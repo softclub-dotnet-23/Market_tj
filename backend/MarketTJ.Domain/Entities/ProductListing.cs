@@ -30,8 +30,10 @@ public class ProductListing
     public Product Product { get; set; } = null!;
     public FarmerProfile FarmerProfile { get; set; } = null!;
 
-    // ProductListing 1 — many ProductImage / CartItem / OrderItem.
+    // ProductListing 1 — many ProductImage / CartItem / OrderItem / ReportedListing / Favorite.
     public ICollection<ProductImage> Images { get; set; } = new List<ProductImage>();
     public ICollection<CartItem> CartItems { get; set; } = new List<CartItem>();
     public ICollection<OrderItem> OrderItems { get; set; } = new List<OrderItem>();
+    public ICollection<ReportedListing> Reports { get; set; } = new List<ReportedListing>();
+    public ICollection<Favorite> Favorites { get; set; } = new List<Favorite>();
 }

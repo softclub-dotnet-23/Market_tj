@@ -23,14 +23,21 @@ public class Order
     public DateTime? CompletedAt { get; set; }
     public DateTime? CancelledAt { get; set; }
 
-    // User 1 — many Order (как Customer / как Farmer) — два разных FK на User.
-    public User Customer { get; set; } = null!;
-    public User Farmer { get; set; } = null!;
+    // CustomerProfile 1 — many Order / FarmerProfile 1 — many Order
+    // (раздел 9 TZ1.md — снова через профили, не напрямую через User).
+    public CustomerProfile Customer { get; set; } = null!;
+    public FarmerProfile Farmer { get; set; } = null!;
 
     // Order 1 — many OrderItem.
     public ICollection<OrderItem> Items { get; set; } = new List<OrderItem>();
 
-    // Order 1 — 0..1 Delivery / Review.
+    // Order 1 — 0..1 Delivery / Review / DeliverySlot / Conversation.
     public Delivery? Delivery { get; set; }
     public Review? Review { get; set; }
+    public DeliverySlot? DeliverySlot { get; set; }
+    public Conversation? Conversation { get; set; }
+
+    // Order 1 — 0..many Payment / RefundRequest.
+    public ICollection<Payment> Payments { get; set; } = new List<Payment>();
+    public ICollection<RefundRequest> RefundRequests { get; set; } = new List<RefundRequest>();
 }

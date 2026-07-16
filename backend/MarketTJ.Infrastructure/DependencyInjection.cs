@@ -38,6 +38,22 @@ public static class DependencyInjection
         services.AddScoped<IDeliveryRepository, DeliveryRepository>();
         services.AddScoped<IReviewRepository, ReviewRepository>();
         services.AddScoped<INotificationRepository, NotificationRepository>();
+        services.AddScoped<IConversationRepository, ConversationRepository>();
+        services.AddScoped<IChatMessageRepository, ChatMessageRepository>();
+        services.AddScoped<IAppSettingRepository, AppSettingRepository>();
+        services.AddScoped<IFarmerDocumentRepository, FarmerDocumentRepository>();
+        services.AddScoped<IAuditLogRepository, AuditLogRepository>();
+        services.AddScoped<IReportedListingRepository, ReportedListingRepository>();
+        services.AddScoped<IRefundRequestRepository, RefundRequestRepository>();
+        services.AddScoped<IDeliveryZoneRepository, DeliveryZoneRepository>();
+        services.AddScoped<ICommissionRepository, CommissionRepository>();
+        services.AddScoped<IPaymentRepository, PaymentRepository>();
+        services.AddScoped<IFavoriteRepository, FavoriteRepository>();
+        services.AddScoped<IFarmerStaffMemberRepository, FarmerStaffMemberRepository>();
+        services.AddScoped<ISupportTicketRepository, SupportTicketRepository>();
+        services.AddScoped<ISupportMessageRepository, SupportMessageRepository>();
+        services.AddScoped<IDeliverySlotRepository, DeliverySlotRepository>();
+        services.AddScoped<IDailySalesSnapshotRepository, DailySalesSnapshotRepository>();
 
         return services;
     }

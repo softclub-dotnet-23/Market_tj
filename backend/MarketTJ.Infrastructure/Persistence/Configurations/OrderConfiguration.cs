@@ -21,21 +21,22 @@ public class OrderConfiguration : IEntityTypeConfiguration<Order>
 
         builder.HasIndex(x => x.OrderNumber).IsUnique();
 
-        // User 1 — many Order (как Customer / как Farmer) — два независимых FK
-        // на User, поэтому у каждой стороны своя навигация.
+        // CustomerProfile/FarmerProfile 1 — many Order (раздел 9 TZ1.md — снова
+        // через профили, не напрямую через User).
         builder.HasOne(x => x.Customer)
-            .WithMany(x => x.OrdersAsCustomer)
+            .WithMany(x => x.Orders)
             .HasForeignKey(x => x.CustomerId)
             .OnDelete(DeleteBehavior.Restrict);
 
         builder.HasOne(x => x.Farmer)
-            .WithMany(x => x.OrdersAsFarmer)
+            .WithMany(x => x.Orders)
             .HasForeignKey(x => x.FarmerId)
             .OnDelete(DeleteBehavior.Restrict);
 
-        // Order 1 — 0..1 Delivery / Review — конфигурируются со стороны
-        // Delivery/Review (там связь обязательная), здесь ничего дополнительно
-        // настраивать не нужно: EF свяжет по HasOne(x => x.Order) с той стороны.
+        // Order 1 — 0..1 Delivery / Review / DeliverySlot / Conversation —
+        // конфигурируются со стороны дочерней сущности (там связь обязательная).
+        // Order 1 — 0..many Payment / RefundRequest — конфигурируются со
+        // стороны Payment/RefundRequest.
 
         builder.HasQueryFilter(x => !x.IsDeleted);
     }

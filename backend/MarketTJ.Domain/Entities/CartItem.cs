@@ -9,7 +9,8 @@ public class CartItem
     public DateTime CreatedAt { get; set; }
     public DateTime UpdatedAt { get; set; }
 
-    // User 1 — many CartItem (как Customer) / ProductListing 1 — many CartItem.
-    public User Customer { get; set; } = null!;
+    // CustomerProfile 1 — many CartItem / ProductListing 1 — many CartItem
+    // (раздел 9 TZ1.md — снова через CustomerProfile, не напрямую через User).
+    public CustomerProfile Customer { get; set; } = null!;
     public ProductListing ProductListing { get; set; } = null!;
 }

@@ -10,6 +10,7 @@ public class Category
     public DateTime CreatedAt { get; set; }
     public DateTime UpdatedAt { get; set; }
 
-    // Category 1 — many Product.
+    // Category 1 — many Product / Commission (0..1 переопределение ставки).
     public ICollection<Product> Products { get; set; } = new List<Product>();
+    public ICollection<Commission> Commissions { get; set; } = new List<Commission>();
 }

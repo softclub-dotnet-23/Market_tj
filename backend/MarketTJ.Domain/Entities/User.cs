@@ -16,22 +16,25 @@ public class User
     public DateTime CreatedAt { get; set; }
     public DateTime UpdatedAt { get; set; }
 
-    // User 1 — 1 FarmerProfile / CustomerProfile / CourierProfile.
+    // User 1 — 1 FarmerProfile / CustomerProfile / CourierProfile / 0..1 FarmerStaffMember.
     public FarmerProfile? FarmerProfile { get; set; }
     public CustomerProfile? CustomerProfile { get; set; }
     public CourierProfile? CourierProfile { get; set; }
+    public FarmerStaffMember? FarmerStaffMember { get; set; }
 
     // User 1 — many Notification.
     public ICollection<Notification> Notifications { get; set; } = new List<Notification>();
 
-    // User 1 — many CartItem (как Customer).
-    public ICollection<CartItem> CartItems { get; set; } = new List<CartItem>();
+    // User 1 — many Favorite (как Customer) — ProductListing many-many User.
+    public ICollection<Favorite> Favorites { get; set; } = new List<Favorite>();
 
-    // User 1 — many Order (как Customer / как Farmer) — два разных FK на User.
-    public ICollection<Order> OrdersAsCustomer { get; set; } = new List<Order>();
-    public ICollection<Order> OrdersAsFarmer { get; set; } = new List<Order>();
+    // User 1 — many ChatMessage / SupportMessage (как отправитель).
+    public ICollection<ChatMessage> SentChatMessages { get; set; } = new List<ChatMessage>();
+    public ICollection<SupportMessage> SentSupportMessages { get; set; } = new List<SupportMessage>();
 
-    // User 1 — many Review (как Customer / как Farmer).
-    public ICollection<Review> ReviewsAsCustomer { get; set; } = new List<Review>();
-    public ICollection<Review> ReviewsAsFarmer { get; set; } = new List<Review>();
+    // User 1 — many SupportTicket (как автор обращения).
+    public ICollection<SupportTicket> SupportTickets { get; set; } = new List<SupportTicket>();
+
+    // User 1 — many AuditLog (как Admin).
+    public ICollection<AuditLog> AuditLogs { get; set; } = new List<AuditLog>();
 }

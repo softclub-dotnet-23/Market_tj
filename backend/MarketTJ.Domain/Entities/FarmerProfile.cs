@@ -24,6 +24,10 @@ public class FarmerProfile
     // Admin (User), который подтвердил фермера — необязательная связь.
     public User? VerifiedByAdmin { get; set; }
 
-    // FarmerProfile 1 — many ProductListing.
+    // FarmerProfile 1 — many ProductListing / Order / Review / FarmerDocument / FarmerStaffMember.
     public ICollection<ProductListing> ProductListings { get; set; } = new List<ProductListing>();
+    public ICollection<Order> Orders { get; set; } = new List<Order>();
+    public ICollection<Review> Reviews { get; set; } = new List<Review>();
+    public ICollection<FarmerDocument> Documents { get; set; } = new List<FarmerDocument>();
+    public ICollection<FarmerStaffMember> StaffMembers { get; set; } = new List<FarmerStaffMember>();
 }

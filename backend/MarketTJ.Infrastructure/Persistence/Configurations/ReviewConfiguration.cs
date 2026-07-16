@@ -20,15 +20,14 @@ public class ReviewConfiguration : IEntityTypeConfiguration<Review>
             .HasForeignKey<Review>(x => x.OrderId)
             .OnDelete(DeleteBehavior.Restrict);
 
-        // User 1 — many Review (как Customer / как Farmer) — два независимых
-        // FK на User (обновлено: раньше ссылались на FarmerProfile/CustomerProfile).
+        // FarmerProfile/CustomerProfile 1 — many Review (раздел 9 TZ1.md).
         builder.HasOne(x => x.Farmer)
-            .WithMany(x => x.ReviewsAsFarmer)
+            .WithMany(x => x.Reviews)
             .HasForeignKey(x => x.FarmerId)
             .OnDelete(DeleteBehavior.Restrict);
 
         builder.HasOne(x => x.Customer)
-            .WithMany(x => x.ReviewsAsCustomer)
+            .WithMany(x => x.Reviews)
             .HasForeignKey(x => x.CustomerId)
             .OnDelete(DeleteBehavior.Restrict);
     }

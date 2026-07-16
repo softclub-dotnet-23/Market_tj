@@ -19,6 +19,22 @@ public class AppDbContext(DbContextOptions<AppDbContext> options) : DbContext(op
     public DbSet<Delivery> Deliveries => Set<Delivery>();
     public DbSet<Review> Reviews => Set<Review>();
     public DbSet<Notification> Notifications => Set<Notification>();
+    public DbSet<Conversation> Conversations => Set<Conversation>();
+    public DbSet<ChatMessage> ChatMessages => Set<ChatMessage>();
+    public DbSet<AppSetting> AppSettings => Set<AppSetting>();
+    public DbSet<FarmerDocument> FarmerDocuments => Set<FarmerDocument>();
+    public DbSet<AuditLog> AuditLogs => Set<AuditLog>();
+    public DbSet<ReportedListing> ReportedListings => Set<ReportedListing>();
+    public DbSet<RefundRequest> RefundRequests => Set<RefundRequest>();
+    public DbSet<DeliveryZone> DeliveryZones => Set<DeliveryZone>();
+    public DbSet<Commission> Commissions => Set<Commission>();
+    public DbSet<Payment> Payments => Set<Payment>();
+    public DbSet<Favorite> Favorites => Set<Favorite>();
+    public DbSet<FarmerStaffMember> FarmerStaffMembers => Set<FarmerStaffMember>();
+    public DbSet<SupportTicket> SupportTickets => Set<SupportTicket>();
+    public DbSet<SupportMessage> SupportMessages => Set<SupportMessage>();
+    public DbSet<DeliverySlot> DeliverySlots => Set<DeliverySlot>();
+    public DbSet<DailySalesSnapshot> DailySalesSnapshots => Set<DailySalesSnapshot>();
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {

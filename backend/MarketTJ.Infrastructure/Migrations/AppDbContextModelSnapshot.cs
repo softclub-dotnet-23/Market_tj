@@ -22,6 +22,77 @@ namespace MarketTJ.Infrastructure.Migrations
 
             NpgsqlModelBuilderExtensions.UseIdentityByDefaultColumns(modelBuilder);
 
+            modelBuilder.Entity("MarketTJ.Domain.Entities.AppSetting", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("integer");
+
+                    NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<int>("Id"));
+
+                    b.Property<string>("Description")
+                        .HasColumnType("text");
+
+                    b.Property<string>("Key")
+                        .IsRequired()
+                        .HasColumnType("text");
+
+                    b.Property<DateTime>("UpdatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<int?>("UpdatedByAdminId")
+                        .HasColumnType("integer");
+
+                    b.Property<string>("Value")
+                        .IsRequired()
+                        .HasColumnType("text");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("Key")
+                        .IsUnique();
+
+                    b.HasIndex("UpdatedByAdminId");
+
+                    b.ToTable("AppSettings");
+                });
+
+            modelBuilder.Entity("MarketTJ.Domain.Entities.AuditLog", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("integer");
+
+                    NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<int>("Id"));
+
+                    b.Property<string>("Action")
+                        .IsRequired()
+                        .HasColumnType("text");
+
+                    b.Property<int>("AdminId")
+                        .HasColumnType("integer");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<string>("Details")
+                        .IsRequired()
+                        .HasColumnType("text");
+
+                    b.Property<int>("EntityId")
+                        .HasColumnType("integer");
+
+                    b.Property<string>("EntityType")
+                        .IsRequired()
+                        .HasColumnType("text");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("AdminId");
+
+                    b.ToTable("AuditLogs");
+                });
+
             modelBuilder.Entity("MarketTJ.Domain.Entities.CartItem", b =>
                 {
                     b.Property<int>("Id")
@@ -89,6 +160,108 @@ namespace MarketTJ.Infrastructure.Migrations
                         .IsUnique();
 
                     b.ToTable("Categories");
+                });
+
+            modelBuilder.Entity("MarketTJ.Domain.Entities.ChatMessage", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("integer");
+
+                    NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<int>("Id"));
+
+                    b.Property<int>("ConversationId")
+                        .HasColumnType("integer");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<bool>("IsRead")
+                        .HasColumnType("boolean");
+
+                    b.Property<string>("Message")
+                        .IsRequired()
+                        .HasColumnType("text");
+
+                    b.Property<int>("SenderId")
+                        .HasColumnType("integer");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("ConversationId");
+
+                    b.HasIndex("SenderId");
+
+                    b.ToTable("ChatMessages");
+                });
+
+            modelBuilder.Entity("MarketTJ.Domain.Entities.Commission", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("integer");
+
+                    NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<int>("Id"));
+
+                    b.Property<int?>("CategoryId")
+                        .HasColumnType("integer");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<DateTime>("EffectiveFrom")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<DateTime?>("EffectiveTo")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<decimal>("Percentage")
+                        .HasPrecision(5, 2)
+                        .HasColumnType("numeric(5,2)");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("CategoryId");
+
+                    b.ToTable("Commissions");
+                });
+
+            modelBuilder.Entity("MarketTJ.Domain.Entities.Conversation", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("integer");
+
+                    NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<int>("Id"));
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<int>("CustomerId")
+                        .HasColumnType("integer");
+
+                    b.Property<int>("FarmerId")
+                        .HasColumnType("integer");
+
+                    b.Property<bool>("IsClosed")
+                        .HasColumnType("boolean");
+
+                    b.Property<int>("OrderId")
+                        .HasColumnType("integer");
+
+                    b.Property<DateTime>("UpdatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("CustomerId");
+
+                    b.HasIndex("FarmerId");
+
+                    b.HasIndex("OrderId")
+                        .IsUnique();
+
+                    b.ToTable("Conversations");
                 });
 
             modelBuilder.Entity("MarketTJ.Domain.Entities.CourierProfile", b =>
@@ -177,6 +350,48 @@ namespace MarketTJ.Infrastructure.Migrations
                     b.ToTable("CustomerProfiles");
                 });
 
+            modelBuilder.Entity("MarketTJ.Domain.Entities.DailySalesSnapshot", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("integer");
+
+                    NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<int>("Id"));
+
+                    b.Property<int>("CompletedDeliveries")
+                        .HasColumnType("integer");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<DateTime>("Date")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<int>("NewCustomers")
+                        .HasColumnType("integer");
+
+                    b.Property<int>("NewFarmers")
+                        .HasColumnType("integer");
+
+                    b.Property<decimal>("TotalCommission")
+                        .HasPrecision(18, 2)
+                        .HasColumnType("numeric(18,2)");
+
+                    b.Property<int>("TotalOrders")
+                        .HasColumnType("integer");
+
+                    b.Property<decimal>("TotalRevenue")
+                        .HasPrecision(18, 2)
+                        .HasColumnType("numeric(18,2)");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("Date")
+                        .IsUnique();
+
+                    b.ToTable("DailySalesSnapshots");
+                });
+
             modelBuilder.Entity("MarketTJ.Domain.Entities.Delivery", b =>
                 {
                     b.Property<int>("Id")
@@ -229,6 +444,119 @@ namespace MarketTJ.Infrastructure.Migrations
                         .IsUnique();
 
                     b.ToTable("Deliveries");
+                });
+
+            modelBuilder.Entity("MarketTJ.Domain.Entities.DeliverySlot", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("integer");
+
+                    NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<int>("Id"));
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<DateTime>("Date")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<int>("OrderId")
+                        .HasColumnType("integer");
+
+                    b.Property<string>("TimeFrom")
+                        .IsRequired()
+                        .HasColumnType("text");
+
+                    b.Property<string>("TimeTo")
+                        .IsRequired()
+                        .HasColumnType("text");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("OrderId")
+                        .IsUnique();
+
+                    b.ToTable("DeliverySlots");
+                });
+
+            modelBuilder.Entity("MarketTJ.Domain.Entities.DeliveryZone", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("integer");
+
+                    NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<int>("Id"));
+
+                    b.Property<decimal>("BasePrice")
+                        .HasPrecision(18, 2)
+                        .HasColumnType("numeric(18,2)");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<string>("District")
+                        .IsRequired()
+                        .HasColumnType("text");
+
+                    b.Property<bool>("IsActive")
+                        .HasColumnType("boolean");
+
+                    b.Property<decimal?>("PricePerKm")
+                        .HasPrecision(18, 2)
+                        .HasColumnType("numeric(18,2)");
+
+                    b.Property<string>("Region")
+                        .IsRequired()
+                        .HasColumnType("text");
+
+                    b.Property<DateTime>("UpdatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.HasKey("Id");
+
+                    b.ToTable("DeliveryZones");
+                });
+
+            modelBuilder.Entity("MarketTJ.Domain.Entities.FarmerDocument", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("integer");
+
+                    NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<int>("Id"));
+
+                    b.Property<int>("DocumentType")
+                        .HasColumnType("integer");
+
+                    b.Property<int>("FarmerProfileId")
+                        .HasColumnType("integer");
+
+                    b.Property<string>("FileUrl")
+                        .IsRequired()
+                        .HasColumnType("text");
+
+                    b.Property<string>("RejectionReason")
+                        .HasColumnType("text");
+
+                    b.Property<DateTime?>("ReviewedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<int?>("ReviewedByAdminId")
+                        .HasColumnType("integer");
+
+                    b.Property<int>("Status")
+                        .HasColumnType("integer");
+
+                    b.Property<DateTime>("UploadedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("FarmerProfileId");
+
+                    b.HasIndex("ReviewedByAdminId");
+
+                    b.ToTable("FarmerDocuments");
                 });
 
             modelBuilder.Entity("MarketTJ.Domain.Entities.FarmerProfile", b =>
@@ -288,6 +616,69 @@ namespace MarketTJ.Infrastructure.Migrations
                     b.HasIndex("VerifiedByAdminId");
 
                     b.ToTable("FarmerProfiles");
+                });
+
+            modelBuilder.Entity("MarketTJ.Domain.Entities.FarmerStaffMember", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("integer");
+
+                    NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<int>("Id"));
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<int>("FarmerProfileId")
+                        .HasColumnType("integer");
+
+                    b.Property<bool>("IsActive")
+                        .HasColumnType("boolean");
+
+                    b.Property<int>("Permissions")
+                        .HasColumnType("integer");
+
+                    b.Property<DateTime>("UpdatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<int>("UserId")
+                        .HasColumnType("integer");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("FarmerProfileId");
+
+                    b.HasIndex("UserId")
+                        .IsUnique();
+
+                    b.ToTable("FarmerStaffMembers");
+                });
+
+            modelBuilder.Entity("MarketTJ.Domain.Entities.Favorite", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("integer");
+
+                    NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<int>("Id"));
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<int>("CustomerId")
+                        .HasColumnType("integer");
+
+                    b.Property<int>("ProductListingId")
+                        .HasColumnType("integer");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("ProductListingId");
+
+                    b.HasIndex("CustomerId", "ProductListingId")
+                        .IsUnique();
+
+                    b.ToTable("Favorites");
                 });
 
             modelBuilder.Entity("MarketTJ.Domain.Entities.Notification", b =>
@@ -440,6 +831,43 @@ namespace MarketTJ.Infrastructure.Migrations
                     b.HasIndex("ProductListingId");
 
                     b.ToTable("OrderItems");
+                });
+
+            modelBuilder.Entity("MarketTJ.Domain.Entities.Payment", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("integer");
+
+                    NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<int>("Id"));
+
+                    b.Property<decimal>("Amount")
+                        .HasPrecision(18, 2)
+                        .HasColumnType("numeric(18,2)");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<int>("Method")
+                        .HasColumnType("integer");
+
+                    b.Property<int>("OrderId")
+                        .HasColumnType("integer");
+
+                    b.Property<DateTime?>("PaidAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<int>("Status")
+                        .HasColumnType("integer");
+
+                    b.Property<string>("TransactionReference")
+                        .HasColumnType("text");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("OrderId");
+
+                    b.ToTable("Payments");
                 });
 
             modelBuilder.Entity("MarketTJ.Domain.Entities.Product", b =>
@@ -595,6 +1023,96 @@ namespace MarketTJ.Infrastructure.Migrations
                     b.ToTable("ProductListings");
                 });
 
+            modelBuilder.Entity("MarketTJ.Domain.Entities.RefundRequest", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("integer");
+
+                    NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<int>("Id"));
+
+                    b.Property<decimal>("Amount")
+                        .HasPrecision(18, 2)
+                        .HasColumnType("numeric(18,2)");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<int>("CustomerId")
+                        .HasColumnType("integer");
+
+                    b.Property<int>("OrderId")
+                        .HasColumnType("integer");
+
+                    b.Property<DateTime?>("ProcessedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<int?>("ProcessedByAdminId")
+                        .HasColumnType("integer");
+
+                    b.Property<string>("Reason")
+                        .IsRequired()
+                        .HasColumnType("text");
+
+                    b.Property<int>("Status")
+                        .HasColumnType("integer");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("CustomerId");
+
+                    b.HasIndex("OrderId")
+                        .IsUnique()
+                        .HasFilter("\"Status\" = 1");
+
+                    b.HasIndex("ProcessedByAdminId");
+
+                    b.ToTable("RefundRequests");
+                });
+
+            modelBuilder.Entity("MarketTJ.Domain.Entities.ReportedListing", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("integer");
+
+                    NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<int>("Id"));
+
+                    b.Property<string>("Comment")
+                        .HasColumnType("text");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<int>("ProductListingId")
+                        .HasColumnType("integer");
+
+                    b.Property<int>("Reason")
+                        .HasColumnType("integer");
+
+                    b.Property<int>("ReportedByUserId")
+                        .HasColumnType("integer");
+
+                    b.Property<DateTime?>("ReviewedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<int?>("ReviewedByAdminId")
+                        .HasColumnType("integer");
+
+                    b.Property<int>("Status")
+                        .HasColumnType("integer");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("ProductListingId");
+
+                    b.HasIndex("ReportedByUserId");
+
+                    b.HasIndex("ReviewedByAdminId");
+
+                    b.ToTable("ReportedListings");
+                });
+
             modelBuilder.Entity("MarketTJ.Domain.Entities.Review", b =>
                 {
                     b.Property<int>("Id")
@@ -631,6 +1149,75 @@ namespace MarketTJ.Infrastructure.Migrations
                         .IsUnique();
 
                     b.ToTable("Reviews");
+                });
+
+            modelBuilder.Entity("MarketTJ.Domain.Entities.SupportMessage", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("integer");
+
+                    NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<int>("Id"));
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<string>("Message")
+                        .IsRequired()
+                        .HasColumnType("text");
+
+                    b.Property<int>("SenderId")
+                        .HasColumnType("integer");
+
+                    b.Property<int>("SupportTicketId")
+                        .HasColumnType("integer");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("SenderId");
+
+                    b.HasIndex("SupportTicketId");
+
+                    b.ToTable("SupportMessages");
+                });
+
+            modelBuilder.Entity("MarketTJ.Domain.Entities.SupportTicket", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("integer");
+
+                    NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<int>("Id"));
+
+                    b.Property<int?>("AssignedToAdminId")
+                        .HasColumnType("integer");
+
+                    b.Property<DateTime?>("ClosedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<int>("Priority")
+                        .HasColumnType("integer");
+
+                    b.Property<int>("Status")
+                        .HasColumnType("integer");
+
+                    b.Property<string>("Subject")
+                        .IsRequired()
+                        .HasColumnType("text");
+
+                    b.Property<int>("UserId")
+                        .HasColumnType("integer");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("AssignedToAdminId");
+
+                    b.HasIndex("UserId");
+
+                    b.ToTable("SupportTickets");
                 });
 
             modelBuilder.Entity("MarketTJ.Domain.Entities.User", b =>
@@ -686,9 +1273,30 @@ namespace MarketTJ.Infrastructure.Migrations
                     b.ToTable("Users");
                 });
 
+            modelBuilder.Entity("MarketTJ.Domain.Entities.AppSetting", b =>
+                {
+                    b.HasOne("MarketTJ.Domain.Entities.User", "UpdatedByAdmin")
+                        .WithMany()
+                        .HasForeignKey("UpdatedByAdminId")
+                        .OnDelete(DeleteBehavior.SetNull);
+
+                    b.Navigation("UpdatedByAdmin");
+                });
+
+            modelBuilder.Entity("MarketTJ.Domain.Entities.AuditLog", b =>
+                {
+                    b.HasOne("MarketTJ.Domain.Entities.User", "Admin")
+                        .WithMany("AuditLogs")
+                        .HasForeignKey("AdminId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.Navigation("Admin");
+                });
+
             modelBuilder.Entity("MarketTJ.Domain.Entities.CartItem", b =>
                 {
-                    b.HasOne("MarketTJ.Domain.Entities.User", "Customer")
+                    b.HasOne("MarketTJ.Domain.Entities.CustomerProfile", "Customer")
                         .WithMany("CartItems")
                         .HasForeignKey("CustomerId")
                         .OnDelete(DeleteBehavior.Restrict)
@@ -703,6 +1311,62 @@ namespace MarketTJ.Infrastructure.Migrations
                     b.Navigation("Customer");
 
                     b.Navigation("ProductListing");
+                });
+
+            modelBuilder.Entity("MarketTJ.Domain.Entities.ChatMessage", b =>
+                {
+                    b.HasOne("MarketTJ.Domain.Entities.Conversation", "Conversation")
+                        .WithMany("Messages")
+                        .HasForeignKey("ConversationId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.HasOne("MarketTJ.Domain.Entities.User", "Sender")
+                        .WithMany("SentChatMessages")
+                        .HasForeignKey("SenderId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.Navigation("Conversation");
+
+                    b.Navigation("Sender");
+                });
+
+            modelBuilder.Entity("MarketTJ.Domain.Entities.Commission", b =>
+                {
+                    b.HasOne("MarketTJ.Domain.Entities.Category", "Category")
+                        .WithMany("Commissions")
+                        .HasForeignKey("CategoryId")
+                        .OnDelete(DeleteBehavior.Restrict);
+
+                    b.Navigation("Category");
+                });
+
+            modelBuilder.Entity("MarketTJ.Domain.Entities.Conversation", b =>
+                {
+                    b.HasOne("MarketTJ.Domain.Entities.User", "Customer")
+                        .WithMany()
+                        .HasForeignKey("CustomerId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.HasOne("MarketTJ.Domain.Entities.User", "Farmer")
+                        .WithMany()
+                        .HasForeignKey("FarmerId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.HasOne("MarketTJ.Domain.Entities.Order", "Order")
+                        .WithOne("Conversation")
+                        .HasForeignKey("MarketTJ.Domain.Entities.Conversation", "OrderId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.Navigation("Customer");
+
+                    b.Navigation("Farmer");
+
+                    b.Navigation("Order");
                 });
 
             modelBuilder.Entity("MarketTJ.Domain.Entities.CourierProfile", b =>
@@ -745,6 +1409,35 @@ namespace MarketTJ.Infrastructure.Migrations
                     b.Navigation("Order");
                 });
 
+            modelBuilder.Entity("MarketTJ.Domain.Entities.DeliverySlot", b =>
+                {
+                    b.HasOne("MarketTJ.Domain.Entities.Order", "Order")
+                        .WithOne("DeliverySlot")
+                        .HasForeignKey("MarketTJ.Domain.Entities.DeliverySlot", "OrderId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("Order");
+                });
+
+            modelBuilder.Entity("MarketTJ.Domain.Entities.FarmerDocument", b =>
+                {
+                    b.HasOne("MarketTJ.Domain.Entities.FarmerProfile", "FarmerProfile")
+                        .WithMany("Documents")
+                        .HasForeignKey("FarmerProfileId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.HasOne("MarketTJ.Domain.Entities.User", "ReviewedByAdmin")
+                        .WithMany()
+                        .HasForeignKey("ReviewedByAdminId")
+                        .OnDelete(DeleteBehavior.SetNull);
+
+                    b.Navigation("FarmerProfile");
+
+                    b.Navigation("ReviewedByAdmin");
+                });
+
             modelBuilder.Entity("MarketTJ.Domain.Entities.FarmerProfile", b =>
                 {
                     b.HasOne("MarketTJ.Domain.Entities.User", "User")
@@ -763,6 +1456,44 @@ namespace MarketTJ.Infrastructure.Migrations
                     b.Navigation("VerifiedByAdmin");
                 });
 
+            modelBuilder.Entity("MarketTJ.Domain.Entities.FarmerStaffMember", b =>
+                {
+                    b.HasOne("MarketTJ.Domain.Entities.FarmerProfile", "FarmerProfile")
+                        .WithMany("StaffMembers")
+                        .HasForeignKey("FarmerProfileId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.HasOne("MarketTJ.Domain.Entities.User", "User")
+                        .WithOne("FarmerStaffMember")
+                        .HasForeignKey("MarketTJ.Domain.Entities.FarmerStaffMember", "UserId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("FarmerProfile");
+
+                    b.Navigation("User");
+                });
+
+            modelBuilder.Entity("MarketTJ.Domain.Entities.Favorite", b =>
+                {
+                    b.HasOne("MarketTJ.Domain.Entities.User", "Customer")
+                        .WithMany("Favorites")
+                        .HasForeignKey("CustomerId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.HasOne("MarketTJ.Domain.Entities.ProductListing", "ProductListing")
+                        .WithMany("Favorites")
+                        .HasForeignKey("ProductListingId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("Customer");
+
+                    b.Navigation("ProductListing");
+                });
+
             modelBuilder.Entity("MarketTJ.Domain.Entities.Notification", b =>
                 {
                     b.HasOne("MarketTJ.Domain.Entities.User", "User")
@@ -776,14 +1507,14 @@ namespace MarketTJ.Infrastructure.Migrations
 
             modelBuilder.Entity("MarketTJ.Domain.Entities.Order", b =>
                 {
-                    b.HasOne("MarketTJ.Domain.Entities.User", "Customer")
-                        .WithMany("OrdersAsCustomer")
+                    b.HasOne("MarketTJ.Domain.Entities.CustomerProfile", "Customer")
+                        .WithMany("Orders")
                         .HasForeignKey("CustomerId")
                         .OnDelete(DeleteBehavior.Restrict)
                         .IsRequired();
 
-                    b.HasOne("MarketTJ.Domain.Entities.User", "Farmer")
-                        .WithMany("OrdersAsFarmer")
+                    b.HasOne("MarketTJ.Domain.Entities.FarmerProfile", "Farmer")
+                        .WithMany("Orders")
                         .HasForeignKey("FarmerId")
                         .OnDelete(DeleteBehavior.Restrict)
                         .IsRequired();
@@ -810,6 +1541,17 @@ namespace MarketTJ.Infrastructure.Migrations
                     b.Navigation("Order");
 
                     b.Navigation("ProductListing");
+                });
+
+            modelBuilder.Entity("MarketTJ.Domain.Entities.Payment", b =>
+                {
+                    b.HasOne("MarketTJ.Domain.Entities.Order", "Order")
+                        .WithMany("Payments")
+                        .HasForeignKey("OrderId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.Navigation("Order");
                 });
 
             modelBuilder.Entity("MarketTJ.Domain.Entities.Product", b =>
@@ -853,16 +1595,68 @@ namespace MarketTJ.Infrastructure.Migrations
                     b.Navigation("Product");
                 });
 
-            modelBuilder.Entity("MarketTJ.Domain.Entities.Review", b =>
+            modelBuilder.Entity("MarketTJ.Domain.Entities.RefundRequest", b =>
                 {
                     b.HasOne("MarketTJ.Domain.Entities.User", "Customer")
-                        .WithMany("ReviewsAsCustomer")
+                        .WithMany()
                         .HasForeignKey("CustomerId")
                         .OnDelete(DeleteBehavior.Restrict)
                         .IsRequired();
 
-                    b.HasOne("MarketTJ.Domain.Entities.User", "Farmer")
-                        .WithMany("ReviewsAsFarmer")
+                    b.HasOne("MarketTJ.Domain.Entities.Order", "Order")
+                        .WithMany("RefundRequests")
+                        .HasForeignKey("OrderId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.HasOne("MarketTJ.Domain.Entities.User", "ProcessedByAdmin")
+                        .WithMany()
+                        .HasForeignKey("ProcessedByAdminId")
+                        .OnDelete(DeleteBehavior.SetNull);
+
+                    b.Navigation("Customer");
+
+                    b.Navigation("Order");
+
+                    b.Navigation("ProcessedByAdmin");
+                });
+
+            modelBuilder.Entity("MarketTJ.Domain.Entities.ReportedListing", b =>
+                {
+                    b.HasOne("MarketTJ.Domain.Entities.ProductListing", "ProductListing")
+                        .WithMany("Reports")
+                        .HasForeignKey("ProductListingId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.HasOne("MarketTJ.Domain.Entities.User", "ReportedByUser")
+                        .WithMany()
+                        .HasForeignKey("ReportedByUserId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.HasOne("MarketTJ.Domain.Entities.User", "ReviewedByAdmin")
+                        .WithMany()
+                        .HasForeignKey("ReviewedByAdminId")
+                        .OnDelete(DeleteBehavior.SetNull);
+
+                    b.Navigation("ProductListing");
+
+                    b.Navigation("ReportedByUser");
+
+                    b.Navigation("ReviewedByAdmin");
+                });
+
+            modelBuilder.Entity("MarketTJ.Domain.Entities.Review", b =>
+                {
+                    b.HasOne("MarketTJ.Domain.Entities.CustomerProfile", "Customer")
+                        .WithMany("Reviews")
+                        .HasForeignKey("CustomerId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.HasOne("MarketTJ.Domain.Entities.FarmerProfile", "Farmer")
+                        .WithMany("Reviews")
                         .HasForeignKey("FarmerId")
                         .OnDelete(DeleteBehavior.Restrict)
                         .IsRequired();
@@ -880,9 +1674,53 @@ namespace MarketTJ.Infrastructure.Migrations
                     b.Navigation("Order");
                 });
 
+            modelBuilder.Entity("MarketTJ.Domain.Entities.SupportMessage", b =>
+                {
+                    b.HasOne("MarketTJ.Domain.Entities.User", "Sender")
+                        .WithMany("SentSupportMessages")
+                        .HasForeignKey("SenderId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.HasOne("MarketTJ.Domain.Entities.SupportTicket", "SupportTicket")
+                        .WithMany("Messages")
+                        .HasForeignKey("SupportTicketId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("Sender");
+
+                    b.Navigation("SupportTicket");
+                });
+
+            modelBuilder.Entity("MarketTJ.Domain.Entities.SupportTicket", b =>
+                {
+                    b.HasOne("MarketTJ.Domain.Entities.User", "AssignedToAdmin")
+                        .WithMany()
+                        .HasForeignKey("AssignedToAdminId")
+                        .OnDelete(DeleteBehavior.SetNull);
+
+                    b.HasOne("MarketTJ.Domain.Entities.User", "User")
+                        .WithMany("SupportTickets")
+                        .HasForeignKey("UserId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.Navigation("AssignedToAdmin");
+
+                    b.Navigation("User");
+                });
+
             modelBuilder.Entity("MarketTJ.Domain.Entities.Category", b =>
                 {
+                    b.Navigation("Commissions");
+
                     b.Navigation("Products");
+                });
+
+            modelBuilder.Entity("MarketTJ.Domain.Entities.Conversation", b =>
+                {
+                    b.Navigation("Messages");
                 });
 
             modelBuilder.Entity("MarketTJ.Domain.Entities.CourierProfile", b =>
@@ -890,16 +1728,41 @@ namespace MarketTJ.Infrastructure.Migrations
                     b.Navigation("Deliveries");
                 });
 
+            modelBuilder.Entity("MarketTJ.Domain.Entities.CustomerProfile", b =>
+                {
+                    b.Navigation("CartItems");
+
+                    b.Navigation("Orders");
+
+                    b.Navigation("Reviews");
+                });
+
             modelBuilder.Entity("MarketTJ.Domain.Entities.FarmerProfile", b =>
                 {
+                    b.Navigation("Documents");
+
+                    b.Navigation("Orders");
+
                     b.Navigation("ProductListings");
+
+                    b.Navigation("Reviews");
+
+                    b.Navigation("StaffMembers");
                 });
 
             modelBuilder.Entity("MarketTJ.Domain.Entities.Order", b =>
                 {
+                    b.Navigation("Conversation");
+
                     b.Navigation("Delivery");
 
+                    b.Navigation("DeliverySlot");
+
                     b.Navigation("Items");
+
+                    b.Navigation("Payments");
+
+                    b.Navigation("RefundRequests");
 
                     b.Navigation("Review");
                 });
@@ -913,14 +1776,23 @@ namespace MarketTJ.Infrastructure.Migrations
                 {
                     b.Navigation("CartItems");
 
+                    b.Navigation("Favorites");
+
                     b.Navigation("Images");
 
                     b.Navigation("OrderItems");
+
+                    b.Navigation("Reports");
+                });
+
+            modelBuilder.Entity("MarketTJ.Domain.Entities.SupportTicket", b =>
+                {
+                    b.Navigation("Messages");
                 });
 
             modelBuilder.Entity("MarketTJ.Domain.Entities.User", b =>
                 {
-                    b.Navigation("CartItems");
+                    b.Navigation("AuditLogs");
 
                     b.Navigation("CourierProfile");
 
@@ -928,15 +1800,17 @@ namespace MarketTJ.Infrastructure.Migrations
 
                     b.Navigation("FarmerProfile");
 
+                    b.Navigation("FarmerStaffMember");
+
+                    b.Navigation("Favorites");
+
                     b.Navigation("Notifications");
 
-                    b.Navigation("OrdersAsCustomer");
+                    b.Navigation("SentChatMessages");
 
-                    b.Navigation("OrdersAsFarmer");
+                    b.Navigation("SentSupportMessages");
 
-                    b.Navigation("ReviewsAsCustomer");
-
-                    b.Navigation("ReviewsAsFarmer");
+                    b.Navigation("SupportTickets");
                 });
 #pragma warning restore 612, 618
         }

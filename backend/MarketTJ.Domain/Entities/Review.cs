@@ -13,7 +13,8 @@ public class Review
     // Order 1 — 0..1 Review (со стороны Review — обязательная связь).
     public Order Order { get; set; } = null!;
 
-    // User 1 — many Review (как Customer / как Farmer).
-    public User Customer { get; set; } = null!;
-    public User Farmer { get; set; } = null!;
+    // FarmerProfile 1 — many Review; CustomerId — по аналогии с CartItem/Order
+    // (раздел 9 TZ1.md), снова через профили, не напрямую через User.
+    public CustomerProfile Customer { get; set; } = null!;
+    public FarmerProfile Farmer { get; set; } = null!;
 }
