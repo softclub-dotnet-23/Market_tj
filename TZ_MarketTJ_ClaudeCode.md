@@ -20,7 +20,7 @@
 3. После завершения этапа/спринта обнови прогресс: отметь выполненные пункты, кратко опиши, что было сделано и какие решения приняты (это должно быть достаточно, чтобы через месяц понять контекст без чтения всего кода).
 4. Не добавляй функциональность, которая явно перечислена в разделе 3 как «В MVP не входят» — даже если это кажется полезным или простым.
 5. Все бизнес-правила из раздела 10 обязательны к соблюдению в коде — это не рекомендации, а требования.
-6. Архитектурные границы из раздела 11 и требования раздела 19 (например, «Frontend не должен напрямую обращаться к базе данных», «контроллеры не должны содержать бизнес-логику») — это hard rules, нарушать нельзя даже ради скорости.
+6. Архитектурные границы из раздела 11 и требования раздела 19 (например, «Frontend не должен напрямую обращаться к базе данных», «контроллеры не должны содержать бизнес-логику») — это hard rules, нарушать нельзя даже ради скорости. Код в Application/Infrastructure должен соблюдать принципы SOLID (раздел 11.2.2) — в частности, сервисы зависят от интерфейсов (Dependency Inversion), а не от конкретных реализаций репозиториев/кэша/файлового хранилища.
 7. Формат ответа API (раздел 20) и коды ошибок (раздел 20.1, добавлено ниже) должны использоваться единообразно во всех endpoint.
 8. Если что-то в задаче неоднозначно или не описано в ТЗ — не додумывай самостоятельно критичные бизнес-решения (например, связанные с деньгами, ролями, безопасностью); сначала опиши варианты и уточни у пользователя.
 9. Дополнительные рекомендации (не обязательные, но желательные для качества) собраны в разделе 37.
@@ -281,14 +281,13 @@ Wholesale — оптовый покупатель
 
 ### 7.1. Статусы фермера
 
-> Обновлено (по указанию пользователя, Phase 1 Step 1): было {Pending,Approved,Rejected,Suspended} — Suspended убран, Approved переименован в Verified.
-
 ```csharp
 public enum FarmerVerificationStatus
 {
     Pending = 1,
-    Verified = 2,
-    Rejected = 3
+    Approved = 2,
+    Rejected = 3,
+    Suspended = 4
 }
 ```
 
@@ -296,15 +295,14 @@ public enum FarmerVerificationStatus
 
 ### 7.2. Статусы объявления
 
-> Обновлено (по указанию пользователя, Phase 1 Step 1): было {Draft,Active,Hidden,OutOfStock,Blocked} — Hidden убран, Blocked переименован в Archived.
-
 ```csharp
 public enum ListingStatus
 {
     Draft = 1,
     Active = 2,
-    OutOfStock = 3,
-    Archived = 4
+    Hidden = 3,
+    OutOfStock = 4,
+    Blocked = 5
 }
 ```
 
@@ -679,39 +677,298 @@ CreatedAt
 
 ---
 
-## 9. Связи сущностей
+## 8.15. Conversation
 
-> Обновлено (по указанию пользователя, Phase 1 Step 1): CartItem, Order, Review
-> раньше ссылались на CustomerProfile/FarmerProfile — теперь ссылаются напрямую
-> на User (CustomerId/FarmerId → User.Id). FarmerProfile/CustomerProfile
-> остаются как профили с дополнительными полями (регион, верификация и т.д.),
-> но больше не являются стороной этих связей.
+```text
+Id              int PK
+OrderId         int FK → Order (unique — один чат на заказ)
+CustomerId      int FK → User
+FarmerId        int FK → User
+IsClosed        bool
+CreatedAt
+UpdatedAt       (время последнего сообщения)
+```
+
+---
+
+## 8.16. ChatMessage
+
+```text
+Id              int PK
+ConversationId  int FK → Conversation
+SenderId        int FK → User
+Message         string
+IsRead          bool
+CreatedAt
+```
+
+---
+
+## 8.17. AppSetting
+
+```text
+Id              int PK
+Key             string (unique)     — например "DefaultDeliveryBasePrice", "DefaultCommissionPercent"
+Value           string              — хранится строкой, парсится приложением по типу настройки
+Description     string?
+UpdatedAt
+UpdatedByAdminId int? FK → User
+```
+
+Не хардкодить commission/базовую цену доставки в коде — читать отсюда (с кэшированием в Redis, TTL короткий, инвалидация при обновлении).
+
+---
+
+## 8.18. FarmerDocument
+
+```text
+Id                int PK
+FarmerProfileId   int FK → FarmerProfile
+DocumentType      enum(Passport, LandDeed, Other)
+FileUrl           string
+Status            enum(Pending, Approved, Rejected)
+UploadedAt
+ReviewedAt        DateTime?
+ReviewedByAdminId int? FK → User
+RejectionReason   string?
+```
+
+Верификация фермера (раздел 6.1) теперь требует минимум один `FarmerDocument` со статусом `Approved`, прежде чем Admin сможет подтвердить `FarmerProfile.VerificationStatus = Verified`.
+
+---
+
+## 8.19. AuditLog
+
+```text
+Id           int PK
+AdminId      int FK → User
+Action       string     — например "VerifyFarmer", "DeleteListing", "AssignCourier"
+EntityType   string     — имя сущности, к которой относится действие
+EntityId     int
+Details      string     — JSON с деталями (было/стало)
+CreatedAt
+```
+
+`EntityType`+`EntityId` — не строгий FK (полиморфная ссылка), таблица только для чтения истории Admin-действий.
+
+---
+
+## 8.20. ReportedListing
+
+```text
+Id                 int PK
+ProductListingId   int FK → ProductListing
+ReportedByUserId   int FK → User
+Reason             enum(Fraud, WrongInfo, Inappropriate, Other)
+Comment            string?
+Status             enum(Pending, Reviewed, Dismissed)
+CreatedAt
+ReviewedAt         DateTime?
+ReviewedByAdminId  int? FK → User
+```
+
+---
+
+## 8.21. RefundRequest
+
+```text
+Id                 int PK
+OrderId            int FK → Order
+CustomerId         int FK → User
+Reason             string
+Amount             decimal(18,2)
+Status             enum(Pending, Approved, Rejected, Refunded)
+CreatedAt
+ProcessedAt        DateTime?
+ProcessedByAdminId int? FK → User
+```
+
+Бизнес-правило: у одного `Order` не может быть двух `RefundRequest` со статусом `Pending` одновременно.
+
+---
+
+## 8.22. DeliveryZone
+
+```text
+Id          int PK
+Region      string
+District    string
+BasePrice   decimal(18,2)
+PricePerKm  decimal(18,2)?
+IsActive    bool
+CreatedAt
+UpdatedAt
+```
+
+---
+
+## 8.23. Commission
+
+```text
+Id             int PK
+CategoryId     int? FK → Category   (null = общая ставка по умолчанию)
+Percentage     decimal(5,2)
+EffectiveFrom  DateTime
+EffectiveTo    DateTime?
+CreatedAt
+```
+
+Используется при создании `Payment`/подсчёте выручки платформы: берётся ставка, у которой `EffectiveFrom <= Order.CreatedAt <= EffectiveTo` (или `EffectiveTo = null`), сначала ищется по `CategoryId`, при отсутствии — общая (`CategoryId = null`).
+
+---
+
+## 8.24. Payment
+
+```text
+Id                    int PK
+OrderId               int FK → Order
+Amount                decimal(18,2)
+Method                enum(Cash, MobileMoney, Card)
+Status                enum(Pending, Completed, Failed, Refunded)
+PaidAt                DateTime?
+TransactionReference  string?
+CreatedAt
+```
+
+MVP: основной метод — `Cash` (оплата при получении), запись создаётся при `Delivered`/`Completed`. Остальные методы — задел на будущее, бизнес-логику для них сейчас не усложнять.
+
+---
+
+## 8.25. Favorite
+
+```text
+Id                 int PK
+CustomerId         int FK → User
+ProductListingId   int FK → ProductListing
+CreatedAt
+```
+
+Unique index: `CustomerId` + `ProductListingId` (по сути many-to-many между User и ProductListing через эту таблицу).
+
+---
+
+## 8.26. FarmerStaffMember
+
+```text
+Id               int PK
+FarmerProfileId  int FK → FarmerProfile
+UserId           int FK → User (1:1 — один логин = один сотрудник)
+Permissions      enum flags (ManageProducts, ManageStock)  — без доступа к финансам/Payment
+IsActive         bool
+CreatedAt
+UpdatedAt
+```
+
+---
+
+## 8.27. SupportTicket
+
+```text
+Id                 int PK
+UserId             int FK → User
+Subject            string
+Status             enum(Open, InProgress, Closed)
+Priority           enum(Low, Normal, High)
+CreatedAt
+ClosedAt           DateTime?
+AssignedToAdminId  int? FK → User
+```
+
+Отдельно от `Conversation`/`ChatMessage` — те про конкретный заказ между Customer и Farmer, `SupportTicket` — обращение к Admin по любому вопросу.
+
+---
+
+## 8.28. SupportMessage
+
+```text
+Id               int PK
+SupportTicketId  int FK → SupportTicket
+SenderId         int FK → User
+Message          string
+CreatedAt
+```
+
+---
+
+## 8.29. DeliverySlot
+
+```text
+Id        int PK
+OrderId   int FK → Order (unique — один слот на заказ)
+Date      DateTime (дата, без времени)
+TimeFrom  string    — например "10:00"
+TimeTo    string    — например "13:00"
+CreatedAt
+```
+
+Клиент выбирает слот на чекауте (раздел 6.3); Admin/Courier видят его при планировании доставки.
+
+---
+
+## 8.30. DailySalesSnapshot
+
+```text
+Id                    int PK
+Date                  DateTime (unique per день)
+TotalOrders           int
+TotalRevenue          decimal(18,2)
+TotalCommission       decimal(18,2)
+NewFarmers            int
+NewCustomers          int
+CompletedDeliveries   int
+CreatedAt
+```
+
+Важно: это агрегат для **исторических** графиков (быстро строить чарты за прошлые дни), заполняется фоновой задачей (например раз в сутки, по данным вчерашнего дня). Текущий/сегодняшний день на Admin Dashboard считается **напрямую из живых данных** (`Order`, `Payment`) — не из snapshot, иначе сегодняшние цифры будут отставать. Snapshot не подменяет реальные данные, а ускоряет только исторические отчёты.
+
+---
+
+## 9. Связи сущностей
 
 ```text
 User 1 — 1 FarmerProfile
 User 1 — 1 CustomerProfile
 User 1 — 1 CourierProfile
+User 1 — 0..1 FarmerStaffMember
 
 Category 1 — many Product
+Category 1 — many Commission          (0..1 переопределение ставки на категорию)
 Product 1 — many ProductListing
 FarmerProfile 1 — many ProductListing
+FarmerProfile 1 — many FarmerDocument
+FarmerProfile 1 — many FarmerStaffMember
 ProductListing 1 — many ProductImage
+ProductListing 1 — many ReportedListing
+ProductListing many — many User (через Favorite)
 
-User 1 — many CartItem (как Customer)
+CustomerProfile 1 — many CartItem
 ProductListing 1 — many CartItem
 
-User 1 — many Order (как Customer)
-User 1 — many Order (как Farmer)
+CustomerProfile 1 — many Order
+FarmerProfile 1 — many Order
 Order 1 — many OrderItem
 ProductListing 1 — many OrderItem
 
 Order 1 — 0..1 Delivery
-CourierProfile 1 — many Delivery (CourierId nullable — доставка может быть
-                                    ещё не назначена)
+Order 1 — 0..1 DeliverySlot
+Order 1 — 0..many Payment
+Order 1 — 0..many RefundRequest
+Order 1 — 0..1 Conversation
+CourierProfile 1 — many Delivery
+DeliveryZone 1 — many Delivery         (через совпадение Region/District, необязательный FK)
 
 Order 1 — 0..1 Review
-User 1 — many Review (как Customer)
-User 1 — many Review (как Farmer)
+FarmerProfile 1 — many Review
+
+Conversation 1 — many ChatMessage
+User 1 — many ChatMessage             (как отправитель)
+
+User 1 — many SupportTicket
+SupportTicket 1 — many SupportMessage
+User 1 — many SupportMessage          (как отправитель)
+
+User 1 — many AuditLog                (как Admin)
+User 1 — many AppSetting              (как UpdatedByAdminId, необязательно)
 ```
 
 ---
@@ -876,6 +1133,16 @@ Application.Tests/
 
 ---
 
+### 11.2.2. Принципы SOLID (обязательно)
+
+- **S** — один сервис = одна зона ответственности (`OrderService` не должен считать доставку и одновременно слать уведомления — для этого свой `INotificationService`);
+- **O** — новую бизнес-логику добавлять новыми классами/методами, не переписывая рабочие куски существующих сервисов "на живую";
+- **L** — любая реализация интерфейса (`IOrderRepository`, `ICacheService`, `IFileStorageService`) должна быть взаимозаменяема без изменения кода, который её вызывает;
+- **I** — интерфейсы узкие и по делу (`IOrderRepository`, а не один гигантский `IRepository` на все сущности сразу с десятками несвязанных методов);
+- **D** — сервисы в Application зависят только от интерфейсов из `Application/Interfaces/` (Repositories, Services), реализации в Infrastructure подставляются через DI в `Program.cs`. Application не должен содержать `using` на EF Core, Npgsql, StackExchange.Redis или любые Infrastructure-пакеты напрямую.
+
+---
+
 ### 11.3. MarketTJ.Infrastructure
 
 ```text
@@ -889,7 +1156,7 @@ Infrastructure/
 
 Infrastructure зависит от Domain и Application. Миграции (`Migrations/`) генерируются EF Core внутри `Persistence/` стандартным образом.
 
-Файловое хранилище (`IFileStorageService`, см. раздел 17) и уведомления также размещаются в Infrastructure — при необходимости заведи под них отдельные папки рядом с `Persistence/` (например `FileStorage/`, `Notifications/`), не смешивая их с Persistence.
+Файловое хранилище (`IFileStorageService`, см. раздел 17) и уведомления также размещаются в Infrastructure — при необходимости заведи под них отдельные папки рядом с `Persistence/` (например `FileStorage/`, `Notifications/`), не смешивая их с Persistence. Redis-кэш (`RedisCacheService` — реализация `ICacheService`, раздел 18) размещается аналогично, в отдельной папке `Caching/`, не внутри `Persistence/`.
 
 ---
 
@@ -945,6 +1212,7 @@ React
 - ASP.NET Core Web API;
 - Entity Framework Core;
 - PostgreSQL;
+- Redis (StackExchange.Redis) — кэширование каталога/справочников;
 - ASP.NET Core Identity;
 - JWT Bearer;
 - FluentValidation;
@@ -1137,6 +1405,120 @@ PATCH  /api/notifications/read-all
 
 ---
 
+## 13.11. Chat (Conversation / ChatMessage)
+
+```http
+GET    /api/orders/{orderId}/conversation
+GET    /api/conversations/{id}/messages
+POST   /api/conversations/{id}/messages
+```
+
+Доступ только у `CustomerId`/`FarmerId` конкретного `Order` (раздел 8.15).
+
+---
+
+## 13.12. Favorites
+
+```http
+GET    /api/favorites
+POST   /api/favorites/{listingId}
+DELETE /api/favorites/{listingId}
+```
+
+---
+
+## 13.13. Support
+
+```http
+POST   /api/support/tickets
+GET    /api/support/tickets/my
+GET    /api/admin/support/tickets
+GET    /api/support/tickets/{id}/messages
+POST   /api/support/tickets/{id}/messages
+PATCH  /api/admin/support/tickets/{id}/close
+```
+
+---
+
+## 13.14. Farmer documents (верификация)
+
+```http
+POST   /api/farmer/documents
+GET    /api/farmer/documents/my
+GET    /api/admin/farmers/{farmerId}/documents
+PATCH  /api/admin/documents/{id}/approve
+PATCH  /api/admin/documents/{id}/reject
+```
+
+---
+
+## 13.15. Reports & Refunds
+
+```http
+POST   /api/listings/{id}/report
+GET    /api/admin/reported-listings
+PATCH  /api/admin/reported-listings/{id}/review
+
+POST   /api/orders/{id}/refund-request
+GET    /api/admin/refund-requests
+PATCH  /api/admin/refund-requests/{id}/approve
+PATCH  /api/admin/refund-requests/{id}/reject
+```
+
+---
+
+## 13.16. Admin settings & lookups
+
+```http
+GET    /api/admin/settings
+PUT    /api/admin/settings/{key}
+
+GET    /api/admin/delivery-zones
+POST   /api/admin/delivery-zones
+PUT    /api/admin/delivery-zones/{id}
+
+GET    /api/admin/commissions
+POST   /api/admin/commissions
+```
+
+---
+
+## 13.17. Farmer staff
+
+```http
+GET    /api/farmer/staff
+POST   /api/farmer/staff
+PATCH  /api/farmer/staff/{id}
+DELETE /api/farmer/staff/{id}
+```
+
+Доступно только владельцу `FarmerProfile` (не самому сотруднику).
+
+---
+
+## 13.18. Delivery slots & payments
+
+```http
+POST   /api/orders/{id}/delivery-slot     (при checkout, раздел 8.29)
+
+GET    /api/admin/payments
+POST   /api/admin/payments               (ручная фиксация оплаты при получении)
+```
+
+---
+
+## 13.19. Analytics
+
+```http
+GET    /api/admin/analytics/dashboard?from=&to=
+GET    /api/admin/analytics/history?from=&to=
+```
+
+- `dashboard` — данные **за сегодня/выбранный текущий период** считаются напрямую по `Order`/`Payment` (живые данные, раздел 8.30);
+- `history` — данные за прошлые дни отдаются из `DailySalesSnapshot` (быстрее, без пересчёта старых заказов).
+
+---
+
 ## 14. Страницы (React, маршруты)
 
 > Обновлено: 4 полноценные панели заменены на 3 части + Courier mini-interface (раздел 4.5). Customer не имеет отдельного dashboard — работает внутри Public/Customer Website.
@@ -1151,6 +1533,9 @@ PATCH  /api/notifications/read-all
 /checkout
 /orders
 /orders/:id
+/orders/:id/chat
+/favorites
+/support
 /profile
 /login
 /register
@@ -1173,8 +1558,11 @@ PATCH  /api/notifications/read-all
 /farmer/products/:id/edit
 /farmer/orders
 /farmer/orders/:id
+/farmer/orders/:id/chat
 /farmer/reviews
 /farmer/profile
+/farmer/documents
+/farmer/staff
 /farmer/notifications
 ```
 
@@ -1198,6 +1586,12 @@ PATCH  /api/notifications/read-all
 /admin/deliveries
 /admin/reviews
 /admin/statistics
+/admin/reported-listings
+/admin/refund-requests
+/admin/support-tickets
+/admin/settings
+/admin/delivery-zones
+/admin/commissions
 ```
 
 `/admin` — Dashboard. `/admin/couriers` — список курьеров с `IsAvailable`/регионом (для назначения, раздел 13.8).
@@ -1327,6 +1721,22 @@ DeletedAt
 ```
 
 Для важных данных рекомендуется soft delete.
+
+Идентификаторы (`Id`):
+
+```csharp
+public int Id { get; set; }   // не Guid — обычный auto-increment int для всех сущностей
+```
+
+Все внешние ключи (`UserId`, `CourierId`, `OrderId` и т.д.) — тоже `int`.
+
+Кэширование (Redis):
+
+- используется для данных, которые часто читаются и редко меняются: каталог (`Category`, публичный список `ProductListing`), справочники (`RefusalReason`-подобные lookup, если появятся);
+- ключ кэша строится по шаблону `market:{entity}:{id}` или `market:{entity}:list:{queryHash}`;
+- инвалидация — при любом Create/Update/Delete соответствующей сущности кэш этого ключа удаляется явно (не полагаться только на TTL);
+- TTL по умолчанию: 5–10 минут для списков каталога;
+- доступ к кэшу — через интерфейс `ICacheService` в `Application/Interfaces/Services/`, реализация `RedisCacheService` в `Infrastructure` (аналогично `IFileStorageService`, раздел 17) — сервисы Application не должны знать о `StackExchange.Redis` напрямую.
 
 ---
 
@@ -2265,7 +2675,7 @@ Base URL: /api/v1
 - JSON only, camelCase
 - DateTimes: ISO 8601 UTC
 - Money (RetailPricePerKg и т.п.): decimal, 2 знака
-- IDs: int
+- IDs: int (auto-increment), не GUID
 - Pagination: ?pageNumber=&pageSize= → { items, pageNumber, pageSize, totalCount, totalPages } (раздел 20)
 - Sorting/Filtering: раздел 13.5 (search, categoryId, region и т.д.)
 
@@ -2294,12 +2704,38 @@ Products, Listings, Cart, Orders, Deliveries, Reviews, Notifications —
 
 ---
 
+## 37.4. Автоматический лог `backend/progress/` (без напоминаний)
+
+В отличие от `docs/PROGRESS.md` (общий чек-лист, раздел 26–27) и `docs/phase-summaries/` (итог по завершении целого Phase, раздел 37.2) — это третий, самый мелкий уровень: лог **каждого** законченного действия, ведётся автоматически, без просьбы пользователя.
+
+Правило для AI-агента (закреплено также в `CLAUDE.md` в корне репозитория, см. ниже):
+
+1. После завершения любого законченного действия (реализована сущность, готов endpoint, исправлен баг, применена миграция и т.д.) — сразу открой/создай файл `backend/progress/YYYY-MM-DD.md` (дата — сегодняшняя).
+2. Допиши в конец записи по шаблону:
+   ```markdown
+   ## HH:MM — <короткое название сделанного>
+   - Что сделано: <1-3 предложения>
+   - Файлы: <изменённые/созданные файлы>
+   - Решения/примечания: <если были — иначе "—">
+   ```
+3. Не спрашивать разрешения каждый раз — это стандартное действие каждой сессии.
+
+Такое правило работает надёжно только если лежит в `CLAUDE.md` в корне репозитория — Claude Code читает этот файл автоматически в начале каждой сессии, без напоминания со стороны пользователя.
+
+---
+
+## 38. Текущий прогресс проекта
+
 > Этот раздел — временный трекер. Если в проекте уже используется отдельный `PROGRESS.md`, обновлять нужно там, а не здесь.
 
-**Статус:** проект ещё не начат / [обновить после начала работы]
+**Статус:** структура backend реализована (Phase 1: Domain, Infrastructure, репозитории, все 30 сущностей) — см. `docs/PROGRESS.md`, `docs/phase-summaries/`, `backend/progress/`.
 
-**Завершённые этапы (раздел 23):** —
+**Завершённые этапы (раздел 23):** Этап 1 частично (entity/EF/репозитории готовы, Result pattern/exception middleware/Seeder — ещё нет).
 
 **Текущий этап:** Этап 1. Основа проекта
 
-**Известные решения/отклонения от ТЗ:** —
+**Известные решения/отклонения от ТЗ:**
+
+- ⚠️ **Открытый вопрос**: `FarmerVerificationStatus`/`ListingStatus` в коде (уже смигрировано) используют упрощённые значения (`Pending/Verified/Rejected`, `Draft/Active/OutOfStock/Archived`), которые пользователь дал отдельным текстом в чате — но этот файл (каноническая версия ТЗ) содержит оригинальные значения (`Pending/Approved/Rejected/Suspended`, `Draft/Active/Hidden/OutOfStock/Blocked`). Требуется явное решение пользователя, какой вариант финальный — см. `backend/progress/2026-07-16.md`.
+- Frontend — React вместо Blazor (раздел 12, уже не отклонение, а часть самого ТЗ).
+- `CLAUDE.md` в корне репозитория реализован по разделу 37.4.
