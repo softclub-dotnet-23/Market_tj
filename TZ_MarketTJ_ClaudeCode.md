@@ -281,13 +281,14 @@ Wholesale — оптовый покупатель
 
 ### 7.1. Статусы фермера
 
+> Обновлено (по указанию пользователя, Phase 1 Step 1): было {Pending,Approved,Rejected,Suspended} — Suspended убран, Approved переименован в Verified.
+
 ```csharp
 public enum FarmerVerificationStatus
 {
     Pending = 1,
-    Approved = 2,
-    Rejected = 3,
-    Suspended = 4
+    Verified = 2,
+    Rejected = 3
 }
 ```
 
@@ -295,14 +296,15 @@ public enum FarmerVerificationStatus
 
 ### 7.2. Статусы объявления
 
+> Обновлено (по указанию пользователя, Phase 1 Step 1): было {Draft,Active,Hidden,OutOfStock,Blocked} — Hidden убран, Blocked переименован в Archived.
+
 ```csharp
 public enum ListingStatus
 {
     Draft = 1,
     Active = 2,
-    Hidden = 3,
-    OutOfStock = 4,
-    Blocked = 5
+    OutOfStock = 3,
+    Archived = 4
 }
 ```
 
@@ -679,6 +681,12 @@ CreatedAt
 
 ## 9. Связи сущностей
 
+> Обновлено (по указанию пользователя, Phase 1 Step 1): CartItem, Order, Review
+> раньше ссылались на CustomerProfile/FarmerProfile — теперь ссылаются напрямую
+> на User (CustomerId/FarmerId → User.Id). FarmerProfile/CustomerProfile
+> остаются как профили с дополнительными полями (регион, верификация и т.д.),
+> но больше не являются стороной этих связей.
+
 ```text
 User 1 — 1 FarmerProfile
 User 1 — 1 CustomerProfile
@@ -689,19 +697,21 @@ Product 1 — many ProductListing
 FarmerProfile 1 — many ProductListing
 ProductListing 1 — many ProductImage
 
-CustomerProfile 1 — many CartItem
+User 1 — many CartItem (как Customer)
 ProductListing 1 — many CartItem
 
-CustomerProfile 1 — many Order
-FarmerProfile 1 — many Order
+User 1 — many Order (как Customer)
+User 1 — many Order (как Farmer)
 Order 1 — many OrderItem
 ProductListing 1 — many OrderItem
 
 Order 1 — 0..1 Delivery
-CourierProfile 1 — many Delivery
+CourierProfile 1 — many Delivery (CourierId nullable — доставка может быть
+                                    ещё не назначена)
 
 Order 1 — 0..1 Review
-FarmerProfile 1 — many Review
+User 1 — many Review (как Customer)
+User 1 — many Review (как Farmer)
 ```
 
 ---
@@ -2255,7 +2265,7 @@ Base URL: /api/v1
 - JSON only, camelCase
 - DateTimes: ISO 8601 UTC
 - Money (RetailPricePerKg и т.п.): decimal, 2 знака
-- IDs: GUID
+- IDs: int
 - Pagination: ?pageNumber=&pageSize= → { items, pageNumber, pageSize, totalCount, totalPages } (раздел 20)
 - Sorting/Filtering: раздел 13.5 (search, categoryId, region и т.д.)
 

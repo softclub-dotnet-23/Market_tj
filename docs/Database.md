@@ -296,7 +296,7 @@ FarmerProfile 1 — many Review
 
 ## Общие требования к данным (см. также раздел 18, 37.3 ТЗ)
 
-* **Id всех сущностей — GUID** (раздел 37.3);
+* **Id всех сущностей — int** (autoincrement; исправлено пользователем, раздел 37.3 ТЗ обновлён с GUID на int);
 * денежные значения — `decimal`, `HasPrecision(18, 2)`;
 * количество — `decimal`, `HasPrecision(18, 3)`;
 * общие поля сущностей: `CreatedAt`, `UpdatedAt`, `IsDeleted`, `DeletedAt`;

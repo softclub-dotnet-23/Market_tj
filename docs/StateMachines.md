@@ -4,26 +4,28 @@
 
 ## Статусы фермера
 
+> Обновлено (Phase 1 Step 1): Suspended убран, Approved → Verified.
+
 ```csharp
 public enum FarmerVerificationStatus
 {
     Pending = 1,
-    Approved = 2,
-    Rejected = 3,
-    Suspended = 4
+    Verified = 2,
+    Rejected = 3
 }
 ```
 
 ## Статусы объявления
+
+> Обновлено (Phase 1 Step 1): Hidden убран, Blocked → Archived.
 
 ```csharp
 public enum ListingStatus
 {
     Draft = 1,
     Active = 2,
-    Hidden = 3,
-    OutOfStock = 4,
-    Blocked = 5
+    OutOfStock = 3,
+    Archived = 4
 }
 ```
 
