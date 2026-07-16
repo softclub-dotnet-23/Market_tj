@@ -138,7 +138,7 @@ Frontend:
 
 ## Общие требования к данным
 
-* **IDs: GUID** (раздел 37.3) — для всех сущностей;
+* **IDs: int** (autoincrement, раздел 37.3 — исправлено пользователем с GUID на int) — для всех сущностей;
 * денежные значения — `decimal`, `HasPrecision(18, 2)`;
 * количество — `decimal`, `HasPrecision(18, 3)`;
 * даты — ISO 8601 UTC;
@@ -160,7 +160,7 @@ Frontend:
 
 ## Формат ответа API и коды ошибок
 
-См. [Api.md](Api.md) — единый документ конвенций (формат ответа, HTTP-коды, `errorCode`, пагинация, GUID ID, endpoint catalogue). JSON camelCase, DateTimes ISO 8601 UTC.
+См. [Api.md](Api.md) — единый документ конвенций (формат ответа, HTTP-коды, `errorCode`, пагинация, int ID, endpoint catalogue). JSON camelCase, DateTimes ISO 8601 UTC.
 
 ## Валидация
 

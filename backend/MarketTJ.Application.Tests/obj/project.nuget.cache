@@ -1,11 +1,12 @@
 {
   "version": 2,
-  "dgSpecHash": "1yWPmHvHuBs=",
+  "dgSpecHash": "3B25mq7Tfhw=",
   "success": true,
   "projectFilePath": "C:\\Users\\2026\\OneDrive\\Desktop\\Softclub\\.Net1\\Demo-Project\\backend\\MarketTJ.Application.Tests\\MarketTJ.Application.Tests.csproj",
   "expectedPackageFiles": [
     "C:\\Users\\2026\\.nuget\\packages\\coverlet.collector\\6.0.4\\coverlet.collector.6.0.4.nupkg.sha512",
     "C:\\Users\\2026\\.nuget\\packages\\microsoft.codecoverage\\17.14.1\\microsoft.codecoverage.17.14.1.nupkg.sha512",
+    "C:\\Users\\2026\\.nuget\\packages\\microsoft.extensions.dependencyinjection.abstractions\\10.0.10\\microsoft.extensions.dependencyinjection.abstractions.10.0.10.nupkg.sha512",
     "C:\\Users\\2026\\.nuget\\packages\\microsoft.net.test.sdk\\17.14.1\\microsoft.net.test.sdk.17.14.1.nupkg.sha512",
     "C:\\Users\\2026\\.nuget\\packages\\microsoft.testplatform.objectmodel\\17.14.1\\microsoft.testplatform.objectmodel.17.14.1.nupkg.sha512",
     "C:\\Users\\2026\\.nuget\\packages\\microsoft.testplatform.testhost\\17.14.1\\microsoft.testplatform.testhost.17.14.1.nupkg.sha512",
