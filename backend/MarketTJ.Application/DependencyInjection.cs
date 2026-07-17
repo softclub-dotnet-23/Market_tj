@@ -17,6 +17,7 @@ public static class DependencyInjection
         services.AddScoped<IFarmerProfileService, FarmerProfileService>();
         services.AddScoped<ICustomerProfileService, CustomerProfileService>();
         services.AddScoped<ICourierProfileService, CourierProfileService>();
+        services.AddScoped<ICategoryService, CategoryService>();
 
         return services;
     }
