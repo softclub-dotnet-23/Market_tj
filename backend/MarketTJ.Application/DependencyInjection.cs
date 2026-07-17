@@ -13,6 +13,8 @@ public static class DependencyInjection
         // сконфигурированный HttpClient в конструктор.
         services.AddHttpClient<IAiAssistantService, AiAssistantService>();
 
+        services.AddScoped<IUserService, UserService>();
+
         return services;
     }
 }
