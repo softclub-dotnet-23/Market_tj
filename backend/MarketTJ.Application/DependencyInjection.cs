@@ -21,6 +21,7 @@ public static class DependencyInjection
         services.AddScoped<IProductService, ProductService>();
         services.AddScoped<IProductListingService, ProductListingService>();
         services.AddScoped<IProductImageService, ProductImageService>();
+        services.AddScoped<ICartItemService, CartItemService>();
 
         return services;
     }
