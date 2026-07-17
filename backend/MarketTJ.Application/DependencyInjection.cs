@@ -1,3 +1,5 @@
+using MarketTJ.Application.Interfaces.Services;
+using MarketTJ.Application.Services;
 using Microsoft.Extensions.DependencyInjection;
 
 namespace MarketTJ.Application;
@@ -6,9 +8,10 @@ public static class DependencyInjection
 {
     public static IServiceCollection AddApplicationServices(this IServiceCollection services)
     {
-        // Пока пусто — сервисы/валидаторы Application-слоя ещё не созданы
-        // (Этап 2+ раздела 23). Метод оставлен для единообразного вызова
-        // из Program.cs, как и AddInfrastructureServices.
+        // AddHttpClient<TInterface, TImplementation> сам регистрирует
+        // IAiAssistantService со scoped-совместимым временем жизни и внедряет
+        // сконфигурированный HttpClient в конструктор.
+        services.AddHttpClient<IAiAssistantService, AiAssistantService>();
 
         return services;
     }
