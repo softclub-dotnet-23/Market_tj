@@ -14,6 +14,7 @@ public static class DependencyInjection
         services.AddHttpClient<IAiAssistantService, AiAssistantService>();
 
         services.AddScoped<IUserService, UserService>();
+        services.AddScoped<IFarmerProfileService, FarmerProfileService>();
 
         return services;
     }
