@@ -13,7 +13,7 @@ using System.Reflection;
 [assembly: System.Reflection.AssemblyCompanyAttribute("MarketTJ.Infrastructure")]
 [assembly: System.Reflection.AssemblyConfigurationAttribute("Debug")]
 [assembly: System.Reflection.AssemblyFileVersionAttribute("1.0.0.0")]
-[assembly: System.Reflection.AssemblyInformationalVersionAttribute("1.0.0+cb14b100fcb18f9330e315deedb7e0c2c0ee6781")]
+[assembly: System.Reflection.AssemblyInformationalVersionAttribute("1.0.0+8a86c4d1683abb7783db63624d014ee3d042e031")]
 [assembly: System.Reflection.AssemblyProductAttribute("MarketTJ.Infrastructure")]
 [assembly: System.Reflection.AssemblyTitleAttribute("MarketTJ.Infrastructure")]
 [assembly: System.Reflection.AssemblyVersionAttribute("1.0.0.0")]
