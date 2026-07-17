@@ -17,3 +17,4 @@ public interface IProductListingService
     Task<Result<string>> UpdateAsync(int id, UpdateProductListingDto dto);
     Task<Result<string>> DeleteAsync(int id);
 }
+                 

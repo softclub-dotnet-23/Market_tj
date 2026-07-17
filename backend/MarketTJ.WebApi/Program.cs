@@ -1,6 +1,7 @@
 using MarketTJ.Application;
 using MarketTJ.Infrastructure;
 using MarketTJ.Infrastructure.Persistence;
+using MarketTJ.Infrastructure.Persistence.Seed;
 using Microsoft.EntityFrameworkCore;
 
 var builder = WebApplication.CreateBuilder(args);
@@ -29,6 +30,8 @@ using (var scope = app.Services.CreateScope())
     var context = scope.ServiceProvider.GetRequiredService<AppDbContext>();
     await context.Database.MigrateAsync();
 }
+
+await Seeder.SeedAsync(app.Services);
 
 if (app.Environment.IsDevelopment())
 {
