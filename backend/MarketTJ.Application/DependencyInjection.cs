@@ -27,6 +27,7 @@ public static class DependencyInjection
         services.AddScoped<IDeliveryService, DeliveryService>();
         services.AddScoped<IReviewService, ReviewService>();
         services.AddScoped<INotificationService, NotificationService>();
+        services.AddScoped<IConversationService, ConversationService>();
 
         return services;
     }
