@@ -1,6 +1,7 @@
 import { createContext, useContext, useMemo, useState } from "react";
 import type { ReactNode } from "react";
 import { toast } from "sonner";
+import { useTranslation } from "react-i18next";
 import type { CartLine, Product } from "@/types";
 import { getProductById } from "@/data/products";
 import { formatSomoni } from "@/lib/utils";
@@ -18,6 +19,7 @@ interface CartContextValue {
 const CartContext = createContext<CartContextValue | null>(null);
 
 export function CartProvider({ children }: { children: ReactNode }) {
+  const { t } = useTranslation(["common", "product"]);
   const [lines, setLines] = useState<CartLine[]>([]);
 
   const addItem = (product: Product, quantity = product.minimumOrderQuantity) => {
@@ -30,8 +32,12 @@ export function CartProvider({ children }: { children: ReactNode }) {
       }
       return [...prev, { productId: product.id, quantity }];
     });
-    toast.success(`${product.title} добавлен в корзину`, {
-      description: `${quantity} ${product.unit} × ${formatSomoni(product.retailPricePerKg)} с.`,
+    toast.success(t("cart.addedToCart", { title: product.title }), {
+      description: t("cart.addedToCartDescription", {
+        quantity,
+        unit: t(`product:units.${product.unit}`),
+        price: `${formatSomoni(product.retailPricePerKg)} ${t("currencySomoni")}`,
+      }),
     });
   };
 

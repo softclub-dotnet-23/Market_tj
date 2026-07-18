@@ -16,6 +16,15 @@
     "loading": "Загрузка..."
   },
   "currencySomoni": "с.",
+  "cart": {
+    "addedToCart": "{{title}} добавлен в корзину",
+    "addedToCartDescription": "{{quantity}} {{unit}} × {{price}}"
+  },
+  "favorites": {
+    "removedItem": "{{title}} убран из избранного",
+    "addedItem": "{{title}} добавлен в избранное",
+    "defaultItemName": "Товар"
+  },
   "dates": {
     "months": [
       "января", "февраля", "марта", "апреля", "мая", "июня",

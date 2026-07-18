@@ -16,6 +16,15 @@
     "loading": "Боркунӣ..."
   },
   "currencySomoni": "сомонӣ",
+  "cart": {
+    "addedToCart": "{{title}} ба сабад илова шуд",
+    "addedToCartDescription": "{{quantity}} {{unit}} × {{price}}"
+  },
+  "favorites": {
+    "removedItem": "{{title}} аз дӯстдоштаҳо бароварда шуд",
+    "addedItem": "{{title}} ба дӯстдоштаҳо илова шуд",
+    "defaultItemName": "Маҳсулот"
+  },
   "dates": {
     "months": [
       "январ", "феврал", "март", "апрел", "май", "июн",
