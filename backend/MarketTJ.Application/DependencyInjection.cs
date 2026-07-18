@@ -36,6 +36,7 @@ public static class DependencyInjection
         services.AddScoped<IRefundRequestService, RefundRequestService>();
         services.AddScoped<IDeliveryZoneService, DeliveryZoneService>();
         services.AddScoped<ICommissionService, CommissionService>();
+        services.AddScoped<IPaymentService, PaymentService>();
 
         return services;
     }
