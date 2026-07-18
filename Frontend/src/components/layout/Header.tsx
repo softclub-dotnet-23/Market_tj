@@ -1,24 +1,26 @@
 import { useEffect, useRef, useState } from "react";
 import { Link, NavLink, useNavigate } from "react-router-dom";
 import { AnimatePresence, motion } from "framer-motion";
+import { useTranslation } from "react-i18next";
 import { Heart, Leaf, Menu, Search, ShoppingBag, User, X } from "lucide-react";
 import { MegaMenu } from "@/components/layout/MegaMenu";
 import { MobileMenu } from "@/components/layout/MobileMenu";
 import { MiniCart } from "@/components/layout/MiniCart";
 import { Button } from "@/components/ui/Button";
 import { ThemeToggle } from "@/components/ui/ThemeToggle";
+import { LanguageSwitcher } from "@/components/ui/LanguageSwitcher";
 import { useCart } from "@/context/CartContext";
 import { useFavorites } from "@/context/FavoritesContext";
 import { cn } from "@/lib/utils";
 
-const NAV_LINKS = [
-  { to: "/", label: "Главная", end: true },
-  { to: "/catalog", label: "Каталог" },
-  { to: "/about", label: "О нас" },
-  { to: "/contact", label: "Контакты" },
-];
-
 export function Header() {
+  const { t } = useTranslation(["layout", "common"]);
+  const NAV_LINKS = [
+    { to: "/", label: t("layout:nav.home"), end: true },
+    { to: "/catalog", label: t("layout:nav.catalog") },
+    { to: "/about", label: t("layout:nav.about") },
+    { to: "/contact", label: t("layout:nav.contact") },
+  ];
   const [scrolled, setScrolled] = useState(false);
   const [megaOpen, setMegaOpen] = useState(false);
   const [mobileOpen, setMobileOpen] = useState(false);
@@ -73,7 +75,7 @@ export function Header() {
 
         <nav className="hidden items-center gap-1 lg:flex">
           {NAV_LINKS.map((link) =>
-            link.label === "Каталог" ? (
+            link.to === "/catalog" ? (
               <div
                 key={link.to}
                 className="relative"
@@ -129,7 +131,7 @@ export function Header() {
                     value={searchValue}
                     onChange={(e) => setSearchValue(e.target.value)}
                     onBlur={() => !searchValue && setSearchOpen(false)}
-                    placeholder="Искать продукты..."
+                    placeholder={t("common:actions.searchPlaceholder")}
                     className="h-10 w-full rounded-full border border-stone-200 bg-white px-4 text-sm focus:border-grove-500 focus:ring-2 focus:ring-grove-100 dark:border-stone-700 dark:bg-stone-900 dark:text-stone-100 dark:placeholder:text-stone-500"
                   />
                 </motion.form>
@@ -137,7 +139,7 @@ export function Header() {
                 <motion.button
                   key="icon"
                   onClick={() => setSearchOpen(true)}
-                  aria-label="Поиск"
+                  aria-label={t("common:actions.search")}
                   className="flex h-10 w-10 items-center justify-center rounded-full text-stone-600 transition hover:bg-stone-100 dark:text-stone-300 dark:hover:bg-stone-800"
                 >
                   <Search size={19} />
@@ -147,10 +149,11 @@ export function Header() {
           </div>
 
           <ThemeToggle />
+          <LanguageSwitcher />
 
           <Link
             to="/catalog?favorites=1"
-            aria-label="Избранное"
+            aria-label={t("common:actions.favorites")}
             className="relative hidden h-10 w-10 items-center justify-center rounded-full text-stone-600 transition hover:bg-stone-100 dark:text-stone-300 dark:hover:bg-stone-800 sm:flex"
           >
             <Heart size={19} />
@@ -164,7 +167,7 @@ export function Header() {
           <div className="relative">
             <button
               onClick={() => setCartOpen((o) => !o)}
-              aria-label="Корзина"
+              aria-label={t("common:actions.cart")}
               className="relative flex h-10 w-10 items-center justify-center rounded-full text-stone-600 transition hover:bg-stone-100 dark:text-stone-300 dark:hover:bg-stone-800"
             >
               <ShoppingBag size={19} />
@@ -179,16 +182,16 @@ export function Header() {
 
           <div className="hidden items-center gap-2 pl-1 md:flex">
             <Button variant="ghost" size="sm" onClick={() => navigate("/login")} leftIcon={<User size={15} />}>
-              Войти
+              {t("common:auth.login")}
             </Button>
             <Button size="sm" onClick={() => navigate("/register")}>
-              Регистрация
+              {t("common:auth.register")}
             </Button>
           </div>
 
           <button
             onClick={() => setMobileOpen(true)}
-            aria-label="Открыть меню"
+            aria-label={t("common:actions.openMenu")}
             className="flex h-10 w-10 items-center justify-center rounded-full text-stone-700 transition hover:bg-stone-100 dark:text-stone-200 dark:hover:bg-stone-800 lg:hidden"
           >
             <Menu size={21} />
@@ -204,10 +207,11 @@ export function Header() {
 }
 
 export function CloseIconButton({ onClick }: { onClick: () => void }) {
+  const { t } = useTranslation("common");
   return (
     <button
       onClick={onClick}
-      aria-label="Закрыть"
+      aria-label={t("actions.close")}
       className="flex h-9 w-9 items-center justify-center rounded-full bg-stone-100 text-stone-500 hover:bg-stone-200 dark:bg-stone-800 dark:text-stone-400 dark:hover:bg-stone-700"
     >
       <X size={16} />

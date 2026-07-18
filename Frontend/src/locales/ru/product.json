@@ -1,0 +1,14 @@
+{
+  "productsCount": "{{count}} товаров",
+  "filters": {
+    "title": "Фильтры",
+    "resetAll": "Сбросить всё",
+    "category": "Категория",
+    "region": "Регион",
+    "price": "Цена, сомони",
+    "priceFrom": "От",
+    "priceTo": "До",
+    "onlyAvailable": "Только в наличии",
+    "resetFilters": "Сбросить фильтры"
+  }
+}

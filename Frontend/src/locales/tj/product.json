@@ -1,0 +1,14 @@
+{
+  "productsCount": "{{count}} маҳсулот",
+  "filters": {
+    "title": "Филтрҳо",
+    "resetAll": "Ҳамаро тоза кардан",
+    "category": "Категория",
+    "region": "Минтақа",
+    "price": "Нарх, сомонӣ",
+    "priceFrom": "Аз",
+    "priceTo": "То",
+    "onlyAvailable": "Танҳо мавҷудбуда",
+    "resetFilters": "Филтрҳоро тоза кардан"
+  }
+}

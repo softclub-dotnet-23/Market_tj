@@ -1,0 +1,17 @@
+{
+  "auth": {
+    "login": "Войти",
+    "register": "Регистрация"
+  },
+  "actions": {
+    "search": "Поиск",
+    "searchPlaceholder": "Искать продукты...",
+    "favorites": "Избранное",
+    "cart": "Корзина",
+    "close": "Закрыть",
+    "openMenu": "Открыть меню",
+    "subscribe": "Подписаться",
+    "socialNetwork": "Социальная сеть",
+    "changeLanguage": "Сменить язык"
+  }
+}

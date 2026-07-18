@@ -1,18 +1,20 @@
 import { Link, NavLink } from "react-router-dom";
 import { motion } from "framer-motion";
+import { useTranslation } from "react-i18next";
 import { Leaf, User, UserPlus, X } from "lucide-react";
 import { createPortal } from "react-dom";
-import { categories } from "@/data/categories";
+import { useCategories } from "@/data/categories";
 import { cn } from "@/lib/utils";
 
-const NAV_LINKS = [
-  { to: "/", label: "Главная", end: true },
-  { to: "/catalog", label: "Каталог" },
-  { to: "/about", label: "О нас" },
-  { to: "/contact", label: "Контакты" },
-];
-
 export function MobileMenu({ onClose }: { onClose: () => void }) {
+  const { t } = useTranslation(["layout", "common"]);
+  const categories = useCategories();
+  const NAV_LINKS = [
+    { to: "/", label: t("layout:nav.home"), end: true },
+    { to: "/catalog", label: t("layout:nav.catalog") },
+    { to: "/about", label: t("layout:nav.about") },
+    { to: "/contact", label: t("layout:nav.contact") },
+  ];
   return createPortal(
     <div className="fixed inset-0 z-100 lg:hidden">
       <motion.div
@@ -40,7 +42,7 @@ export function MobileMenu({ onClose }: { onClose: () => void }) {
           </Link>
           <button
             onClick={onClose}
-            aria-label="Закрыть меню"
+            aria-label={t("layout:mobileMenu.closeMenu")}
             className="flex h-9 w-9 items-center justify-center rounded-full bg-stone-100 text-stone-500 dark:bg-stone-800 dark:text-stone-400"
           >
             <X size={16} />
@@ -67,7 +69,9 @@ export function MobileMenu({ onClose }: { onClose: () => void }) {
         </nav>
 
         <div className="mt-6 border-t border-stone-100 pt-6 dark:border-stone-800">
-          <p className="mb-3 px-3 text-xs font-semibold uppercase tracking-wide text-stone-400 dark:text-stone-500">Категории</p>
+          <p className="mb-3 px-3 text-xs font-semibold uppercase tracking-wide text-stone-400 dark:text-stone-500">
+            {t("layout:mobileMenu.categoriesLabel")}
+          </p>
           <div className="flex flex-col gap-0.5">
             {categories.map((category) => (
               <Link
@@ -89,7 +93,7 @@ export function MobileMenu({ onClose }: { onClose: () => void }) {
             className="flex h-11 items-center justify-center gap-2 rounded-xl border border-stone-200 text-sm font-medium text-stone-700 dark:border-stone-700 dark:text-stone-200"
           >
             <User size={16} />
-            Войти
+            {t("common:auth.login")}
           </Link>
           <Link
             to="/register"
@@ -97,7 +101,7 @@ export function MobileMenu({ onClose }: { onClose: () => void }) {
             className="flex h-11 items-center justify-center gap-2 rounded-xl bg-grove-700 text-sm font-medium text-white"
           >
             <UserPlus size={16} />
-            Регистрация
+            {t("common:auth.register")}
           </Link>
         </div>
       </motion.div>

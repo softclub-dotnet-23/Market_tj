@@ -1,11 +1,13 @@
 import { Link } from "react-router-dom";
 import { motion } from "framer-motion";
+import { useTranslation } from "react-i18next";
 import type { Category } from "@/types";
 import { PhotoTile } from "@/components/ui/PhotoTile";
 import { categoryPhotos } from "@/assets/photos";
 import { cn } from "@/lib/utils";
 
 export function CategoryCard({ category, className }: { category: Category; className?: string }) {
+  const { t } = useTranslation("product");
   return (
     <motion.div whileHover={{ y: -5 }} transition={{ type: "spring", stiffness: 300, damping: 22 }}>
       <Link
@@ -22,7 +24,9 @@ export function CategoryCard({ category, className }: { category: Category; clas
         </div>
         <div className="flex flex-col gap-0.5 p-4">
           <h3 className="font-display text-base text-stone-900 dark:text-stone-50">{category.name}</h3>
-          <p className="text-xs text-stone-400 dark:text-stone-500">{category.productCount} товаров</p>
+          <p className="text-xs text-stone-400 dark:text-stone-500">
+            {t("productsCount", { count: category.productCount })}
+          </p>
         </div>
       </Link>
     </motion.div>

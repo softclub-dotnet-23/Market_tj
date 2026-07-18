@@ -1,12 +1,15 @@
 import { motion } from "framer-motion";
+import { useTranslation } from "react-i18next";
 import { SectionHeading } from "@/components/ui/SectionHeading";
 import { CategoryCard } from "@/components/product/CategoryCard";
-import { categories } from "@/data/categories";
+import { useCategories } from "@/data/categories";
 
 export function PopularCategories() {
+  const { t } = useTranslation("sections");
+  const categories = useCategories();
   return (
     <section className="container-page py-14 sm:py-20">
-      <SectionHeading eyebrow="Категории" title="Выбирайте по категориям" />
+      <SectionHeading eyebrow={t("popularCategories.eyebrow")} title={t("popularCategories.title")} />
       <div className="mt-12 grid grid-cols-2 gap-4 sm:grid-cols-3 lg:grid-cols-6">
         {categories.map((category, i) => (
           <motion.div

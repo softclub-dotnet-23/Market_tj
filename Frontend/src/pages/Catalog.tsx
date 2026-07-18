@@ -13,7 +13,7 @@ import { Button } from "@/components/ui/Button";
 import { ProductCard } from "@/components/product/ProductCard";
 import { CatalogFilters, type CatalogFilterState } from "@/components/product/CatalogFilters";
 import { products } from "@/data/products";
-import { getCategoryBySlug } from "@/data/categories";
+import { useCategories } from "@/data/categories";
 import { getFarmerById } from "@/data/farmers";
 import { regions } from "@/data/site";
 import { useFavorites } from "@/context/FavoritesContext";
@@ -33,6 +33,7 @@ export function Catalog() {
   const [mobileFiltersOpen, setMobileFiltersOpen] = useState(false);
   const [loading, setLoading] = useState(true);
   const { favoriteIds } = useFavorites();
+  const categories = useCategories();
 
   const search = searchParams.get("search") ?? "";
   const [searchInput, setSearchInput] = useState(search);
@@ -86,7 +87,7 @@ export function Catalog() {
       list = list.filter((p) => p.title.toLowerCase().includes(q) || p.shortDescription.toLowerCase().includes(q));
     }
     if (categorySlugs.length) {
-      const ids = categorySlugs.map((s) => getCategoryBySlug(s)?.id).filter(Boolean);
+      const ids = categorySlugs.map((s) => categories.find((c) => c.slug === s)?.id).filter(Boolean);
       list = list.filter((p) => ids.includes(p.categoryId));
     }
     if (region !== regions[0]) list = list.filter((p) => p.region === region);
@@ -112,7 +113,7 @@ export function Catalog() {
         list.sort((a, b) => b.orderCount - a.orderCount);
     }
     return list;
-  }, [search, categorySlugs, region, farmerId, onlyAvailable, priceMin, priceMax, sortBy, favoritesOnly, favoriteIds]);
+  }, [search, categorySlugs, region, farmerId, onlyAvailable, priceMin, priceMax, sortBy, favoritesOnly, favoriteIds, categories]);
 
   const totalPages = Math.max(1, Math.ceil(filtered.length / PAGE_SIZE));
   const currentPage = Math.min(page, totalPages);
@@ -126,7 +127,7 @@ export function Catalog() {
 
   const activeChips: { key: string; label: string; onRemove: () => void }[] = [];
   categorySlugs.forEach((slug) => {
-    const c = getCategoryBySlug(slug);
+    const c = categories.find((cat) => cat.slug === slug);
     if (c) activeChips.push({ key: `cat-${slug}`, label: c.name, onRemove: () => handleFilterChange({ categorySlugs: categorySlugs.filter((s) => s !== slug) }) });
   });
   if (region !== regions[0]) activeChips.push({ key: "region", label: region, onRemove: () => handleFilterChange({ region: regions[0] }) });

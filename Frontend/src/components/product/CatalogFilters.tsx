@@ -1,5 +1,6 @@
+import { useTranslation } from "react-i18next";
 import { Leaf } from "lucide-react";
-import { categories } from "@/data/categories";
+import { useCategories } from "@/data/categories";
 import { regions } from "@/data/site";
 import { Checkbox } from "@/components/ui/Field";
 import { Dropdown } from "@/components/ui/Dropdown";
@@ -22,6 +23,8 @@ export function CatalogFilters({
   onChange: (patch: Partial<CatalogFilterState>) => void;
   onReset: () => void;
 }) {
+  const { t } = useTranslation("product");
+  const categories = useCategories();
   const toggleCategory = (slug: string) => {
     const next = state.categorySlugs.includes(slug)
       ? state.categorySlugs.filter((s) => s !== slug)
@@ -32,14 +35,14 @@ export function CatalogFilters({
   return (
     <div className="flex flex-col gap-8">
       <div className="flex items-center justify-between">
-        <h3 className="font-display text-lg text-stone-900 dark:text-stone-50">Фильтры</h3>
+        <h3 className="font-display text-lg text-stone-900 dark:text-stone-50">{t("filters.title")}</h3>
         <button onClick={onReset} className="text-xs font-medium text-grove-700 hover:text-grove-800 dark:text-grove-400 dark:hover:text-grove-300">
-          Сбросить всё
+          {t("filters.resetAll")}
         </button>
       </div>
 
       <div>
-        <p className="mb-3 text-sm font-semibold text-stone-700 dark:text-stone-300">Категория</p>
+        <p className="mb-3 text-sm font-semibold text-stone-700 dark:text-stone-300">{t("filters.category")}</p>
         <div className="flex flex-col gap-2.5">
           {categories.map((c) => (
             <Checkbox
@@ -58,7 +61,7 @@ export function CatalogFilters({
       </div>
 
       <div>
-        <p className="mb-3 text-sm font-semibold text-stone-700 dark:text-stone-300">Регион</p>
+        <p className="mb-3 text-sm font-semibold text-stone-700 dark:text-stone-300">{t("filters.region")}</p>
         <Dropdown
           options={regions.map((r) => ({ value: r, label: r }))}
           value={state.region}
@@ -67,14 +70,14 @@ export function CatalogFilters({
       </div>
 
       <div>
-        <p className="mb-3 text-sm font-semibold text-stone-700 dark:text-stone-300">Цена, сомони</p>
+        <p className="mb-3 text-sm font-semibold text-stone-700 dark:text-stone-300">{t("filters.price")}</p>
         <div className="flex items-center gap-2">
           <input
             type="number"
             min={0}
             value={state.priceMin}
             onChange={(e) => onChange({ priceMin: e.target.value })}
-            placeholder="От"
+            placeholder={t("filters.priceFrom")}
             className="h-11 w-full rounded-xl border border-stone-200 bg-white px-3 text-sm focus:border-grove-500 focus:ring-2 focus:ring-grove-100 dark:border-stone-700 dark:bg-stone-900 dark:text-stone-100 dark:placeholder:text-stone-500 dark:focus:ring-grove-900"
           />
           <span className="text-stone-300 dark:text-stone-600">—</span>
@@ -83,7 +86,7 @@ export function CatalogFilters({
             min={0}
             value={state.priceMax}
             onChange={(e) => onChange({ priceMax: e.target.value })}
-            placeholder="До"
+            placeholder={t("filters.priceTo")}
             className="h-11 w-full rounded-xl border border-stone-200 bg-white px-3 text-sm focus:border-grove-500 focus:ring-2 focus:ring-grove-100 dark:border-stone-700 dark:bg-stone-900 dark:text-stone-100 dark:placeholder:text-stone-500 dark:focus:ring-grove-900"
           />
         </div>
@@ -92,7 +95,7 @@ export function CatalogFilters({
       <div className="flex items-center justify-between rounded-xl bg-stone-50 px-4 py-3.5 dark:bg-stone-800">
         <span className="flex items-center gap-2 text-sm font-medium text-stone-700 dark:text-stone-200">
           <Leaf size={15} className="text-grove-600 dark:text-grove-400" />
-          Только в наличии
+          {t("filters.onlyAvailable")}
         </span>
         <button
           role="switch"
@@ -111,7 +114,7 @@ export function CatalogFilters({
       </div>
 
       <Button variant="outline" onClick={onReset} className="w-full">
-        Сбросить фильтры
+        {t("filters.resetFilters")}
       </Button>
     </div>
   );

@@ -1,0 +1,17 @@
+{
+  "auth": {
+    "login": "Ворид шудан",
+    "register": "Сабти ном"
+  },
+  "actions": {
+    "search": "Ҷустуҷӯ",
+    "searchPlaceholder": "Ҷустуҷӯи маҳсулот...",
+    "favorites": "Дӯстдоштаҳо",
+    "cart": "Сабад",
+    "close": "Пӯшидан",
+    "openMenu": "Кушодани меню",
+    "subscribe": "Обуна шудан",
+    "socialNetwork": "Шабакаи иҷтимоӣ",
+    "changeLanguage": "Иваз кардани забон"
+  }
+}

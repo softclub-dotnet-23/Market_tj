@@ -1,11 +1,14 @@
 import { Link } from "react-router-dom";
 import { motion } from "framer-motion";
+import { useTranslation } from "react-i18next";
 import { ArrowRight } from "lucide-react";
-import { categories } from "@/data/categories";
+import { useCategories } from "@/data/categories";
 import { PhotoTile } from "@/components/ui/PhotoTile";
 import { categoryPhotos } from "@/assets/photos";
 
 export function MegaMenu({ onNavigate }: { onNavigate?: () => void }) {
+  const { t } = useTranslation(["layout", "product"]);
+  const categories = useCategories();
   return (
     <motion.div
       initial={{ opacity: 0, y: -8 }}
@@ -32,7 +35,9 @@ export function MegaMenu({ onNavigate }: { onNavigate?: () => void }) {
                   <Icon size={14} className="text-grove-600 dark:text-grove-400" />
                   {category.name}
                 </p>
-                <p className="truncate text-xs text-stone-400 dark:text-stone-500">{category.productCount} товаров</p>
+                <p className="truncate text-xs text-stone-400 dark:text-stone-500">
+                  {t("product:productsCount", { count: category.productCount })}
+                </p>
               </div>
             </Link>
           );
@@ -43,7 +48,7 @@ export function MegaMenu({ onNavigate }: { onNavigate?: () => void }) {
         onClick={onNavigate}
         className="mt-4 flex items-center justify-between rounded-2xl bg-grove-50 px-5 py-4 text-sm font-semibold text-grove-800 transition hover:bg-grove-100 dark:bg-grove-950 dark:text-grove-200 dark:hover:bg-grove-900"
       >
-        Смотреть весь каталог
+        {t("layout:megaMenu.viewAllCatalog")}
         <ArrowRight size={16} />
       </Link>
     </motion.div>
