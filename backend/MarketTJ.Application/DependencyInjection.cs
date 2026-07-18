@@ -30,6 +30,7 @@ public static class DependencyInjection
         services.AddScoped<IConversationService, ConversationService>();
         services.AddScoped<IChatMessageService, ChatMessageService>();
         services.AddScoped<IAppSettingService, AppSettingService>();
+        services.AddScoped<IFarmerDocumentService, FarmerDocumentService>();
 
         return services;
     }
