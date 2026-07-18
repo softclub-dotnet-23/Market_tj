@@ -9,10 +9,11 @@ import { Dropdown } from "@/components/ui/Dropdown";
 import { Button } from "@/components/ui/Button";
 import { FAQSection } from "@/components/sections/FAQSection";
 import { FacebookIcon, InstagramIcon, TelegramIcon, WhatsAppIcon } from "@/components/ui/SocialIcons";
-import { officeInfo } from "@/data/site";
+import { useOfficeInfo } from "@/data/site";
 
 export function Contact() {
   const { t } = useTranslation(["pages", "layout"]);
+  const officeInfo = useOfficeInfo();
   const SUBJECTS = [
     { value: "general", label: t("pages:contact.subjectGeneral") },
     { value: "farmer", label: t("pages:contact.subjectFarmer") },

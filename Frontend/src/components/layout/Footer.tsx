@@ -4,13 +4,14 @@ import { toast } from "sonner";
 import { useTranslation } from "react-i18next";
 import { Leaf, Mail, MapPin, Phone, Send } from "lucide-react";
 import { useCategories } from "@/data/categories";
-import { officeInfo } from "@/data/site";
+import { useOfficeInfo } from "@/data/site";
 import { FacebookIcon, InstagramIcon, TelegramIcon, WhatsAppIcon } from "@/components/ui/SocialIcons";
 import { Button } from "@/components/ui/Button";
 
 export function Footer() {
   const { t } = useTranslation(["layout", "common"]);
   const categories = useCategories();
+  const officeInfo = useOfficeInfo();
   const [email, setEmail] = useState("");
 
   const columns = [

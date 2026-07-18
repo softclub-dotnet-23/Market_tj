@@ -1,49 +1,48 @@
-export const values = [
-  {
-    title: "Честность",
-    description: "Прозрачные цены, точный вес и происхождение каждого продукта — без скрытых наценок.",
-  },
-  {
-    title: "Прямая связь",
-    description: "Минимум посредников между полем и столом — фермер получает больше, покупатель платит меньше.",
-  },
-  {
-    title: "Качество прежде всего",
-    description: "Каждое хозяйство проходит проверку, а покупатели оставляют честные отзывы о продукции.",
-  },
-  {
-    title: "Поддержка фермеров",
-    description: "Мы даём малым и средним хозяйствам инструменты, которые раньше были доступны только крупным игрокам.",
-  },
+import { useTranslation } from "react-i18next";
+
+const valueIds = [1, 2, 3, 4];
+
+export function useAboutValues() {
+  const { t } = useTranslation("data");
+  return valueIds.map((id) => ({
+    title: t(`aboutValues.${id}.title`),
+    description: t(`aboutValues.${id}.description`),
+  }));
+}
+
+const impactStatsBase = [
+  { id: 1, value: 34, suffix: "%" },
+  { id: 2, value: 214, suffix: "+" },
+  { id: 3, value: 5, suffix: "" },
+  { id: 4, value: 18 },
 ];
 
-export const impactStats = [
-  { id: 1, label: "Рост дохода фермеров", value: 34, suffix: "%" },
-  { id: 2, label: "Хозяйств на платформе", value: 214, suffix: "+" },
-  { id: 3, label: "Регионов охвата", value: 5, suffix: "" },
-  { id: 4, label: "Среднее время доставки", value: 18, suffix: " ч" },
-];
+export function useImpactStats() {
+  const { t } = useTranslation("data");
+  return impactStatsBase.map((s) => ({
+    ...s,
+    suffix: s.id === 4 ? t("impactStatsHourSuffix") : s.suffix,
+    label: t(`impactStats.${s.id}`),
+  }));
+}
 
-export const timeline = [
-  {
-    year: "2024",
-    title: "Идея и исследование рынка",
-    description: "Изучили путь продукта от фермера к покупателю и обнаружили, сколько теряется на посредниках.",
-  },
-  {
-    year: "2025",
-    title: "Пилотный запуск в трёх районах",
-    description: "Первые 40 фермерских хозяйств Хатлона и Согда начали продавать напрямую через платформу.",
-  },
-  {
-    year: "2026",
-    title: "Национальный запуск",
-    description: "Market.tj выходит на полное покрытие страны — от Душанбе до ГБАО, с сотнями активных хозяйств.",
-  },
-];
+const timelineYears = ["2024", "2025", "2026"];
 
-export const teamValues = [
-  { name: "Команда продукта", focus: "Разработка платформы и пользовательского опыта" },
-  { name: "Команда поддержки фермеров", focus: "Обучение, верификация и сопровождение хозяйств" },
-  { name: "Команда логистики", focus: "Координация курьеров и качество доставки" },
-];
+export function useTimeline() {
+  const { t } = useTranslation("data");
+  return timelineYears.map((year) => ({
+    year,
+    title: t(`timeline.${year}.title`),
+    description: t(`timeline.${year}.description`),
+  }));
+}
+
+const teamValueIds = [1, 2, 3];
+
+export function useTeamValues() {
+  const { t } = useTranslation("data");
+  return teamValueIds.map((id) => ({
+    name: t(`teamValues.${id}.name`),
+    focus: t(`teamValues.${id}.focus`),
+  }));
+}

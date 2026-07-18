@@ -6,7 +6,7 @@ import type { Product } from "@/types";
 import { PhotoTile } from "@/components/ui/PhotoTile";
 import { RatingStars } from "@/components/ui/RatingStars";
 import { Badge } from "@/components/ui/Badge";
-import { getFarmerById } from "@/data/farmers";
+import { useFarmers } from "@/data/farmers";
 import { useCart } from "@/context/CartContext";
 import { useFavorites } from "@/context/FavoritesContext";
 import { productPhotos } from "@/assets/photos";
@@ -22,7 +22,8 @@ const BADGE_VARIANTS: Record<string, "grove" | "harvest" | "clay" | "dark"> = {
 
 export function ProductCard({ product, className }: { product: Product; className?: string }) {
   const { t } = useTranslation(["product", "common"]);
-  const farmer = getFarmerById(product.farmerId);
+  const farmers = useFarmers();
+  const farmer = farmers.find((f) => f.id === product.farmerId);
   const { addItem } = useCart();
   const { isFavorite, toggleFavorite } = useFavorites();
   const favorite = isFavorite(product.id);

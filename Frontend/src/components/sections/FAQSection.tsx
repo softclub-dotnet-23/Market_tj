@@ -3,12 +3,14 @@ import { useTranslation } from "react-i18next";
 import { SectionHeading } from "@/components/ui/SectionHeading";
 import { Accordion, AccordionItem } from "@/components/ui/Accordion";
 import { Chip } from "@/components/ui/Chip";
-import { faqGroups, faqItems } from "@/data/faq";
+import { useFaqGroupKeys, useFaqItems } from "@/data/faq";
 
 export function FAQSection() {
-  const { t } = useTranslation("sections");
-  const [activeGroup, setActiveGroup] = useState(faqGroups[0]);
-  const items = faqItems.filter((f) => f.group === activeGroup);
+  const { t } = useTranslation(["sections", "data"]);
+  const groupKeys = useFaqGroupKeys();
+  const faqItems = useFaqItems();
+  const [activeGroupKey, setActiveGroupKey] = useState(groupKeys[0]);
+  const items = faqItems.filter((f) => f.groupKey === activeGroupKey);
 
   return (
     <section className="bg-stone-50/60 py-14 sm:py-20 dark:bg-stone-900/40">
@@ -21,9 +23,9 @@ export function FAQSection() {
             description={t("faq.description")}
           />
           <div className="mt-8 flex flex-wrap gap-2">
-            {faqGroups.map((group) => (
-              <Chip key={group} active={group === activeGroup} onClick={() => setActiveGroup(group)}>
-                {group}
+            {groupKeys.map((key) => (
+              <Chip key={key} active={key === activeGroupKey} onClick={() => setActiveGroupKey(key)}>
+                {t(`data:faqGroups.${key}`)}
               </Chip>
             ))}
           </div>

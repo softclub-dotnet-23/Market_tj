@@ -1,44 +1,21 @@
+import { useTranslation } from "react-i18next";
 import type { Testimonial } from "@/types";
 
-export const testimonials: Testimonial[] = [
-  {
-    id: 1,
-    name: "Фарида Назарова",
-    role: "Покупательница, Душанбе",
-    quote:
-      "Заказываю овощи и зелень каждую неделю уже полгода. Разница с рынком колоссальная — всё приходит свежим, будто сама сорвала с грядки утром.",
-    rating: 5,
-  },
-  {
-    id: 2,
-    name: "Рустам Абдуллоев",
-    role: "Владелец кафе «Ошхона»",
-    quote:
-      "Для нашего кафе важна стабильность поставок и честный вес. Market.tj закрывает обе задачи — заказы приходят день в день, без сюрпризов.",
-    rating: 5,
-  },
-  {
-    id: 3,
-    name: "Гулбахор Раҳимова",
-    role: "Покупательница, Худжанд",
-    quote:
-      "Больше всего радует, что видно, у какого именно фермера покупаешь — с фото хозяйства, отзывами и историей. Появляется доверие, которого не было на рынке.",
-    rating: 5,
-  },
-  {
-    id: 4,
-    name: "Шерали Юсупов",
-    role: "Покупатель, Бохтар",
-    quote:
-      "Раньше приходилось ехать за свежими фруктами через весь город. Теперь просто оформляю заказ вечером — и утром всё уже у меня.",
-    rating: 4,
-  },
-  {
-    id: 5,
-    name: "Наргис Каримова",
-    role: "Шеф-повар, ресторан «Дастархон»",
-    quote:
-      "Работаем с несколькими фермерскими хозяйствами напрямую через платформу. Качество продукции ощутимо выше, чем у прежних поставщиков.",
-    rating: 5,
-  },
+type TestimonialBase = Omit<Testimonial, "role" | "quote">;
+
+const testimonialsBase: TestimonialBase[] = [
+  { id: 1, name: "Фарида Назарова", rating: 5 },
+  { id: 2, name: "Рустам Абдуллоев", rating: 5 },
+  { id: 3, name: "Гулбахор Раҳимова", rating: 5 },
+  { id: 4, name: "Шерали Юсупов", rating: 4 },
+  { id: 5, name: "Наргис Каримова", rating: 5 },
 ];
+
+export function useTestimonials(): Testimonial[] {
+  const { t } = useTranslation("data");
+  return testimonialsBase.map((item) => ({
+    ...item,
+    role: t(`testimonials.${item.id}.role`),
+    quote: t(`testimonials.${item.id}.quote`),
+  }));
+}

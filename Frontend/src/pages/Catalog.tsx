@@ -15,14 +15,14 @@ import { ProductCard } from "@/components/product/ProductCard";
 import { CatalogFilters, type CatalogFilterState } from "@/components/product/CatalogFilters";
 import { products } from "@/data/products";
 import { useCategories } from "@/data/categories";
-import { getFarmerById } from "@/data/farmers";
+import { useFarmers } from "@/data/farmers";
 import { regions } from "@/data/site";
 import { useFavorites } from "@/context/FavoritesContext";
 
 const PAGE_SIZE = 12;
 
 export function Catalog() {
-  const { t } = useTranslation(["pages", "layout", "product", "common"]);
+  const { t } = useTranslation(["pages", "layout", "product", "common", "data"]);
   const SORT_OPTIONS = [
     { value: "popularity", label: t("pages:catalog.sortPopularity") },
     { value: "price-asc", label: t("pages:catalog.sortPriceAsc") },
@@ -30,6 +30,7 @@ export function Catalog() {
     { value: "rating", label: t("pages:catalog.sortRating") },
     { value: "fresh", label: t("pages:catalog.sortFresh") },
   ];
+  const farmers = useFarmers();
   const [searchParams, setSearchParams] = useSearchParams();
   const [mobileFiltersOpen, setMobileFiltersOpen] = useState(false);
   const [loading, setLoading] = useState(true);
@@ -131,9 +132,9 @@ export function Catalog() {
     const c = categories.find((cat) => cat.slug === slug);
     if (c) activeChips.push({ key: `cat-${slug}`, label: c.name, onRemove: () => handleFilterChange({ categorySlugs: categorySlugs.filter((s) => s !== slug) }) });
   });
-  if (region !== regions[0]) activeChips.push({ key: "region", label: region, onRemove: () => handleFilterChange({ region: regions[0] }) });
+  if (region !== regions[0]) activeChips.push({ key: "region", label: t(`data:regionLabels.${region}`), onRemove: () => handleFilterChange({ region: regions[0] }) });
   if (farmerId) {
-    const f = getFarmerById(farmerId);
+    const f = farmers.find((farmer) => farmer.id === farmerId);
     if (f) activeChips.push({ key: "farmer", label: f.farmName, onRemove: () => updateParams({ farmer: null }) });
   }
   if (onlyAvailable) activeChips.push({ key: "avail", label: t("product:filters.onlyAvailable"), onRemove: () => handleFilterChange({ onlyAvailable: false }) });

@@ -1,9 +1,16 @@
-export const platformStats = [
-  { id: 1, label: "Проверенных фермеров", value: 214, suffix: "+" },
-  { id: 2, label: "Товаров в каталоге", value: 1860, suffix: "+" },
-  { id: 3, label: "Выполненных заказов", value: 32400, suffix: "+" },
-  { id: 4, label: "Регионов охвата", value: 5, suffix: "" },
+import { useTranslation } from "react-i18next";
+
+const platformStatsBase = [
+  { id: 1, value: 214, suffix: "+" },
+  { id: 2, value: 1860, suffix: "+" },
+  { id: 3, value: 32400, suffix: "+" },
+  { id: 4, value: 5, suffix: "" },
 ];
+
+export function usePlatformStats() {
+  const { t } = useTranslation("data");
+  return platformStatsBase.map((s) => ({ ...s, label: t(`platformStats.${s.id}`) }));
+}
 
 export const regions = [
   "Все регионы",
@@ -14,56 +21,35 @@ export const regions = [
   "ГБАО",
 ];
 
-export const deliverySteps = [
-  {
-    id: 1,
-    title: "Выбираете продукты",
-    description: "Находите нужные товары в каталоге и добавляете в корзину — с сортировкой по фермеру, региону и цене.",
-  },
-  {
-    id: 2,
-    title: "Фермер подтверждает заказ",
-    description: "Фермер получает уведомление, проверяет наличие и подтверждает заказ в течение нескольких часов.",
-  },
-  {
-    id: 3,
-    title: "Курьер забирает продукцию",
-    description: "Заказ передаётся курьеру прямо с фермы — свежесть сохраняется на всём пути до вас.",
-  },
-  {
-    id: 4,
-    title: "Вы получаете заказ",
-    description: "Курьер доставляет заказ по указанному адресу в согласованный интервал времени.",
-  },
-];
+const deliveryStepsBase = [{ id: 1 }, { id: 2 }, { id: 3 }, { id: 4 }];
 
-export const whyChooseUs = [
-  {
-    id: 1,
-    title: "Напрямую от фермера",
-    description: "Без посредников и наценок перекупщиков — вы платите справедливую цену, а фермер получает больше.",
-  },
-  {
-    id: 2,
-    title: "Проверенное качество",
-    description: "Каждое фермерское хозяйство проходит верификацию перед тем, как начать продавать на платформе.",
-  },
-  {
-    id: 3,
-    title: "Прозрачное происхождение",
-    description: "Вы всегда знаете, из какого региона продукт, когда собран и кто его вырастил.",
-  },
-  {
-    id: 4,
-    title: "Честные отзывы",
-    description: "Оценки оставляют только покупатели с подтверждённым заказом — никакой накрутки рейтинга.",
-  },
-];
+export function useDeliverySteps() {
+  const { t } = useTranslation("data");
+  return deliveryStepsBase.map((s) => ({
+    ...s,
+    title: t(`deliverySteps.${s.id}.title`),
+    description: t(`deliverySteps.${s.id}.description`),
+  }));
+}
 
-export const officeInfo = {
-  address: "г. Душанбе, проспект Рудаки, 42",
-  phone: "+992 37 221 04 15",
-  phoneAlt: "+992 90 000 12 34",
-  email: "hello@market.tj",
-  hours: "Пн–Сб: 09:00–19:00, Вс: 10:00–16:00",
-};
+const whyChooseUsBase = [{ id: 1 }, { id: 2 }, { id: 3 }, { id: 4 }];
+
+export function useWhyChooseUs() {
+  const { t } = useTranslation("data");
+  return whyChooseUsBase.map((s) => ({
+    ...s,
+    title: t(`whyChooseUs.${s.id}.title`),
+    description: t(`whyChooseUs.${s.id}.description`),
+  }));
+}
+
+export function useOfficeInfo() {
+  const { t } = useTranslation("data");
+  return {
+    address: t("officeInfo.address"),
+    phone: "+992 37 221 04 15",
+    phoneAlt: "+992 90 000 12 34",
+    email: "hello@market.tj",
+    hours: t("officeInfo.hours"),
+  };
+}

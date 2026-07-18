@@ -6,7 +6,7 @@ import { SectionHeading } from "@/components/ui/SectionHeading";
 import { AnimatedCounter } from "@/components/ui/AnimatedCounter";
 import { PhotoTile } from "@/components/ui/PhotoTile";
 import { CTASection } from "@/components/sections/CTASection";
-import { values, impactStats, timeline, teamValues } from "@/data/about";
+import { useAboutValues, useImpactStats, useTimeline, useTeamValues } from "@/data/about";
 import { categoryPhotos } from "@/assets/photos";
 
 const VALUE_ICONS = [ShieldCheck, HandHeart, Sprout, Target];
@@ -14,6 +14,10 @@ const MISSION_PHOTO_KEYS = ["vegetables", "fruits", "dried", "dairy"];
 
 export function About() {
   const { t } = useTranslation(["pages", "layout"]);
+  const values = useAboutValues();
+  const impactStats = useImpactStats();
+  const timeline = useTimeline();
+  const teamValues = useTeamValues();
   return (
     <div>
       <div className="container-page pb-4 pt-8">

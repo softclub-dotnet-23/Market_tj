@@ -26,7 +26,7 @@ import { ReviewsSection } from "@/components/product/ReviewsSection";
 import { ProductCard } from "@/components/product/ProductCard";
 import { getProductBySlug, getRelatedProducts, products } from "@/data/products";
 import { useCategories } from "@/data/categories";
-import { getFarmerById } from "@/data/farmers";
+import { useFarmers } from "@/data/farmers";
 import { getReviewsForProduct } from "@/data/reviews";
 import { productPhotos, farmerPhotos } from "@/assets/photos";
 import { useCart } from "@/context/CartContext";
@@ -49,6 +49,7 @@ export function ProductDetails() {
   const { isFavorite, toggleFavorite } = useFavorites();
   const [quantity, setQuantity] = useState(product?.minimumOrderQuantity ?? 1);
   const categories = useCategories();
+  const farmers = useFarmers();
 
   if (!product) {
     return (
@@ -68,7 +69,7 @@ export function ProductDetails() {
   }
 
   const category = categories.find((c) => c.id === product.categoryId);
-  const farmer = getFarmerById(product.farmerId);
+  const farmer = farmers.find((f) => f.id === product.farmerId);
   const reviews = getReviewsForProduct(product.id);
   const related = getRelatedProducts(product, 4);
   const recommended = products

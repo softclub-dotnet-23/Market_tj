@@ -1,8 +1,9 @@
 import { motion } from "framer-motion";
 import { AnimatedCounter } from "@/components/ui/AnimatedCounter";
-import { platformStats } from "@/data/site";
+import { usePlatformStats } from "@/data/site";
 
 export function PlatformStats() {
+  const platformStats = usePlatformStats();
   return (
     <section className="relative overflow-hidden bg-grove-900 py-14 text-white sm:py-20">
       <div className="pointer-events-none absolute inset-0 bg-noise opacity-30" />

@@ -2,12 +2,13 @@ import { motion } from "framer-motion";
 import { useTranslation } from "react-i18next";
 import { BadgeCheck, Handshake, MapPinned, MessageSquareHeart } from "lucide-react";
 import { SectionHeading } from "@/components/ui/SectionHeading";
-import { whyChooseUs } from "@/data/site";
+import { useWhyChooseUs } from "@/data/site";
 
 const ICONS = [Handshake, BadgeCheck, MapPinned, MessageSquareHeart];
 
 export function WhyChooseUs() {
   const { t } = useTranslation("sections");
+  const whyChooseUs = useWhyChooseUs();
   return (
     <section className="container-page py-14 sm:py-20">
       <SectionHeading

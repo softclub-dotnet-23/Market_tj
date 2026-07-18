@@ -23,7 +23,7 @@ export function CatalogFilters({
   onChange: (patch: Partial<CatalogFilterState>) => void;
   onReset: () => void;
 }) {
-  const { t } = useTranslation("product");
+  const { t } = useTranslation(["product", "data"]);
   const categories = useCategories();
   const toggleCategory = (slug: string) => {
     const next = state.categorySlugs.includes(slug)
@@ -63,7 +63,7 @@ export function CatalogFilters({
       <div>
         <p className="mb-3 text-sm font-semibold text-stone-700 dark:text-stone-300">{t("filters.region")}</p>
         <Dropdown
-          options={regions.map((r) => ({ value: r, label: r }))}
+          options={regions.map((r) => ({ value: r, label: t(`data:regionLabels.${r}`) }))}
           value={state.region}
           onChange={(v) => onChange({ region: v })}
         />

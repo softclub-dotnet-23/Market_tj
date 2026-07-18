@@ -4,12 +4,12 @@ import { ArrowUpRight } from "lucide-react";
 import { SectionHeading } from "@/components/ui/SectionHeading";
 import { FarmerCard } from "@/components/product/FarmerCard";
 import { Carousel } from "@/components/ui/Carousel";
-import { farmers } from "@/data/farmers";
-
-const featured = [...farmers].sort((a, b) => b.rating - a.rating).slice(0, 6);
+import { useFarmers } from "@/data/farmers";
 
 export function BestFarmers() {
   const { t } = useTranslation("sections");
+  const farmers = useFarmers();
+  const featured = [...farmers].sort((a, b) => b.rating - a.rating).slice(0, 6);
   return (
     <section className="container-page py-14 sm:py-20">
       <SectionHeading
