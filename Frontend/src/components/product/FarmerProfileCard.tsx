@@ -1,4 +1,5 @@
 import { Link } from "react-router-dom";
+import { useTranslation } from "react-i18next";
 import { BadgeCheck, MapPin, MessageCircle, Package, Star } from "lucide-react";
 import type { Farmer } from "@/types";
 import { Avatar } from "@/components/ui/Avatar";
@@ -7,6 +8,7 @@ import { Button } from "@/components/ui/Button";
 import { farmerPhotos } from "@/assets/photos";
 
 export function FarmerProfileCard({ farmer }: { farmer: Farmer }) {
+  const { t } = useTranslation("product");
   return (
     <div className="flex flex-col gap-5 rounded-3xl border border-stone-100 bg-white p-6 sm:flex-row sm:items-center sm:justify-between dark:border-stone-800 dark:bg-stone-900">
       <div className="flex items-center gap-4">
@@ -15,7 +17,7 @@ export function FarmerProfileCard({ farmer }: { farmer: Farmer }) {
           <div className="flex items-center gap-2">
             <h3 className="font-display text-lg text-stone-900 dark:text-stone-50">{farmer.farmName}</h3>
             {farmer.verified && (
-              <span title="Проверенный фермер">
+              <span title={t("verifiedFarmerTitle")}>
                 <BadgeCheck size={16} className="text-grove-600 dark:text-grove-400" />
               </span>
             )}
@@ -32,7 +34,7 @@ export function FarmerProfileCard({ farmer }: { farmer: Farmer }) {
             </span>
             <span className="flex items-center gap-1">
               <Package size={12} />
-              {farmer.productCount} товаров
+              {t("productsCount", { count: farmer.productCount })}
             </span>
           </div>
           <div className="mt-1.5 flex flex-wrap gap-1.5">
@@ -48,11 +50,11 @@ export function FarmerProfileCard({ farmer }: { farmer: Farmer }) {
       <div className="flex shrink-0 gap-2">
         <Link to={`/catalog?farmer=${farmer.id}`}>
           <Button variant="outline" size="sm">
-            Все товары
+            {t("allProducts")}
           </Button>
         </Link>
         <Button variant="ghost" size="sm" leftIcon={<MessageCircle size={14} />}>
-          Написать
+          {t("writeMessage")}
         </Button>
       </div>
     </div>

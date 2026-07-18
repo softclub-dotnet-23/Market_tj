@@ -1,3 +1,4 @@
+import { useTranslation } from "react-i18next";
 import { BadgeCheck, ThumbsUp } from "lucide-react";
 import type { Review } from "@/types";
 import { Avatar } from "@/components/ui/Avatar";
@@ -6,6 +7,7 @@ import { getCustomerPhoto } from "@/assets/photos";
 import { formatDate } from "@/lib/utils";
 
 function RatingBreakdown({ reviews, rating, count }: { reviews: Review[]; rating: number; count: number }) {
+  const { t } = useTranslation("product");
   const distribution = [5, 4, 3, 2, 1].map((star) => ({
     star,
     count: reviews.filter((r) => r.rating === star).length,
@@ -17,7 +19,7 @@ function RatingBreakdown({ reviews, rating, count }: { reviews: Review[]; rating
       <div className="flex shrink-0 flex-col items-center gap-1.5 sm:border-r sm:border-stone-100 sm:pr-10 dark:sm:border-stone-800">
         <span className="font-display text-5xl text-stone-900 dark:text-stone-50">{rating.toFixed(1)}</span>
         <RatingStars rating={rating} size={16} />
-        <span className="text-sm text-stone-400 dark:text-stone-500">{count} отзывов</span>
+        <span className="text-sm text-stone-400 dark:text-stone-500">{t("reviewsCount", { count })}</span>
       </div>
       <div className="flex flex-1 flex-col gap-1.5">
         {distribution.map((d) => (
@@ -38,6 +40,7 @@ function RatingBreakdown({ reviews, rating, count }: { reviews: Review[]; rating
 }
 
 export function ReviewsSection({ reviews, rating, count }: { reviews: Review[]; rating: number; count: number }) {
+  const { t } = useTranslation("product");
   return (
     <div className="flex flex-col gap-6">
       <RatingBreakdown reviews={reviews} rating={rating} count={count} />
@@ -53,7 +56,7 @@ export function ReviewsSection({ reviews, rating, count }: { reviews: Review[]; 
                   {review.verifiedPurchase && (
                     <span className="flex items-center gap-1 text-xs text-grove-600 dark:text-grove-400">
                       <BadgeCheck size={12} />
-                      Подтверждённая покупка
+                      {t("verifiedPurchase")}
                     </span>
                   )}
                 </div>
@@ -64,14 +67,14 @@ export function ReviewsSection({ reviews, rating, count }: { reviews: Review[]; 
 
               {review.farmerReply && (
                 <div className="mt-1 rounded-2xl bg-stone-50 p-4 dark:bg-stone-800/60">
-                  <p className="mb-1 text-xs font-semibold text-stone-700 dark:text-stone-200">Ответ фермера</p>
+                  <p className="mb-1 text-xs font-semibold text-stone-700 dark:text-stone-200">{t("farmerReply")}</p>
                   <p className="text-sm text-stone-500 dark:text-stone-400">{review.farmerReply.message}</p>
                 </div>
               )}
 
               <button className="mt-1 flex w-fit items-center gap-1.5 text-xs text-stone-400 transition hover:text-grove-700 dark:text-stone-500 dark:hover:text-grove-400">
                 <ThumbsUp size={12} />
-                Полезно ({review.helpfulCount})
+                {t("helpful", { count: review.helpfulCount })}
               </button>
             </div>
           </div>

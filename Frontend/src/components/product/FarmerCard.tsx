@@ -1,5 +1,6 @@
 import { Link } from "react-router-dom";
 import { motion } from "framer-motion";
+import { useTranslation } from "react-i18next";
 import { BadgeCheck, MapPin, Package } from "lucide-react";
 import type { Farmer } from "@/types";
 import { RatingStars } from "@/components/ui/RatingStars";
@@ -7,6 +8,7 @@ import { farmerPhotos } from "@/assets/photos";
 import { cn } from "@/lib/utils";
 
 export function FarmerCard({ farmer, className }: { farmer: Farmer; className?: string }) {
+  const { t } = useTranslation("product");
   return (
     <motion.div
       whileHover={{ y: -6 }}
@@ -28,7 +30,7 @@ export function FarmerCard({ farmer, className }: { farmer: Farmer; className?: 
         {farmer.verified && (
           <span className="absolute right-3 top-3 flex items-center gap-1 rounded-full bg-white/95 px-2.5 py-1 text-xs font-semibold text-grove-700 shadow-sm backdrop-blur dark:bg-stone-800/95 dark:text-grove-400">
             <BadgeCheck size={13} />
-            Проверен
+            {t("verified")}
           </span>
         )}
       </Link>
@@ -52,7 +54,7 @@ export function FarmerCard({ farmer, className }: { farmer: Farmer; className?: 
           <RatingStars rating={farmer.rating} size={13} showValue reviewCount={farmer.reviewCount} />
           <span className="flex items-center gap-1 text-xs text-stone-500 dark:text-stone-400">
             <Package size={13} />
-            {farmer.productCount} товаров
+            {t("productsCount", { count: farmer.productCount })}
           </span>
         </div>
       </div>

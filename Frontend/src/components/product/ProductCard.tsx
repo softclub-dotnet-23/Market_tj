@@ -1,5 +1,6 @@
 import { Link } from "react-router-dom";
 import { motion } from "framer-motion";
+import { useTranslation } from "react-i18next";
 import { Heart, MapPin, Plus } from "lucide-react";
 import type { Product } from "@/types";
 import { PhotoTile } from "@/components/ui/PhotoTile";
@@ -11,15 +12,16 @@ import { useFavorites } from "@/context/FavoritesContext";
 import { productPhotos } from "@/assets/photos";
 import { cn, formatSomoni } from "@/lib/utils";
 
-const BADGE_LABELS: Record<string, { label: string; variant: "grove" | "harvest" | "clay" | "dark" }> = {
-  organic: { label: "Органика", variant: "grove" },
-  new: { label: "Новинка", variant: "harvest" },
-  bestseller: { label: "Хит продаж", variant: "dark" },
-  discount: { label: "Скидка", variant: "clay" },
-  premium: { label: "Премиум", variant: "harvest" },
+const BADGE_VARIANTS: Record<string, "grove" | "harvest" | "clay" | "dark"> = {
+  organic: "grove",
+  new: "harvest",
+  bestseller: "dark",
+  discount: "clay",
+  premium: "harvest",
 };
 
 export function ProductCard({ product, className }: { product: Product; className?: string }) {
+  const { t } = useTranslation(["product", "common"]);
   const farmer = getFarmerById(product.farmerId);
   const { addItem } = useCart();
   const { isFavorite, toggleFavorite } = useFavorites();
@@ -42,8 +44,8 @@ export function ProductCard({ product, className }: { product: Product; classNam
 
         <div className="absolute left-3 top-3 flex flex-col gap-1.5">
           {product.badges.slice(0, 2).map((b) => (
-            <Badge key={b} variant={BADGE_LABELS[b].variant} className="shadow-sm">
-              {BADGE_LABELS[b].label}
+            <Badge key={b} variant={BADGE_VARIANTS[b]} className="shadow-sm">
+              {t(`product:badges.${b}`)}
             </Badge>
           ))}
         </div>
@@ -51,7 +53,7 @@ export function ProductCard({ product, className }: { product: Product; classNam
         {outOfStock && (
           <div className="absolute inset-0 flex items-center justify-center bg-stone-900/45 backdrop-blur-[2px]">
             <span className="rounded-full bg-white px-4 py-1.5 text-sm font-semibold text-stone-800 dark:bg-stone-800 dark:text-stone-100">
-              Нет в наличии
+              {t("product:outOfStock")}
             </span>
           </div>
         )}
@@ -59,7 +61,7 @@ export function ProductCard({ product, className }: { product: Product; classNam
 
       <button
         onClick={() => toggleFavorite(product.id)}
-        aria-label={favorite ? "Убрать из избранного" : "Добавить в избранное"}
+        aria-label={favorite ? t("product:removeFromFavorites") : t("product:addToFavorites")}
         aria-pressed={favorite}
         className={cn(
           "absolute right-3 top-3 flex h-9 w-9 items-center justify-center rounded-full bg-white/90 text-stone-500 shadow-sm backdrop-blur transition hover:scale-110 hover:text-clay-500 dark:bg-stone-800/90 dark:text-stone-300",
@@ -96,11 +98,15 @@ export function ProductCard({ product, className }: { product: Product; classNam
         <div className="mt-auto flex items-end justify-between pt-2">
           <div className="flex flex-col">
             {product.oldPrice && (
-              <span className="text-xs text-stone-400 line-through dark:text-stone-500">{formatSomoni(product.oldPrice)} с.</span>
+              <span className="text-xs text-stone-400 line-through dark:text-stone-500">
+                {formatSomoni(product.oldPrice)} {t("common:currencySomoni")}
+              </span>
             )}
             <span className="font-display text-xl text-stone-900 dark:text-stone-50">
-              {formatSomoni(product.retailPricePerKg)} с.
-              <span className="ml-1 text-xs font-normal text-stone-400 dark:text-stone-500">/{product.unit}</span>
+              {formatSomoni(product.retailPricePerKg)} {t("common:currencySomoni")}
+              <span className="ml-1 text-xs font-normal text-stone-400 dark:text-stone-500">
+                /{t(`product:units.${product.unit}`)}
+              </span>
             </span>
           </div>
 
@@ -108,7 +114,7 @@ export function ProductCard({ product, className }: { product: Product; classNam
             whileTap={{ scale: 0.9 }}
             disabled={outOfStock}
             onClick={() => addItem(product)}
-            aria-label="Добавить в корзину"
+            aria-label={t("product:addToCart")}
             className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-grove-700 text-white shadow-(--shadow-glow-grove) transition hover:bg-grove-800 disabled:cursor-not-allowed disabled:bg-stone-200 disabled:text-stone-400 disabled:shadow-none dark:disabled:bg-stone-700 dark:disabled:text-stone-500"
           >
             <Plus size={18} />
