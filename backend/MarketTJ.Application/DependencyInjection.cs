@@ -31,6 +31,7 @@ public static class DependencyInjection
         services.AddScoped<IChatMessageService, ChatMessageService>();
         services.AddScoped<IAppSettingService, AppSettingService>();
         services.AddScoped<IFarmerDocumentService, FarmerDocumentService>();
+        services.AddScoped<IAuditLogService, AuditLogService>();
 
         return services;
     }
