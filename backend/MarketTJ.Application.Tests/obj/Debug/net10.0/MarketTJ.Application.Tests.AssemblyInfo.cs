@@ -13,7 +13,7 @@ using System.Reflection;
 [assembly: System.Reflection.AssemblyCompanyAttribute("MarketTJ.Application.Tests")]
 [assembly: System.Reflection.AssemblyConfigurationAttribute("Debug")]
 [assembly: System.Reflection.AssemblyFileVersionAttribute("1.0.0.0")]
-[assembly: System.Reflection.AssemblyInformationalVersionAttribute("1.0.0+d578e4676577ce68f205c74736b93c86a7aaa4a0")]
+[assembly: System.Reflection.AssemblyInformationalVersionAttribute("1.0.0+7011be0f9b0902d04a9fe7002ce4008898c09144")]
 [assembly: System.Reflection.AssemblyProductAttribute("MarketTJ.Application.Tests")]
 [assembly: System.Reflection.AssemblyTitleAttribute("MarketTJ.Application.Tests")]
 [assembly: System.Reflection.AssemblyVersionAttribute("1.0.0.0")]
