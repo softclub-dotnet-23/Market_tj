@@ -29,6 +29,7 @@ public static class DependencyInjection
         services.AddScoped<INotificationService, NotificationService>();
         services.AddScoped<IConversationService, ConversationService>();
         services.AddScoped<IChatMessageService, ChatMessageService>();
+        services.AddScoped<IAppSettingService, AppSettingService>();
 
         return services;
     }
