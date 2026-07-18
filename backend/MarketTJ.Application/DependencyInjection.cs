@@ -41,6 +41,7 @@ public static class DependencyInjection
         services.AddScoped<IFarmerStaffMemberService, FarmerStaffMemberService>();
         services.AddScoped<ISupportTicketService, SupportTicketService>();
         services.AddScoped<ISupportMessageService, SupportMessageService>();
+        services.AddScoped<IDeliverySlotService, DeliverySlotService>();
 
         return services;
     }
