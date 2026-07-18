@@ -21,6 +21,7 @@ public class OrderService(
     {
         try
         {
+            
             var orders = await orderRepository.GetAllAsync();
             return Result<IEnumerable<GetOrderDto>>.Ok(orders.Select(ToGetDto));
         }
