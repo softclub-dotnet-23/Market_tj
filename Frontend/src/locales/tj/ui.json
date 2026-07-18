@@ -1,0 +1,14 @@
+{
+  "pagination": "Саҳифабандӣ",
+  "previousPage": "Саҳифаи қаблӣ",
+  "nextPage": "Саҳифаи баъдӣ",
+  "carouselPrev": "Қафо",
+  "carouselNext": "Пеш",
+  "slideNumber": "Слайди {{number}}",
+  "breadcrumbs": "Нақшаи роҳ",
+  "selectPlaceholder": "Интихоб кунед",
+  "themeToLight": "Фаъол кардани мавзӯи равшан",
+  "themeToDark": "Фаъол кардани мавзӯи торик",
+  "lightTheme": "Мавзӯи равшан",
+  "darkTheme": "Мавзӯи торик"
+}

@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useState } from "react";
 import type { ReactNode } from "react";
 import useEmblaCarousel from "embla-carousel-react";
+import { useTranslation } from "react-i18next";
 import { ChevronLeft, ChevronRight } from "lucide-react";
 import { cn } from "@/lib/utils";
 
@@ -19,6 +20,7 @@ export function Carousel({
   showControls?: boolean;
   showDots?: boolean;
 }) {
+  const { t } = useTranslation("ui");
   const [emblaRef, emblaApi] = useEmblaCarousel({ align: "start", dragFree: false, ...options });
   const [selectedIndex, setSelectedIndex] = useState(0);
   const [canPrev, setCanPrev] = useState(false);
@@ -55,7 +57,7 @@ export function Carousel({
           <button
             onClick={() => emblaApi?.scrollPrev()}
             disabled={!canPrev}
-            aria-label="Назад"
+            aria-label={t("carouselPrev")}
             className="flex h-11 w-11 items-center justify-center rounded-full border border-stone-200 bg-white text-stone-600 transition hover:border-grove-400 hover:text-grove-700 disabled:pointer-events-none disabled:opacity-30 dark:border-stone-700 dark:bg-stone-900 dark:text-stone-300 dark:hover:border-grove-500 dark:hover:text-grove-400"
           >
             <ChevronLeft size={18} />
@@ -63,7 +65,7 @@ export function Carousel({
           <button
             onClick={() => emblaApi?.scrollNext()}
             disabled={!canNext}
-            aria-label="Вперёд"
+            aria-label={t("carouselNext")}
             className="flex h-11 w-11 items-center justify-center rounded-full border border-stone-200 bg-white text-stone-600 transition hover:border-grove-400 hover:text-grove-700 disabled:pointer-events-none disabled:opacity-30 dark:border-stone-700 dark:bg-stone-900 dark:text-stone-300 dark:hover:border-grove-500 dark:hover:text-grove-400"
           >
             <ChevronRight size={18} />
@@ -77,7 +79,7 @@ export function Carousel({
             <button
               key={i}
               onClick={() => emblaApi?.scrollTo(i)}
-              aria-label={`Слайд ${i + 1}`}
+              aria-label={t("slideNumber", { number: i + 1 })}
               className={cn(
                 "h-1.5 rounded-full transition-all",
                 i === selectedIndex ? "w-6 bg-grove-600" : "w-1.5 bg-stone-300 dark:bg-stone-600",

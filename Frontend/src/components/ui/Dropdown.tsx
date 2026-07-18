@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from "react";
 import type { ReactNode } from "react";
 import { AnimatePresence, motion } from "framer-motion";
+import { useTranslation } from "react-i18next";
 import { ChevronDown } from "lucide-react";
 import { cn } from "@/lib/utils";
 
@@ -13,7 +14,7 @@ export function Dropdown({
   options,
   value,
   onChange,
-  placeholder = "Выберите",
+  placeholder,
   className,
   icon,
 }: {
@@ -24,6 +25,7 @@ export function Dropdown({
   className?: string;
   icon?: ReactNode;
 }) {
+  const { t } = useTranslation("ui");
   const [open, setOpen] = useState(false);
   const ref = useRef<HTMLDivElement>(null);
   const selected = options.find((o) => o.value === value);
@@ -48,7 +50,7 @@ export function Dropdown({
       >
         <span className="flex items-center gap-2 truncate">
           {icon}
-          {selected ? selected.label : placeholder}
+          {selected ? selected.label : (placeholder ?? t("selectPlaceholder"))}
         </span>
         <ChevronDown size={16} className={cn("shrink-0 text-stone-400 transition-transform dark:text-stone-500", open && "rotate-180")} />
       </button>

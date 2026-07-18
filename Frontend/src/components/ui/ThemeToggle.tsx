@@ -1,17 +1,19 @@
 import { AnimatePresence, motion } from "framer-motion";
+import { useTranslation } from "react-i18next";
 import { Moon, Sun } from "lucide-react";
 import { useTheme } from "@/context/ThemeContext";
 import { cn } from "@/lib/utils";
 
 export function ThemeToggle({ className }: { className?: string }) {
+  const { t } = useTranslation("ui");
   const { theme, toggleTheme } = useTheme();
   const isDark = theme === "dark";
 
   return (
     <button
       onClick={toggleTheme}
-      aria-label={isDark ? "Включить светлую тему" : "Включить тёмную тему"}
-      title={isDark ? "Светлая тема" : "Тёмная тема"}
+      aria-label={isDark ? t("themeToLight") : t("themeToDark")}
+      title={isDark ? t("lightTheme") : t("darkTheme")}
       className={cn(
         "relative flex h-10 w-10 items-center justify-center overflow-hidden rounded-full text-stone-600 transition hover:bg-stone-100 dark:text-stone-300 dark:hover:bg-stone-800",
         className,

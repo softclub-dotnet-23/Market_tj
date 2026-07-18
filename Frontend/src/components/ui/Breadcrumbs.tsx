@@ -1,4 +1,5 @@
 import { Link } from "react-router-dom";
+import { useTranslation } from "react-i18next";
 import { ChevronRight, Home } from "lucide-react";
 import { cn } from "@/lib/utils";
 
@@ -8,8 +9,9 @@ export interface Crumb {
 }
 
 export function Breadcrumbs({ items, className }: { items: Crumb[]; className?: string }) {
+  const { t } = useTranslation("ui");
   return (
-    <nav className={cn("flex items-center gap-1.5 text-sm", className)} aria-label="Хлебные крошки">
+    <nav className={cn("flex items-center gap-1.5 text-sm", className)} aria-label={t("breadcrumbs")}>
       <Link to="/" className="flex items-center text-stone-400 transition hover:text-grove-700 dark:text-stone-500 dark:hover:text-grove-400">
         <Home size={14} />
       </Link>

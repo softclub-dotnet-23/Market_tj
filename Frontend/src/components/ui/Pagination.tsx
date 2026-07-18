@@ -1,3 +1,4 @@
+import { useTranslation } from "react-i18next";
 import { ChevronLeft, ChevronRight, MoreHorizontal } from "lucide-react";
 import { cn } from "@/lib/utils";
 
@@ -26,16 +27,17 @@ export function Pagination({
   onPageChange: (page: number) => void;
   className?: string;
 }) {
+  const { t } = useTranslation("ui");
   if (totalPages <= 1) return null;
   const pages = getPageList(page, totalPages);
 
   return (
-    <nav className={cn("flex items-center justify-center gap-1.5", className)} aria-label="Пагинация">
+    <nav className={cn("flex items-center justify-center gap-1.5", className)} aria-label={t("pagination")}>
       <button
         onClick={() => onPageChange(page - 1)}
         disabled={page === 1}
         className="flex h-10 w-10 items-center justify-center rounded-xl border border-stone-200 text-stone-600 transition hover:border-grove-400 hover:text-grove-700 disabled:pointer-events-none disabled:opacity-40 dark:border-stone-700 dark:text-stone-300 dark:hover:border-grove-500 dark:hover:text-grove-400"
-        aria-label="Предыдущая страница"
+        aria-label={t("previousPage")}
       >
         <ChevronLeft size={18} />
       </button>
@@ -66,7 +68,7 @@ export function Pagination({
         onClick={() => onPageChange(page + 1)}
         disabled={page === totalPages}
         className="flex h-10 w-10 items-center justify-center rounded-xl border border-stone-200 text-stone-600 transition hover:border-grove-400 hover:text-grove-700 disabled:pointer-events-none disabled:opacity-40 dark:border-stone-700 dark:text-stone-300 dark:hover:border-grove-500 dark:hover:text-grove-400"
-        aria-label="Следующая страница"
+        aria-label={t("nextPage")}
       >
         <ChevronRight size={18} />
       </button>
