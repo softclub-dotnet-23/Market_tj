@@ -29,6 +29,14 @@ public class ProductListingRepository(AppDbContext context, ICacheService cache)
     public async Task<ProductListing?> GetByIdAsync(int id)
         => await context.ProductListings.FindAsync(id);
 
+    public async Task<List<ProductListing>> SearchAsync(string query)
+        => await context.ProductListings
+            .Where(p => EF.Functions.ILike(p.Title, $"%{query}%")
+                     || (p.Description != null && EF.Functions.ILike(p.Description, $"%{query}%"))
+                     || EF.Functions.ILike(p.Product.Name, $"%{query}%"))
+            .Take(10)
+            .ToListAsync();
+
     public async Task AddAsync(ProductListing productListing)
     {
         await context.ProductListings.AddAsync(productListing);

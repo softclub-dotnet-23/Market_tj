@@ -102,3 +102,15 @@ C:\Users\2026\OneDrive\Desktop\Softclub\.Net1\Demo-Project\backend\MarketTJ.Appl
 C:\Users\2026\OneDrive\Desktop\Softclub\.Net1\Demo-Project\backend\MarketTJ.Application.Tests\obj\Debug\net10.0\MarketTJ.Application.Tests.pdb
 C:\Users\2026\OneDrive\Desktop\Softclub\.Net1\Demo-Project\backend\MarketTJ.Application.Tests\obj\Debug\net10.0\MarketTJ.Application.Tests.genruntimeconfig.cache
 C:\Users\2026\OneDrive\Desktop\Softclub\.Net1\Demo-Project\backend\MarketTJ.Application.Tests\obj\Debug\net10.0\ref\MarketTJ.Application.Tests.dll
+C:\Users\2026\OneDrive\Desktop\Softclub\.Net1\Demo-Project\backend\MarketTJ.Application.Tests\bin\Debug\net10.0\Microsoft.Extensions.Configuration.dll
+C:\Users\2026\OneDrive\Desktop\Softclub\.Net1\Demo-Project\backend\MarketTJ.Application.Tests\bin\Debug\net10.0\Microsoft.Extensions.Configuration.Abstractions.dll
+C:\Users\2026\OneDrive\Desktop\Softclub\.Net1\Demo-Project\backend\MarketTJ.Application.Tests\bin\Debug\net10.0\Microsoft.Extensions.Configuration.Binder.dll
+C:\Users\2026\OneDrive\Desktop\Softclub\.Net1\Demo-Project\backend\MarketTJ.Application.Tests\bin\Debug\net10.0\Microsoft.Extensions.DependencyInjection.dll
+C:\Users\2026\OneDrive\Desktop\Softclub\.Net1\Demo-Project\backend\MarketTJ.Application.Tests\bin\Debug\net10.0\Microsoft.Extensions.Diagnostics.dll
+C:\Users\2026\OneDrive\Desktop\Softclub\.Net1\Demo-Project\backend\MarketTJ.Application.Tests\bin\Debug\net10.0\Microsoft.Extensions.Diagnostics.Abstractions.dll
+C:\Users\2026\OneDrive\Desktop\Softclub\.Net1\Demo-Project\backend\MarketTJ.Application.Tests\bin\Debug\net10.0\Microsoft.Extensions.Http.dll
+C:\Users\2026\OneDrive\Desktop\Softclub\.Net1\Demo-Project\backend\MarketTJ.Application.Tests\bin\Debug\net10.0\Microsoft.Extensions.Logging.dll
+C:\Users\2026\OneDrive\Desktop\Softclub\.Net1\Demo-Project\backend\MarketTJ.Application.Tests\bin\Debug\net10.0\Microsoft.Extensions.Logging.Abstractions.dll
+C:\Users\2026\OneDrive\Desktop\Softclub\.Net1\Demo-Project\backend\MarketTJ.Application.Tests\bin\Debug\net10.0\Microsoft.Extensions.Options.dll
+C:\Users\2026\OneDrive\Desktop\Softclub\.Net1\Demo-Project\backend\MarketTJ.Application.Tests\bin\Debug\net10.0\Microsoft.Extensions.Options.ConfigurationExtensions.dll
+C:\Users\2026\OneDrive\Desktop\Softclub\.Net1\Demo-Project\backend\MarketTJ.Application.Tests\bin\Debug\net10.0\Microsoft.Extensions.Primitives.dll
