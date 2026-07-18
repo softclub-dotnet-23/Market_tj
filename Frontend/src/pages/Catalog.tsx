@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { useSearchParams } from "react-router-dom";
 import { motion } from "framer-motion";
+import { useTranslation } from "react-i18next";
 import { Heart, PackageSearch, Search, SlidersHorizontal, X } from "lucide-react";
 import { Breadcrumbs } from "@/components/ui/Breadcrumbs";
 import { Dropdown } from "@/components/ui/Dropdown";
@@ -20,15 +21,15 @@ import { useFavorites } from "@/context/FavoritesContext";
 
 const PAGE_SIZE = 12;
 
-const SORT_OPTIONS = [
-  { value: "popularity", label: "По популярности" },
-  { value: "price-asc", label: "Сначала дешевле" },
-  { value: "price-desc", label: "Сначала дороже" },
-  { value: "rating", label: "По рейтингу" },
-  { value: "fresh", label: "Сначала свежие" },
-];
-
 export function Catalog() {
+  const { t } = useTranslation(["pages", "layout", "product", "common"]);
+  const SORT_OPTIONS = [
+    { value: "popularity", label: t("pages:catalog.sortPopularity") },
+    { value: "price-asc", label: t("pages:catalog.sortPriceAsc") },
+    { value: "price-desc", label: t("pages:catalog.sortPriceDesc") },
+    { value: "rating", label: t("pages:catalog.sortRating") },
+    { value: "fresh", label: t("pages:catalog.sortFresh") },
+  ];
   const [searchParams, setSearchParams] = useSearchParams();
   const [mobileFiltersOpen, setMobileFiltersOpen] = useState(false);
   const [loading, setLoading] = useState(true);
@@ -135,20 +136,20 @@ export function Catalog() {
     const f = getFarmerById(farmerId);
     if (f) activeChips.push({ key: "farmer", label: f.farmName, onRemove: () => updateParams({ farmer: null }) });
   }
-  if (onlyAvailable) activeChips.push({ key: "avail", label: "Только в наличии", onRemove: () => handleFilterChange({ onlyAvailable: false }) });
-  if (priceMin || priceMax) activeChips.push({ key: "price", label: `${priceMin || 0}–${priceMax || "∞"} с.`, onRemove: () => handleFilterChange({ priceMin: "", priceMax: "" }) });
-  if (favoritesOnly) activeChips.push({ key: "fav", label: "Избранное", onRemove: () => updateParams({ favorites: null }) });
+  if (onlyAvailable) activeChips.push({ key: "avail", label: t("product:filters.onlyAvailable"), onRemove: () => handleFilterChange({ onlyAvailable: false }) });
+  if (priceMin || priceMax) activeChips.push({ key: "price", label: `${priceMin || 0}–${priceMax || "∞"} ${t("common:currencySomoni")}`, onRemove: () => handleFilterChange({ priceMin: "", priceMax: "" }) });
+  if (favoritesOnly) activeChips.push({ key: "fav", label: t("common:actions.favorites"), onRemove: () => updateParams({ favorites: null }) });
 
   return (
     <div className="container-page py-8 sm:py-12">
-      <Breadcrumbs items={[{ label: "Каталог" }]} className="mb-6" />
+      <Breadcrumbs items={[{ label: t("layout:nav.catalog") }]} className="mb-6" />
 
       <div className="mb-8 flex flex-col gap-3">
         <h1 className="font-display text-3xl text-stone-900 sm:text-4xl dark:text-stone-50">
-          {favoritesOnly ? "Избранные товары" : "Каталог продуктов"}
+          {favoritesOnly ? t("pages:catalog.favoritesTitle") : t("pages:catalog.title")}
         </h1>
         <p className="text-stone-500 dark:text-stone-400">
-          {loading ? "Ищем товары..." : `Найдено ${filtered.length} товаров от местных фермеров`}
+          {loading ? t("pages:catalog.searching") : t("pages:catalog.foundCount", { count: filtered.length })}
         </p>
       </div>
 
@@ -172,7 +173,7 @@ export function Catalog() {
               <input
                 value={searchInput}
                 onChange={(e) => setSearchInput(e.target.value)}
-                placeholder="Поиск в каталоге..."
+                placeholder={t("pages:catalog.searchPlaceholder")}
                 className="w-full bg-transparent text-sm outline-none placeholder:text-stone-400 dark:text-stone-100 dark:placeholder:text-stone-500"
               />
               {searchInput && (
@@ -188,7 +189,7 @@ export function Catalog() {
                 className="flex h-12 items-center gap-2 rounded-xl border border-stone-200 bg-white px-4 text-sm font-medium text-stone-700 lg:hidden dark:border-stone-700 dark:bg-stone-900 dark:text-stone-200"
               >
                 <SlidersHorizontal size={15} />
-                Фильтры
+                {t("product:filters.title")}
                 {activeChips.length > 0 && (
                   <span className="flex h-5 w-5 items-center justify-center rounded-full bg-grove-700 text-[10px] font-bold text-white">
                     {activeChips.length}
@@ -223,15 +224,15 @@ export function Catalog() {
           ) : pageItems.length === 0 ? (
             <EmptyState
               icon={favoritesOnly ? <Heart size={26} /> : <PackageSearch size={26} />}
-              title={favoritesOnly ? "В избранном пока пусто" : "Ничего не найдено"}
+              title={favoritesOnly ? t("pages:catalog.emptyFavoritesTitle") : t("pages:catalog.emptyResultsTitle")}
               description={
                 favoritesOnly
-                  ? "Нажимайте на сердечко на карточке товара, чтобы добавить его сюда."
-                  : "Попробуйте изменить фильтры или запрос поиска — либо сбросьте всё и начните заново."
+                  ? t("pages:catalog.emptyFavoritesDescription")
+                  : t("pages:catalog.emptyResultsDescription")
               }
               action={
                 <Button variant="outline" onClick={resetFilters}>
-                  Сбросить фильтры
+                  {t("product:filters.resetFilters")}
                 </Button>
               }
             />
@@ -274,7 +275,7 @@ export function Catalog() {
           }}
         />
         <Button className="mt-6 w-full" onClick={() => setMobileFiltersOpen(false)}>
-          Показать {filtered.length} товаров
+          {t("pages:catalog.showCount", { count: filtered.length })}
         </Button>
       </Modal>
     </div>

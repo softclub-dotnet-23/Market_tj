@@ -3,6 +3,7 @@ import { Link, useNavigate } from "react-router-dom";
 import { useForm } from "react-hook-form";
 import { motion } from "framer-motion";
 import { toast } from "sonner";
+import { useTranslation } from "react-i18next";
 import { ArrowLeft, Eye, EyeOff, Lock, Mail } from "lucide-react";
 import { Input, Checkbox } from "@/components/ui/Field";
 import { Button } from "@/components/ui/Button";
@@ -15,6 +16,7 @@ interface LoginForm {
 }
 
 export function Login() {
+  const { t } = useTranslation(["pages", "common", "layout"]);
   const navigate = useNavigate();
   const [showPassword, setShowPassword] = useState(false);
   const {
@@ -25,8 +27,8 @@ export function Login() {
 
   const onSubmit = async () => {
     await new Promise((r) => setTimeout(r, 700));
-    toast.info("Вход появится после подключения к серверу", {
-      description: "Сейчас интерфейс работает на демонстрационных данных.",
+    toast.info(t("pages:login.toastTitle"), {
+      description: t("pages:login.toastDescription"),
     });
   };
 
@@ -35,7 +37,7 @@ export function Login() {
       <div className="flex flex-col justify-center px-6 py-14 sm:px-12 lg:px-20">
         <Link to="/" className="mb-10 flex w-fit items-center gap-1.5 text-sm text-stone-400 hover:text-stone-600 dark:text-stone-500 dark:hover:text-stone-300">
           <ArrowLeft size={14} />
-          На главную
+          {t("pages:goHome")}
         </Link>
 
         <motion.div
@@ -44,19 +46,19 @@ export function Login() {
           transition={{ duration: 0.5 }}
           className="mx-auto w-full max-w-sm"
         >
-          <h1 className="font-display text-3xl text-stone-900 dark:text-stone-50">С возвращением</h1>
-          <p className="mt-2 text-stone-500 dark:text-stone-400">Войдите, чтобы продолжить покупки на Market.tj</p>
+          <h1 className="font-display text-3xl text-stone-900 dark:text-stone-50">{t("pages:login.title")}</h1>
+          <p className="mt-2 text-stone-500 dark:text-stone-400">{t("pages:login.subtitle")}</p>
 
           <form onSubmit={handleSubmit(onSubmit)} className="mt-8 flex flex-col gap-5">
             <Input
-              label="Email или телефон"
+              label={t("pages:login.emailOrPhoneLabel")}
               placeholder="you@example.com"
               leftIcon={<Mail size={16} />}
               error={errors.email?.message}
-              {...register("email", { required: "Укажите email или телефон" })}
+              {...register("email", { required: t("pages:login.emailOrPhoneRequired") })}
             />
             <Input
-              label="Пароль"
+              label={t("pages:login.passwordLabel")}
               type={showPassword ? "text" : "password"}
               placeholder="••••••••"
               leftIcon={<Lock size={16} />}
@@ -66,35 +68,38 @@ export function Login() {
                   {showPassword ? <EyeOff size={16} /> : <Eye size={16} />}
                 </button>
               }
-              {...register("password", { required: "Введите пароль", minLength: { value: 6, message: "Минимум 6 символов" } })}
+              {...register("password", {
+                required: t("pages:login.passwordRequired"),
+                minLength: { value: 6, message: t("pages:login.passwordMinLength") },
+              })}
             />
 
             <div className="flex items-center justify-between">
-              <Checkbox label="Запомнить меня" {...register("remember")} />
-              <button type="button" onClick={() => toast("Восстановление пароля скоро появится")} className="text-sm font-medium text-grove-700 hover:text-grove-800 dark:text-grove-400 dark:hover:text-grove-300">
-                Забыли пароль?
+              <Checkbox label={t("pages:login.rememberMe")} {...register("remember")} />
+              <button type="button" onClick={() => toast(t("pages:login.forgotPasswordToast"))} className="text-sm font-medium text-grove-700 hover:text-grove-800 dark:text-grove-400 dark:hover:text-grove-300">
+                {t("pages:login.forgotPassword")}
               </button>
             </div>
 
             <Button type="submit" size="lg" loading={isSubmitting} className="mt-1">
-              Войти
+              {t("common:auth.login")}
             </Button>
           </form>
 
           <p className="mt-8 text-center text-sm text-stone-500 dark:text-stone-400">
-            Ещё нет аккаунта?{" "}
+            {t("pages:login.noAccount")}{" "}
             <Link to="/register" className="font-semibold text-grove-700 hover:text-grove-800 dark:text-grove-400 dark:hover:text-grove-300">
-              Зарегистрироваться
+              {t("pages:login.signUp")}
             </Link>
           </p>
 
           <div className="mt-8 flex items-center justify-center gap-3 text-xs text-stone-400 dark:text-stone-500">
             <button onClick={() => navigate("/forbidden")} className="hover:text-stone-600 dark:hover:text-stone-300">
-              Условия использования
+              {t("layout:footer.terms")}
             </button>
             <span>·</span>
             <button onClick={() => navigate("/forbidden")} className="hover:text-stone-600 dark:hover:text-stone-300">
-              Конфиденциальность
+              {t("pages:login.privacy")}
             </button>
           </div>
         </motion.div>

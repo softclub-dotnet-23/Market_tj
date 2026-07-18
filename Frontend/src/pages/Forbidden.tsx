@@ -1,9 +1,11 @@
 import { Link } from "react-router-dom";
 import { motion } from "framer-motion";
+import { useTranslation } from "react-i18next";
 import { ArrowLeft, LifeBuoy, ShieldAlert } from "lucide-react";
 import { Button } from "@/components/ui/Button";
 
 export function Forbidden() {
+  const { t } = useTranslation("pages");
   return (
     <div className="container-page flex min-h-[calc(100vh-4.5rem)] flex-col items-center justify-center gap-8 py-16 text-center">
       <motion.div
@@ -17,20 +19,19 @@ export function Forbidden() {
 
       <div className="flex flex-col items-center gap-3">
         <span className="font-display text-7xl text-stone-200 dark:text-stone-700">403</span>
-        <h1 className="font-display text-2xl text-stone-900 sm:text-3xl dark:text-stone-50">Доступ ограничен</h1>
+        <h1 className="font-display text-2xl text-stone-900 sm:text-3xl dark:text-stone-50">{t("forbidden.title")}</h1>
         <p className="max-w-md text-balance text-stone-500 dark:text-stone-400">
-          У вас недостаточно прав для просмотра этой страницы. Если вы считаете, что это ошибка, свяжитесь с
-          поддержкой.
+          {t("forbidden.description")}
         </p>
       </div>
 
       <div className="flex flex-wrap items-center justify-center gap-3">
         <Link to="/">
-          <Button leftIcon={<ArrowLeft size={16} />}>На главную</Button>
+          <Button leftIcon={<ArrowLeft size={16} />}>{t("goHome")}</Button>
         </Link>
         <Link to="/contact">
           <Button variant="outline" leftIcon={<LifeBuoy size={16} />}>
-            Связаться с поддержкой
+            {t("forbidden.contactSupport")}
           </Button>
         </Link>
       </div>

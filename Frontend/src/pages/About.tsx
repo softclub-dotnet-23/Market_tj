@@ -1,4 +1,5 @@
 import { motion } from "framer-motion";
+import { useTranslation } from "react-i18next";
 import { Compass, HandHeart, ShieldCheck, Sprout, Target } from "lucide-react";
 import { Breadcrumbs } from "@/components/ui/Breadcrumbs";
 import { SectionHeading } from "@/components/ui/SectionHeading";
@@ -12,10 +13,11 @@ const VALUE_ICONS = [ShieldCheck, HandHeart, Sprout, Target];
 const MISSION_PHOTO_KEYS = ["vegetables", "fruits", "dried", "dairy"];
 
 export function About() {
+  const { t } = useTranslation(["pages", "layout"]);
   return (
     <div>
       <div className="container-page pb-4 pt-8">
-        <Breadcrumbs items={[{ label: "О нас" }]} />
+        <Breadcrumbs items={[{ label: t("layout:nav.about") }]} />
       </div>
 
       <section className="container-page grid grid-cols-1 items-center gap-14 py-12 lg:grid-cols-2">
@@ -27,20 +29,16 @@ export function About() {
         >
           <span className="inline-flex w-fit items-center gap-2 rounded-full border border-grove-200 bg-grove-50 px-3.5 py-1.5 text-xs font-semibold uppercase tracking-[0.14em] text-grove-700 dark:border-grove-800 dark:bg-grove-950 dark:text-grove-300">
             <Compass size={13} />
-            Наша миссия
+            {t("pages:about.badge")}
           </span>
           <h1 className="text-balance font-display text-4xl leading-[1.1] text-stone-900 sm:text-5xl dark:text-stone-50">
-            Сокращаем путь от земли до стола
+            {t("pages:about.title")}
           </h1>
           <p className="text-balance text-lg leading-relaxed text-stone-500 dark:text-stone-400">
-            Market.tj создан, чтобы фермеры Таджикистана могли продавать урожай напрямую покупателям — честно,
-            прозрачно и без многоступенчатой цепочки перекупщиков, которая забирает большую часть прибыли и
-            добавляет продукту лишние дни в пути.
+            {t("pages:about.paragraph1")}
           </p>
           <p className="text-balance leading-relaxed text-stone-500 dark:text-stone-400">
-            Мы верим, что качественная еда и справедливая цена — это не привилегия, а норма. Поэтому строим
-            инструмент, который одинаково полезен и небольшому семейному хозяйству в горном кишлаке, и городской
-            семье, которая хочет знать, что покупает.
+            {t("pages:about.paragraph2")}
           </p>
         </motion.div>
 
@@ -81,7 +79,7 @@ export function About() {
       </section>
 
       <section className="container-page py-14 sm:py-20">
-        <SectionHeading eyebrow="Ценности" title="Что определяет нашу работу" />
+        <SectionHeading eyebrow={t("pages:about.valuesEyebrow")} title={t("pages:about.valuesTitle")} />
         <div className="mt-14 grid grid-cols-1 gap-5 sm:grid-cols-2 lg:grid-cols-4">
           {values.map((value, i) => {
             const Icon = VALUE_ICONS[i];
@@ -107,7 +105,7 @@ export function About() {
 
       <section className="bg-stone-50/60 py-14 sm:py-20 dark:bg-stone-900/40">
         <div className="container-page">
-          <SectionHeading eyebrow="Наш путь" title="Как всё начиналось" align="left" />
+          <SectionHeading eyebrow={t("pages:about.journeyEyebrow")} title={t("pages:about.journeyTitle")} align="left" />
           <div className="relative mt-14 flex flex-col gap-10 border-l border-stone-200 pl-8 sm:pl-10 dark:border-stone-700">
             {timeline.map((item, i) => (
               <motion.div
@@ -129,19 +127,19 @@ export function About() {
       </section>
 
       <section className="container-page py-14 sm:py-20">
-        <SectionHeading eyebrow="Команда" title="Кто стоит за платформой" align="left" />
+        <SectionHeading eyebrow={t("pages:about.teamEyebrow")} title={t("pages:about.teamTitle")} align="left" />
         <div className="mt-12 grid grid-cols-1 gap-5 sm:grid-cols-3">
-          {teamValues.map((t, i) => (
+          {teamValues.map((member, i) => (
             <motion.div
-              key={t.name}
+              key={member.name}
               initial={{ opacity: 0, y: 20 }}
               whileInView={{ opacity: 1, y: 0 }}
               viewport={{ once: true }}
               transition={{ duration: 0.5, delay: i * 0.08 }}
               className="rounded-2xl border border-stone-100 bg-white p-7 dark:border-stone-800 dark:bg-stone-900"
             >
-              <h3 className="font-display text-lg text-stone-900 dark:text-stone-50">{t.name}</h3>
-              <p className="mt-2 text-sm leading-relaxed text-stone-500 dark:text-stone-400">{t.focus}</p>
+              <h3 className="font-display text-lg text-stone-900 dark:text-stone-50">{member.name}</h3>
+              <p className="mt-2 text-sm leading-relaxed text-stone-500 dark:text-stone-400">{member.focus}</p>
             </motion.div>
           ))}
         </div>

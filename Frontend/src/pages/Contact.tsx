@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { motion } from "framer-motion";
 import { toast } from "sonner";
+import { useTranslation } from "react-i18next";
 import { Clock, Mail, MapPin, MessageCircle, Phone, Send } from "lucide-react";
 import { Breadcrumbs } from "@/components/ui/Breadcrumbs";
 import { Input, Textarea } from "@/components/ui/Field";
@@ -10,21 +11,22 @@ import { FAQSection } from "@/components/sections/FAQSection";
 import { FacebookIcon, InstagramIcon, TelegramIcon, WhatsAppIcon } from "@/components/ui/SocialIcons";
 import { officeInfo } from "@/data/site";
 
-const SUBJECTS = [
-  { value: "general", label: "Общий вопрос" },
-  { value: "farmer", label: "Хочу стать фермером" },
-  { value: "order", label: "Вопрос по заказу" },
-  { value: "partnership", label: "Партнёрство" },
-];
-
-const CONTACT_CARDS = [
-  { icon: MapPin, label: "Адрес офиса", value: officeInfo.address },
-  { icon: Phone, label: "Телефон", value: officeInfo.phone },
-  { icon: Mail, label: "Email", value: officeInfo.email },
-  { icon: Clock, label: "Часы работы", value: officeInfo.hours },
-];
-
 export function Contact() {
+  const { t } = useTranslation(["pages", "layout"]);
+  const SUBJECTS = [
+    { value: "general", label: t("pages:contact.subjectGeneral") },
+    { value: "farmer", label: t("pages:contact.subjectFarmer") },
+    { value: "order", label: t("pages:contact.subjectOrder") },
+    { value: "partnership", label: t("pages:contact.subjectPartnership") },
+  ];
+
+  const CONTACT_CARDS = [
+    { icon: MapPin, label: t("pages:contact.cardAddress"), value: officeInfo.address },
+    { icon: Phone, label: t("pages:contact.cardPhone"), value: officeInfo.phone },
+    { icon: Mail, label: t("pages:contact.cardEmail"), value: officeInfo.email },
+    { icon: Clock, label: t("pages:contact.cardHours"), value: officeInfo.hours },
+  ];
+
   const [subject, setSubject] = useState(SUBJECTS[0].value);
   const [submitting, setSubmitting] = useState(false);
 
@@ -33,7 +35,7 @@ export function Contact() {
     setSubmitting(true);
     setTimeout(() => {
       setSubmitting(false);
-      toast.success("Сообщение отправлено!", { description: "Мы ответим вам в течение рабочего дня." });
+      toast.success(t("pages:contact.toastTitle"), { description: t("pages:contact.toastDescription") });
       (e.target as HTMLFormElement).reset();
     }, 700);
   };
@@ -41,7 +43,7 @@ export function Contact() {
   return (
     <div>
       <div className="container-page pb-4 pt-8">
-        <Breadcrumbs items={[{ label: "Контакты" }]} />
+        <Breadcrumbs items={[{ label: t("layout:nav.contact") }]} />
       </div>
 
       <section className="container-page pb-16 pt-8 text-center">
@@ -53,11 +55,13 @@ export function Contact() {
         >
           <span className="inline-flex items-center gap-2 rounded-full border border-grove-200 bg-grove-50 px-3.5 py-1.5 text-xs font-semibold uppercase tracking-[0.14em] text-grove-700 dark:border-grove-800 dark:bg-grove-950 dark:text-grove-300">
             <MessageCircle size={13} />
-            Мы на связи
+            {t("pages:contact.badge")}
           </span>
-          <h1 className="text-balance font-display text-4xl text-stone-900 sm:text-5xl dark:text-stone-50">Свяжитесь с нами</h1>
+          <h1 className="text-balance font-display text-4xl text-stone-900 sm:text-5xl dark:text-stone-50">
+            {t("pages:contact.title")}
+          </h1>
           <p className="text-balance text-lg text-stone-500 dark:text-stone-400">
-            Вопросы по заказу, сотрудничеству или предложения по улучшению платформы — пишите, мы всегда рады помочь.
+            {t("pages:contact.description")}
           </p>
         </motion.div>
       </section>
@@ -72,19 +76,19 @@ export function Contact() {
             onSubmit={onSubmit}
             className="flex flex-col gap-5 rounded-3xl border border-stone-100 bg-white p-6 sm:p-8 dark:border-stone-800 dark:bg-stone-900"
           >
-            <h2 className="font-display text-xl text-stone-900 dark:text-stone-50">Напишите нам</h2>
+            <h2 className="font-display text-xl text-stone-900 dark:text-stone-50">{t("pages:contact.formTitle")}</h2>
             <div className="grid grid-cols-1 gap-5 sm:grid-cols-2">
-              <Input label="Имя" placeholder="Ваше имя" required />
-              <Input label="Телефон" type="tel" placeholder="+992 __ ___ ____" required />
+              <Input label={t("pages:contact.nameLabel")} placeholder={t("pages:contact.namePlaceholder")} required />
+              <Input label={t("pages:contact.phoneLabel")} type="tel" placeholder="+992 __ ___ ____" required />
             </div>
-            <Input label="Email" type="email" placeholder="you@example.com" required />
+            <Input label={t("pages:contact.cardEmail")} type="email" placeholder="you@example.com" required />
             <div className="flex flex-col gap-1.5">
-              <span className="text-sm font-medium text-stone-700 dark:text-stone-300">Тема обращения</span>
+              <span className="text-sm font-medium text-stone-700 dark:text-stone-300">{t("pages:contact.subjectLabel")}</span>
               <Dropdown options={SUBJECTS} value={subject} onChange={setSubject} />
             </div>
-            <Textarea label="Сообщение" placeholder="Расскажите подробнее, чем мы можем помочь..." required rows={5} />
+            <Textarea label={t("pages:contact.messageLabel")} placeholder={t("pages:contact.messagePlaceholder")} required rows={5} />
             <Button type="submit" size="lg" loading={submitting} rightIcon={<Send size={16} />}>
-              Отправить сообщение
+              {t("pages:contact.submit")}
             </Button>
           </motion.form>
 
@@ -124,7 +128,7 @@ export function Contact() {
                   <MapPin size={20} />
                 </span>
                 <p className="text-sm font-semibold text-stone-800 dark:text-stone-100">{officeInfo.address}</p>
-                <p className="text-xs text-stone-400 dark:text-stone-500">Интерактивная карта появится совсем скоро</p>
+                <p className="text-xs text-stone-400 dark:text-stone-500">{t("pages:contact.mapComingSoon")}</p>
               </div>
             </motion.div>
 
@@ -135,7 +139,7 @@ export function Contact() {
               transition={{ duration: 0.5, delay: 0.3 }}
               className="flex items-center justify-between rounded-2xl border border-stone-100 bg-white p-5 dark:border-stone-800 dark:bg-stone-900"
             >
-              <span className="text-sm font-medium text-stone-700 dark:text-stone-300">Мы в соцсетях</span>
+              <span className="text-sm font-medium text-stone-700 dark:text-stone-300">{t("pages:contact.socialTitle")}</span>
               <div className="flex items-center gap-2">
                 {[InstagramIcon, TelegramIcon, FacebookIcon, WhatsAppIcon].map((Icon, i) => (
                   <a

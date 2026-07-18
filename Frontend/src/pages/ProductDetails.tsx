@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { Link, useParams } from "react-router-dom";
 import { motion } from "framer-motion";
+import { useTranslation } from "react-i18next";
 import {
   CalendarDays,
   Heart,
@@ -32,15 +33,16 @@ import { useCart } from "@/context/CartContext";
 import { useFavorites } from "@/context/FavoritesContext";
 import { cn, formatDate, formatSomoni } from "@/lib/utils";
 
-const BADGE_LABELS: Record<string, { label: string; variant: "grove" | "harvest" | "clay" | "dark" }> = {
-  organic: { label: "Органика", variant: "grove" },
-  new: { label: "Новинка", variant: "harvest" },
-  bestseller: { label: "Хит продаж", variant: "dark" },
-  discount: { label: "Скидка", variant: "clay" },
-  premium: { label: "Премиум", variant: "harvest" },
+const BADGE_VARIANTS: Record<string, "grove" | "harvest" | "clay" | "dark"> = {
+  organic: "grove",
+  new: "harvest",
+  bestseller: "dark",
+  discount: "clay",
+  premium: "harvest",
 };
 
 export function ProductDetails() {
+  const { t } = useTranslation(["pages", "product", "common", "layout"]);
   const { slug } = useParams();
   const product = getProductBySlug(slug ?? "");
   const { addItem } = useCart();
@@ -53,11 +55,11 @@ export function ProductDetails() {
       <div className="container-page py-16">
         <EmptyState
           icon={<PackageCheck size={26} />}
-          title="Товар не найден"
-          description="Возможно, объявление было снято с публикации или ссылка устарела."
+          title={t("pages:productDetails.notFoundTitle")}
+          description={t("pages:productDetails.notFoundDescription")}
           action={
             <Link to="/catalog">
-              <Button variant="outline">Вернуться в каталог</Button>
+              <Button variant="outline">{t("pages:productDetails.backToCatalog")}</Button>
             </Link>
           }
         />
@@ -87,7 +89,7 @@ export function ProductDetails() {
     <div className="container-page py-8 sm:py-12">
       <Breadcrumbs
         items={[
-          { label: category?.name ?? "Каталог", to: `/catalog?category=${category?.slug}` },
+          { label: category?.name ?? t("layout:nav.catalog"), to: `/catalog?category=${category?.slug}` },
           { label: product.title },
         ]}
         className="mb-6"
@@ -102,8 +104,8 @@ export function ProductDetails() {
         <div className="flex flex-col gap-5">
           <div className="flex flex-wrap items-center gap-2">
             {product.badges.map((b) => (
-              <Badge key={b} variant={BADGE_LABELS[b].variant}>
-                {BADGE_LABELS[b].label}
+              <Badge key={b} variant={BADGE_VARIANTS[b]}>
+                {t(`product:badges.${b}`)}
               </Badge>
             ))}
             <Badge variant="outline">{product.qualityGrade}</Badge>
@@ -116,9 +118,13 @@ export function ProductDetails() {
           <div className="flex flex-wrap items-center gap-4">
             <RatingStars rating={product.rating} size={15} showValue reviewCount={product.reviewCount} />
             <span className="h-4 w-px bg-stone-200 dark:bg-stone-700" />
-            <span className="text-sm text-stone-400 dark:text-stone-500">{product.viewCount} просмотров</span>
+            <span className="text-sm text-stone-400 dark:text-stone-500">
+              {t("pages:productDetails.viewsCount", { count: product.viewCount })}
+            </span>
             <span className="h-4 w-px bg-stone-200 dark:bg-stone-700" />
-            <span className="text-sm text-stone-400 dark:text-stone-500">{product.orderCount} заказов</span>
+            <span className="text-sm text-stone-400 dark:text-stone-500">
+              {t("pages:productDetails.ordersCount", { count: product.orderCount })}
+            </span>
           </div>
 
           {farmer && (
@@ -131,19 +137,24 @@ export function ProductDetails() {
                 alt={farmer.ownerName}
                 className="h-7 w-7 shrink-0 rounded-full object-cover"
               />
-              Фермер: <span className="font-medium text-stone-800 dark:text-stone-100">{farmer.farmName}</span>
+              {t("pages:productDetails.farmerPrefix")}{" "}
+              <span className="font-medium text-stone-800 dark:text-stone-100">{farmer.farmName}</span>
             </Link>
           )}
 
           <div className="flex items-end gap-3 rounded-2xl bg-stone-50 p-5 dark:bg-stone-800/60">
             <div className="flex flex-col">
               <span className="font-display text-4xl text-stone-900 dark:text-stone-50">
-                {formatSomoni(product.retailPricePerKg)} с.
-                <span className="ml-1.5 text-base font-normal text-stone-400 dark:text-stone-500">/{product.unit}</span>
+                {formatSomoni(product.retailPricePerKg)} {t("common:currencySomoni")}
+                <span className="ml-1.5 text-base font-normal text-stone-400 dark:text-stone-500">
+                  /{t(`product:units.${product.unit}`)}
+                </span>
               </span>
               {product.oldPrice && (
                 <span className="mt-1 flex items-center gap-2 text-sm">
-                  <span className="text-stone-400 line-through dark:text-stone-500">{formatSomoni(product.oldPrice)} с.</span>
+                  <span className="text-stone-400 line-through dark:text-stone-500">
+                    {formatSomoni(product.oldPrice)} {t("common:currencySomoni")}
+                  </span>
                   <span className="font-semibold text-clay-600 dark:text-clay-400">−{discount}%</span>
                 </span>
               )}
@@ -151,19 +162,23 @@ export function ProductDetails() {
             {product.wholesalePricePerKg && (
               <div className="ml-auto text-right text-xs text-stone-500 dark:text-stone-400">
                 <p className="font-semibold text-stone-700 dark:text-stone-200">
-                  Опт: {formatSomoni(product.wholesalePricePerKg)} с./{product.unit}
+                  {t("pages:productDetails.wholesalePrefix")} {formatSomoni(product.wholesalePricePerKg)}{" "}
+                  {t("common:currencySomoni")}/{t(`product:units.${product.unit}`)}
                 </p>
-                <p>от {product.wholesaleMinimumQuantity} {product.unit}</p>
+                <p>
+                  {t("pages:productDetails.fromPrefix")} {product.wholesaleMinimumQuantity}{" "}
+                  {t(`product:units.${product.unit}`)}
+                </p>
               </div>
             )}
           </div>
 
           <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
             {[
-              { icon: CalendarDays, label: "Сбор урожая", value: formatDate(product.harvestDate) },
-              { icon: Sprout, label: "Регион", value: product.district },
-              { icon: PackageCheck, label: "В наличии", value: `${product.availableQuantity} ${product.unit}` },
-              { icon: Truck, label: "Мин. заказ", value: `${product.minimumOrderQuantity} ${product.unit}` },
+              { icon: CalendarDays, label: t("pages:productDetails.harvestDate"), value: formatDate(product.harvestDate) },
+              { icon: Sprout, label: t("pages:productDetails.region"), value: product.district },
+              { icon: PackageCheck, label: t("pages:productDetails.inStock"), value: `${product.availableQuantity} ${t(`product:units.${product.unit}`)}` },
+              { icon: Truck, label: t("pages:productDetails.minOrder"), value: `${product.minimumOrderQuantity} ${t(`product:units.${product.unit}`)}` },
             ].map((item) => (
               <div key={item.label} className="flex flex-col gap-1.5 rounded-xl border border-stone-100 p-3 dark:border-stone-800">
                 <item.icon size={15} className="text-grove-600 dark:text-grove-400" />
@@ -185,7 +200,7 @@ export function ProductDetails() {
                 <Minus size={15} />
               </button>
               <span className="min-w-10 text-center text-sm font-semibold text-stone-800 dark:text-stone-100">
-                {quantity} {product.unit}
+                {quantity} {t(`product:units.${product.unit}`)}
               </span>
               <button
                 onClick={() => changeQty(1)}
@@ -202,7 +217,11 @@ export function ProductDetails() {
               disabled={outOfStock}
               onClick={() => addItem(product, quantity)}
             >
-              {outOfStock ? "Нет в наличии" : `В корзину · ${formatSomoni(product.retailPricePerKg * quantity)} с.`}
+              {outOfStock
+                ? t("product:outOfStock")
+                : t("pages:productDetails.addToCartWithPrice", {
+                    price: `${formatSomoni(product.retailPricePerKg * quantity)} ${t("common:currencySomoni")}`,
+                  })}
             </Button>
 
             <div className="flex gap-2">
@@ -212,13 +231,13 @@ export function ProductDetails() {
                   "flex h-13 w-13 shrink-0 items-center justify-center rounded-xl border border-stone-200 text-stone-500 transition hover:border-clay-300 hover:text-clay-500 dark:border-stone-700 dark:text-stone-400",
                   favorite && "border-clay-300 bg-clay-50 text-clay-500 dark:border-clay-500/40 dark:bg-clay-500/15 dark:text-clay-400",
                 )}
-                aria-label="В избранное"
+                aria-label={t("pages:productDetails.addToFavorites")}
               >
                 <Heart size={18} fill={favorite ? "currentColor" : "none"} />
               </button>
               <button
                 className="flex h-13 w-13 shrink-0 items-center justify-center rounded-xl border border-stone-200 text-stone-500 transition hover:border-stone-300 dark:border-stone-700 dark:text-stone-400 dark:hover:border-stone-600"
-                aria-label="Поделиться"
+                aria-label={t("pages:productDetails.share")}
               >
                 <Share2 size={18} />
               </button>
@@ -227,7 +246,7 @@ export function ProductDetails() {
 
           <div className="flex items-center gap-2 pt-1 text-xs text-stone-400 dark:text-stone-500">
             <ShieldCheck size={14} className="text-grove-600 dark:text-grove-400" />
-            Оплата при получении. Проверка качества перед приёмкой заказа.
+            {t("pages:productDetails.paymentNote")}
           </div>
         </div>
       </div>
@@ -235,9 +254,9 @@ export function ProductDetails() {
       <div className="mt-16">
         <Tabs defaultValue="description">
           <TabsList>
-            <TabsTrigger value="description">Описание</TabsTrigger>
-            <TabsTrigger value="specs">Характеристики</TabsTrigger>
-            <TabsTrigger value="reviews">Отзывы ({reviews.length})</TabsTrigger>
+            <TabsTrigger value="description">{t("pages:productDetails.tabDescription")}</TabsTrigger>
+            <TabsTrigger value="specs">{t("pages:productDetails.tabSpecs")}</TabsTrigger>
+            <TabsTrigger value="reviews">{t("pages:productDetails.tabReviews", { count: reviews.length })}</TabsTrigger>
           </TabsList>
 
           <div className="mt-8 max-w-3xl">
@@ -253,7 +272,7 @@ export function ProductDetails() {
                   </div>
                 ))}
                 <div className="flex justify-between bg-white px-5 py-3.5 text-sm dark:bg-stone-900">
-                  <dt className="text-stone-500 dark:text-stone-400">Регион происхождения</dt>
+                  <dt className="text-stone-500 dark:text-stone-400">{t("pages:productDetails.originRegion")}</dt>
                   <dd className="font-medium text-stone-800 dark:text-stone-100">
                     {product.region}, {product.district}
                   </dd>
@@ -269,14 +288,14 @@ export function ProductDetails() {
 
       {farmer && (
         <div className="mt-16">
-          <h2 className="mb-5 font-display text-2xl text-stone-900 dark:text-stone-50">О фермере</h2>
+          <h2 className="mb-5 font-display text-2xl text-stone-900 dark:text-stone-50">{t("pages:productDetails.aboutFarmer")}</h2>
           <FarmerProfileCard farmer={farmer} />
         </div>
       )}
 
       {related.length > 0 && (
         <section className="mt-20">
-          <SectionHeading align="left" title="Похожие товары" className="mb-8" />
+          <SectionHeading align="left" title={t("pages:productDetails.relatedProducts")} className="mb-8" />
           <div className="grid grid-cols-2 gap-4 sm:grid-cols-4">
             {related.map((p, i) => (
               <motion.div
@@ -295,7 +314,7 @@ export function ProductDetails() {
 
       {recommended.length > 0 && (
         <section className="mt-16">
-          <SectionHeading align="left" title="Вам может понравиться" className="mb-8" />
+          <SectionHeading align="left" title={t("pages:productDetails.recommendedProducts")} className="mb-8" />
           <div className="grid grid-cols-2 gap-4 sm:grid-cols-4">
             {recommended.map((p, i) => (
               <motion.div

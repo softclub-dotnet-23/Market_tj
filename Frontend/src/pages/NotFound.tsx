@@ -1,11 +1,13 @@
 import { Link } from "react-router-dom";
 import { motion } from "framer-motion";
+import { useTranslation } from "react-i18next";
 import { ArrowLeft, Compass, Search } from "lucide-react";
 import { Button } from "@/components/ui/Button";
 import { PhotoTile } from "@/components/ui/PhotoTile";
 import { categoryPhotos } from "@/assets/photos";
 
 export function NotFound() {
+  const { t } = useTranslation("pages");
   return (
     <div className="container-page flex min-h-[calc(100vh-4.5rem)] flex-col items-center justify-center gap-8 py-16 text-center">
       <motion.div
@@ -28,19 +30,19 @@ export function NotFound() {
 
       <div className="flex flex-col items-center gap-3">
         <span className="font-display text-7xl text-stone-200 dark:text-stone-700">404</span>
-        <h1 className="font-display text-2xl text-stone-900 sm:text-3xl dark:text-stone-50">Такой страницы не нашлось</h1>
+        <h1 className="font-display text-2xl text-stone-900 sm:text-3xl dark:text-stone-50">{t("notFound.title")}</h1>
         <p className="max-w-md text-balance text-stone-500 dark:text-stone-400">
-          Похоже, урожай с этой грядки уже собран. Возможно, ссылка устарела или страница была перемещена.
+          {t("notFound.description")}
         </p>
       </div>
 
       <div className="flex flex-wrap items-center justify-center gap-3">
         <Link to="/">
-          <Button leftIcon={<ArrowLeft size={16} />}>На главную</Button>
+          <Button leftIcon={<ArrowLeft size={16} />}>{t("goHome")}</Button>
         </Link>
         <Link to="/catalog">
           <Button variant="outline" leftIcon={<Compass size={16} />}>
-            В каталог
+            {t("notFound.goToCatalog")}
           </Button>
         </Link>
       </div>
