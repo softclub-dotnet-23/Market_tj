@@ -43,6 +43,7 @@ public static class DependencyInjection
         services.AddScoped<ISupportMessageService, SupportMessageService>();
         services.AddScoped<IDeliverySlotService, DeliverySlotService>();
         services.AddScoped<IDailySalesSnapshotService, DailySalesSnapshotService>();
+        services.AddScoped<IAnalyticsService, AnalyticsService>();
 
         return services;
     }
