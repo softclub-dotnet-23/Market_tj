@@ -1,4 +1,5 @@
 import { motion } from "framer-motion";
+import { useTranslation } from "react-i18next";
 import { Bike, ClipboardCheck, PackageCheck, ShoppingBasket } from "lucide-react";
 import { SectionHeading } from "@/components/ui/SectionHeading";
 import { deliverySteps } from "@/data/site";
@@ -6,12 +7,13 @@ import { deliverySteps } from "@/data/site";
 const ICONS = [ShoppingBasket, ClipboardCheck, Bike, PackageCheck];
 
 export function DeliveryProcess() {
+  const { t } = useTranslation("sections");
   return (
     <section className="bg-stone-50/60 py-14 sm:py-20 dark:bg-stone-900/40">
       <div className="container-page">
         <SectionHeading
-          eyebrow="Как это работает"
-          title="Путь заказа от корзины до двери"
+          eyebrow={t("deliveryProcess.eyebrow")}
+          title={t("deliveryProcess.title")}
         />
 
         <div className="relative mt-16 grid grid-cols-1 gap-10 sm:grid-cols-2 lg:grid-cols-4">

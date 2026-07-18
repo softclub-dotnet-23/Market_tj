@@ -1,5 +1,6 @@
 import { Link } from "react-router-dom";
 import { motion } from "framer-motion";
+import { useTranslation } from "react-i18next";
 import { ArrowRight, Clock, Leaf } from "lucide-react";
 import { PhotoTile } from "@/components/ui/PhotoTile";
 import { RatingStars } from "@/components/ui/RatingStars";
@@ -12,6 +13,7 @@ const freshest = [...products]
   .slice(0, 5);
 
 export function FreshHarvest() {
+  const { t } = useTranslation(["sections", "common", "product"]);
   const [big, ...rest] = freshest;
 
   return (
@@ -20,21 +22,19 @@ export function FreshHarvest() {
         <div className="flex flex-col items-start gap-6">
           <span className="inline-flex items-center gap-2 rounded-full border border-grove-200 bg-grove-50 px-3.5 py-1.5 text-xs font-semibold uppercase tracking-[0.14em] text-grove-700 dark:border-grove-800 dark:bg-grove-950 dark:text-grove-300">
             <Leaf size={13} />
-            Свежий урожай
+            {t("sections:freshHarvest.badge")}
           </span>
           <h2 className="text-balance font-display text-3xl leading-[1.12] text-stone-900 sm:text-[2.6rem] dark:text-stone-50">
-            От сбора до доставки — в среднем 18 часов
+            {t("sections:freshHarvest.title")}
           </h2>
           <p className="text-balance text-[15px] leading-relaxed text-stone-500 sm:text-base dark:text-stone-400">
-            Мы намеренно ограничиваем время между сбором урожая и доставкой. Фермер публикует объявление в день сбора,
-            а курьер забирает заказ уже на следующее утро — так продукт не успевает потерять вкус и питательную
-            ценность.
+            {t("sections:freshHarvest.description")}
           </p>
           <Link
             to="/catalog?sortBy=fresh"
             className="inline-flex items-center gap-2 rounded-xl bg-stone-900 px-6 py-3.5 text-sm font-medium text-white transition hover:bg-stone-800 dark:bg-grove-600 dark:hover:bg-grove-500"
           >
-            Смотреть свежие поступления
+            {t("sections:freshHarvest.viewFresh")}
             <ArrowRight size={16} />
           </Link>
         </div>
@@ -59,7 +59,9 @@ export function FreshHarvest() {
                 <h3 className="font-display text-xl text-stone-900 hover:text-grove-700 dark:text-stone-50 dark:hover:text-grove-400">{big.title}</h3>
               </Link>
               <RatingStars rating={big.rating} size={13} showValue reviewCount={big.reviewCount} />
-              <p className="font-display text-lg text-stone-900 dark:text-stone-50">{formatSomoni(big.retailPricePerKg)} с./{big.unit}</p>
+              <p className="font-display text-lg text-stone-900 dark:text-stone-50">
+                {formatSomoni(big.retailPricePerKg)} {t("common:currencySomoni")}/{t(`product:units.${big.unit}`)}
+              </p>
             </div>
           </motion.div>
 

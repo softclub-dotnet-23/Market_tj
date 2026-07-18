@@ -12,6 +12,20 @@
     "openMenu": "Кушодани меню",
     "subscribe": "Обуна шудан",
     "socialNetwork": "Шабакаи иҷтимоӣ",
-    "changeLanguage": "Иваз кардани забон"
+    "changeLanguage": "Иваз кардани забон",
+    "loading": "Боркунӣ..."
+  },
+  "currencySomoni": "сомонӣ",
+  "dates": {
+    "months": [
+      "январ", "феврал", "март", "апрел", "май", "июн",
+      "июл", "август", "сентябр", "октябр", "ноябр", "декабр"
+    ],
+    "today": "имрӯз",
+    "yesterday": "дирӯз",
+    "daysAgo": "{{count}} рӯз пеш",
+    "weeksAgo": "{{count}} ҳафта пеш",
+    "monthsAgo": "{{count}} моҳ пеш",
+    "yearsAgo": "{{count}} сол пеш"
   }
 }

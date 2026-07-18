@@ -1,4 +1,5 @@
 import { motion } from "framer-motion";
+import { useTranslation } from "react-i18next";
 import { BadgeCheck, Handshake, MapPinned, MessageSquareHeart } from "lucide-react";
 import { SectionHeading } from "@/components/ui/SectionHeading";
 import { whyChooseUs } from "@/data/site";
@@ -6,11 +7,12 @@ import { whyChooseUs } from "@/data/site";
 const ICONS = [Handshake, BadgeCheck, MapPinned, MessageSquareHeart];
 
 export function WhyChooseUs() {
+  const { t } = useTranslation("sections");
   return (
     <section className="container-page py-14 sm:py-20">
       <SectionHeading
-        eyebrow="Наши преимущества"
-        title="Почему выбирают Market.tj"
+        eyebrow={t("whyChooseUs.eyebrow")}
+        title={t("whyChooseUs.title")}
       />
 
       <div className="mt-14 grid grid-cols-1 gap-5 sm:grid-cols-2 lg:grid-cols-4">

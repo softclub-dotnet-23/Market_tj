@@ -1,3 +1,4 @@
+import { useTranslation } from "react-i18next";
 import { Quote } from "lucide-react";
 import { SectionHeading } from "@/components/ui/SectionHeading";
 import { Carousel } from "@/components/ui/Carousel";
@@ -7,11 +8,12 @@ import { testimonials } from "@/data/testimonials";
 import { getCustomerPhoto } from "@/assets/photos";
 
 export function Testimonials() {
+  const { t } = useTranslation("sections");
   return (
     <section className="container-page py-14 sm:py-20">
       <SectionHeading
-        eyebrow="Отзывы"
-        title="Что говорят наши покупатели"
+        eyebrow={t("testimonials.eyebrow")}
+        title={t("testimonials.title")}
       />
 
       <Carousel className="mt-12" slideClassName="w-[85%] sm:w-[55%] lg:w-[36%]" showDots>

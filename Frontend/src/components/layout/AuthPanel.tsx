@@ -1,4 +1,5 @@
 import { motion } from "framer-motion";
+import { useTranslation } from "react-i18next";
 import { BadgeCheck, Leaf, Quote } from "lucide-react";
 import { PhotoTile } from "@/components/ui/PhotoTile";
 import { Avatar } from "@/components/ui/Avatar";
@@ -12,6 +13,7 @@ const floaters = [
 ];
 
 export function AuthPanel() {
+  const { t } = useTranslation("layout");
   return (
     <div className="relative hidden overflow-hidden bg-grove-900 lg:block">
       <div className="pointer-events-none absolute inset-0 bg-noise opacity-20" />
@@ -35,7 +37,7 @@ export function AuthPanel() {
             transition={{ duration: 0.7 }}
             className="absolute inset-6 overflow-hidden rounded-[2rem] shadow-2xl"
           >
-            <PhotoTile src={heroPhoto} alt="Фермер с корзиной свежих овощей" className="h-full w-full" />
+            <PhotoTile src={heroPhoto} alt={t("authPanel.heroAlt")} className="h-full w-full" />
           </motion.div>
           {floaters.map((f, i) => (
             <motion.div
@@ -54,15 +56,12 @@ export function AuthPanel() {
         <div className="flex flex-col gap-6">
           <div className="rounded-2xl border border-white/10 bg-white/5 p-5 backdrop-blur">
             <Quote size={20} className="mb-3 text-grove-400" fill="currentColor" />
-            <p className="text-sm leading-relaxed text-grove-100">
-              "Заказываю каждую неделю — разница со свежестью рыночных продуктов колоссальная. Больше не хочу
-              покупать иначе."
-            </p>
+            <p className="text-sm leading-relaxed text-grove-100">{t("authPanel.quote")}</p>
             <div className="mt-4 flex items-center gap-3">
-              <Avatar name="Фарида Назарова" src={getCustomerPhoto(1)} size={36} />
+              <Avatar name={t("authPanel.customerName")} src={getCustomerPhoto(1)} size={36} />
               <div>
-                <p className="text-sm font-medium text-white">Фарида Назарова</p>
-                <p className="text-xs text-grove-300">Покупательница, Душанбе</p>
+                <p className="text-sm font-medium text-white">{t("authPanel.customerName")}</p>
+                <p className="text-xs text-grove-300">{t("authPanel.customerRole")}</p>
               </div>
             </div>
           </div>
@@ -70,18 +69,18 @@ export function AuthPanel() {
           <div className="flex items-center justify-between text-white">
             <div>
               <AnimatedCounter value={214} suffix="+" className="font-display text-2xl" />
-              <p className="text-xs text-grove-300">фермеров</p>
+              <p className="text-xs text-grove-300">{t("authPanel.farmersLabel")}</p>
             </div>
             <div>
               <AnimatedCounter value={32400} suffix="+" className="font-display text-2xl" />
-              <p className="text-xs text-grove-300">заказов</p>
+              <p className="text-xs text-grove-300">{t("authPanel.ordersLabel")}</p>
             </div>
             <div className="flex items-center gap-1.5">
               <BadgeCheck size={18} className="text-grove-400" />
               <span className="text-xs text-grove-300">
-                Проверенные
+                {t("authPanel.verifiedFarms1")}
                 <br />
-                хозяйства
+                {t("authPanel.verifiedFarms2")}
               </span>
             </div>
           </div>

@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { motion } from "framer-motion";
 import { toast } from "sonner";
+import { useTranslation } from "react-i18next";
 import { Mail, Send } from "lucide-react";
 import { PhotoTile } from "@/components/ui/PhotoTile";
 import { productPhotos } from "@/assets/photos";
@@ -8,12 +9,13 @@ import { productPhotos } from "@/assets/photos";
 const floaterIds = [201, 203, 501];
 
 export function NewsletterSection() {
+  const { t } = useTranslation(["sections", "layout", "common"]);
   const [email, setEmail] = useState("");
 
   const submit = (e: React.FormEvent) => {
     e.preventDefault();
     if (!email.trim()) return;
-    toast.success("Вы подписаны!", { description: "Скидка 10% на первый заказ уже у вас на почте." });
+    toast.success(t("sections:newsletter.toastTitle"), { description: t("sections:newsletter.toastDescription") });
     setEmail("");
   };
 
@@ -41,13 +43,13 @@ export function NewsletterSection() {
         <div className="relative flex max-w-lg flex-col gap-4">
           <span className="inline-flex w-fit items-center gap-2 rounded-full bg-white px-3.5 py-1.5 text-xs font-semibold text-harvest-700 shadow-sm dark:bg-stone-800 dark:text-harvest-300">
             <Mail size={13} />
-            Рассылка
+            {t("sections:newsletter.badge")}
           </span>
           <h2 className="text-balance font-display text-3xl leading-tight text-stone-900 dark:text-stone-50">
-            Получите скидку 10% на первый заказ
+            {t("sections:newsletter.title")}
           </h2>
           <p className="text-balance text-stone-500 dark:text-stone-400">
-            Подпишитесь на еженедельную подборку сезонных продуктов и советов от фермеров — без спама.
+            {t("sections:newsletter.description")}
           </p>
           <form onSubmit={submit} className="mt-2 flex flex-col gap-3 sm:flex-row">
             <input
@@ -55,14 +57,14 @@ export function NewsletterSection() {
               required
               value={email}
               onChange={(e) => setEmail(e.target.value)}
-              placeholder="Ваш email"
+              placeholder={t("layout:footer.emailPlaceholder")}
               className="h-13 w-full rounded-xl border border-stone-200 bg-white px-5 text-[15px] focus:border-grove-500 focus:ring-2 focus:ring-grove-100 sm:max-w-xs dark:border-stone-700 dark:bg-stone-800 dark:text-stone-100 dark:placeholder:text-stone-500 dark:focus:ring-grove-900"
             />
             <button
               type="submit"
               className="flex h-13 items-center justify-center gap-2 rounded-xl bg-stone-900 px-6 text-sm font-semibold text-white transition hover:bg-stone-800 dark:bg-grove-600 dark:hover:bg-grove-500"
             >
-              Подписаться
+              {t("common:actions.subscribe")}
               <Send size={15} />
             </button>
           </form>

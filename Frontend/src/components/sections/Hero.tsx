@@ -1,5 +1,6 @@
 import { useNavigate } from "react-router-dom";
 import { motion } from "framer-motion";
+import { useTranslation } from "react-i18next";
 import { ArrowRight, BadgeCheck, PlayCircle, Sparkles } from "lucide-react";
 import { PhotoTile } from "@/components/ui/PhotoTile";
 import { Avatar } from "@/components/ui/Avatar";
@@ -11,6 +12,7 @@ const floatingIds = [201, 401, 501, 601];
 const avatarFarmerIds = [1, 2, 3, 8];
 
 export function Hero() {
+  const { t } = useTranslation(["sections", "layout", "common"]);
   const navigate = useNavigate();
   const floaters = floatingIds.map((id) => products.find((p) => p.id === id)!).filter(Boolean);
 
@@ -30,7 +32,7 @@ export function Hero() {
             className="inline-flex items-center gap-2 rounded-full border border-grove-200 bg-white/80 px-4 py-1.5 text-xs font-semibold text-grove-700 shadow-sm backdrop-blur dark:border-grove-800 dark:bg-grove-950/60 dark:text-grove-300"
           >
             <Sparkles size={13} />
-            Более 200 проверенных фермеров по всему Таджикистану
+            {t("sections:hero.badge")}
           </motion.div>
 
           <motion.h1
@@ -39,9 +41,9 @@ export function Hero() {
             transition={{ duration: 0.7, delay: 0.08, ease: [0.25, 1, 0.5, 1] }}
             className="text-balance text-[2.6rem] leading-[1.06] text-stone-900 sm:text-6xl dark:text-stone-50"
           >
-            Свежее с поля —
+            {t("sections:hero.titleLine1")}
             <br />
-            <span className="text-grove-700 dark:text-grove-400">прямо к вашему столу</span>
+            <span className="text-grove-700 dark:text-grove-400">{t("sections:hero.titleLine2")}</span>
           </motion.h1>
 
           <motion.p
@@ -50,8 +52,7 @@ export function Hero() {
             transition={{ duration: 0.7, delay: 0.16 }}
             className="max-w-md text-balance text-lg leading-relaxed text-stone-500 dark:text-stone-400"
           >
-            Market.tj напрямую соединяет фермерские хозяйства с покупателями — без перекупщиков, накруток и лишних
-            дней в пути. Только свежий урожай и честная цена.
+            {t("sections:hero.description")}
           </motion.p>
 
           <motion.div
@@ -64,14 +65,14 @@ export function Hero() {
               onClick={() => navigate("/catalog")}
               className="group inline-flex h-13 items-center gap-2 rounded-xl bg-grove-700 px-7 text-base font-medium text-white shadow-(--shadow-glow-grove) transition hover:bg-grove-800"
             >
-              Смотреть каталог
+              {t("sections:hero.viewCatalog")}
               <ArrowRight size={18} className="transition-transform group-hover:translate-x-1" />
             </button>
             <button className="inline-flex h-13 items-center gap-2.5 rounded-xl px-5 text-base font-medium text-stone-700 transition hover:text-grove-700 dark:text-stone-300 dark:hover:text-grove-400">
               <span className="flex h-9 w-9 items-center justify-center rounded-full bg-white shadow-(--shadow-soft) dark:bg-stone-800">
                 <PlayCircle size={18} />
               </span>
-              Как это работает
+              {t("sections:hero.howItWorks")}
             </button>
           </motion.div>
 
@@ -88,7 +89,8 @@ export function Hero() {
               })}
             </div>
             <p className="text-sm text-stone-500 dark:text-stone-400">
-              <span className="font-semibold text-stone-800 dark:text-stone-200">32 400+</span> заказов доставлено по стране
+              <span className="font-semibold text-stone-800 dark:text-stone-200">32 400+</span>{" "}
+              {t("sections:hero.ordersDeliveredSuffix")}
             </p>
           </motion.div>
         </div>
@@ -100,7 +102,7 @@ export function Hero() {
             transition={{ duration: 0.8, ease: [0.25, 1, 0.5, 1] }}
             className="absolute inset-8 overflow-hidden rounded-[2.5rem] shadow-(--shadow-lifted)"
           >
-            <PhotoTile src={heroPhoto} alt="Фермер с корзиной свежих овощей" className="h-full w-full" />
+            <PhotoTile src={heroPhoto} alt={t("layout:authPanel.heroAlt")} className="h-full w-full" />
           </motion.div>
 
           {floaters.map((product, i) => {
@@ -123,7 +125,9 @@ export function Hero() {
                   <PhotoTile src={productPhotos[product.id]} alt={product.title} className="h-full w-full" />
                 </div>
                 <p className="truncate text-[11px] font-medium text-stone-700">{product.title}</p>
-                <p className="text-xs font-semibold text-grove-700">{product.retailPricePerKg} с.</p>
+                <p className="text-xs font-semibold text-grove-700">
+                  {product.retailPricePerKg} {t("common:currencySomoni")}
+                </p>
               </motion.div>
             );
           })}
@@ -136,8 +140,8 @@ export function Hero() {
           >
             <BadgeCheck size={20} className="text-grove-600" />
             <div>
-              <p className="text-xs font-semibold text-stone-800">Фермер проверен</p>
-              <p className="text-[11px] text-stone-400">Документы и адрес подтверждены</p>
+              <p className="text-xs font-semibold text-stone-800">{t("sections:hero.farmerVerifiedTitle")}</p>
+              <p className="text-[11px] text-stone-400">{t("sections:hero.farmerVerifiedSubtitle")}</p>
             </div>
           </motion.div>
         </div>

@@ -1,6 +1,7 @@
 import { useEffect, useRef } from "react";
 import { Link } from "react-router-dom";
 import { motion } from "framer-motion";
+import { useTranslation } from "react-i18next";
 import { Minus, Plus, ShoppingBag, Trash2 } from "lucide-react";
 import { useCart } from "@/context/CartContext";
 import { getProductById } from "@/data/products";
@@ -10,6 +11,7 @@ import { Button } from "@/components/ui/Button";
 import { formatSomoni } from "@/lib/utils";
 
 export function MiniCart({ onClose }: { onClose: () => void }) {
+  const { t } = useTranslation(["layout", "common"]);
   const { lines, removeItem, setQuantity, totalPrice } = useCart();
   const ref = useRef<HTMLDivElement>(null);
 
@@ -31,8 +33,8 @@ export function MiniCart({ onClose }: { onClose: () => void }) {
       className="absolute right-0 top-full z-50 mt-3 w-[min(380px,90vw)] rounded-2xl border border-stone-100 bg-white p-4 shadow-(--shadow-lifted) dark:border-stone-800 dark:bg-stone-900"
     >
       <div className="mb-3 flex items-center justify-between">
-        <h3 className="font-display text-base text-stone-900 dark:text-stone-50">Корзина</h3>
-        <span className="text-xs text-stone-400 dark:text-stone-500">{lines.length} товар(ов)</span>
+        <h3 className="font-display text-base text-stone-900 dark:text-stone-50">{t("miniCart.title")}</h3>
+        <span className="text-xs text-stone-400 dark:text-stone-500">{t("miniCart.itemsCount", { count: lines.length })}</span>
       </div>
 
       {lines.length === 0 ? (
@@ -40,10 +42,10 @@ export function MiniCart({ onClose }: { onClose: () => void }) {
           <div className="flex h-12 w-12 items-center justify-center rounded-full bg-stone-100 text-stone-400 dark:bg-stone-800 dark:text-stone-500">
             <ShoppingBag size={20} />
           </div>
-          <p className="text-sm text-stone-500 dark:text-stone-400">Корзина пока пуста</p>
+          <p className="text-sm text-stone-500 dark:text-stone-400">{t("miniCart.empty")}</p>
           <Link to="/catalog" onClick={onClose}>
             <Button size="sm" variant="outline" className="mt-1">
-              Перейти в каталог
+              {t("miniCart.goToCatalog")}
             </Button>
           </Link>
         </div>
@@ -85,13 +87,13 @@ export function MiniCart({ onClose }: { onClose: () => void }) {
                         </button>
                       </div>
                       <span className="text-sm font-semibold text-stone-900 dark:text-stone-100">
-                        {formatSomoni(product.retailPricePerKg * line.quantity)} с.
+                        {formatSomoni(product.retailPricePerKg * line.quantity)} {t("common:currencySomoni")}
                       </span>
                     </div>
                   </div>
                   <button
                     onClick={() => removeItem(line.productId)}
-                    aria-label="Удалить"
+                    aria-label={t("miniCart.remove")}
                     className="self-start text-stone-300 transition hover:text-clay-500"
                   >
                     <Trash2 size={15} />
@@ -102,14 +104,16 @@ export function MiniCart({ onClose }: { onClose: () => void }) {
           </div>
 
           <div className="mt-4 flex items-center justify-between border-t border-stone-100 pt-3 dark:border-stone-800">
-            <span className="text-sm text-stone-500 dark:text-stone-400">Итого</span>
-            <span className="font-display text-lg text-stone-900 dark:text-stone-50">{formatSomoni(totalPrice)} с.</span>
+            <span className="text-sm text-stone-500 dark:text-stone-400">{t("miniCart.total")}</span>
+            <span className="font-display text-lg text-stone-900 dark:text-stone-50">
+              {formatSomoni(totalPrice)} {t("common:currencySomoni")}
+            </span>
           </div>
           <Button className="mt-3 w-full" size="md">
-            Оформить заказ
+            {t("miniCart.checkout")}
           </Button>
           <p className="mt-2 text-center text-[11px] text-stone-400 dark:text-stone-500">
-            Оформление заказа появится после подключения к бэкенду
+            {t("miniCart.checkoutNote")}
           </p>
         </>
       )}

@@ -12,6 +12,20 @@
     "openMenu": "Открыть меню",
     "subscribe": "Подписаться",
     "socialNetwork": "Социальная сеть",
-    "changeLanguage": "Сменить язык"
+    "changeLanguage": "Сменить язык",
+    "loading": "Загрузка..."
+  },
+  "currencySomoni": "с.",
+  "dates": {
+    "months": [
+      "января", "февраля", "марта", "апреля", "мая", "июня",
+      "июля", "августа", "сентября", "октября", "ноября", "декабря"
+    ],
+    "today": "сегодня",
+    "yesterday": "вчера",
+    "daysAgo": "{{count}} дн. назад",
+    "weeksAgo": "{{count}} нед. назад",
+    "monthsAgo": "{{count}} мес. назад",
+    "yearsAgo": "{{count}} г. назад"
   }
 }

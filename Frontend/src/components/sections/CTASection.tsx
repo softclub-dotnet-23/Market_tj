@@ -1,8 +1,10 @@
 import { Link } from "react-router-dom";
 import { motion } from "framer-motion";
+import { useTranslation } from "react-i18next";
 import { ArrowRight, Sprout, UserRound } from "lucide-react";
 
 export function CTASection() {
+  const { t } = useTranslation("sections");
   return (
     <section className="container-page py-14 sm:py-20">
       <motion.div
@@ -19,10 +21,10 @@ export function CTASection() {
         <div className="relative grid grid-cols-1 items-center gap-10 lg:grid-cols-[1.2fr_auto]">
           <div className="flex flex-col gap-4">
             <h2 className="text-balance font-display text-3xl leading-tight sm:text-4xl">
-              Готовы попробовать свежие продукты напрямую от фермера?
+              {t("cta.title")}
             </h2>
             <p className="max-w-xl text-balance text-grove-100">
-              Присоединяйтесь к тысячам покупателей и фермеров, которые уже отказались от посредников.
+              {t("cta.description")}
             </p>
           </div>
 
@@ -32,7 +34,7 @@ export function CTASection() {
               className="group inline-flex items-center justify-center gap-2 rounded-xl bg-white px-6 py-3.5 text-sm font-semibold text-grove-800 transition hover:bg-grove-50"
             >
               <UserRound size={16} />
-              Стать покупателем
+              {t("cta.becomeCustomer")}
               <ArrowRight size={15} className="transition-transform group-hover:translate-x-1" />
             </Link>
             <Link
@@ -40,7 +42,7 @@ export function CTASection() {
               className="group inline-flex items-center justify-center gap-2 rounded-xl border border-white/30 px-6 py-3.5 text-sm font-semibold text-white transition hover:bg-white/10"
             >
               <Sprout size={16} />
-              Стать фермером
+              {t("cta.becomeFarmer")}
               <ArrowRight size={15} className="transition-transform group-hover:translate-x-1" />
             </Link>
           </div>

@@ -1,5 +1,6 @@
 import { Link } from "react-router-dom";
 import { motion } from "framer-motion";
+import { useTranslation } from "react-i18next";
 import { ArrowUpRight } from "lucide-react";
 import { SectionHeading } from "@/components/ui/SectionHeading";
 import { ProductCard } from "@/components/product/ProductCard";
@@ -29,19 +30,20 @@ function Grid({ items }: { items: typeof products }) {
 }
 
 export function FeaturedProducts() {
+  const { t } = useTranslation("sections");
   return (
     <section className="bg-stone-50/60 py-14 sm:py-20 dark:bg-stone-900/40">
       <div className="container-page">
         <SectionHeading
-          eyebrow="Каталог"
+          eyebrow={t("featuredProducts.eyebrow")}
           align="left"
-          title="Популярные товары этой недели"
+          title={t("featuredProducts.title")}
           action={
             <Link
               to="/catalog"
               className="inline-flex items-center gap-1.5 text-sm font-semibold text-grove-700 transition hover:text-grove-800 dark:text-grove-400 dark:hover:text-grove-300"
             >
-              Весь каталог
+              {t("featuredProducts.viewAll")}
               <ArrowUpRight size={16} />
             </Link>
           }
@@ -49,9 +51,9 @@ export function FeaturedProducts() {
 
         <Tabs defaultValue="bestsellers" className="mt-10">
           <TabsList>
-            <TabsTrigger value="bestsellers">Хиты продаж</TabsTrigger>
-            <TabsTrigger value="new">Новинки</TabsTrigger>
-            <TabsTrigger value="premium">Премиум</TabsTrigger>
+            <TabsTrigger value="bestsellers">{t("featuredProducts.tabBestsellers")}</TabsTrigger>
+            <TabsTrigger value="new">{t("featuredProducts.tabNew")}</TabsTrigger>
+            <TabsTrigger value="premium">{t("featuredProducts.tabPremium")}</TabsTrigger>
           </TabsList>
           <div className="mt-8">
             <TabsContent value="bestsellers">

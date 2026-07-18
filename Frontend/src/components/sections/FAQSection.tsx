@@ -1,10 +1,12 @@
 import { useState } from "react";
+import { useTranslation } from "react-i18next";
 import { SectionHeading } from "@/components/ui/SectionHeading";
 import { Accordion, AccordionItem } from "@/components/ui/Accordion";
 import { Chip } from "@/components/ui/Chip";
 import { faqGroups, faqItems } from "@/data/faq";
 
 export function FAQSection() {
+  const { t } = useTranslation("sections");
   const [activeGroup, setActiveGroup] = useState(faqGroups[0]);
   const items = faqItems.filter((f) => f.group === activeGroup);
 
@@ -13,10 +15,10 @@ export function FAQSection() {
       <div className="container-page grid grid-cols-1 gap-12 lg:grid-cols-[0.8fr_1.2fr]">
         <div>
           <SectionHeading
-            eyebrow="Вопросы"
+            eyebrow={t("faq.eyebrow")}
             align="left"
-            title="Часто задаваемые вопросы"
-            description="Не нашли ответ? Напишите нам — раздел «Контакты» всегда на связи."
+            title={t("faq.title")}
+            description={t("faq.description")}
           />
           <div className="mt-8 flex flex-wrap gap-2">
             {faqGroups.map((group) => (
