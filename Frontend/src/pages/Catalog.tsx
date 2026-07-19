@@ -13,7 +13,7 @@ import { Modal } from "@/components/ui/Modal";
 import { Button } from "@/components/ui/Button";
 import { ProductCard } from "@/components/product/ProductCard";
 import { CatalogFilters, type CatalogFilterState } from "@/components/product/CatalogFilters";
-import { products } from "@/data/products";
+import { useProducts } from "@/data/products";
 import { useCategories } from "@/data/categories";
 import { useFarmers } from "@/data/farmers";
 import { regions } from "@/data/site";
@@ -31,6 +31,7 @@ export function Catalog() {
     { value: "fresh", label: t("pages:catalog.sortFresh") },
   ];
   const farmers = useFarmers();
+  const products = useProducts();
   const [searchParams, setSearchParams] = useSearchParams();
   const [mobileFiltersOpen, setMobileFiltersOpen] = useState(false);
   const [loading, setLoading] = useState(true);
@@ -115,7 +116,7 @@ export function Catalog() {
         list.sort((a, b) => b.orderCount - a.orderCount);
     }
     return list;
-  }, [search, categorySlugs, region, farmerId, onlyAvailable, priceMin, priceMax, sortBy, favoritesOnly, favoriteIds, categories]);
+  }, [search, categorySlugs, region, farmerId, onlyAvailable, priceMin, priceMax, sortBy, favoritesOnly, favoriteIds, categories, products]);
 
   const totalPages = Math.max(1, Math.ceil(filtered.length / PAGE_SIZE));
   const currentPage = Math.min(page, totalPages);

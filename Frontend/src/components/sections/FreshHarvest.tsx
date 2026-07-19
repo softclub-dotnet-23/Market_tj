@@ -4,16 +4,16 @@ import { useTranslation } from "react-i18next";
 import { ArrowRight, Clock, Leaf } from "lucide-react";
 import { PhotoTile } from "@/components/ui/PhotoTile";
 import { RatingStars } from "@/components/ui/RatingStars";
-import { products } from "@/data/products";
+import { useProducts } from "@/data/products";
 import { productPhotos } from "@/assets/photos";
 import { formatSomoni, timeAgo } from "@/lib/utils";
 
-const freshest = [...products]
-  .sort((a, b) => new Date(b.harvestDate).getTime() - new Date(a.harvestDate).getTime())
-  .slice(0, 5);
-
 export function FreshHarvest() {
   const { t } = useTranslation(["sections", "common", "product"]);
+  const products = useProducts();
+  const freshest = [...products]
+    .sort((a, b) => new Date(b.harvestDate).getTime() - new Date(a.harvestDate).getTime())
+    .slice(0, 5);
   const [big, ...rest] = freshest;
 
   return (

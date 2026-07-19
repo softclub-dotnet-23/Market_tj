@@ -4,7 +4,7 @@ import { useTranslation } from "react-i18next";
 import { ArrowRight, BadgeCheck, PlayCircle, Sparkles } from "lucide-react";
 import { PhotoTile } from "@/components/ui/PhotoTile";
 import { Avatar } from "@/components/ui/Avatar";
-import { products } from "@/data/products";
+import { useProducts } from "@/data/products";
 import { useFarmers } from "@/data/farmers";
 import { productPhotos, heroPhoto, farmerPhotos } from "@/assets/photos";
 
@@ -15,6 +15,7 @@ export function Hero() {
   const { t } = useTranslation(["sections", "layout", "common"]);
   const navigate = useNavigate();
   const farmers = useFarmers();
+  const products = useProducts();
   const floaters = floatingIds.map((id) => products.find((p) => p.id === id)!).filter(Boolean);
 
   return (

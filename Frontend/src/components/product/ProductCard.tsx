@@ -21,7 +21,7 @@ const BADGE_VARIANTS: Record<string, "grove" | "harvest" | "clay" | "dark"> = {
 };
 
 export function ProductCard({ product, className }: { product: Product; className?: string }) {
-  const { t } = useTranslation(["product", "common"]);
+  const { t } = useTranslation(["product", "common", "data"]);
   const farmers = useFarmers();
   const farmer = farmers.find((f) => f.id === product.farmerId);
   const { addItem } = useCart();
@@ -76,7 +76,7 @@ export function ProductCard({ product, className }: { product: Product; classNam
         <div className="flex items-center justify-between gap-2 text-xs text-stone-400 dark:text-stone-500">
           <span className="inline-flex items-center gap-1">
             <MapPin size={12} />
-            {product.district}
+            {t(`data:districtLabels.${product.district}`)}
           </span>
           <RatingStars rating={product.rating} size={12} />
         </div>

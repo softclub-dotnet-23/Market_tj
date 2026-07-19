@@ -4,7 +4,7 @@ import { motion } from "framer-motion";
 import { useTranslation } from "react-i18next";
 import { Minus, Plus, ShoppingBag, Trash2 } from "lucide-react";
 import { useCart } from "@/context/CartContext";
-import { getProductById } from "@/data/products";
+import { useProducts } from "@/data/products";
 import { PhotoTile } from "@/components/ui/PhotoTile";
 import { productPhotos } from "@/assets/photos";
 import { Button } from "@/components/ui/Button";
@@ -12,6 +12,7 @@ import { formatSomoni } from "@/lib/utils";
 
 export function MiniCart({ onClose }: { onClose: () => void }) {
   const { t } = useTranslation(["layout", "common"]);
+  const products = useProducts();
   const { lines, removeItem, setQuantity, totalPrice } = useCart();
   const ref = useRef<HTMLDivElement>(null);
 
@@ -53,7 +54,7 @@ export function MiniCart({ onClose }: { onClose: () => void }) {
         <>
           <div className="flex max-h-72 flex-col gap-3 overflow-y-auto pr-1">
             {lines.map((line) => {
-              const product = getProductById(line.productId);
+              const product = products.find((p) => p.id === line.productId);
               if (!product) return null;
               return (
                 <div key={line.productId} className="flex gap-3">

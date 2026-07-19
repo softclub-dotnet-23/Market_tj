@@ -5,13 +5,10 @@ import { ArrowUpRight } from "lucide-react";
 import { SectionHeading } from "@/components/ui/SectionHeading";
 import { ProductCard } from "@/components/product/ProductCard";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/Tabs";
-import { products } from "@/data/products";
+import { useProducts } from "@/data/products";
+import type { Product } from "@/types";
 
-const bestsellers = products.filter((p) => p.badges.includes("bestseller")).slice(0, 8);
-const newArrivals = products.filter((p) => p.badges.includes("new")).slice(0, 8);
-const premium = products.filter((p) => p.badges.includes("premium")).slice(0, 8);
-
-function Grid({ items }: { items: typeof products }) {
+function Grid({ items }: { items: Product[] }) {
   return (
     <div className="grid grid-cols-2 gap-4 sm:grid-cols-3 sm:gap-5 lg:grid-cols-4">
       {items.map((product, i) => (
@@ -31,6 +28,10 @@ function Grid({ items }: { items: typeof products }) {
 
 export function FeaturedProducts() {
   const { t } = useTranslation("sections");
+  const products = useProducts();
+  const bestsellers = products.filter((p) => p.badges.includes("bestseller")).slice(0, 8);
+  const newArrivals = products.filter((p) => p.badges.includes("new")).slice(0, 8);
+  const premium = products.filter((p) => p.badges.includes("premium")).slice(0, 8);
   return (
     <section className="bg-stone-50/60 py-14 sm:py-20 dark:bg-stone-900/40">
       <div className="container-page">

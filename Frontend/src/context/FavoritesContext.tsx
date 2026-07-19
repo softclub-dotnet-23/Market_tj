@@ -2,7 +2,7 @@ import { createContext, useContext, useState } from "react";
 import type { ReactNode } from "react";
 import { toast } from "sonner";
 import { useTranslation } from "react-i18next";
-import { getProductById } from "@/data/products";
+import { useProducts } from "@/data/products";
 
 interface FavoritesContextValue {
   favoriteIds: number[];
@@ -14,12 +14,13 @@ const FavoritesContext = createContext<FavoritesContextValue | null>(null);
 
 export function FavoritesProvider({ children }: { children: ReactNode }) {
   const { t } = useTranslation("common");
+  const products = useProducts();
   const [favoriteIds, setFavoriteIds] = useState<number[]>([]);
 
   const toggleFavorite = (productId: number) => {
     setFavoriteIds((prev) => {
       const exists = prev.includes(productId);
-      const product = getProductById(productId);
+      const product = products.find((p) => p.id === productId);
       const title = product?.title ?? t("favorites.defaultItemName");
       if (exists) {
         toast(t("favorites.removedItem", { title }));

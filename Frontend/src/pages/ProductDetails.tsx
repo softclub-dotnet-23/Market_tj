@@ -24,7 +24,7 @@ import { ProductGallery } from "@/components/product/ProductGallery";
 import { FarmerProfileCard } from "@/components/product/FarmerProfileCard";
 import { ReviewsSection } from "@/components/product/ReviewsSection";
 import { ProductCard } from "@/components/product/ProductCard";
-import { getProductBySlug, getRelatedProducts, products } from "@/data/products";
+import { useProducts } from "@/data/products";
 import { useCategories } from "@/data/categories";
 import { useFarmers } from "@/data/farmers";
 import { getReviewsForProduct } from "@/data/reviews";
@@ -42,9 +42,10 @@ const BADGE_VARIANTS: Record<string, "grove" | "harvest" | "clay" | "dark"> = {
 };
 
 export function ProductDetails() {
-  const { t } = useTranslation(["pages", "product", "common", "layout"]);
+  const { t } = useTranslation(["pages", "product", "common", "layout", "data"]);
   const { slug } = useParams();
-  const product = getProductBySlug(slug ?? "");
+  const products = useProducts();
+  const product = products.find((p) => p.slug === slug);
   const { addItem } = useCart();
   const { isFavorite, toggleFavorite } = useFavorites();
   const [quantity, setQuantity] = useState(product?.minimumOrderQuantity ?? 1);
@@ -71,7 +72,9 @@ export function ProductDetails() {
   const category = categories.find((c) => c.id === product.categoryId);
   const farmer = farmers.find((f) => f.id === product.farmerId);
   const reviews = getReviewsForProduct(product.id);
-  const related = getRelatedProducts(product, 4);
+  const related = products
+    .filter((p) => p.id !== product.id && (p.categoryId === product.categoryId || p.farmerId === product.farmerId))
+    .slice(0, 4);
   const recommended = products
     .filter((p) => p.id !== product.id && p.categoryId !== product.categoryId && p.rating >= 4.6)
     .slice(0, 4);
@@ -177,7 +180,7 @@ export function ProductDetails() {
           <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
             {[
               { icon: CalendarDays, label: t("pages:productDetails.harvestDate"), value: formatDate(product.harvestDate) },
-              { icon: Sprout, label: t("pages:productDetails.region"), value: product.district },
+              { icon: Sprout, label: t("pages:productDetails.region"), value: t(`data:districtLabels.${product.district}`) },
               { icon: PackageCheck, label: t("pages:productDetails.inStock"), value: `${product.availableQuantity} ${t(`product:units.${product.unit}`)}` },
               { icon: Truck, label: t("pages:productDetails.minOrder"), value: `${product.minimumOrderQuantity} ${t(`product:units.${product.unit}`)}` },
             ].map((item) => (
@@ -275,7 +278,7 @@ export function ProductDetails() {
                 <div className="flex justify-between bg-white px-5 py-3.5 text-sm dark:bg-stone-900">
                   <dt className="text-stone-500 dark:text-stone-400">{t("pages:productDetails.originRegion")}</dt>
                   <dd className="font-medium text-stone-800 dark:text-stone-100">
-                    {product.region}, {product.district}
+                    {t(`data:regionLabels.${product.region}`)}, {t(`data:districtLabels.${product.district}`)}
                   </dd>
                 </div>
               </dl>
