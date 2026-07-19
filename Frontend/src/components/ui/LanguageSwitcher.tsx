@@ -4,6 +4,7 @@ import { AnimatePresence, motion } from "framer-motion";
 import { useTranslation } from "react-i18next";
 import { Check, ChevronDown, Globe } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { useSwitchLanguage } from "@/context/LanguageContext";
 import type { SupportedLanguage } from "@/lib/i18n";
 
 // Флаги — inline SVG, а не emoji: на Windows флаг-эмодзи не рендерятся (показываются буквами).
@@ -48,6 +49,7 @@ const LANGUAGES: LanguageOption[] = [
 
 export function LanguageSwitcher({ className }: { className?: string }) {
   const { t, i18n } = useTranslation();
+  const switchLanguage = useSwitchLanguage();
   const [open, setOpen] = useState(false);
   const ref = useRef<HTMLDivElement>(null);
   const current = (i18n.resolvedLanguage ?? i18n.language) as SupportedLanguage;
@@ -73,8 +75,8 @@ export function LanguageSwitcher({ className }: { className?: string }) {
   }, [current]);
 
   const selectLanguage = (code: SupportedLanguage) => {
-    i18n.changeLanguage(code);
     setOpen(false);
+    switchLanguage(code);
   };
 
   return (
