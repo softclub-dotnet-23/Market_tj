@@ -114,3 +114,8 @@ C:\Users\2026\OneDrive\Desktop\Softclub\.Net1\Demo-Project\backend\MarketTJ.Appl
 C:\Users\2026\OneDrive\Desktop\Softclub\.Net1\Demo-Project\backend\MarketTJ.Application.Tests\bin\Debug\net10.0\Microsoft.Extensions.Options.dll
 C:\Users\2026\OneDrive\Desktop\Softclub\.Net1\Demo-Project\backend\MarketTJ.Application.Tests\bin\Debug\net10.0\Microsoft.Extensions.Options.ConfigurationExtensions.dll
 C:\Users\2026\OneDrive\Desktop\Softclub\.Net1\Demo-Project\backend\MarketTJ.Application.Tests\bin\Debug\net10.0\Microsoft.Extensions.Primitives.dll
+C:\Users\2026\OneDrive\Desktop\Softclub\.Net1\Demo-Project\backend\MarketTJ.Application.Tests\bin\Debug\net10.0\Castle.Core.dll
+C:\Users\2026\OneDrive\Desktop\Softclub\.Net1\Demo-Project\backend\MarketTJ.Application.Tests\bin\Debug\net10.0\Moq.dll
+C:\Users\2026\OneDrive\Desktop\Softclub\.Net1\Demo-Project\backend\MarketTJ.Application.Tests\bin\Debug\net10.0\System.Diagnostics.EventLog.dll
+C:\Users\2026\OneDrive\Desktop\Softclub\.Net1\Demo-Project\backend\MarketTJ.Application.Tests\bin\Debug\net10.0\runtimes\win\lib\net6.0\System.Diagnostics.EventLog.Messages.dll
+C:\Users\2026\OneDrive\Desktop\Softclub\.Net1\Demo-Project\backend\MarketTJ.Application.Tests\bin\Debug\net10.0\runtimes\win\lib\net6.0\System.Diagnostics.EventLog.dll

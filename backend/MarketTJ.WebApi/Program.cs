@@ -2,6 +2,7 @@ using MarketTJ.Application;
 using MarketTJ.Infrastructure;
 using MarketTJ.Infrastructure.Persistence;
 using MarketTJ.Infrastructure.Persistence.Seed;
+using MarketTJ.WebApi.Middleware;
 using Microsoft.EntityFrameworkCore;
 
 var builder = WebApplication.CreateBuilder(args);
@@ -32,6 +33,13 @@ using (var scope = app.Services.CreateScope())
 }
 
 await Seeder.SeedAsync(app.Services);
+
+// ExceptionHandling — самым первым в pipeline, чтобы ловить исключения из
+// всех последующих middleware/контроллеров. RequestLogging — сразу после,
+// чтобы в лог запроса попадал в том числе статус-код, который расставил
+// ExceptionHandling при необработанном исключении.
+app.UseMiddleware<ExceptionHandlingMiddleware>();
+app.UseMiddleware<RequestLoggingMiddleware>();
 
 if (app.Environment.IsDevelopment())
 {

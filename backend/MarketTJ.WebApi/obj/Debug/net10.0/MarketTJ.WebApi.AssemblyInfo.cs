@@ -14,7 +14,7 @@ using System.Reflection;
 [assembly: System.Reflection.AssemblyCompanyAttribute("MarketTJ.WebApi")]
 [assembly: System.Reflection.AssemblyConfigurationAttribute("Debug")]
 [assembly: System.Reflection.AssemblyFileVersionAttribute("1.0.0.0")]
-[assembly: System.Reflection.AssemblyInformationalVersionAttribute("1.0.0+d578e4676577ce68f205c74736b93c86a7aaa4a0")]
+[assembly: System.Reflection.AssemblyInformationalVersionAttribute("1.0.0+09684e9bc0e3974425d20d99ef93e9e3c89d19c5")]
 [assembly: System.Reflection.AssemblyProductAttribute("MarketTJ.WebApi")]
 [assembly: System.Reflection.AssemblyTitleAttribute("MarketTJ.WebApi")]
 [assembly: System.Reflection.AssemblyVersionAttribute("1.0.0.0")]
