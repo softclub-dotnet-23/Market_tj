@@ -104,8 +104,8 @@ export function AuthPanel() {
           <motion.img
             src={treePhoto}
             alt={t("authPanel.heroAlt")}
-            className="absolute inset-0 h-full w-full object-contain drop-shadow-[0_18px_30px_rgba(0,0,0,0.35)]"
-            style={{ transformOrigin: "bottom center" }}
+            className={`absolute inset-0 h-full w-full object-contain ${grown ? "drop-shadow-[0_18px_30px_rgba(0,0,0,0.35)]" : ""}`}
+            style={{ transformOrigin: "bottom center", willChange: grown ? "auto" : "transform, opacity, clip-path" }}
             initial={
               prefersReducedMotion
                 ? false
