@@ -1,10 +1,9 @@
 import { useState } from "react";
 import { motion } from "framer-motion";
 import { useTranslation } from "react-i18next";
-import { BadgeCheck, Leaf, Quote } from "lucide-react";
-import { Avatar } from "@/components/ui/Avatar";
+import { BadgeCheck, Leaf } from "lucide-react";
 import { AnimatedCounter } from "@/components/ui/AnimatedCounter";
-import { treePhoto, applePhoto, getCustomerPhoto } from "@/assets/photos";
+import { treePhoto, applePhoto } from "@/assets/photos";
 
 const prefersReducedMotion =
   typeof window !== "undefined" && window.matchMedia("(prefers-reduced-motion: reduce)").matches;
@@ -128,18 +127,6 @@ export function AuthPanel() {
         </div>
 
         <div className="flex flex-col gap-6">
-          <div className="rounded-2xl border border-white/10 bg-white/5 p-5 backdrop-blur">
-            <Quote size={20} className="mb-3 text-grove-400" fill="currentColor" />
-            <p className="text-sm leading-relaxed text-grove-100">{t("authPanel.quote")}</p>
-            <div className="mt-4 flex items-center gap-3">
-              <Avatar name={t("authPanel.customerName")} src={getCustomerPhoto(1)} size={36} />
-              <div>
-                <p className="text-sm font-medium text-white">{t("authPanel.customerName")}</p>
-                <p className="text-xs text-grove-300">{t("authPanel.customerRole")}</p>
-              </div>
-            </div>
-          </div>
-
           <div className="flex items-center justify-between text-white">
             <div>
               <AnimatedCounter value={214} suffix="+" className="font-display text-2xl" />
