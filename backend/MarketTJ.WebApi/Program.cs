@@ -15,6 +15,23 @@ builder.Services.AddInfrastructureServices(builder.Configuration);
 
 builder.Services.AddControllers();
 
+// CORS для React-фронтенда (Frontend/, Vite dev server) — origin'ы берутся
+// из конфига (Cors:AllowedOrigins), а не хардкодятся, т.к. в проде адрес
+// фронтенда будет другим. AllowCredentials не включаем — Auth (JWT/cookies)
+// в проекте ещё не реализован (Этап 2, раздел 23 ТЗ), запросы идут без cookies.
+const string FrontendCorsPolicy = "FrontendCorsPolicy";
+var allowedOrigins = builder.Configuration.GetSection("Cors:AllowedOrigins").Get<string[]>() ?? [];
+
+builder.Services.AddCors(options =>
+{
+    options.AddPolicy(FrontendCorsPolicy, policy =>
+    {
+        policy.WithOrigins(allowedOrigins)
+            .AllowAnyHeader()
+            .AllowAnyMethod();
+    });
+});
+
 builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen(options =>
 {
@@ -53,6 +70,8 @@ if (app.Environment.IsDevelopment())
 app.UseHttpsRedirection();
 
 app.UseStaticFiles();
+
+app.UseCors(FrontendCorsPolicy);
 
 app.UseAuthorization();
 
