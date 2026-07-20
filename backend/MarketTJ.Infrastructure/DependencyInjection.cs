@@ -3,6 +3,7 @@ using MarketTJ.Application.Interfaces.Services;
 using MarketTJ.Infrastructure.Caching;
 using MarketTJ.Infrastructure.Persistence;
 using MarketTJ.Infrastructure.Persistence.Repositories;
+using MarketTJ.Infrastructure.Security;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
@@ -23,6 +24,7 @@ public static class DependencyInjection
             options.Configuration = configuration.GetConnectionString("RedisCache");
         });
         services.AddScoped<ICacheService, RedisCacheService>();
+        services.AddScoped<IPasswordHasher, BCryptPasswordHasher>();
 
         services.AddScoped<IUserRepository, UserRepository>();
         services.AddScoped<IFarmerProfileRepository, FarmerProfileRepository>();
