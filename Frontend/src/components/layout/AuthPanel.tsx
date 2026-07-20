@@ -101,7 +101,7 @@ export function AuthPanel() {
           </span>
         </div>
 
-        <div className="relative mx-auto aspect-630/628 w-full max-w-107.5" style={{ backgroundColor: "#1a482a" }}>
+        <div className="relative mx-auto aspect-630/628 w-full max-w-107.5">
           <motion.img
             src={treePhoto}
             alt={t("authPanel.heroAlt")}
