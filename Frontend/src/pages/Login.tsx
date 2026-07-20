@@ -8,6 +8,8 @@ import { ArrowLeft, Eye, EyeOff, Lock, Mail } from "lucide-react";
 import { Input, Checkbox } from "@/components/ui/Field";
 import { Button } from "@/components/ui/Button";
 import { AuthPanel } from "@/components/layout/AuthPanel";
+import { useAuth } from "@/context/AuthContext";
+import { ApiError } from "@/lib/api";
 
 interface LoginForm {
   email: string;
@@ -18,6 +20,7 @@ interface LoginForm {
 export function Login() {
   const { t } = useTranslation(["pages", "common", "layout"]);
   const navigate = useNavigate();
+  const { login } = useAuth();
   const [showPassword, setShowPassword] = useState(false);
   const {
     register,
@@ -25,11 +28,21 @@ export function Login() {
     formState: { errors, isSubmitting },
   } = useForm<LoginForm>();
 
-  const onSubmit = async () => {
-    await new Promise((r) => setTimeout(r, 700));
-    toast.info(t("pages:login.toastTitle"), {
-      description: t("pages:login.toastDescription"),
-    });
+  const onSubmit = async (data: LoginForm) => {
+    try {
+      const user = await login(data.email, data.password);
+      toast.success(`Добро пожаловать, ${user.fullName}`);
+
+      if (user.role === "Admin") {
+        navigate("/admin");
+      } else {
+        toast.info("Личный кабинет для этой роли ещё в разработке");
+        navigate("/");
+      }
+    } catch (err) {
+      const message = err instanceof ApiError ? err.message : "Не удалось подключиться к серверу";
+      toast.error(message);
+    }
   };
 
   return (
