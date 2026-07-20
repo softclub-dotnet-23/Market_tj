@@ -88,7 +88,6 @@ export function AuthPanel() {
     <div className="relative hidden overflow-hidden bg-grove-900 lg:block">
       <div className="pointer-events-none absolute inset-0 bg-noise opacity-20" />
       <div className="pointer-events-none absolute -left-20 top-10 h-72 w-72 rounded-full bg-grove-700/50 blur-3xl" />
-      <div className="pointer-events-none absolute -right-16 bottom-10 h-72 w-72 rounded-full bg-harvest-600/30 blur-3xl" />
 
       <div className="relative flex h-full flex-col justify-between p-12">
         <div className="flex items-center gap-2 text-white">
