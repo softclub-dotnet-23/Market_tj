@@ -1,0 +1,39 @@
+{
+  "productsCount": "{{count}} товаров",
+  "units": {
+    "кг": "кг",
+    "шт": "шт",
+    "пучок": "пучок",
+    "литр": "литр"
+  },
+  "filters": {
+    "title": "Фильтры",
+    "resetAll": "Сбросить всё",
+    "category": "Категория",
+    "region": "Регион",
+    "price": "Цена, сомони",
+    "priceFrom": "От",
+    "priceTo": "До",
+    "onlyAvailable": "Только в наличии",
+    "resetFilters": "Сбросить фильтры"
+  },
+  "badges": {
+    "organic": "Органика",
+    "new": "Новинка",
+    "bestseller": "Хит продаж",
+    "discount": "Скидка",
+    "premium": "Премиум"
+  },
+  "outOfStock": "Нет в наличии",
+  "removeFromFavorites": "Убрать из избранного",
+  "addToFavorites": "Добавить в избранное",
+  "addToCart": "Добавить в корзину",
+  "reviewsCount": "{{count}} отзывов",
+  "verifiedPurchase": "Подтверждённая покупка",
+  "farmerReply": "Ответ фермера",
+  "helpful": "Полезно ({{count}})",
+  "verified": "Проверен",
+  "verifiedFarmerTitle": "Проверенный фермер",
+  "allProducts": "Все товары",
+  "writeMessage": "Написать"
+}

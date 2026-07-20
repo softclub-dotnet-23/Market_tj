@@ -1,0 +1,14 @@
+{
+  "pagination": "Пагинация",
+  "previousPage": "Предыдущая страница",
+  "nextPage": "Следующая страница",
+  "carouselPrev": "Назад",
+  "carouselNext": "Вперёд",
+  "slideNumber": "Слайд {{number}}",
+  "breadcrumbs": "Хлебные крошки",
+  "selectPlaceholder": "Выберите",
+  "themeToLight": "Включить светлую тему",
+  "themeToDark": "Включить тёмную тему",
+  "lightTheme": "Светлая тема",
+  "darkTheme": "Тёмная тема"
+}

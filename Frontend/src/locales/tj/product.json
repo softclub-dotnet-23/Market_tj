@@ -1,0 +1,39 @@
+{
+  "productsCount": "{{count}} маҳсулот",
+  "units": {
+    "кг": "кг",
+    "шт": "дона",
+    "пучок": "даста",
+    "литр": "литр"
+  },
+  "filters": {
+    "title": "Филтрҳо",
+    "resetAll": "Ҳамаро тоза кардан",
+    "category": "Категория",
+    "region": "Минтақа",
+    "price": "Нарх, сомонӣ",
+    "priceFrom": "Аз",
+    "priceTo": "То",
+    "onlyAvailable": "Танҳо мавҷудбуда",
+    "resetFilters": "Филтрҳоро тоза кардан"
+  },
+  "badges": {
+    "organic": "Органикӣ",
+    "new": "Нав",
+    "bestseller": "Пуртарафдор",
+    "discount": "Тахфиф",
+    "premium": "Премиум"
+  },
+  "outOfStock": "Мавҷуд нест",
+  "removeFromFavorites": "Аз дӯстдоштаҳо баровардан",
+  "addToFavorites": "Ба дӯстдоштаҳо илова кардан",
+  "addToCart": "Ба сабад илова кардан",
+  "reviewsCount": "{{count}} тақриз",
+  "verifiedPurchase": "Хариди тасдиқшуда",
+  "farmerReply": "Ҷавоби деҳқон",
+  "helpful": "Муфид ({{count}})",
+  "verified": "Санҷидашуда",
+  "verifiedFarmerTitle": "Деҳқони санҷидашуда",
+  "allProducts": "Ҳамаи маҳсулот",
+  "writeMessage": "Навиштан"
+}

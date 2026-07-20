@@ -1,0 +1,40 @@
+{
+  "auth": {
+    "login": "Войти",
+    "register": "Регистрация"
+  },
+  "actions": {
+    "search": "Поиск",
+    "searchPlaceholder": "Искать продукты...",
+    "favorites": "Избранное",
+    "cart": "Корзина",
+    "close": "Закрыть",
+    "openMenu": "Открыть меню",
+    "subscribe": "Подписаться",
+    "socialNetwork": "Социальная сеть",
+    "changeLanguage": "Сменить язык",
+    "loading": "Загрузка..."
+  },
+  "currencySomoni": "с.",
+  "cart": {
+    "addedToCart": "{{title}} добавлен в корзину",
+    "addedToCartDescription": "{{quantity}} {{unit}} × {{price}}"
+  },
+  "favorites": {
+    "removedItem": "{{title}} убран из избранного",
+    "addedItem": "{{title}} добавлен в избранное",
+    "defaultItemName": "Товар"
+  },
+  "dates": {
+    "months": [
+      "января", "февраля", "марта", "апреля", "мая", "июня",
+      "июля", "августа", "сентября", "октября", "ноября", "декабря"
+    ],
+    "today": "сегодня",
+    "yesterday": "вчера",
+    "daysAgo": "{{count}} дн. назад",
+    "weeksAgo": "{{count}} нед. назад",
+    "monthsAgo": "{{count}} мес. назад",
+    "yearsAgo": "{{count}} г. назад"
+  }
+}

@@ -1,0 +1,40 @@
+{
+  "auth": {
+    "login": "Ворид шудан",
+    "register": "Сабти ном"
+  },
+  "actions": {
+    "search": "Ҷустуҷӯ",
+    "searchPlaceholder": "Ҷустуҷӯи маҳсулот...",
+    "favorites": "Дӯстдоштаҳо",
+    "cart": "Сабад",
+    "close": "Пӯшидан",
+    "openMenu": "Кушодани меню",
+    "subscribe": "Обуна шудан",
+    "socialNetwork": "Шабакаи иҷтимоӣ",
+    "changeLanguage": "Иваз кардани забон",
+    "loading": "Боркунӣ..."
+  },
+  "currencySomoni": "сомонӣ",
+  "cart": {
+    "addedToCart": "{{title}} ба сабад илова шуд",
+    "addedToCartDescription": "{{quantity}} {{unit}} × {{price}}"
+  },
+  "favorites": {
+    "removedItem": "{{title}} аз дӯстдоштаҳо бароварда шуд",
+    "addedItem": "{{title}} ба дӯстдоштаҳо илова шуд",
+    "defaultItemName": "Маҳсулот"
+  },
+  "dates": {
+    "months": [
+      "январ", "феврал", "март", "апрел", "май", "июн",
+      "июл", "август", "сентябр", "октябр", "ноябр", "декабр"
+    ],
+    "today": "имрӯз",
+    "yesterday": "дирӯз",
+    "daysAgo": "{{count}} рӯз пеш",
+    "weeksAgo": "{{count}} ҳафта пеш",
+    "monthsAgo": "{{count}} моҳ пеш",
+    "yearsAgo": "{{count}} сол пеш"
+  }
+}
