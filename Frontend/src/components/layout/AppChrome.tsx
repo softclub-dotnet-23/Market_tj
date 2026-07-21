@@ -1,14 +1,19 @@
 import { useEffect } from "react";
-import { Outlet, useLocation } from "react-router-dom";
+import { Outlet, useLocation, useNavigationType } from "react-router-dom";
 import { Toaster } from "sonner";
 import { SmoothScroll } from "@/components/layout/SmoothScroll";
 import { useTheme } from "@/context/ThemeContext";
 
 function ScrollToTop() {
   const { pathname } = useLocation();
+  const navigationType = useNavigationType();
   useEffect(() => {
+    // On back/forward (POP) navigation, leave scroll position alone — the
+    // browser restores it natively, which feels smooth and unnoticeable.
+    // Forcing scroll-to-top there is what made "back" feel like a jump.
+    if (navigationType === "POP") return;
     window.scrollTo({ top: 0, behavior: "instant" as ScrollBehavior });
-  }, [pathname]);
+  }, [pathname, navigationType]);
   return null;
 }
 

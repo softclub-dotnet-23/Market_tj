@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from "react";
-import { Link, NavLink, useNavigate } from "react-router-dom";
+import { Link, NavLink, useLocation, useNavigate } from "react-router-dom";
 import { AnimatePresence, motion } from "framer-motion";
 import { useTranslation } from "react-i18next";
 import { Heart, Leaf, Menu, Search, ShoppingBag, User, X } from "lucide-react";
@@ -29,6 +29,7 @@ export function Header() {
   const [searchValue, setSearchValue] = useState("");
   const closeTimer = useRef<ReturnType<typeof setTimeout>>(undefined);
   const navigate = useNavigate();
+  const { pathname } = useLocation();
 
   const { totalItems } = useCart();
   const { favoriteIds } = useFavorites();
@@ -39,6 +40,11 @@ export function Header() {
     window.addEventListener("scroll", onScroll, { passive: true });
     return () => window.removeEventListener("scroll", onScroll);
   }, []);
+
+  useEffect(() => {
+    clearTimeout(closeTimer.current);
+    setMegaOpen(false);
+  }, [pathname]);
 
   const openMega = () => {
     clearTimeout(closeTimer.current);
@@ -84,6 +90,7 @@ export function Header() {
               >
                 <NavLink
                   to={link.to}
+                  onClick={() => setMegaOpen(false)}
                   className={({ isActive }) =>
                     cn(
                       "whitespace-nowrap rounded-lg px-4 py-2 text-sm font-medium text-stone-600 transition hover:bg-stone-100 hover:text-stone-900 dark:text-stone-300 dark:hover:bg-stone-800 dark:hover:text-stone-50",

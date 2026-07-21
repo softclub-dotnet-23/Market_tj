@@ -1,5 +1,5 @@
 {
-  "version": 4,
+  "version": 3,
   "targets": {
     "net10.0": {
       "BCrypt.Net-Next/4.2.0": {
@@ -2780,38 +2780,35 @@
     ]
   },
   "packageFolders": {
-    "C:\\Users\\2026\\.nuget\\packages\\": {}
+    "C:\\Users\\Dell\\.nuget\\packages\\": {}
   },
   "project": {
     "version": "1.0.0",
     "restore": {
-      "projectUniqueName": "C:\\Users\\2026\\OneDrive\\Desktop\\Softclub\\.Net1\\Demo-Project\\backend\\MarketTJ.WebApi\\MarketTJ.WebApi.csproj",
+      "projectUniqueName": "C:\\Users\\Dell\\Desktop\\Market_tj\\backend\\MarketTJ.WebApi\\MarketTJ.WebApi.csproj",
       "projectName": "MarketTJ.WebApi",
-      "projectPath": "C:\\Users\\2026\\OneDrive\\Desktop\\Softclub\\.Net1\\Demo-Project\\backend\\MarketTJ.WebApi\\MarketTJ.WebApi.csproj",
-      "packagesPath": "C:\\Users\\2026\\.nuget\\packages\\",
-      "outputPath": "C:\\Users\\2026\\OneDrive\\Desktop\\Softclub\\.Net1\\Demo-Project\\backend\\MarketTJ.WebApi\\obj\\",
+      "projectPath": "C:\\Users\\Dell\\Desktop\\Market_tj\\backend\\MarketTJ.WebApi\\MarketTJ.WebApi.csproj",
+      "packagesPath": "C:\\Users\\Dell\\.nuget\\packages\\",
+      "outputPath": "C:\\Users\\Dell\\Desktop\\Market_tj\\backend\\MarketTJ.WebApi\\obj\\",
       "projectStyle": "PackageReference",
       "configFilePaths": [
-        "C:\\Users\\2026\\AppData\\Roaming\\NuGet\\NuGet.Config",
-        "C:\\Program Files (x86)\\NuGet\\Config\\Microsoft.VisualStudio.Offline.config"
+        "C:\\Users\\Dell\\AppData\\Roaming\\NuGet\\NuGet.Config"
       ],
       "originalTargetFrameworks": [
         "net10.0"
       ],
       "sources": {
-        "C:\\Program Files (x86)\\Microsoft SDKs\\NuGetPackages\\": {},
         "https://api.nuget.org/v3/index.json": {}
       },
       "frameworks": {
         "net10.0": {
-          "framework": "net10.0",
           "targetAlias": "net10.0",
           "projectReferences": {
-            "C:\\Users\\2026\\OneDrive\\Desktop\\Softclub\\.Net1\\Demo-Project\\backend\\MarketTJ.Application\\MarketTJ.Application.csproj": {
-              "projectPath": "C:\\Users\\2026\\OneDrive\\Desktop\\Softclub\\.Net1\\Demo-Project\\backend\\MarketTJ.Application\\MarketTJ.Application.csproj"
+            "C:\\Users\\Dell\\Desktop\\Market_tj\\backend\\MarketTJ.Application\\MarketTJ.Application.csproj": {
+              "projectPath": "C:\\Users\\Dell\\Desktop\\Market_tj\\backend\\MarketTJ.Application\\MarketTJ.Application.csproj"
             },
-            "C:\\Users\\2026\\OneDrive\\Desktop\\Softclub\\.Net1\\Demo-Project\\backend\\MarketTJ.Infrastructure\\MarketTJ.Infrastructure.csproj": {
-              "projectPath": "C:\\Users\\2026\\OneDrive\\Desktop\\Softclub\\.Net1\\Demo-Project\\backend\\MarketTJ.Infrastructure\\MarketTJ.Infrastructure.csproj"
+            "C:\\Users\\Dell\\Desktop\\Market_tj\\backend\\MarketTJ.Infrastructure\\MarketTJ.Infrastructure.csproj": {
+              "projectPath": "C:\\Users\\Dell\\Desktop\\Market_tj\\backend\\MarketTJ.Infrastructure\\MarketTJ.Infrastructure.csproj"
             }
           }
         }
@@ -2826,11 +2823,10 @@
         "auditLevel": "low",
         "auditMode": "all"
       },
-      "SdkAnalysisLevel": "10.0.300"
+      "SdkAnalysisLevel": "10.0.100"
     },
     "frameworks": {
       "net10.0": {
-        "framework": "net10.0",
         "targetAlias": "net10.0",
         "dependencies": {
           "Microsoft.EntityFrameworkCore.Design": {
@@ -2863,7 +2859,7 @@
             "privateAssets": "all"
           }
         },
-        "runtimeIdentifierGraphPath": "C:\\Program Files\\dotnet\\sdk\\10.0.302/PortableRuntimeIdentifierGraph.json",
+        "runtimeIdentifierGraphPath": "C:\\Program Files\\dotnet\\sdk\\10.0.102/PortableRuntimeIdentifierGraph.json",
         "packagesToPrune": {
           "Microsoft.AspNetCore": "(,10.0.32767]",
           "Microsoft.AspNetCore.Antiforgery": "(,10.0.32767]",

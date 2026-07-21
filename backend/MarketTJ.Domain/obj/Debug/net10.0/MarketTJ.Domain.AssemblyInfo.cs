@@ -13,7 +13,7 @@ using System.Reflection;
 [assembly: System.Reflection.AssemblyCompanyAttribute("MarketTJ.Domain")]
 [assembly: System.Reflection.AssemblyConfigurationAttribute("Debug")]
 [assembly: System.Reflection.AssemblyFileVersionAttribute("1.0.0.0")]
-[assembly: System.Reflection.AssemblyInformationalVersionAttribute("1.0.0+ef2dc98d08e238cb5f44b6dd25488d6feda85237")]
+[assembly: System.Reflection.AssemblyInformationalVersionAttribute("1.0.0+0b4701397235b35be8d3dc244606c6fabbd9cbab")]
 [assembly: System.Reflection.AssemblyProductAttribute("MarketTJ.Domain")]
 [assembly: System.Reflection.AssemblyTitleAttribute("MarketTJ.Domain")]
 [assembly: System.Reflection.AssemblyVersionAttribute("1.0.0.0")]

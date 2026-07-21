@@ -17,6 +17,7 @@ export function PhotoTile({
         src={src}
         alt={alt}
         loading="lazy"
+        draggable={false}
         className={cn("h-full w-full object-cover", imgClassName)}
       />
     </div>

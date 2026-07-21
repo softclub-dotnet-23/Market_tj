@@ -1,7 +1,7 @@
 import { useNavigate } from "react-router-dom";
 import { motion } from "framer-motion";
 import { useTranslation } from "react-i18next";
-import { ArrowRight, BadgeCheck, PlayCircle, Sparkles } from "lucide-react";
+import { ArrowRight, BadgeCheck, PlayCircle } from "lucide-react";
 import { PhotoTile } from "@/components/ui/PhotoTile";
 import { Avatar } from "@/components/ui/Avatar";
 import { useProducts } from "@/data/products";
@@ -27,16 +27,6 @@ export function Hero() {
 
       <div className="container-page grid grid-cols-1 items-center gap-16 lg:grid-cols-2">
         <div className="flex flex-col items-start gap-7">
-          <motion.div
-            initial={{ opacity: 0, y: 10 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.5 }}
-            className="inline-flex items-center gap-2 rounded-full border border-grove-200 bg-white/80 px-4 py-1.5 text-xs font-semibold text-grove-700 shadow-sm backdrop-blur dark:border-grove-800 dark:bg-grove-950/60 dark:text-grove-300"
-          >
-            <Sparkles size={13} />
-            {t("sections:hero.badge")}
-          </motion.div>
-
           <motion.h1
             initial={{ opacity: 0, y: 18 }}
             animate={{ opacity: 1, y: 0 }}

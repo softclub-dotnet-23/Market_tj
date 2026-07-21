@@ -1,0 +1,53 @@
+{
+  "nav": {
+    "overview": "Обзор",
+    "analytics": "Аналитика",
+    "orders": "Заказы",
+    "products": "Товары",
+    "farmers": "Фермеры",
+    "customers": "Покупатели",
+    "payments": "Платежи",
+    "reviews": "Отзывы",
+    "settings": "Настройки"
+  },
+  "collapseSidebar": "Свернуть меню",
+  "expandSidebar": "Развернуть меню",
+  "search": "Поиск...",
+  "notifications": "Уведомления",
+  "adminName": "Администратор",
+  "common": {
+    "somoni": "сомони"
+  },
+  "dashboard": {
+    "greeting": "С возвращением, администратор 👋",
+    "greetingSubtitle": "Вот что происходит на вашей площадке сегодня.",
+    "stats": {
+      "revenue": "Выручка за неделю",
+      "customers": "Новые покупатели",
+      "orders": "Заказы",
+      "farmers": "Активные фермеры"
+    },
+    "vsLastWeek": "vs прошлой недели {{value}}",
+    "salesByRegion": "Продажи по регионам",
+    "total": "Всего",
+    "siteVisits": "Посещения сайта",
+    "recentOrders": "Последние заказы",
+    "viewAll": "Смотреть все",
+    "topFarmers": "Топ фермеры",
+    "popularCategories": "Популярные категории",
+    "orderStatus": {
+      "new": "Новый",
+      "processing": "В обработке",
+      "shipped": "Отправлен",
+      "delivered": "Доставлен"
+    },
+    "regions": {
+      "dushanbe": "Душанбе",
+      "khatlon": "Хатлонская обл.",
+      "sughd": "Согдийская обл.",
+      "gbao": "ГБАО",
+      "rrp": "РРП"
+    },
+    "months": ["Янв", "Фев", "Мар", "Апр", "Май", "Июн"]
+  }
+}
