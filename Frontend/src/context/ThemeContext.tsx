@@ -1,10 +1,14 @@
-import { createContext, useContext, useEffect, useState, type ReactNode } from "react";
+import { createContext, useContext, useEffect, useRef, useState, type ReactNode } from "react";
 
 type Theme = "light" | "dark";
 
 interface ThemeContextValue {
   theme: Theme;
   toggleTheme: () => void;
+}
+
+interface DocumentWithViewTransitions extends Document {
+  startViewTransition?: (callback: () => void) => unknown;
 }
 
 const ThemeContext = createContext<ThemeContextValue | null>(null);
@@ -18,9 +22,30 @@ function getInitialTheme(): Theme {
 
 export function ThemeProvider({ children }: { children: ReactNode }) {
   const [theme, setTheme] = useState<Theme>(getInitialTheme);
+  const isFirstRender = useRef(true);
 
   useEffect(() => {
-    document.documentElement.classList.toggle("dark", theme === "dark");
+    const root = document.documentElement;
+    const applyClass = () => root.classList.toggle("dark", theme === "dark");
+
+    // Skip animating the very first paint — there's nothing to cross-fade from yet.
+    if (isFirstRender.current) {
+      isFirstRender.current = false;
+      applyClass();
+      return;
+    }
+
+    const doc = document as DocumentWithViewTransitions;
+    const prefersReducedMotion = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+
+    // The View Transitions API cross-fades a snapshot of the old/new screen
+    // via the compositor instead of recalculating styles on every DOM node,
+    // so the switch stays smooth even on a page this animation-heavy.
+    if (doc.startViewTransition && !prefersReducedMotion) {
+      doc.startViewTransition(applyClass);
+    } else {
+      applyClass();
+    }
   }, [theme]);
 
   useEffect(() => {

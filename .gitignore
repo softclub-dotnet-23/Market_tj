@@ -1,0 +1,9 @@
+# Локальные настройки backend (строки подключения, пароли, API-ключи) —
+# не коммитятся, у каждого разработчика свои значения локально.
+backend/MarketTJ.WebApi/appsettings.json
+backend/MarketTJ.WebApi/appsettings.*.json
+
+# .NET build artifacts — не коммитятся (были причиной постоянных merge-конфликтов
+# между ветками: скомпилированные .dll/.pdb расходятся при каждой сборке).
+backend/*/bin/
+backend/*/obj/

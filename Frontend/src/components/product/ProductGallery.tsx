@@ -1,10 +1,12 @@
 import { useState } from "react";
 import type { MouseEvent } from "react";
 import { motion } from "framer-motion";
-import { Maximize2, X, ZoomIn } from "lucide-react";
+import { useTranslation } from "react-i18next";
+import { X, ZoomIn } from "lucide-react";
 import { Modal } from "@/components/ui/Modal";
 
 export function ProductGallery({ src, title }: { src: string; title: string }) {
+  const { t } = useTranslation("common");
   const [zoomStyle, setZoomStyle] = useState<{ x: number; y: number } | null>(null);
   const [lightboxOpen, setLightboxOpen] = useState(false);
 
@@ -40,21 +42,23 @@ export function ProductGallery({ src, title }: { src: string; title: string }) {
         </span>
       </div>
 
-      <Modal open={lightboxOpen} onClose={() => setLightboxOpen(false)} className="max-w-2xl bg-transparent p-0 shadow-none">
+      <Modal
+        open={lightboxOpen}
+        onClose={() => setLightboxOpen(false)}
+        showClose={false}
+        className="max-w-2xl overflow-visible bg-transparent p-0 shadow-none"
+      >
         <div className="relative">
           <button
             onClick={() => setLightboxOpen(false)}
-            className="absolute -top-14 right-0 flex h-10 w-10 items-center justify-center rounded-full bg-white/90 text-stone-700"
+            aria-label={t("actions.close")}
+            className="absolute right-4 top-4 flex h-10 w-10 items-center justify-center rounded-full bg-white/90 text-stone-700 shadow-sm backdrop-blur"
           >
             <X size={18} />
           </button>
           <div className="aspect-square overflow-hidden rounded-3xl bg-white shadow-(--shadow-lifted)">
             <img src={src} alt={title} className="h-full w-full object-cover" />
           </div>
-          <p className="mt-4 flex items-center justify-center gap-2 text-sm text-white/80">
-            <Maximize2 size={13} />
-            {title}
-          </p>
         </div>
       </Modal>
     </div>

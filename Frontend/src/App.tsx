@@ -1,9 +1,10 @@
 import { lazy, Suspense } from "react";
-import { BrowserRouter, Route, Routes } from "react-router-dom";
+import { BrowserRouter, Navigate, Route, Routes } from "react-router-dom";
 import { CartProvider } from "@/context/CartContext";
 import { FavoritesProvider } from "@/context/FavoritesContext";
 import { RootLayout } from "@/components/layout/RootLayout";
 import { AppChrome } from "@/components/layout/AppChrome";
+import { AdminLayout } from "@/components/layout/AdminLayout";
 import { PageLoader } from "@/components/layout/PageLoader";
 import { Home } from "@/pages/Home";
 
@@ -15,6 +16,7 @@ const Login = lazy(() => import("@/pages/Login").then((m) => ({ default: m.Login
 const Register = lazy(() => import("@/pages/Register").then((m) => ({ default: m.Register })));
 const Forbidden = lazy(() => import("@/pages/Forbidden").then((m) => ({ default: m.Forbidden })));
 const NotFound = lazy(() => import("@/pages/NotFound").then((m) => ({ default: m.NotFound })));
+const AdminDashboard = lazy(() => import("@/pages/AdminDashboard").then((m) => ({ default: m.AdminDashboard })));
 
 function App() {
   return (
@@ -26,6 +28,11 @@ function App() {
               <Route element={<AppChrome />}>
                 <Route path="login" element={<Login />} />
                 <Route path="register" element={<Register />} />
+
+                <Route path="admin" element={<AdminLayout />}>
+                  <Route index element={<AdminDashboard />} />
+                  <Route path="*" element={<Navigate to="/admin" replace />} />
+                </Route>
 
                 <Route element={<RootLayout />}>
                   <Route index element={<Home />} />

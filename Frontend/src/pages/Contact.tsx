@@ -2,7 +2,7 @@ import { useState } from "react";
 import { motion } from "framer-motion";
 import { toast } from "sonner";
 import { useTranslation } from "react-i18next";
-import { Clock, Mail, MapPin, MessageCircle, Phone, Send } from "lucide-react";
+import { Clock, Mail, MapPin, Phone, Send } from "lucide-react";
 import { Breadcrumbs } from "@/components/ui/Breadcrumbs";
 import { Input, Textarea } from "@/components/ui/Field";
 import { Dropdown } from "@/components/ui/Dropdown";
@@ -54,10 +54,6 @@ export function Contact() {
           transition={{ duration: 0.5 }}
           className="mx-auto flex max-w-2xl flex-col items-center gap-4"
         >
-          <span className="inline-flex items-center gap-2 rounded-full border border-grove-200 bg-grove-50 px-3.5 py-1.5 text-xs font-semibold uppercase tracking-[0.14em] text-grove-700 dark:border-grove-800 dark:bg-grove-950 dark:text-grove-300">
-            <MessageCircle size={13} />
-            {t("pages:contact.badge")}
-          </span>
           <h1 className="text-balance font-display text-4xl text-stone-900 sm:text-5xl dark:text-stone-50">
             {t("pages:contact.title")}
           </h1>

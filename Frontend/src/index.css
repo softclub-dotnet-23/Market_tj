@@ -90,6 +90,18 @@
     @apply border-stone-200 dark:border-stone-800;
   }
 
+  /* Gentle cross-fade for light/dark theme switching, driven by the native
+     View Transitions API (see ThemeContext.tsx). The browser cross-fades a
+     snapshot of the old/new screen via the compositor — cheap and smooth
+     regardless of how many elements are on the page — rather than us
+     forcing a CSS transition on every DOM node, which was janky on a page
+     this animation-heavy. */
+  ::view-transition-old(root),
+  ::view-transition-new(root) {
+    animation-duration: 0.4s;
+    animation-timing-function: ease-in-out;
+  }
+
   html {
     scroll-behavior: smooth;
     -webkit-tap-highlight-color: transparent;
@@ -104,7 +116,6 @@
     @apply bg-stone-25 text-stone-800 font-sans antialiased dark:bg-stone-950 dark:text-stone-200;
     margin: 0;
     font-feature-settings: "cv11", "ss01";
-    transition: background-color 0.25s ease;
   }
 
   ::selection {
