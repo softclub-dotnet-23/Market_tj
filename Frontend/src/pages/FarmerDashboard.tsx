@@ -121,7 +121,7 @@ export function FarmerDashboard() {
                 <XAxis dataKey="label" tickLine={false} axisLine={false} tick={{ fill: muted, fontSize: 12 }} />
                 <YAxis tickLine={false} axisLine={false} tick={{ fill: muted, fontSize: 12 }} />
                 <Tooltip
-                  formatter={(value: number) => `${formatSomoni(value)} ${t("common.somoni")}`}
+                  formatter={(value) => `${formatSomoni(Number(value))} ${t("common.somoni")}`}
                   contentStyle={{ background: surface, border: "1px solid rgba(11,11,11,0.10)", borderRadius: 12, fontSize: 12, color: ink }}
                 />
                 <Area type="monotone" dataKey="revenue" stroke="#298a47" strokeWidth={2} fill="url(#farmer-revenue)" />

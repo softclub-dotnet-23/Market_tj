@@ -1,14 +1,14 @@
 import { createContext, useContext, useState } from "react";
 import type { ReactNode } from "react";
-import { apiPost } from "@/lib/api";
+import { api } from "@/lib/api";
 
-const AUTH_STORAGE_KEY = "market-tj-auth";
+export type UserRole = "Admin" | "Farmer" | "Customer" | "Courier";
 
-interface AuthUser {
+export interface AuthUser {
   userId: number;
   email: string;
   fullName: string;
-  role: string;
+  role: UserRole;
 }
 
 interface StoredAuth {
@@ -21,7 +21,7 @@ interface LoginResponseDto {
   userId: number;
   email: string;
   fullName: string;
-  role: string;
+  role: UserRole;
 }
 
 interface AuthContextValue {
@@ -30,6 +30,8 @@ interface AuthContextValue {
   login: (email: string, password: string, remember?: boolean) => Promise<AuthUser>;
   logout: () => void;
 }
+    
+const AUTH_STORAGE_KEY = "market-tj-auth";
 
 const AuthContext = createContext<AuthContextValue | null>(null);
 
@@ -48,7 +50,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [auth, setAuth] = useState<StoredAuth | null>(readStoredAuth);
 
   const login = async (email: string, password: string, remember = true) => {
-    const data = await apiPost<LoginResponseDto>("/auth/login", { email, password });
+    const data = await api.post<LoginResponseDto>("/auth/login", { email, password });
     const next: StoredAuth = {
       token: data.token,
       user: { userId: data.userId, email: data.email, fullName: data.fullName, role: data.role },

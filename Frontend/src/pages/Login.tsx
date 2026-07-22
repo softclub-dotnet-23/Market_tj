@@ -9,6 +9,7 @@ import { Input, Checkbox } from "@/components/ui/Field";
 import { Button } from "@/components/ui/Button";
 import { AuthPanel } from "@/components/layout/AuthPanel";
 import { useAuth } from "@/context/AuthContext";
+import { ApiError } from "@/lib/api";
 
 interface LoginForm {
   email: string;
@@ -29,11 +30,11 @@ export function Login() {
 
   const isSubmittingRef = useRef(false);
 
-  const onSubmit = async (values: LoginForm) => {
+  const onSubmit = async (data: LoginForm) => {
     if (isSubmittingRef.current) return;
     isSubmittingRef.current = true;
     try {
-      const user = await login(values.email, values.password, values.remember);
+      const user = await login(data.email, data.password, data.remember);
       // Customer/Courier не имеют отдельной панели (раздел 4.5 ТЗ) — идут на главную.
       const target = user.role === "Admin" ? "/admin" : user.role === "Farmer" ? "/farmer" : "/";
       // Настоящая перезагрузка страницы (не SPA-переход через react-router) —
@@ -42,9 +43,8 @@ export function Login() {
       // это не триггерят.
       window.location.href = target;
     } catch (err) {
-      toast.error(err instanceof Error ? err.message : t("pages:login.loginErrorFallback"), {
-        id: "login-toast",
-      });
+      const message = err instanceof ApiError ? err.message : t("pages:login.loginErrorFallback");
+      toast.error(message, { id: "login-toast" });
     } finally {
       isSubmittingRef.current = false;
     }

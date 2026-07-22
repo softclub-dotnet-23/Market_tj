@@ -19,6 +19,23 @@ builder.Services.AddInfrastructureServices(builder.Configuration);
 
 builder.Services.AddControllers();
 
+// CORS для React-фронтенда (Frontend/, Vite dev server) — origin'ы берутся
+// из конфига (Cors:AllowedOrigins), а не хардкодятся, т.к. в проде адрес
+// фронтенда будет другим. AllowCredentials не включаем — токен передаётся
+// через Authorization header, а не через cookies.
+const string FrontendCorsPolicy = "FrontendCorsPolicy";
+var allowedOrigins = builder.Configuration.GetSection("Cors:AllowedOrigins").Get<string[]>() ?? [];
+
+builder.Services.AddCors(options =>
+{
+    options.AddPolicy(FrontendCorsPolicy, policy =>
+    {
+        policy.WithOrigins(allowedOrigins)
+            .AllowAnyHeader()
+            .AllowAnyMethod();
+    });
+});
+
 // Минимальный login для админа (раздел 23 ТЗ — полноценная Authentication с
 // регистрацией Customer/Farmer остаётся отдельным этапом, здесь только JWT
 // issue/validate для уже существующих сидированных пользователей).
@@ -87,6 +104,8 @@ if (app.Environment.IsDevelopment())
 app.UseHttpsRedirection();
 
 app.UseStaticFiles();
+
+app.UseCors(FrontendCorsPolicy);
 
 app.UseAuthentication();
 app.UseAuthorization();
