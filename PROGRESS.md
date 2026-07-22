@@ -1,5 +1,19 @@
 # Прогресс Market.tj
 
+## 2026-07-22 — Второй merge-конфликт origin/main → Backend (remember-me, роль Farmer, admin/farmer-дашборды)
+- Сделано:
+  - После предыдущего merge-коммита пришёл ещё один `git pull origin main` (пользователь запустил его сам), снова зацепивший те же 3 файла: `AuthContext.tsx`, `lib/api.ts`, `pages/Login.tsx` — плюс безконфликтно добавился большой пласт новых страниц (`AdminStatistics`, `AdminOrders`, `AdminProducts`, `AdminFarmers`, `AdminUsers`, `AdminCommissions`, `AdminReviews`, `AdminSettings`, `FarmerDashboard`, `FarmerProducts`, `FarmerLayout`).
+  - Конфликты разрешены в пользу `main`: "запомнить меня" (localStorage/sessionStorage), редирект по трём ролям (Admin/Farmer/остальные) через `window.location.href` вместо SPA-навигации (нужно для надёжного предложения браузера сохранить пароль).
+  - `lib/api.ts` снова оставлен в виде универсального клиента (`api.get/post/put/delete`) — но новые `data/adminEntities.ts` и `data/farmer.ts` (из `main`, без конфликта) вызывают `apiGet`/`apiPost` напрямую, поэтому добавлены тонкие алиасы `export const apiGet = api.get; export const apiPost = api.post;` вместо переписывания чужого нового кода.
+  - `AuthUser.id` переименован в `AuthUser.userId` — под это поле уже написан `data/farmer.ts` (`user?.userId`), это единственный реальный потребитель.
+  - `backend/MarketTJ.WebApi/Dockerfile` оказался staged как переименование в `backend/Dockerfile` (содержимое идентично — просто перемещённый файл, не конфликт слияния) — поправлена ссылка `dockerfile:` в `docker-compose.yml`.
+  - Починены ещё 2 однотипные TS-ошибки `recharts`-formatter'а в `AdminStatistics.tsx`/`FarmerDashboard.tsx` (тот же паттерн, что раньше в `AdminDashboard.tsx`).
+  - Проверено: `dotnet build` — 0 ошибок; `dotnet test` — 743/743; `npm run build` — успешно.
+- Проблемы/блокеры: нет.
+- Что осталось на следующую сессию:
+  - Не запушено — коммиты локально на ветке `Backend`.
+  - Токен всё ещё не подставляется в `Authorization`-заголовок для защищённых запросов (актуально теперь для всех новых Admin*/Farmer*-страниц, использующих `apiGet`/`apiPost`).
+
 ## 2026-07-21 — Разрешён конфликт слияния origin/main → Backend (реальный JWT вместо заглушки)
 - Сделано:
   - Разблокирован `git pull origin main`: на ветке `Backend` `bin/`/`obj/` не были в `.gitignore` и мешали merge — добавлены паттерны `backend/*/bin/`, `backend/*/obj/` в `.gitignore`, файлы сняты с отслеживания (`git rm -r --cached`), как уже было сделано ранее на ветке `Frontend`.
