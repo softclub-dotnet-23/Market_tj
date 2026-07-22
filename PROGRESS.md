@@ -1,5 +1,24 @@
 # Прогресс Market.tj
 
+## 2026-07-22 — Полноценный JWT auth + [Authorize] на всех контроллерах
+- Сделано:
+  - `backend/MarketTJ.Domain/Entities/RefreshToken.cs` + `RefreshTokenConfiguration.cs` + `DbSet<RefreshToken>` в `AppDbContext` + `IRefreshTokenRepository`/`RefreshTokenRepository`; миграция `20260722135016_AddRefreshToken`.
+  - `Application/Dto/AuthDto/`: `LoginResponseDto` переименован в `AuthResponseDto` (добавлены `RefreshToken`, `ExpiresAt`), новые `RegisterRequestDto`, `RefreshTokenRequestDto`; `Validators/AuthValidator.cs` (самостоятельная регистрация — только Customer/Farmer).
+  - `ITokenService`/`TokenService`: добавлены `GenerateRefreshToken()`, `AccessTokenExpiryMinutes`, `RefreshTokenExpiryDays` (Application не читает `IConfiguration` напрямую).
+  - `IAuthService`/`AuthService`: `RegisterAsync`, `LoginAsync` (теперь выдаёт пару access+refresh), `RefreshTokenAsync` (ротация — старый токен отзывается), `LogoutAsync` (отзыв refresh token).
+  - `AuthController`: `/api/auth/register`, `/refresh`, `/logout` рядом с уже существующим `/login`, весь контроллер `[AllowAnonymous]`.
+  - `ICurrentUserService`/`CurrentUserService` (WebApi, читает claims через `IHttpContextAccessor`) — `AnalyticsController.GetFarmerDashboard` больше не принимает `farmerId` как query-параметр, берёт `UserId` из JWT; `IFarmerProfileRepository` получил `GetByUserIdAsync`; `IAnalyticsService.GetFarmerDashboardAsync` теперь резолвит `FarmerProfile` по `UserId` сам.
+  - `Program.cs`: `AddHttpContextAccessor()` + регистрация `ICurrentUserService` (сам JWT-пайплайн — `AddAuthentication`/`AddJwtBearer`/`UseAuthentication` — уже был в проекте с прошлой сессии, раскомментированного кода не было).
+  - **[Authorize]/[Authorize(Roles=...)] добавлен на все 33 контроллера** (кроме `AuthController`) — из них только `AnalyticsController` содержал явные TODO-комментарии про Auth; на остальных 31 роль/анонимность назначены самостоятельно по разделу 16 ТЗ ("endpoints защищать через [Authorize]") — **самостоятельное решение, требует проверки**: каталог (Category/Product/ProductListing/ProductImage/FarmerProfile/DeliveryZone/Review) — чтение анонимное, запись Admin/Farmer; admin-only сущности (AppSetting/AuditLog/Commission/DailySalesSnapshot/User) — `Roles="Admin"`; профильные контроллеры — своя роль+Admin; всё остальное — просто `[Authorize]` (сервисы не фильтруют по владельцу, поэтому точечные роли не расставлялись там, где это могло бы запереть легитимный доступ).
+  - `Jwt:Secret` перенесён из `appsettings.json` в User Secrets (`dotnet user-secrets set`, `UserSecretsId` уже был в `.csproj`); `docker-compose.yml` дополнен `Jwt__RefreshTokenExpiryDays`.
+  - Попутно: убрана задвоенная регистрация `IAuthService` в `Application/DependencyInjection.cs` (была прописана дважды ещё до этой сессии).
+  - Проверено: `dotnet build` — 0 ошибок; `dotnet test` — 743/743.
+- Проблемы/блокеры: нет.
+- Что осталось на следующую сессию:
+  - Frontend не подставляет JWT в `Authorization`-заголовок для запросов после логина — теперь это блокирует уже намного больше эндпоинтов, чем раньше (весь API, кроме auth и публичного чтения каталога).
+  - Заполнение FarmerProfile/CustomerProfile после регистрации остаётся отдельным шагом (раздел 23 ТЗ, Этап 3) — Register не создаёт профиль автоматически.
+  - Не запушено — коммит `add JWT auth and enforce authorization` локально на ветке `Backend`.
+
 ## 2026-07-22 — Второй merge-конфликт origin/main → Backend (remember-me, роль Farmer, admin/farmer-дашборды)
 - Сделано:
   - После предыдущего merge-коммита пришёл ещё один `git pull origin main` (пользователь запустил его сам), снова зацепивший те же 3 файла: `AuthContext.tsx`, `lib/api.ts`, `pages/Login.tsx` — плюс безконфликтно добавился большой пласт новых страниц (`AdminStatistics`, `AdminOrders`, `AdminProducts`, `AdminFarmers`, `AdminUsers`, `AdminCommissions`, `AdminReviews`, `AdminSettings`, `FarmerDashboard`, `FarmerProducts`, `FarmerLayout`).
