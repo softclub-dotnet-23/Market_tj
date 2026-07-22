@@ -1240,6 +1240,13 @@ React
 - интеграционные тесты для основных API;
 - на Frontend — тесты не обязательны для MVP, но приветствуются (например Vitest/React Testing Library) для критичной логики (корзина, чекаут).
 
+### Развёртывание (Docker)
+
+- `backend/MarketTJ.WebApi/Dockerfile` — multi-stage сборка: `mcr.microsoft.com/dotnet/sdk:10.0` (restore + publish) → `mcr.microsoft.com/dotnet/aspnet:10.0` (запуск), порт 8080 внутри контейнера;
+- `Frontend/Dockerfile` — multi-stage сборка: `node:20-alpine` (`npm ci` + `npm run build`) → `nginx:alpine` (раздача `dist/`, SPA fallback на `index.html` для React Router), порт 80 внутри контейнера;
+- `docker-compose.yml` в корне репозитория поднимает `db` (postgres:16-alpine), `redis` (redis:7-alpine), `backend` (порт 5000→8080) и `frontend` (порт 3000→80) в общей сети; секреты (`ANTHROPIC_API_KEY`, пароль БД) передаются через `.env` (см. `.env.example`), не хардкодятся в compose-файле;
+- локальный запуск без Docker (см. выше — `dotnet run` / `npm run dev`) остаётся основным сценарием разработки; Docker — для быстрого воспроизводимого окружения и будущего деплоя.
+
 ---
 
 ## 13. API endpoints
@@ -2727,6 +2734,8 @@ Products, Listings, Cart, Orders, Deliveries, Reviews, Notifications —
 ## 38. Текущий прогресс проекта
 
 > Этот раздел — временный трекер. Если в проекте уже используется отдельный `PROGRESS.md`, обновлять нужно там, а не здесь.
+
+> С 2026-07-21 в корне репозитория есть `PROGRESS.md` (пошессионный журнал: сделано / проблемы / что осталось). Согласно правилу выше, дальнейшие записи о прогрессе ведутся там, этот раздел ниже не обновляется.
 
 **Статус:** структура backend реализована (Phase 1: Domain, Infrastructure, репозитории, все 30 сущностей) — см. `docs/PROGRESS.md`, `docs/phase-summaries/`, `backend/progress/`.
 

@@ -2,3 +2,7 @@
 # не коммитятся, у каждого разработчика свои значения локально.
 backend/MarketTJ.WebApi/appsettings.json
 backend/MarketTJ.WebApi/appsettings.*.json
+
+# Секреты docker-compose (POSTGRES_PASSWORD, ANTHROPIC_API_KEY и т.д.) —
+# см. .env.example для списка переменных.
+.env

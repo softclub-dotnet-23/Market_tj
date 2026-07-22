@@ -1,0 +1,70 @@
+services:
+  db:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER:-postgres}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-postgres}
+      POSTGRES_DB: ${POSTGRES_DB:-markettj}
+    volumes:
+      - db-data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-postgres} -d ${POSTGRES_DB:-markettj}"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+    networks:
+      - markettj
+
+  # Redis — реально используется в проекте (ICacheService/RedisCacheService,
+  # раздел 12 ТЗ), поэтому поднимается вместе с остальными сервисами, хотя
+  # в исходном запросе явно не упоминался.
+  redis:
+    image: redis:7-alpine
+    networks:
+      - markettj
+
+  backend:
+    build:
+      context: ./backend
+      dockerfile: MarketTJ.WebApi/Dockerfile
+    environment:
+      ASPNETCORE_ENVIRONMENT: Production
+      # Раздел 12 ТЗ: провайдер — Npgsql/PostgreSQL. Двойное подчёркивание —
+      # стандартная нотация ASP.NET Core для вложенных ключей конфигурации
+      # через переменные окружения (без префикса ASPNETCORE_ — тот префикс
+      # относится только к специальным переменным вроде ASPNETCORE_URLS).
+      ConnectionStrings__DefaultConnection: Host=db;Port=5432;Database=${POSTGRES_DB:-markettj};Username=${POSTGRES_USER:-postgres};Password=${POSTGRES_PASSWORD:-postgres}
+      ConnectionStrings__RedisCache: redis:6379
+      Cors__AllowedOrigins__0: http://localhost:3000
+      # Секрет не хардкодится — берётся из .env (см. .env.example), пустая
+      # строка по умолчанию, если .env не заполнен.
+      Anthropic__ApiKey: ${ANTHROPIC_API_KEY:-}
+    depends_on:
+      db:
+        condition: service_healthy
+    ports:
+      - "5000:8080"
+    networks:
+      - markettj
+
+  frontend:
+    build:
+      context: ./Frontend
+      dockerfile: Dockerfile
+      args:
+        # Браузер обращается к backend по адресу хоста (порт, опубликованный
+        # выше), а не по внутреннему docker-сети имени "backend".
+        VITE_API_BASE_URL: http://localhost:5000/api
+    depends_on:
+      - backend
+    ports:
+      - "3000:80"
+    networks:
+      - markettj
+
+volumes:
+  db-data:
+
+networks:
+  markettj:
+    driver: bridge
