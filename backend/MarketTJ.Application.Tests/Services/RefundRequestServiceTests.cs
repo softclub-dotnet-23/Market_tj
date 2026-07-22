@@ -1,6 +1,7 @@
 using MarketTJ.Application.Common;
 using MarketTJ.Application.Dto.RefundRequestDto;
 using MarketTJ.Application.Interfaces.Repositories;
+using MarketTJ.Application.Interfaces.Services;
 using MarketTJ.Application.Services;
 using MarketTJ.Domain.Entities;
 using MarketTJ.Domain.Enums;
@@ -15,12 +16,13 @@ public class RefundRequestServiceTests
     private readonly Mock<IOrderRepository> _orderRepository = new();
     private readonly Mock<ICustomerProfileRepository> _customerProfileRepository = new();
     private readonly Mock<IUserRepository> _userRepository = new();
+    private readonly Mock<IAuditLogService> _auditLogService = new();
     private readonly Mock<ILogger<RefundRequestService>> _logger = new();
     private readonly RefundRequestService _service;
 
     public RefundRequestServiceTests()
     {
-        _service = new RefundRequestService(_refundRequestRepository.Object, _orderRepository.Object, _customerProfileRepository.Object, _userRepository.Object, _logger.Object);
+        _service = new RefundRequestService(_refundRequestRepository.Object, _orderRepository.Object, _customerProfileRepository.Object, _userRepository.Object, _auditLogService.Object, _logger.Object);
         _orderRepository.Setup(r => r.GetByIdAsync(It.IsAny<int>())).ReturnsAsync((int id) => new Order
         {
             Id = id, OrderNumber = "ORD-1", CustomerId = 1, FarmerId = 1, Status = OrderStatus.Completed,

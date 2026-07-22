@@ -134,6 +134,44 @@ public class AuditLogService(
         }
     }
 
+    public async Task<Result<PagedResult<GetAuditLogDto>>> GetPagedAsync(PagedRequest request, DateTime? from, DateTime? to, int? adminId, string? action)
+    {
+        try
+        {
+            var all = await auditLogRepository.GetAllAsync();
+
+            IEnumerable<AuditLog> filtered = all;
+            if (from is not null)
+                filtered = filtered.Where(l => l.CreatedAt >= from);
+            if (to is not null)
+                filtered = filtered.Where(l => l.CreatedAt <= to);
+            if (adminId is not null)
+                filtered = filtered.Where(l => l.AdminId == adminId);
+            if (!string.IsNullOrWhiteSpace(action))
+                filtered = filtered.Where(l => l.Action.Contains(action, StringComparison.OrdinalIgnoreCase));
+
+            // Журнал действий по умолчанию — самые свежие записи первыми.
+            filtered = request.SortDescending || request.SortBy is null
+                ? filtered.OrderByDescending(l => l.CreatedAt)
+                : filtered.OrderBy(l => l.CreatedAt);
+
+            var materialized = filtered.ToList();
+            var page = materialized
+                .Skip((request.PageNumber - 1) * request.PageSize)
+                .Take(request.PageSize)
+                .Select(ToGetDto)
+                .ToList();
+
+            return Result<PagedResult<GetAuditLogDto>>.Ok(
+                PagedResult<GetAuditLogDto>.Ok(page, materialized.Count, request.PageNumber, request.PageSize));
+        }
+        catch (Exception ex)
+        {
+            logger.LogError(ex, "Ошибка при получении журнала действий (paged)");
+            return Result<PagedResult<GetAuditLogDto>>.Fail("Не удалось получить журнал действий", ErrorType.InternalServerError);
+        }
+    }
+
     private static GetAuditLogDto ToGetDto(AuditLog log) => new()
     {
         Id = log.Id,

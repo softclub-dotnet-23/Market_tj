@@ -77,6 +77,14 @@ builder.Services.AddSwaggerGen(options =>
         In = ParameterLocation.Header,
         Description = "Вставьте только сам JWT-токен (без слова \"Bearer\")."
     });
+
+    // Без этого SecurityDefinition выше только описывает схему в JSON-схеме,
+    // но кнопка Authorize в Swagger UI не подставляет токен в запросы —
+    // требование должно быть явно привязано к операциям.
+    options.AddSecurityRequirement(doc => new OpenApiSecurityRequirement
+    {
+        { new OpenApiSecuritySchemeReference("Bearer", doc), new List<string>() }
+    });
 });
 
 var app = builder.Build();

@@ -150,6 +150,37 @@ public class SupportTicketService(
         }
     }
 
+    public async Task<Result<PagedResult<GetSupportTicketDto>>> GetPagedAsync(PagedRequest request, SupportTicketStatus? status)
+    {
+        try
+        {
+            var all = await supportTicketRepository.GetAllAsync();
+
+            IEnumerable<SupportTicket> filtered = all;
+            if (status is not null)
+                filtered = filtered.Where(t => t.Status == status);
+
+            filtered = request.SortDescending
+                ? filtered.OrderByDescending(t => t.CreatedAt)
+                : filtered.OrderBy(t => t.CreatedAt);
+
+            var materialized = filtered.ToList();
+            var page = materialized
+                .Skip((request.PageNumber - 1) * request.PageSize)
+                .Take(request.PageSize)
+                .Select(ToGetDto)
+                .ToList();
+
+            return Result<PagedResult<GetSupportTicketDto>>.Ok(
+                PagedResult<GetSupportTicketDto>.Ok(page, materialized.Count, request.PageNumber, request.PageSize));
+        }
+        catch (Exception ex)
+        {
+            logger.LogError(ex, "Ошибка при получении списка тикетов поддержки (paged)");
+            return Result<PagedResult<GetSupportTicketDto>>.Fail("Не удалось получить список тикетов", ErrorType.InternalServerError);
+        }
+    }
+
     private static GetSupportTicketDto ToGetDto(SupportTicket ticket) => new()
     {
         Id = ticket.Id,
