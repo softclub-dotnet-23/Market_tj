@@ -34,15 +34,14 @@ export function Login() {
     if (isSubmittingRef.current) return;
     isSubmittingRef.current = true;
     try {
-      const user = await login(data.email, data.password);
-      toast.success(`Добро пожаловать, ${user.fullName}`);
-
-      if (user.role === "Admin") {
-        navigate("/admin");
-      } else {
-        toast.info("Личный кабинет для этой роли ещё в разработке");
-        navigate("/");
-      }
+      const user = await login(data.email, data.password, data.remember);
+      // Customer/Courier не имеют отдельной панели (раздел 4.5 ТЗ) — идут на главную.
+      const target = user.role === "Admin" ? "/admin" : user.role === "Farmer" ? "/farmer" : "/";
+      // Настоящая перезагрузка страницы (не SPA-переход через react-router) —
+      // так браузер надёжно распознаёт "форма отправлена → логин успешен" и
+      // предлагает сохранить пароль. С history.pushState многие браузеры
+      // это не триггерят.
+      window.location.href = target;
     } catch (err) {
       const message = err instanceof ApiError ? err.message : t("pages:login.loginErrorFallback");
       toast.error(message, { id: "login-toast" });
@@ -72,6 +71,7 @@ export function Login() {
             <Input
               label={t("pages:login.emailOrPhoneLabel")}
               placeholder="you@example.com"
+              autoComplete="username"
               leftIcon={<Mail size={16} />}
               error={errors.email?.message}
               {...register("email", { required: t("pages:login.emailOrPhoneRequired") })}
@@ -80,6 +80,7 @@ export function Login() {
               label={t("pages:login.passwordLabel")}
               type={showPassword ? "text" : "password"}
               placeholder="••••••••"
+              autoComplete="current-password"
               leftIcon={<Lock size={16} />}
               error={errors.password?.message}
               rightSlot={

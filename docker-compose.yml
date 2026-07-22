@@ -26,7 +26,7 @@ services:
   backend:
     build:
       context: ./backend
-      dockerfile: MarketTJ.WebApi/Dockerfile
+      dockerfile: Dockerfile
     environment:
       ASPNETCORE_ENVIRONMENT: Production
       # Раздел 12 ТЗ: провайдер — Npgsql/PostgreSQL. Двойное подчёркивание —

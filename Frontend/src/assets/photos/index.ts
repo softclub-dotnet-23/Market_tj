@@ -24,6 +24,7 @@ export const customerPhotos: string[] = Object.entries(customerModules)
   .map(([, url]) => url);
 
 export { default as heroPhoto } from "./hero-farmer.jpg";
+export { default as ctaOrchardPhoto } from "./cta-orchard.jpg";
 export { default as treePhoto } from "./tree.png";
 export { default as applePhoto } from "./apple.png";
 

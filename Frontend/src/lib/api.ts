@@ -54,3 +54,8 @@ export const api = {
     request<T>(path, { method: "PUT", body: JSON.stringify(payload) }),
   delete: <T>(path: string) => request<T>(path, { method: "DELETE" }),
 };
+
+// Именованные алиасы поверх api.get/post — часть страниц (data/adminEntities.ts,
+// data/farmer.ts) написана в этом стиле вызова.
+export const apiGet = api.get;
+export const apiPost = api.post;
