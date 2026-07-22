@@ -21,10 +21,17 @@ export function Carousel({
   showDots?: boolean;
 }) {
   const { t } = useTranslation("ui");
-  const [emblaRef, emblaApi] = useEmblaCarousel({ align: "start", dragFree: false, ...options });
+  const [emblaRef, emblaApi] = useEmblaCarousel({
+    align: "start",
+    dragFree: true,
+    dragThreshold: 4,
+    duration: 32,
+    ...options,
+  });
   const [selectedIndex, setSelectedIndex] = useState(0);
   const [canPrev, setCanPrev] = useState(false);
   const [canNext, setCanNext] = useState(false);
+  const [isDragging, setIsDragging] = useState(false);
 
   const onSelect = useCallback(() => {
     if (!emblaApi) return;
@@ -38,11 +45,43 @@ export function Carousel({
     onSelect();
     emblaApi.on("select", onSelect);
     emblaApi.on("reInit", onSelect);
+    emblaApi.on("pointerDown", () => setIsDragging(true));
+    emblaApi.on("pointerUp", () => setIsDragging(false));
   }, [emblaApi, onSelect]);
+
+  // Trackpad two-finger swipe support. Deliberately passive (never calls
+  // preventDefault) and only reacts when the gesture is clearly horizontal,
+  // so vertical page scrolling over the carousel is never touched — a
+  // third-party wheel-gestures plugin used to fight the browser's own
+  // scroll here and cause visible stutter on trackpads.
+  useEffect(() => {
+    if (!emblaApi) return;
+    const node = emblaApi.rootNode();
+    let lastTrigger = 0;
+
+    const onWheel = (event: WheelEvent) => {
+      const absX = Math.abs(event.deltaX);
+      const absY = Math.abs(event.deltaY);
+      if (absX < 8 || absX <= absY * 1.3) return;
+
+      const now = performance.now();
+      if (now - lastTrigger < 260) return;
+      lastTrigger = now;
+
+      if (event.deltaX > 0) emblaApi.scrollNext();
+      else emblaApi.scrollPrev();
+    };
+
+    node.addEventListener("wheel", onWheel, { passive: true });
+    return () => node.removeEventListener("wheel", onWheel);
+  }, [emblaApi]);
 
   return (
     <div className={cn("relative", className)}>
-      <div className="overflow-hidden" ref={emblaRef}>
+      <div
+        className={cn("touch-pan-y select-none overflow-hidden", isDragging ? "cursor-grabbing" : "cursor-grab")}
+        ref={emblaRef}
+      >
         <div className="flex gap-5">
           {children.map((child, i) => (
             <div key={i} className={cn("min-w-0 shrink-0 grow-0", slideClassName)}>

@@ -1,0 +1,54 @@
+{
+  "nav": {
+    "overview": "Дурнамо",
+    "analytics": "Таҳлил",
+    "orders": "Фармоишҳо",
+    "products": "Маҳсулот",
+    "farmers": "Деҳқонон",
+    "customers": "Харидорон",
+    "payments": "Пардохтҳо",
+    "reviews": "Шарҳҳо",
+    "settings": "Танзимот"
+  },
+  "collapseSidebar": "Пӯшидани меню",
+  "expandSidebar": "Кушодани меню",
+  "search": "Ҷустуҷӯ...",
+  "notifications": "Огоҳиномаҳо",
+  "adminName": "Маъмур",
+  "logout": "Баромадан",
+  "common": {
+    "somoni": "сомонӣ"
+  },
+  "dashboard": {
+    "greeting": "Хуш омадед, маъмур 👋",
+    "greetingSubtitle": "Дар майдончаи шумо имрӯз чӣ рӯй медиҳад.",
+    "stats": {
+      "revenue": "Даромад дар як ҳафта",
+      "customers": "Харидорони нав",
+      "orders": "Фармоишҳо",
+      "farmers": "Деҳқонони фаъол"
+    },
+    "vsLastWeek": "нисбат ба ҳафтаи гузашта {{value}}",
+    "salesByRegion": "Фурӯш аз рӯи минтақаҳо",
+    "total": "Ҳамагӣ",
+    "siteVisits": "Ташрифҳо ба сомона",
+    "recentOrders": "Фармоишҳои охирин",
+    "viewAll": "Ҳамаро дидан",
+    "topFarmers": "Деҳқонони беҳтарин",
+    "popularCategories": "Категорияҳои маъмул",
+    "orderStatus": {
+      "new": "Нав",
+      "processing": "Дар коркард",
+      "shipped": "Фиристода шуд",
+      "delivered": "Расонида шуд"
+    },
+    "regions": {
+      "dushanbe": "Душанбе",
+      "khatlon": "Хатлон",
+      "sughd": "Суғд",
+      "gbao": "ВМКБ",
+      "rrp": "НТҶ"
+    },
+    "months": ["Янв", "Фев", "Мар", "Апр", "Май", "Июн"]
+  }
+}

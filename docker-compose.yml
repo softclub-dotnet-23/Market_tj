@@ -39,6 +39,10 @@ services:
       # Секрет не хардкодится — берётся из .env (см. .env.example), пустая
       # строка по умолчанию, если .env не заполнен.
       Anthropic__ApiKey: ${ANTHROPIC_API_KEY:-}
+      Jwt__Issuer: MarketTJ
+      Jwt__Audience: MarketTJ.Client
+      Jwt__Secret: ${JWT_SECRET:-dev-secret-change-in-production-32chars-min}
+      Jwt__ExpiryMinutes: "60"
     depends_on:
       db:
         condition: service_healthy

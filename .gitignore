@@ -8,6 +8,6 @@ backend/MarketTJ.WebApi/appsettings.*.json
 backend/*/bin/
 backend/*/obj/
 
-# Секреты docker-compose (POSTGRES_PASSWORD, ANTHROPIC_API_KEY и т.д.) —
+# Секреты docker-compose (POSTGRES_PASSWORD, ANTHROPIC_API_KEY, JWT_SECRET и т.д.) —
 # см. .env.example для списка переменных.
 .env

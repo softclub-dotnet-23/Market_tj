@@ -1,6 +1,6 @@
 import { motion } from "framer-motion";
 import { useTranslation } from "react-i18next";
-import { Compass, HandHeart, ShieldCheck, Sprout, Target } from "lucide-react";
+import { HandHeart, ShieldCheck, Sprout, Target } from "lucide-react";
 import { Breadcrumbs } from "@/components/ui/Breadcrumbs";
 import { SectionHeading } from "@/components/ui/SectionHeading";
 import { AnimatedCounter } from "@/components/ui/AnimatedCounter";
@@ -31,10 +31,6 @@ export function About() {
           transition={{ duration: 0.6 }}
           className="flex flex-col gap-6"
         >
-          <span className="inline-flex w-fit items-center gap-2 rounded-full border border-grove-200 bg-grove-50 px-3.5 py-1.5 text-xs font-semibold uppercase tracking-[0.14em] text-grove-700 dark:border-grove-800 dark:bg-grove-950 dark:text-grove-300">
-            <Compass size={13} />
-            {t("pages:about.badge")}
-          </span>
           <h1 className="text-balance font-display text-4xl leading-[1.1] text-stone-900 sm:text-5xl dark:text-stone-50">
             {t("pages:about.title")}
           </h1>

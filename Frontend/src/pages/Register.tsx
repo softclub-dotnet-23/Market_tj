@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useRef, useState } from "react";
 import { Link } from "react-router-dom";
 import { useForm } from "react-hook-form";
 import { motion } from "framer-motion";
@@ -39,14 +39,23 @@ export function Register() {
 
   const password = watch("password");
 
+  const isSubmittingRef = useRef(false);
+
   const onSubmit = async () => {
-    await new Promise((r) => setTimeout(r, 800));
-    toast.info(t("pages:register.toastTitle"), {
-      description:
-        role === "farmer"
-          ? t("pages:register.toastDescriptionFarmer")
-          : t("pages:register.toastDescriptionCustomer"),
-    });
+    if (isSubmittingRef.current) return;
+    isSubmittingRef.current = true;
+    try {
+      await new Promise((r) => setTimeout(r, 800));
+      toast.info(t("pages:register.toastTitle"), {
+        id: "register-toast",
+        description:
+          role === "farmer"
+            ? t("pages:register.toastDescriptionFarmer")
+            : t("pages:register.toastDescriptionCustomer"),
+      });
+    } finally {
+      isSubmittingRef.current = false;
+    }
   };
 
   return (

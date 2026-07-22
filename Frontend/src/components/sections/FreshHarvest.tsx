@@ -1,7 +1,7 @@
 import { Link } from "react-router-dom";
 import { motion } from "framer-motion";
 import { useTranslation } from "react-i18next";
-import { ArrowRight, Clock, Leaf } from "lucide-react";
+import { ArrowRight, Clock } from "lucide-react";
 import { PhotoTile } from "@/components/ui/PhotoTile";
 import { RatingStars } from "@/components/ui/RatingStars";
 import { useProducts } from "@/data/products";
@@ -20,10 +20,6 @@ export function FreshHarvest() {
     <section className="py-14 sm:py-20">
       <div className="container-page grid grid-cols-1 gap-12 lg:grid-cols-[0.85fr_1.15fr] lg:items-center">
         <div className="flex flex-col items-start gap-6">
-          <span className="inline-flex items-center gap-2 rounded-full border border-grove-200 bg-grove-50 px-3.5 py-1.5 text-xs font-semibold uppercase tracking-[0.14em] text-grove-700 dark:border-grove-800 dark:bg-grove-950 dark:text-grove-300">
-            <Leaf size={13} />
-            {t("sections:freshHarvest.badge")}
-          </span>
           <h2 className="text-balance font-display text-3xl leading-[1.12] text-stone-900 sm:text-[2.6rem] dark:text-stone-50">
             {t("sections:freshHarvest.title")}
           </h2>

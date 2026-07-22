@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { useSearchParams } from "react-router-dom";
 import { motion } from "framer-motion";
 import { useTranslation } from "react-i18next";
@@ -37,6 +37,8 @@ export function Catalog() {
   const [loading, setLoading] = useState(true);
   const { favoriteIds } = useFavorites();
   const categories = useCategories();
+  const resultsTopRef = useRef<HTMLDivElement>(null);
+  const isFirstPageRender = useRef(true);
 
   const search = searchParams.get("search") ?? "";
   const [searchInput, setSearchInput] = useState(search);
@@ -128,6 +130,17 @@ export function Catalog() {
     return () => clearTimeout(t);
   }, [search, categorySlugs.join(), region, farmerId, onlyAvailable, priceMin, priceMax, sortBy, currentPage, favoritesOnly]);
 
+  useEffect(() => {
+    // Only for page-number changes (not the initial mount) — gently bring the
+    // fresh results into view instead of leaving the reader stranded down by
+    // the pagination controls while new cards silently swap in above them.
+    if (isFirstPageRender.current) {
+      isFirstPageRender.current = false;
+      return;
+    }
+    resultsTopRef.current?.scrollIntoView({ behavior: "smooth", block: "start" });
+  }, [currentPage]);
+
   const activeChips: { key: string; label: string; onRemove: () => void }[] = [];
   categorySlugs.forEach((slug) => {
     const c = categories.find((cat) => cat.slug === slug);
@@ -162,7 +175,7 @@ export function Catalog() {
           </div>
         </aside>
 
-        <div>
+        <div ref={resultsTopRef} className="scroll-mt-24">
           <div className="mb-6 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
             <form
               onSubmit={(e) => {
@@ -219,7 +232,7 @@ export function Catalog() {
 
           {loading ? (
             <div className="grid grid-cols-2 gap-4 sm:grid-cols-3 sm:gap-5 xl:grid-cols-4">
-              {Array.from({ length: 8 }).map((_, i) => (
+              {Array.from({ length: pageItems.length || PAGE_SIZE }).map((_, i) => (
                 <ProductCardSkeleton key={i} />
               ))}
             </div>

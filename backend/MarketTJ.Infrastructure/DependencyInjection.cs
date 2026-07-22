@@ -24,7 +24,7 @@ public static class DependencyInjection
             options.Configuration = configuration.GetConnectionString("RedisCache");
         });
         services.AddScoped<ICacheService, RedisCacheService>();
-        services.AddScoped<IPasswordHasher, BCryptPasswordHasher>();
+        services.AddScoped<ITokenService, TokenService>();
 
         services.AddScoped<IUserRepository, UserRepository>();
         services.AddScoped<IFarmerProfileRepository, FarmerProfileRepository>();

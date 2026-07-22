@@ -3,7 +3,6 @@ import { motion } from "framer-motion";
 import { cn } from "@/lib/utils";
 
 export function SectionHeading({
-  eyebrow,
   title,
   description,
   align = "center",
@@ -26,18 +25,6 @@ export function SectionHeading({
       )}
     >
       <div className={cn("flex flex-col gap-4", align === "center" && "items-center")}>
-        {eyebrow && (
-          <motion.span
-            initial={{ opacity: 0, y: 8 }}
-            whileInView={{ opacity: 1, y: 0 }}
-            viewport={{ once: true }}
-            transition={{ duration: 0.5 }}
-            className="inline-flex items-center gap-2 self-start rounded-full border border-grove-200 bg-grove-50 px-3.5 py-1.5 text-xs font-semibold uppercase tracking-[0.14em] text-grove-700 sm:self-auto dark:border-grove-800 dark:bg-grove-950 dark:text-grove-300"
-          >
-            <span className="h-1.5 w-1.5 rounded-full bg-grove-500" />
-            {eyebrow}
-          </motion.span>
-        )}
         <motion.h2
           initial={{ opacity: 0, y: 14 }}
           whileInView={{ opacity: 1, y: 0 }}

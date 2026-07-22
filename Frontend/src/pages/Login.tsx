@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useRef, useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { useForm } from "react-hook-form";
 import { motion } from "framer-motion";
@@ -28,7 +28,11 @@ export function Login() {
     formState: { errors, isSubmitting },
   } = useForm<LoginForm>();
 
+  const isSubmittingRef = useRef(false);
+
   const onSubmit = async (data: LoginForm) => {
+    if (isSubmittingRef.current) return;
+    isSubmittingRef.current = true;
     try {
       const user = await login(data.email, data.password);
       toast.success(`Добро пожаловать, ${user.fullName}`);
@@ -40,8 +44,10 @@ export function Login() {
         navigate("/");
       }
     } catch (err) {
-      const message = err instanceof ApiError ? err.message : "Не удалось подключиться к серверу";
-      toast.error(message);
+      const message = err instanceof ApiError ? err.message : t("pages:login.loginErrorFallback");
+      toast.error(message, { id: "login-toast" });
+    } finally {
+      isSubmittingRef.current = false;
     }
   };
 

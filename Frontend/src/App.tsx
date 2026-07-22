@@ -1,12 +1,13 @@
 import { lazy, Suspense } from "react";
-import { BrowserRouter, Route, Routes } from "react-router-dom";
+import { BrowserRouter, Navigate, Route, Routes } from "react-router-dom";
 import { AuthProvider } from "@/context/AuthContext";
 import { CartProvider } from "@/context/CartContext";
 import { FavoritesProvider } from "@/context/FavoritesContext";
 import { RootLayout } from "@/components/layout/RootLayout";
 import { AppChrome } from "@/components/layout/AppChrome";
+import { AdminLayout } from "@/components/layout/AdminLayout";
+import { ProtectedRoute } from "@/components/layout/ProtectedRoute";
 import { PageLoader } from "@/components/layout/PageLoader";
-import { RequireAdmin } from "@/components/auth/RequireAdmin";
 import { Home } from "@/pages/Home";
 
 const Catalog = lazy(() => import("@/pages/Catalog").then((m) => ({ default: m.Catalog })));
@@ -17,7 +18,7 @@ const Login = lazy(() => import("@/pages/Login").then((m) => ({ default: m.Login
 const Register = lazy(() => import("@/pages/Register").then((m) => ({ default: m.Register })));
 const Forbidden = lazy(() => import("@/pages/Forbidden").then((m) => ({ default: m.Forbidden })));
 const NotFound = lazy(() => import("@/pages/NotFound").then((m) => ({ default: m.NotFound })));
-const AdminDashboard = lazy(() => import("@/pages/admin/AdminDashboard").then((m) => ({ default: m.AdminDashboard })));
+const AdminDashboard = lazy(() => import("@/pages/AdminDashboard").then((m) => ({ default: m.AdminDashboard })));
 
 function App() {
   return (
@@ -27,18 +28,16 @@ function App() {
           <FavoritesProvider>
             <Suspense fallback={<PageLoader />}>
               <Routes>
-                <Route
-                  path="admin"
-                  element={
-                    <RequireAdmin>
-                      <AdminDashboard />
-                    </RequireAdmin>
-                  }
-                />
-
                 <Route element={<AppChrome />}>
                   <Route path="login" element={<Login />} />
                   <Route path="register" element={<Register />} />
+
+                  <Route element={<ProtectedRoute role="Admin" />}>
+                    <Route path="admin" element={<AdminLayout />}>
+                      <Route index element={<AdminDashboard />} />
+                      <Route path="*" element={<Navigate to="/admin" replace />} />
+                    </Route>
+                  </Route>
 
                   <Route element={<RootLayout />}>
                     <Route index element={<Home />} />

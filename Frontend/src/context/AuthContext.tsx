@@ -1,85 +1,67 @@
-import { createContext, useContext, useEffect, useState } from "react";
+import { createContext, useContext, useState } from "react";
 import type { ReactNode } from "react";
 import { api } from "@/lib/api";
 
-// Роль приходит от бэкенда числом (System.Text.Json сериализует enum как int) —
-// см. MarketTJ.Domain.Enums.UserRole (Admin=1, Farmer=2, Customer=3, Courier=4).
 export type UserRole = "Admin" | "Farmer" | "Customer" | "Courier";
-
-const ROLE_MAP: Record<number, UserRole> = {
-  1: "Admin",
-  2: "Farmer",
-  3: "Customer",
-  4: "Courier",
-};
 
 export interface AuthUser {
   id: number;
-  fullName: string;
   email: string;
-  phoneNumber: string;
+  fullName: string;
   role: UserRole;
 }
 
-interface LoginApiResponse {
-  id: number;
-  fullName: string;
+interface StoredAuth {
+  token: string;
+  user: AuthUser;
+}
+
+interface LoginResponseDto {
+  token: string;
+  userId: number;
   email: string;
-  phoneNumber: string;
-  role: number;
+  fullName: string;
+  role: UserRole;
 }
 
 interface AuthContextValue {
+  token: string | null;
   user: AuthUser | null;
-  isLoading: boolean;
   login: (email: string, password: string) => Promise<AuthUser>;
   logout: () => void;
 }
 
-// В бэкенде пока нет JWT/Identity (см. TODO в AuthController) — "сессия"
-// на фронте временно держится просто как объект пользователя в localStorage,
-// без токена. Когда появится настоящая аутентификация — заменить на токен.
-const STORAGE_KEY = "marketTJ.auth.user";
+const AUTH_STORAGE_KEY = "market-tj-auth";
 
 const AuthContext = createContext<AuthContextValue | null>(null);
 
-export function AuthProvider({ children }: { children: ReactNode }) {
-  const [user, setUser] = useState<AuthUser | null>(null);
-  const [isLoading, setIsLoading] = useState(true);
+function readStoredAuth(): StoredAuth | null {
+  try {
+    const raw = localStorage.getItem(AUTH_STORAGE_KEY);
+    return raw ? (JSON.parse(raw) as StoredAuth) : null;
+  } catch {
+    return null;
+  }
+}
 
-  useEffect(() => {
-    const raw = localStorage.getItem(STORAGE_KEY);
-    if (raw) {
-      try {
-        setUser(JSON.parse(raw) as AuthUser);
-      } catch {
-        localStorage.removeItem(STORAGE_KEY);
-      }
-    }
-    setIsLoading(false);
-  }, []);
+export function AuthProvider({ children }: { children: ReactNode }) {
+  const [auth, setAuth] = useState<StoredAuth | null>(readStoredAuth);
 
   const login = async (email: string, password: string) => {
-    const response = await api.post<LoginApiResponse>("/auth/login", { email, password });
-    const authUser: AuthUser = {
-      id: response.id,
-      fullName: response.fullName,
-      email: response.email,
-      phoneNumber: response.phoneNumber,
-      role: ROLE_MAP[response.role] ?? "Customer",
-    };
-    setUser(authUser);
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(authUser));
-    return authUser;
+    const data = await api.post<LoginResponseDto>("/auth/login", { email, password });
+    const user: AuthUser = { id: data.userId, email: data.email, fullName: data.fullName, role: data.role };
+    setAuth({ token: data.token, user });
+    localStorage.setItem(AUTH_STORAGE_KEY, JSON.stringify({ token: data.token, user }));
+    return user;
   };
 
   const logout = () => {
-    setUser(null);
-    localStorage.removeItem(STORAGE_KEY);
+    localStorage.removeItem(AUTH_STORAGE_KEY);
+    setAuth(null);
   };
 
   return (
-    <AuthContext.Provider value={{ user, isLoading, login, logout }}>
+    <AuthContext.Provider value={{ token: auth?.token ?? null, user: auth?.user ?? null, login, logout }}>
       {children}
     </AuthContext.Provider>
   );
