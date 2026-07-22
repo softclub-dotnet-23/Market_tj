@@ -1,14 +1,16 @@
-import { useState } from "react";
-import { NavLink, Outlet, useLocation } from "react-router-dom";
+import { useEffect, useRef, useState } from "react";
+import { NavLink, Outlet, useLocation, useNavigate } from "react-router-dom";
 import { useTranslation } from "react-i18next";
 import {
   BarChart3,
   Bell,
+  ChevronDown,
   ChevronsLeft,
   ChevronsRight,
   CreditCard,
   Leaf,
   LayoutDashboard,
+  LogOut,
   MessageSquare,
   Package,
   Search,
@@ -20,6 +22,7 @@ import {
 import type { LucideIcon } from "lucide-react";
 import { Avatar } from "@/components/ui/Avatar";
 import { LanguageSwitcher } from "@/components/ui/LanguageSwitcher";
+import { useAuth } from "@/context/AuthContext";
 import { cn } from "@/lib/utils";
 
 interface AdminNavItem {
@@ -44,11 +47,28 @@ const NAV_ITEMS: AdminNavItem[] = [
 export function AdminLayout() {
   const { t } = useTranslation("admin");
   const location = useLocation();
+  const navigate = useNavigate();
+  const { user, logout } = useAuth();
   const [collapsed, setCollapsed] = useState(false);
+  const [menuOpen, setMenuOpen] = useState(false);
+  const menuRef = useRef<HTMLDivElement>(null);
 
   const currentItem = NAV_ITEMS.find((item) =>
     item.path === "/admin" ? location.pathname === "/admin" : location.pathname.startsWith(item.path),
   );
+
+  useEffect(() => {
+    function onClick(e: MouseEvent) {
+      if (menuRef.current && !menuRef.current.contains(e.target as Node)) setMenuOpen(false);
+    }
+    document.addEventListener("mousedown", onClick);
+    return () => document.removeEventListener("mousedown", onClick);
+  }, []);
+
+  const handleLogout = () => {
+    logout();
+    navigate("/login");
+  };
 
   return (
     <div className="flex h-screen bg-stone-25 dark:bg-stone-950">
@@ -143,7 +163,36 @@ export function AdminLayout() {
                 4
               </span>
             </button>
-            <Avatar name={t("adminName")} size={38} />
+            <div ref={menuRef} className="relative">
+              <button
+                onClick={() => setMenuOpen((o) => !o)}
+                className="flex items-center gap-2 rounded-full py-1 pl-1 pr-2 transition hover:bg-stone-100 dark:hover:bg-stone-800"
+              >
+                <Avatar name={user?.fullName ?? t("adminName")} size={36} />
+                <ChevronDown
+                  size={14}
+                  className={cn("text-stone-400 transition-transform dark:text-stone-500", menuOpen && "rotate-180")}
+                />
+              </button>
+
+              {menuOpen && (
+                <div className="absolute right-0 top-full z-50 mt-2 w-52 overflow-hidden rounded-2xl border border-stone-100 bg-white p-1.5 shadow-(--shadow-lifted) dark:border-stone-800 dark:bg-stone-900">
+                  <div className="px-2.5 py-2">
+                    <p className="truncate text-sm font-semibold text-stone-800 dark:text-stone-100">
+                      {user?.fullName ?? t("adminName")}
+                    </p>
+                    <p className="truncate text-xs text-stone-400 dark:text-stone-500">{user?.email}</p>
+                  </div>
+                  <button
+                    onClick={handleLogout}
+                    className="flex w-full items-center gap-2.5 rounded-xl px-2.5 py-2 text-left text-sm text-stone-600 transition hover:bg-stone-50 dark:text-stone-300 dark:hover:bg-stone-800"
+                  >
+                    <LogOut size={15} />
+                    {t("logout")}
+                  </button>
+                </div>
+              )}
+            </div>
           </div>
         </header>
 

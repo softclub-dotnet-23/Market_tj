@@ -156,7 +156,7 @@ function RegionDonutCard() {
                 className="h-2.5 w-2.5 shrink-0 rounded-full"
                 style={{ backgroundColor: getRegionColor(i, isDark) }}
               />
-              <span className="shrink-0 text-stone-600 dark:text-stone-300">{r.name}</span>
+              <span className="w-32 shrink-0 truncate text-stone-600 dark:text-stone-300">{r.name}</span>
               <span className="flex-1 text-right whitespace-nowrap text-stone-400 dark:text-stone-500" style={{ color: muted }}>
                 {formatNumber(r.amount)} {t("common.somoni")}
               </span>

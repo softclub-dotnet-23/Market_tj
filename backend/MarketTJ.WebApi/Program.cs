@@ -1,9 +1,13 @@
+using System.Text;
 using MarketTJ.Application;
 using MarketTJ.Infrastructure;
 using MarketTJ.Infrastructure.Persistence;
 using MarketTJ.Infrastructure.Persistence.Seed;
 using MarketTJ.WebApi.Middleware;
+using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.IdentityModel.Tokens;
+using Microsoft.OpenApi;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -15,12 +19,42 @@ builder.Services.AddInfrastructureServices(builder.Configuration);
 
 builder.Services.AddControllers();
 
+// Минимальный login для админа (раздел 23 ТЗ — полноценная Authentication с
+// регистрацией Customer/Farmer остаётся отдельным этапом, здесь только JWT
+// issue/validate для уже существующих сидированных пользователей).
+var jwtSection = builder.Configuration.GetSection("Jwt");
+builder.Services
+    .AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
+    .AddJwtBearer(options =>
+    {
+        options.TokenValidationParameters = new TokenValidationParameters
+        {
+            ValidateIssuer = true,
+            ValidIssuer = jwtSection["Issuer"],
+            ValidateAudience = true,
+            ValidAudience = jwtSection["Audience"],
+            ValidateIssuerSigningKey = true,
+            IssuerSigningKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(jwtSection["Secret"]!)),
+            ValidateLifetime = true,
+            ClockSkew = TimeSpan.Zero
+        };
+    });
+builder.Services.AddAuthorization();
+
 builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen(options =>
 {
-    options.SwaggerDoc("v1", new Microsoft.OpenApi.OpenApiInfo { Title = "Market.tj API", Version = "v1" });
-    // JWT Bearer security definition добавится вместе с Authentication (Этап 2, раздел 23) —
-    // пока endpoint'ов с [Authorize] нет, описывать схему безопасности рано.
+    options.SwaggerDoc("v1", new OpenApiInfo { Title = "Market.tj API", Version = "v1" });
+
+    options.AddSecurityDefinition("Bearer", new OpenApiSecurityScheme
+    {
+        Name = "Authorization",
+        Type = SecuritySchemeType.Http,
+        Scheme = "bearer",
+        BearerFormat = "JWT",
+        In = ParameterLocation.Header,
+        Description = "Вставьте только сам JWT-токен (без слова \"Bearer\")."
+    });
 });
 
 var app = builder.Build();
@@ -54,6 +88,7 @@ app.UseHttpsRedirection();
 
 app.UseStaticFiles();
 
+app.UseAuthentication();
 app.UseAuthorization();
 
 app.MapControllers();

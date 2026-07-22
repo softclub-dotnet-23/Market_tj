@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useRef, useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { useForm } from "react-hook-form";
 import { motion } from "framer-motion";
@@ -8,6 +8,7 @@ import { ArrowLeft, Eye, EyeOff, Lock, Mail } from "lucide-react";
 import { Input, Checkbox } from "@/components/ui/Field";
 import { Button } from "@/components/ui/Button";
 import { AuthPanel } from "@/components/layout/AuthPanel";
+import { useAuth } from "@/context/AuthContext";
 
 interface LoginForm {
   email: string;
@@ -18,6 +19,7 @@ interface LoginForm {
 export function Login() {
   const { t } = useTranslation(["pages", "common", "layout"]);
   const navigate = useNavigate();
+  const { login } = useAuth();
   const [showPassword, setShowPassword] = useState(false);
   const {
     register,
@@ -25,11 +27,21 @@ export function Login() {
     formState: { errors, isSubmitting },
   } = useForm<LoginForm>();
 
-  const onSubmit = async () => {
-    await new Promise((r) => setTimeout(r, 700));
-    toast.info(t("pages:login.toastTitle"), {
-      description: t("pages:login.toastDescription"),
-    });
+  const isSubmittingRef = useRef(false);
+
+  const onSubmit = async (values: LoginForm) => {
+    if (isSubmittingRef.current) return;
+    isSubmittingRef.current = true;
+    try {
+      await login(values.email, values.password);
+      navigate("/admin");
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : t("pages:login.loginErrorFallback"), {
+        id: "login-toast",
+      });
+    } finally {
+      isSubmittingRef.current = false;
+    }
   };
 
   return (

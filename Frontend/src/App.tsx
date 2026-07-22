@@ -1,10 +1,12 @@
 import { lazy, Suspense } from "react";
 import { BrowserRouter, Navigate, Route, Routes } from "react-router-dom";
+import { AuthProvider } from "@/context/AuthContext";
 import { CartProvider } from "@/context/CartContext";
 import { FavoritesProvider } from "@/context/FavoritesContext";
 import { RootLayout } from "@/components/layout/RootLayout";
 import { AppChrome } from "@/components/layout/AppChrome";
 import { AdminLayout } from "@/components/layout/AdminLayout";
+import { ProtectedRoute } from "@/components/layout/ProtectedRoute";
 import { PageLoader } from "@/components/layout/PageLoader";
 import { Home } from "@/pages/Home";
 
@@ -21,33 +23,37 @@ const AdminDashboard = lazy(() => import("@/pages/AdminDashboard").then((m) => (
 function App() {
   return (
     <BrowserRouter>
-      <CartProvider>
-        <FavoritesProvider>
-          <Suspense fallback={<PageLoader />}>
-            <Routes>
-              <Route element={<AppChrome />}>
-                <Route path="login" element={<Login />} />
-                <Route path="register" element={<Register />} />
+      <AuthProvider>
+        <CartProvider>
+          <FavoritesProvider>
+            <Suspense fallback={<PageLoader />}>
+              <Routes>
+                <Route element={<AppChrome />}>
+                  <Route path="login" element={<Login />} />
+                  <Route path="register" element={<Register />} />
 
-                <Route path="admin" element={<AdminLayout />}>
-                  <Route index element={<AdminDashboard />} />
-                  <Route path="*" element={<Navigate to="/admin" replace />} />
-                </Route>
+                  <Route element={<ProtectedRoute role="Admin" />}>
+                    <Route path="admin" element={<AdminLayout />}>
+                      <Route index element={<AdminDashboard />} />
+                      <Route path="*" element={<Navigate to="/admin" replace />} />
+                    </Route>
+                  </Route>
 
-                <Route element={<RootLayout />}>
-                  <Route index element={<Home />} />
-                  <Route path="catalog" element={<Catalog />} />
-                  <Route path="product/:slug" element={<ProductDetails />} />
-                  <Route path="about" element={<About />} />
-                  <Route path="contact" element={<Contact />} />
-                  <Route path="forbidden" element={<Forbidden />} />
-                  <Route path="*" element={<NotFound />} />
+                  <Route element={<RootLayout />}>
+                    <Route index element={<Home />} />
+                    <Route path="catalog" element={<Catalog />} />
+                    <Route path="product/:slug" element={<ProductDetails />} />
+                    <Route path="about" element={<About />} />
+                    <Route path="contact" element={<Contact />} />
+                    <Route path="forbidden" element={<Forbidden />} />
+                    <Route path="*" element={<NotFound />} />
+                  </Route>
                 </Route>
-              </Route>
-            </Routes>
-          </Suspense>
-        </FavoritesProvider>
-      </CartProvider>
+              </Routes>
+            </Suspense>
+          </FavoritesProvider>
+        </CartProvider>
+      </AuthProvider>
     </BrowserRouter>
   );
 }
