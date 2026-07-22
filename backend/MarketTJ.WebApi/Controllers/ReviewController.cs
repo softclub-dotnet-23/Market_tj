@@ -1,16 +1,23 @@
 using MarketTJ.Application.Dto.ReviewDto;
 using MarketTJ.Application.Interfaces.Services;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 
 namespace MarketTJ.WebApi.Controllers;
 
+// Отзывы публично видны на странице товара; писать/менять может любой
+// вошедший пользователь (без ограничения по роли — сервис пока не проверяет
+// владельца, см. отчёт по этой задаче).
+[Authorize]
 [Route("api/reviews")]
 public class ReviewController(IReviewService service) : ApiControllerBase
 {
+    [AllowAnonymous]
     [HttpGet]
     public async Task<IActionResult> GetAll()
         => HandleResult(await service.GetAllAsync());
 
+    [AllowAnonymous]
     [HttpGet("{id:int}")]
     public async Task<IActionResult> GetById(int id)
         => HandleResult(await service.GetByIdAsync(id));

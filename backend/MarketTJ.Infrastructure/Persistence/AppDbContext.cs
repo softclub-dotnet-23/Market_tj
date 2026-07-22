@@ -6,6 +6,7 @@ namespace MarketTJ.Infrastructure.Persistence;
 public class AppDbContext(DbContextOptions<AppDbContext> options) : DbContext(options)
 {
     public DbSet<User> Users => Set<User>();
+    public DbSet<RefreshToken> RefreshTokens => Set<RefreshToken>();
     public DbSet<FarmerProfile> FarmerProfiles => Set<FarmerProfile>();
     public DbSet<CustomerProfile> CustomerProfiles => Set<CustomerProfile>();
     public DbSet<CourierProfile> CourierProfiles => Set<CourierProfile>();

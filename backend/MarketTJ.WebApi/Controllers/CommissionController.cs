@@ -1,9 +1,11 @@
 using MarketTJ.Application.Dto.CommissionDto;
 using MarketTJ.Application.Interfaces.Services;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 
 namespace MarketTJ.WebApi.Controllers;
 
+[Authorize(Roles = "Admin")]
 [Route("api/commissions")]
 public class CommissionController(ICommissionService service) : ApiControllerBase
 {

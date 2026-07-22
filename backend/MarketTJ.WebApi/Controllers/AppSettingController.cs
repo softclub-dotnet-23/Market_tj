@@ -1,9 +1,11 @@
 using MarketTJ.Application.Dto.AppSettingDto;
 using MarketTJ.Application.Interfaces.Services;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 
 namespace MarketTJ.WebApi.Controllers;
 
+[Authorize(Roles = "Admin")]
 [Route("api/app-settings")]
 public class AppSettingController(IAppSettingService service) : ApiControllerBase
 {

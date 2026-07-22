@@ -3,7 +3,9 @@ using MarketTJ.Application;
 using MarketTJ.Infrastructure;
 using MarketTJ.Infrastructure.Persistence;
 using MarketTJ.Infrastructure.Persistence.Seed;
+using MarketTJ.Application.Interfaces.Services;
 using MarketTJ.WebApi.Middleware;
+using MarketTJ.WebApi.Services;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.IdentityModel.Tokens;
@@ -57,6 +59,9 @@ builder.Services
         };
     });
 builder.Services.AddAuthorization();
+
+builder.Services.AddHttpContextAccessor();
+builder.Services.AddScoped<ICurrentUserService, CurrentUserService>();
 
 builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen(options =>
