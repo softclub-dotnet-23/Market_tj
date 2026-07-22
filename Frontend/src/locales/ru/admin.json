@@ -50,5 +50,162 @@
       "rrp": "РРП"
     },
     "months": ["Янв", "Фев", "Мар", "Апр", "Май", "Июн"]
+  },
+  "orders": {
+    "errorTitle": "Не удалось загрузить заказы",
+    "errorDescription": "Проверьте подключение к серверу и попробуйте снова.",
+    "emptyTitle": "Пока нет заказов",
+    "emptyDescription": "Здесь появятся заказы клиентов, когда они начнут оформляться.",
+    "columns": {
+      "orderNumber": "№ заказа",
+      "customer": "Клиент",
+      "farmer": "Фермер",
+      "region": "Регион",
+      "amount": "Сумма",
+      "status": "Статус",
+      "createdAt": "Дата"
+    },
+    "customerLabel": "Клиент #{{id}}",
+    "farmerLabel": "Фермер #{{id}}",
+    "status": {
+      "pending": "Ожидает",
+      "accepted": "Принят",
+      "rejected": "Отклонён",
+      "preparing": "Готовится",
+      "readyForPickup": "Готов к выдаче",
+      "courierAssigned": "Назначен курьер",
+      "pickedUp": "Забран курьером",
+      "inDelivery": "В пути",
+      "delivered": "Доставлен",
+      "completed": "Завершён",
+      "cancelled": "Отменён"
+    }
+  },
+  "products": {
+    "errorTitle": "Не удалось загрузить товары",
+    "errorDescription": "Проверьте подключение к серверу и попробуйте снова.",
+    "emptyTitle": "Пока нет товаров",
+    "emptyDescription": "Здесь появятся товары фермеров, когда они добавят первые объявления.",
+    "columns": {
+      "title": "Название",
+      "farmer": "Фермер",
+      "price": "Цена",
+      "quantity": "Остаток",
+      "status": "Статус",
+      "region": "Регион"
+    },
+    "farmerLabel": "Фермер #{{id}}",
+    "perKg": "с./кг",
+    "kg": "кг",
+    "status": {
+      "draft": "Черновик",
+      "active": "Активен",
+      "outOfStock": "Нет в наличии",
+      "archived": "В архиве"
+    }
+  },
+  "farmers": {
+    "errorTitle": "Не удалось загрузить фермеров",
+    "errorDescription": "Проверьте подключение к серверу и попробуйте снова.",
+    "emptyTitle": "Пока нет фермеров",
+    "emptyDescription": "Здесь появятся зарегистрированные фермерские хозяйства.",
+    "columns": {
+      "farmName": "Хозяйство",
+      "region": "Регион",
+      "status": "Статус",
+      "createdAt": "Дата регистрации"
+    },
+    "status": {
+      "pending": "На проверке",
+      "verified": "Подтверждён",
+      "rejected": "Отклонён"
+    }
+  },
+  "users": {
+    "errorTitle": "Не удалось загрузить покупателей",
+    "errorDescription": "Проверьте подключение к серверу и попробуйте снова.",
+    "emptyTitle": "Пока нет покупателей",
+    "emptyDescription": "Здесь появятся зарегистрированные покупатели.",
+    "columns": {
+      "fullName": "ФИО",
+      "email": "Email",
+      "phone": "Телефон",
+      "status": "Статус",
+      "createdAt": "Дата регистрации"
+    },
+    "status": {
+      "active": "Активен",
+      "inactive": "Неактивен"
+    }
+  },
+  "commissions": {
+    "errorTitle": "Не удалось загрузить комиссии",
+    "errorDescription": "Проверьте подключение к серверу и попробуйте снова.",
+    "emptyTitle": "Пока нет комиссий",
+    "emptyDescription": "Здесь появятся настроенные ставки комиссии платформы.",
+    "columns": {
+      "category": "Категория",
+      "percentage": "Процент",
+      "effectiveFrom": "Действует с",
+      "effectiveTo": "Действует до",
+      "status": "Статус"
+    },
+    "allCategories": "Все категории",
+    "categoryLabel": "Категория #{{id}}",
+    "status": {
+      "active": "Активна",
+      "expired": "Завершена"
+    }
+  },
+  "reviews": {
+    "errorTitle": "Не удалось загрузить отзывы",
+    "errorDescription": "Проверьте подключение к серверу и попробуйте снова.",
+    "emptyTitle": "Пока нет отзывов",
+    "emptyDescription": "Здесь появятся отзывы покупателей о заказах.",
+    "columns": {
+      "order": "Заказ",
+      "customer": "Клиент",
+      "farmer": "Фермер",
+      "rating": "Оценка",
+      "comment": "Комментарий",
+      "createdAt": "Дата"
+    },
+    "orderLabel": "Заказ #{{id}}",
+    "customerLabel": "Клиент #{{id}}",
+    "farmerLabel": "Фермер #{{id}}"
+  },
+  "settings": {
+    "errorTitle": "Не удалось загрузить настройки",
+    "errorDescription": "Проверьте подключение к серверу и попробуйте снова.",
+    "emptyTitle": "Пока нет настроек",
+    "emptyDescription": "Здесь появятся системные настройки платформы.",
+    "columns": {
+      "key": "Ключ",
+      "value": "Значение",
+      "description": "Описание",
+      "updatedAt": "Обновлено"
+    }
+  },
+  "statistics": {
+    "errorTitle": "Не удалось загрузить аналитику",
+    "errorDescription": "Проверьте подключение к серверу и попробуйте снова.",
+    "stats": {
+      "totalUsers": "Всего пользователей",
+      "totalFarmers": "Всего фермеров",
+      "totalCustomers": "Всего покупателей",
+      "totalCouriers": "Всего курьеров",
+      "ordersThisMonth": "Заказы в этом месяце",
+      "revenueThisMonth": "Выручка в этом месяце",
+      "totalRevenue": "Выручка за всё время",
+      "activeProductListings": "Активные товары"
+    },
+    "revenueByMonth": "Выручка по месяцам",
+    "noRevenueYet": "Пока нет данных о выручке",
+    "topSellingProducts": "Топ продаж",
+    "noSalesYet": "Пока нет продаж",
+    "kg": "кг",
+    "ordersByStatus": "Заказы по статусам",
+    "noOrdersYet": "Пока нет заказов",
+    "months": ["Янв", "Фев", "Мар", "Апр", "Май", "Июн", "Июл", "Авг", "Сен", "Окт", "Ноя", "Дек"]
   }
 }
