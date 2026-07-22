@@ -9,7 +9,6 @@ import { DeliveryProcess } from "@/components/sections/DeliveryProcess";
 import { Testimonials } from "@/components/sections/Testimonials";
 import { FAQSection } from "@/components/sections/FAQSection";
 import { CTASection } from "@/components/sections/CTASection";
-import { NewsletterSection } from "@/components/sections/NewsletterSection";
 
 export function Home() {
   return (
@@ -25,7 +24,6 @@ export function Home() {
       <Testimonials />
       <FAQSection />
       <CTASection />
-      <NewsletterSection />
     </>
   );
 }

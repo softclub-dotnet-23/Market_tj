@@ -104,6 +104,7 @@ export function Register() {
             <Input
               label={t("pages:register.fullNameLabel")}
               placeholder={t("pages:register.fullNamePlaceholder")}
+              autoComplete="name"
               leftIcon={<User size={16} />}
               error={errors.fullName?.message}
               {...register("fullName", {
@@ -116,6 +117,7 @@ export function Register() {
                 label={t("pages:register.emailLabel")}
                 type="email"
                 placeholder="you@example.com"
+                autoComplete="email"
                 leftIcon={<Mail size={16} />}
                 error={errors.email?.message}
                 {...register("email", {
@@ -127,6 +129,7 @@ export function Register() {
                 label={t("pages:register.phoneLabel")}
                 type="tel"
                 placeholder="+992 __ ___ ____"
+                autoComplete="tel"
                 leftIcon={<Phone size={16} />}
                 error={errors.phone?.message}
                 {...register("phone", { required: t("pages:register.phoneRequired") })}
@@ -136,6 +139,7 @@ export function Register() {
               label={t("pages:login.passwordLabel")}
               type={showPassword ? "text" : "password"}
               placeholder={t("pages:register.passwordPlaceholder")}
+              autoComplete="new-password"
               leftIcon={<Lock size={16} />}
               error={errors.password?.message}
               rightSlot={
@@ -152,6 +156,7 @@ export function Register() {
               label={t("pages:register.confirmPasswordLabel")}
               type={showPassword ? "text" : "password"}
               placeholder={t("pages:register.confirmPasswordPlaceholder")}
+              autoComplete="new-password"
               leftIcon={<Lock size={16} />}
               error={errors.confirmPassword?.message}
               {...register("confirmPassword", {

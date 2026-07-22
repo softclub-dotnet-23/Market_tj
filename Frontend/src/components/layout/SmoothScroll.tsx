@@ -9,11 +9,11 @@ export function SmoothScroll() {
     const prefersReducedMotion = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
     if (prefersReducedMotion) return;
 
-    // Admin Panel scrolls inside its own fixed-shell <main overflow-y-auto>,
-    // not the document/window — Lenis controls window-level scroll by
-    // default, so on /admin it swallows the wheel event and scrolls nothing,
-    // breaking touchpad/mouse scroll there entirely.
-    if (pathname.startsWith("/admin")) return;
+    // Admin/Farmer panels scroll inside their own fixed-shell <main
+    // overflow-y-auto>, not the document/window — Lenis controls
+    // window-level scroll by default, so there it swallows the wheel event
+    // and scrolls nothing, breaking touchpad/mouse scroll entirely.
+    if (pathname.startsWith("/admin") || pathname.startsWith("/farmer")) return;
 
     const lenis = new Lenis({
       duration: 1.05,

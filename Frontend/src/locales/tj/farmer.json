@@ -1,0 +1,96 @@
+{
+  "nav": {
+    "overview": "Дурнамо",
+    "products": "Маҳсулоти ман",
+    "orders": "Фармоишҳо",
+    "reviews": "Шарҳҳо",
+    "profile": "Профили хоҷагӣ",
+    "documents": "Ҳуҷҷатҳо",
+    "staff": "Кормандон",
+    "notifications": "Огоҳиномаҳо"
+  },
+  "collapseSidebar": "Пӯшидани меню",
+  "expandSidebar": "Кушодани меню",
+  "search": "Ҷустуҷӯ...",
+  "notifications": "Огоҳиномаҳо",
+  "farmerName": "Деҳқон",
+  "logout": "Баромадан",
+  "common": {
+    "somoni": "сомонӣ"
+  },
+  "dashboard": {
+    "greeting": "Хуш омадед боз 👋",
+    "greetingSubtitle": "Дар хоҷагии шумо имрӯз чӣ рӯй медиҳад.",
+    "stats": {
+      "totalProducts": "Ҳамаи маҳсулот",
+      "activeProducts": "Маҳсулоти фаъол",
+      "ordersThisMonth": "Фармоишҳо дар ин моҳ",
+      "revenueThisMonth": "Даромад дар ин моҳ",
+      "totalRevenue": "Даромад дар тамоми давра",
+      "averageRating": "Рейтинги миёна"
+    },
+    "noRatingYet": "Ҳанӯз шарҳ нест",
+    "revenueByMonth": "Даромад аз рӯи моҳҳо",
+    "topSelling": "Фурӯши беҳтарин",
+    "noSalesYet": "Ҳанӯз фурӯш нест",
+    "kg": "кг",
+    "months": ["Янв", "Фев", "Мар", "Апр", "Май", "Июн", "Июл", "Авг", "Сен", "Окт", "Ноя", "Дек"],
+    "errorTitle": "Дурнамо бор нашуд",
+    "errorDescription": "Пайвастшавӣ ба сервер тафтиш карда, аз нав кӯшиш кунед."
+  },
+  "products": {
+    "errorTitle": "Маҳсулот бор нашуд",
+    "errorDescription": "Пайвастшавӣ ба сервер тафтиш карда, аз нав кӯшиш кунед.",
+    "emptyTitle": "Ҳанӯз маҳсулот нест",
+    "emptyDescription": "Дар ин ҷо эълонҳои шумо пас аз илова кардани маҳсулоти аввал пайдо мешаванд.",
+    "columns": {
+      "title": "Ном",
+      "price": "Нарх",
+      "quantity": "Боқимонда",
+      "status": "Ҳолат",
+      "harvestDate": "Санаи ҷамъоварӣ"
+    },
+    "perKg": "смн./кг",
+    "kg": "кг",
+    "status": {
+      "draft": "Пешнавис",
+      "active": "Фаъол",
+      "outOfStock": "Тамом шудааст",
+      "archived": "Дар бойгонӣ"
+    },
+    "addButton": "Илова кардани маҳсулот",
+    "modalTitle": "Маҳсулоти нав",
+    "createSuccess": "Маҳсулот илова карда шуд",
+    "createError": "Маҳсулот илова карда нашуд",
+    "form": {
+      "product": "Маҳсулот",
+      "productPlaceholder": "Аз каталог интихоб кунед",
+      "title": "Номи эълон",
+      "titlePlaceholder": "Масалан: Помидор грунтовый, свежий сбор",
+      "titleLength": "Ном бояд аз 3 то 150 аломат бошад",
+      "qualityGrade": "Навъ / сифат",
+      "qualityOptions": {
+        "premium": "Премиум",
+        "first": "Навъи якум",
+        "standard": "Стандарт"
+      },
+      "status": "Ҳолат ҳангоми сохтан",
+      "retailPrice": "Нархи чакана, сомонӣ/кг",
+      "availableQuantity": "Боқимонда, кг",
+      "minimumOrderQuantity": "Ҳадди ақали фармоиш, кг",
+      "minOrderExceedsAvailable": "Наметавонад аз боқимонда зиёд бошад",
+      "harvestDate": "Санаи ҷамъоварӣ",
+      "wholesalePrice": "Нархи яклухт, сомонӣ/кг",
+      "wholesaleMinQuantity": "Ҳадди ақали яклухт, кг",
+      "wholesaleExceedsRetail": "Наметавонад аз нархи чакана баланд бошад",
+      "wholesaleMinRequired": "Ҳадди ақали яклухтро нишон диҳед",
+      "optional": "Ихтиёрӣ",
+      "description": "Тавсиф",
+      "descriptionLength": "На бештар аз 2000 аломат",
+      "required": "Майдони ҳатмӣ",
+      "mustBePositive": "Бояд аз 0 зиёд бошад",
+      "submit": "Сохтани эълон",
+      "cancel": "Бекор кардан"
+    }
+  }
+}

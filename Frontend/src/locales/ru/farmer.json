@@ -1,0 +1,96 @@
+{
+  "nav": {
+    "overview": "Обзор",
+    "products": "Мои товары",
+    "orders": "Заказы",
+    "reviews": "Отзывы",
+    "profile": "Профиль хозяйства",
+    "documents": "Документы",
+    "staff": "Сотрудники",
+    "notifications": "Уведомления"
+  },
+  "collapseSidebar": "Свернуть меню",
+  "expandSidebar": "Развернуть меню",
+  "search": "Поиск...",
+  "notifications": "Уведомления",
+  "farmerName": "Фермер",
+  "logout": "Выйти",
+  "common": {
+    "somoni": "сомони"
+  },
+  "dashboard": {
+    "greeting": "С возвращением 👋",
+    "greetingSubtitle": "Вот что происходит с вашим хозяйством сегодня.",
+    "stats": {
+      "totalProducts": "Товаров всего",
+      "activeProducts": "Активные товары",
+      "ordersThisMonth": "Заказы в этом месяце",
+      "revenueThisMonth": "Выручка в этом месяце",
+      "totalRevenue": "Выручка за всё время",
+      "averageRating": "Средний рейтинг"
+    },
+    "noRatingYet": "Пока нет отзывов",
+    "revenueByMonth": "Выручка по месяцам",
+    "topSelling": "Топ продаж",
+    "noSalesYet": "Пока нет продаж",
+    "kg": "кг",
+    "months": ["Янв", "Фев", "Мар", "Апр", "Май", "Июн", "Июл", "Авг", "Сен", "Окт", "Ноя", "Дек"],
+    "errorTitle": "Не удалось загрузить дашборд",
+    "errorDescription": "Проверьте подключение к серверу и попробуйте снова."
+  },
+  "products": {
+    "errorTitle": "Не удалось загрузить товары",
+    "errorDescription": "Проверьте подключение к серверу и попробуйте снова.",
+    "emptyTitle": "Пока нет товаров",
+    "emptyDescription": "Здесь появятся ваши объявления, когда вы добавите первый товар.",
+    "columns": {
+      "title": "Название",
+      "price": "Цена",
+      "quantity": "Остаток",
+      "status": "Статус",
+      "harvestDate": "Дата сбора"
+    },
+    "perKg": "с./кг",
+    "kg": "кг",
+    "status": {
+      "draft": "Черновик",
+      "active": "Активен",
+      "outOfStock": "Нет в наличии",
+      "archived": "В архиве"
+    },
+    "addButton": "Добавить товар",
+    "modalTitle": "Новый товар",
+    "createSuccess": "Товар добавлен",
+    "createError": "Не удалось создать товар",
+    "form": {
+      "product": "Товар",
+      "productPlaceholder": "Выберите товар из каталога",
+      "title": "Название объявления",
+      "titlePlaceholder": "Например: Помидор грунтовый, свежий сбор",
+      "titleLength": "Название должно быть от 3 до 150 символов",
+      "qualityGrade": "Сорт / качество",
+      "qualityOptions": {
+        "premium": "Премиум",
+        "first": "Первый сорт",
+        "standard": "Стандарт"
+      },
+      "status": "Статус при создании",
+      "retailPrice": "Розничная цена, сомони/кг",
+      "availableQuantity": "Остаток, кг",
+      "minimumOrderQuantity": "Мин. объём заказа, кг",
+      "minOrderExceedsAvailable": "Не может превышать остаток",
+      "harvestDate": "Дата сбора",
+      "wholesalePrice": "Оптовая цена, сомони/кг",
+      "wholesaleMinQuantity": "Мин. объём для опта, кг",
+      "wholesaleExceedsRetail": "Не может быть выше розничной цены",
+      "wholesaleMinRequired": "Укажите минимальный объём для опта",
+      "optional": "Необязательно",
+      "description": "Описание",
+      "descriptionLength": "Не более 2000 символов",
+      "required": "Обязательное поле",
+      "mustBePositive": "Должно быть больше 0",
+      "submit": "Создать объявление",
+      "cancel": "Отмена"
+    }
+  }
+}

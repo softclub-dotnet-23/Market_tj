@@ -1,5 +1,5 @@
 import { forwardRef, useId } from "react";
-import type { InputHTMLAttributes, LabelHTMLAttributes, ReactNode, TextareaHTMLAttributes } from "react";
+import type { InputHTMLAttributes, LabelHTMLAttributes, ReactNode, SelectHTMLAttributes, TextareaHTMLAttributes } from "react";
 import { cn } from "@/lib/utils";
 
 interface FieldWrapperProps {
@@ -93,6 +93,36 @@ export const Textarea = forwardRef<HTMLTextAreaElement, TextareaProps>(
   },
 );
 Textarea.displayName = "Textarea";
+
+interface SelectProps extends SelectHTMLAttributes<HTMLSelectElement> {
+  label?: string;
+  hint?: string;
+  error?: string;
+}
+
+export const Select = forwardRef<HTMLSelectElement, SelectProps>(
+  ({ label, hint, error, required, className, id, children, ...props }, ref) => {
+    const autoId = useId();
+    const selectId = id ?? autoId;
+    return (
+      <FieldWrapper label={label} hint={hint} error={error} required={required} htmlFor={selectId}>
+        <select
+          ref={ref}
+          id={selectId}
+          className={cn(
+            "h-11 w-full rounded-xl border border-stone-200 bg-white px-4 text-[15px] text-stone-900 transition focus:border-grove-500 focus:ring-2 focus:ring-grove-100 dark:border-stone-700 dark:bg-stone-900 dark:text-stone-100 dark:focus:ring-grove-900",
+            error && "border-danger focus:border-danger focus:ring-red-100",
+            className,
+          )}
+          {...props}
+        >
+          {children}
+        </select>
+      </FieldWrapper>
+    );
+  },
+);
+Select.displayName = "Select";
 
 interface CheckboxProps extends Omit<InputHTMLAttributes<HTMLInputElement>, "type"> {
   label?: ReactNode;
