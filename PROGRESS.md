@@ -1,5 +1,19 @@
 # Прогресс Market.tj
 
+## 2026-07-21 — Разрешён конфликт слияния origin/main → Backend (реальный JWT вместо заглушки)
+- Сделано:
+  - Разблокирован `git pull origin main`: на ветке `Backend` `bin/`/`obj/` не были в `.gitignore` и мешали merge — добавлены паттерны `backend/*/bin/`, `backend/*/obj/` в `.gitignore`, файлы сняты с отслеживания (`git rm -r --cached`), как уже было сделано ранее на ветке `Frontend`.
+  - После этого `git pull` дал реальные конфликты (не тривиальные): на `Backend` авторизация была заглушкой без токена (комментарии в коде прямо это фиксировали: "TODO: заменить на JWT, когда появится"), `main` принёс полноценную JWT-реализацию. Разрешено в пользу `main` для: `AuthService.cs`, `LoginResponseDto.cs`, `AuthController.cs`, `AuthContext.tsx`, `Login.tsx`, роутинга в `App.tsx` (`ProtectedRoute`/`AdminLayout` вместо старого `RequireAdmin`), DI-регистрации `ITokenService` вместо `IPasswordHasher`.
+  - Там, где обе стороны добавили разное, но нужное одновременно, — объединено, а не выбрана одна сторона: `Program.cs` сохранил CORS-политику (была только в `Backend`) вместе с JWT-мидлварой (была только в `main`), в правильном порядке (`UseCors` → `UseAuthentication` → `UseAuthorization`); `Frontend/src/lib/api.ts` оставлен в варианте `Backend` (универсальный клиент `get/post/put/delete`, `ApiError`, `VITE_API_BASE_URL` для Docker) — вариант `main` (`apiPost`, только для логина, захардкоженный `/api`) сломал бы уже собранный Docker-билд фронтенда.
+  - Удалены файлы, ставшие мёртвым кодом после разрешения конфликта (нулевые оставшиеся ссылки, проверено grep): `RequireAdmin.tsx`, `pages/admin/AdminDashboard.tsx`, `IPasswordHasher.cs`, `BCryptPasswordHasher.cs`.
+  - Добавлена секция `Jwt` (`Issuer`/`Audience`/`Secret`/`ExpiryMinutes`) в локальный `appsettings.json` (не в git) и `JWT_SECRET` в `docker-compose.yml`/`.env.example`/`.env` — без этого смёрженный код не запускался бы (конфиг был только локально у автора `main`).
+  - Попутно исправлены две TS-ошибки сборки, всплывшие после `npm install` (не связаны с Auth): типы `formatter` у `Tooltip` из `recharts` в `AdminDashboard.tsx`, конфликт типов `startViewTransition` в `ThemeContext.tsx` (новая версия `lib.dom.d.ts`).
+  - Проверено: `dotnet build` — 0 ошибок; `dotnet test` — 743/743 пройдено; `npm run build` (`tsc -b && vite build`) — успешно.
+- Проблемы/блокеры: нет.
+- Что осталось на следующую сессию:
+  - Токен из `AuthContext` пока нигде не подставляется в заголовок `Authorization` для последующих защищённых запросов (кроме самого логина) — `api.ts` это не делает автоматически, понадобится для любых будущих `[Authorize]`-эндпоинтов на фронте.
+  - Не запушено — коммиты остались локально на ветке `Backend`.
+
 ## 2026-07-21 — Docker-поддержка для локального запуска + система учёта прогресса
 - Сделано:
   - `backend/MarketTJ.WebApi/Dockerfile` — multi-stage (`mcr.microsoft.com/dotnet/sdk:10.0` → `mcr.microsoft.com/dotnet/aspnet:10.0`), `ENV ASPNETCORE_URLS=http://+:8080`, `EXPOSE 8080`.
