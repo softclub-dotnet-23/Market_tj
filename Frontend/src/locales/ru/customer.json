@@ -1,0 +1,73 @@
+{
+  "nav": {
+    "overview": "Обзор",
+    "orders": "Мои заказы",
+    "profile": "Профиль"
+  },
+  "collapseSidebar": "Свернуть меню",
+  "expandSidebar": "Развернуть меню",
+  "search": "Поиск...",
+  "notifications": "Уведомления",
+  "customerName": "Покупатель",
+  "logout": "Выйти",
+  "common": {
+    "somoni": "сомони"
+  },
+  "dashboard": {
+    "greeting": "С возвращением 👋",
+    "greetingSubtitle": "Вот что происходит с вашими заказами.",
+    "stats": {
+      "totalOrders": "Всего заказов",
+      "activeOrders": "Активные заказы",
+      "totalSpent": "Потрачено всего"
+    },
+    "recentOrders": "Последние заказы",
+    "viewAll": "Все заказы",
+    "noOrdersYet": "У вас пока нет заказов",
+    "goToCatalog": "Перейти в каталог",
+    "errorTitle": "Не удалось загрузить данные",
+    "errorDescription": "Проверьте подключение к серверу и попробуйте снова."
+  },
+  "orders": {
+    "errorTitle": "Не удалось загрузить заказы",
+    "errorDescription": "Проверьте подключение к серверу и попробуйте снова.",
+    "emptyTitle": "Пока нет заказов",
+    "emptyDescription": "Оформите первый заказ в каталоге — он появится здесь.",
+    "columns": {
+      "orderNumber": "№ заказа",
+      "address": "Адрес доставки",
+      "amount": "Сумма",
+      "status": "Статус",
+      "createdAt": "Дата"
+    },
+    "status": {
+      "pending": "Ожидает",
+      "accepted": "Принят",
+      "rejected": "Отклонён",
+      "preparing": "Готовится",
+      "readyForPickup": "Готов к выдаче",
+      "courierAssigned": "Назначен курьер",
+      "pickedUp": "Забран курьером",
+      "inDelivery": "В пути",
+      "delivered": "Доставлен",
+      "completed": "Завершён",
+      "cancelled": "Отменён"
+    }
+  },
+  "profile": {
+    "errorTitle": "Не удалось загрузить профиль",
+    "errorDescription": "Проверьте подключение к серверу и попробуйте снова.",
+    "accountTitle": "Аккаунт",
+    "deliveryTitle": "Доставка",
+    "fullName": "ФИО",
+    "email": "Email",
+    "customerType": "Тип покупателя",
+    "typeRetail": "Розничный",
+    "typeWholesale": "Оптовый",
+    "region": "Регион",
+    "defaultAddress": "Адрес по умолчанию",
+    "noAddress": "Не указан",
+    "memberSince": "С нами с",
+    "editHint": "Редактирование профиля появится после подключения соответствующего эндпоинта на бэкенде."
+  }
+}

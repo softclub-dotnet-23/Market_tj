@@ -93,7 +93,7 @@ function AddProductModal({
       wholesaleMinimumQuantity: values.wholesaleMinimumQuantity ? Number(values.wholesaleMinimumQuantity) : null,
       availableQuantity: Number(values.availableQuantity),
       minimumOrderQuantity: Number(values.minimumOrderQuantity),
-      harvestDate: values.harvestDate || null,
+      harvestDate: values.harvestDate ? `${values.harvestDate}T00:00:00.000Z` : null,
       qualityGrade: values.qualityGrade,
       region: farmerProfile.region,
       district: farmerProfile.district,

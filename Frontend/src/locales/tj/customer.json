@@ -1,0 +1,73 @@
+{
+  "nav": {
+    "overview": "Дурнамо",
+    "orders": "Фармоишҳои ман",
+    "profile": "Профил"
+  },
+  "collapseSidebar": "Пӯшидани меню",
+  "expandSidebar": "Кушодани меню",
+  "search": "Ҷустуҷӯ...",
+  "notifications": "Огоҳиномаҳо",
+  "customerName": "Харидор",
+  "logout": "Баромадан",
+  "common": {
+    "somoni": "сомонӣ"
+  },
+  "dashboard": {
+    "greeting": "Хуш омадед боз 👋",
+    "greetingSubtitle": "Дар бораи фармоишҳои шумо чӣ рӯй медиҳад.",
+    "stats": {
+      "totalOrders": "Ҳамаи фармоишҳо",
+      "activeOrders": "Фармоишҳои фаъол",
+      "totalSpent": "Дар маҷмӯъ сарф шуд"
+    },
+    "recentOrders": "Фармоишҳои охирин",
+    "viewAll": "Ҳамаи фармоишҳо",
+    "noOrdersYet": "Шумо ҳанӯз фармоише надоред",
+    "goToCatalog": "Гузаштан ба каталог",
+    "errorTitle": "Маълумот бор нашуд",
+    "errorDescription": "Пайвастшавӣ ба сервер тафтиш карда, аз нав кӯшиш кунед."
+  },
+  "orders": {
+    "errorTitle": "Фармоишҳо бор нашуданд",
+    "errorDescription": "Пайвастшавӣ ба сервер тафтиш карда, аз нав кӯшиш кунед.",
+    "emptyTitle": "Ҳанӯз фармоише нест",
+    "emptyDescription": "Фармоиши аввалро дар каталог ба расмият дароред — он дар ин ҷо пайдо мешавад.",
+    "columns": {
+      "orderNumber": "№ фармоиш",
+      "address": "Суроғаи расонидан",
+      "amount": "Маблағ",
+      "status": "Ҳолат",
+      "createdAt": "Сана"
+    },
+    "status": {
+      "pending": "Дар интизорӣ",
+      "accepted": "Қабул шуд",
+      "rejected": "Рад шуд",
+      "preparing": "Омода мешавад",
+      "readyForPickup": "Омода барои гирифтан",
+      "courierAssigned": "Курьер таъин шуд",
+      "pickedUp": "Аз ҷониби курьер гирифта шуд",
+      "inDelivery": "Дар роҳ",
+      "delivered": "Расонида шуд",
+      "completed": "Анҷом ёфт",
+      "cancelled": "Бекор карда шуд"
+    }
+  },
+  "profile": {
+    "errorTitle": "Профил бор нашуд",
+    "errorDescription": "Пайвастшавӣ ба сервер тафтиш карда, аз нав кӯшиш кунед.",
+    "accountTitle": "Ҳисоб",
+    "deliveryTitle": "Расонидан",
+    "fullName": "Ному насаб",
+    "email": "Email",
+    "customerType": "Навъи харидор",
+    "typeRetail": "Чакана",
+    "typeWholesale": "Яклухт",
+    "region": "Минтақа",
+    "defaultAddress": "Суроғаи пешфарз",
+    "noAddress": "Нишон дода нашуд",
+    "memberSince": "Бо мо аз",
+    "editHint": "Таҳрири профил пас аз пайваст кардани эндпоинти мувофиқ дар бэкенд пайдо мешавад."
+  }
+}

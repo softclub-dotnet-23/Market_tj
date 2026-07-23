@@ -7,6 +7,7 @@ import { RootLayout } from "@/components/layout/RootLayout";
 import { AppChrome } from "@/components/layout/AppChrome";
 import { AdminLayout } from "@/components/layout/AdminLayout";
 import { FarmerLayout } from "@/components/layout/FarmerLayout";
+import { CustomerLayout } from "@/components/layout/CustomerLayout";
 import { ProtectedRoute } from "@/components/layout/ProtectedRoute";
 import { PageLoader } from "@/components/layout/PageLoader";
 import { Home } from "@/pages/Home";
@@ -30,6 +31,9 @@ const AdminReviews = lazy(() => import("@/pages/AdminReviews").then((m) => ({ de
 const AdminSettings = lazy(() => import("@/pages/AdminSettings").then((m) => ({ default: m.AdminSettings })));
 const FarmerDashboard = lazy(() => import("@/pages/FarmerDashboard").then((m) => ({ default: m.FarmerDashboard })));
 const FarmerProducts = lazy(() => import("@/pages/FarmerProducts").then((m) => ({ default: m.FarmerProducts })));
+const CustomerDashboard = lazy(() => import("@/pages/CustomerDashboard").then((m) => ({ default: m.CustomerDashboard })));
+const CustomerOrders = lazy(() => import("@/pages/CustomerOrders").then((m) => ({ default: m.CustomerOrders })));
+const CustomerProfile = lazy(() => import("@/pages/CustomerProfile").then((m) => ({ default: m.CustomerProfile })));
 
 function App() {
   return (
@@ -63,6 +67,15 @@ function App() {
                       <Route index element={<FarmerDashboard />} />
                       <Route path="products" element={<FarmerProducts />} />
                       <Route path="*" element={<Navigate to="/farmer" replace />} />
+                    </Route>
+                  </Route>
+
+                  <Route element={<ProtectedRoute role="Customer" />}>
+                    <Route path="customer" element={<CustomerLayout />}>
+                      <Route index element={<CustomerDashboard />} />
+                      <Route path="orders" element={<CustomerOrders />} />
+                      <Route path="profile" element={<CustomerProfile />} />
+                      <Route path="*" element={<Navigate to="/customer" replace />} />
                     </Route>
                   </Route>
 

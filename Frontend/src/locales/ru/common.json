@@ -1,7 +1,9 @@
 {
   "auth": {
     "login": "Войти",
-    "register": "Регистрация"
+    "register": "Регистрация",
+    "logout": "Выйти",
+    "goToPanel": "Перейти в панель"
   },
   "actions": {
     "search": "Поиск",

@@ -1,7 +1,9 @@
 {
   "auth": {
     "login": "Ворид шудан",
-    "register": "Сабти ном"
+    "register": "Сабти ном",
+    "logout": "Баромадан",
+    "goToPanel": "Гузаштан ба панел"
   },
   "actions": {
     "search": "Ҷустуҷӯ",
