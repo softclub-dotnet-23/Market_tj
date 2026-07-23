@@ -1,9 +1,11 @@
 using MarketTJ.Application.Dto.DailySalesSnapshotDto;
 using MarketTJ.Application.Interfaces.Services;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 
 namespace MarketTJ.WebApi.Controllers;
 
+[Authorize(Roles = "Admin")]
 [Route("api/daily-sales-snapshots")]
 public class DailySalesSnapshotController(IDailySalesSnapshotService service) : ApiControllerBase
 {

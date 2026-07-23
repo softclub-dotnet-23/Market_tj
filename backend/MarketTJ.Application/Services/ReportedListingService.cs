@@ -1,4 +1,5 @@
 using MarketTJ.Application.Common;
+using MarketTJ.Application.Dto.AuditLogDto;
 using MarketTJ.Application.Dto.ReportedListingDto;
 using MarketTJ.Application.Interfaces.Repositories;
 using MarketTJ.Application.Interfaces.Services;
@@ -14,6 +15,7 @@ public class ReportedListingService(
     IReportedListingRepository reportedListingRepository,
     IProductListingRepository productListingRepository,
     IUserRepository userRepository,
+    IAuditLogService auditLogService,
     ILogger<ReportedListingService> logger) : IReportedListingService
 {
     public async Task<Result<IEnumerable<GetReportedListingDto>>> GetAllAsync()
@@ -158,6 +160,75 @@ public class ReportedListingService(
         {
             logger.LogError(ex, "Ошибка при удалении жалобы {Id}", id);
             return Result<string>.Fail("Не удалось удалить жалобу", ErrorType.InternalServerError);
+        }
+    }
+
+    public async Task<Result<PagedResult<GetReportedListingDto>>> GetPagedAsync(PagedRequest request, ReportStatus? status)
+    {
+        try
+        {
+            var all = await reportedListingRepository.GetAllAsync();
+
+            IEnumerable<ReportedListing> filtered = all;
+            if (status is not null)
+                filtered = filtered.Where(r => r.Status == status);
+
+            filtered = request.SortDescending
+                ? filtered.OrderByDescending(r => r.CreatedAt)
+                : filtered.OrderBy(r => r.CreatedAt);
+
+            var materialized = filtered.ToList();
+            var page = materialized
+                .Skip((request.PageNumber - 1) * request.PageSize)
+                .Take(request.PageSize)
+                .Select(ToGetDto)
+                .ToList();
+
+            return Result<PagedResult<GetReportedListingDto>>.Ok(
+                PagedResult<GetReportedListingDto>.Ok(page, materialized.Count, request.PageNumber, request.PageSize));
+        }
+        catch (Exception ex)
+        {
+            logger.LogError(ex, "Ошибка при получении списка жалоб (paged)");
+            return Result<PagedResult<GetReportedListingDto>>.Fail("Не удалось получить список жалоб", ErrorType.InternalServerError);
+        }
+    }
+
+    public async Task<Result<string>> ResolveAsync(int id, ReportStatus resolution, int adminId)
+    {
+        try
+        {
+            if (resolution is not (ReportStatus.Reviewed or ReportStatus.Dismissed))
+                return Result<string>.Fail("Разрешить жалобу можно только в статус Reviewed или Dismissed", ErrorType.Validation);
+
+            var report = await reportedListingRepository.GetByIdAsync(id);
+            if (report is null)
+                return Result<string>.Fail("Жалоба не найдена", ErrorType.NotFound);
+
+            if (report.Status != ReportStatus.Pending)
+                return Result<string>.Fail("Рассмотреть можно только жалобу в статусе Pending", ErrorType.Validation);
+
+            report.Status = resolution;
+            report.ReviewedAt = DateTime.UtcNow;
+            report.ReviewedByAdminId = adminId;
+
+            await reportedListingRepository.UpdateAsync(report);
+
+            await auditLogService.CreateAsync(new CreateAuditLogDto
+            {
+                AdminId = adminId,
+                Action = "ResolveReportedListing",
+                EntityType = nameof(ReportedListing),
+                EntityId = id,
+                Details = $"Жалоба рассмотрена, статус: {resolution}"
+            });
+
+            return Result<string>.Ok("Жалоба рассмотрена");
+        }
+        catch (Exception ex)
+        {
+            logger.LogError(ex, "Ошибка при рассмотрении жалобы {Id}", id);
+            return Result<string>.Fail("Не удалось рассмотреть жалобу", ErrorType.InternalServerError);
         }
     }
 

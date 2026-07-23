@@ -1,6 +1,7 @@
 using MarketTJ.Application.Common;
 using MarketTJ.Application.Dto.UserDto;
 using MarketTJ.Application.Interfaces.Repositories;
+using MarketTJ.Application.Interfaces.Services;
 using MarketTJ.Application.Services;
 using MarketTJ.Domain.Entities;
 using MarketTJ.Domain.Enums;
@@ -12,12 +13,13 @@ namespace MarketTJ.Application.Tests.Services;
 public class UserServiceTests
 {
     private readonly Mock<IUserRepository> _userRepository = new();
+    private readonly Mock<IAuditLogService> _auditLogService = new();
     private readonly Mock<ILogger<UserService>> _logger = new();
     private readonly UserService _service;
 
     public UserServiceTests()
     {
-        _service = new UserService(_userRepository.Object, _logger.Object);
+        _service = new UserService(_userRepository.Object, _auditLogService.Object, _logger.Object);
     }
 
     private static User CreateUser(int id = 1, string email = "user@example.com", string phone = "+992900000000") => new()

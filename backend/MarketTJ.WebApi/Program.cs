@@ -3,7 +3,9 @@ using MarketTJ.Application;
 using MarketTJ.Infrastructure;
 using MarketTJ.Infrastructure.Persistence;
 using MarketTJ.Infrastructure.Persistence.Seed;
+using MarketTJ.Application.Interfaces.Services;
 using MarketTJ.WebApi.Middleware;
+using MarketTJ.WebApi.Services;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.IdentityModel.Tokens;
@@ -58,6 +60,14 @@ builder.Services
     });
 builder.Services.AddAuthorization();
 
+builder.Services.AddHttpContextAccessor();
+builder.Services.AddScoped<ICurrentUserService, CurrentUserService>();
+
+// GET /health — для docker-compose healthcheck / внешнего мониторинга,
+// без авторизации (см. app.MapHealthChecks ниже — не под UseAuthorization).
+builder.Services.AddHealthChecks()
+    .AddDbContextCheck<AppDbContext>();
+
 builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen(options =>
 {
@@ -71,6 +81,14 @@ builder.Services.AddSwaggerGen(options =>
         BearerFormat = "JWT",
         In = ParameterLocation.Header,
         Description = "Вставьте только сам JWT-токен (без слова \"Bearer\")."
+    });
+
+    // Без этого SecurityDefinition выше только описывает схему в JSON-схеме,
+    // но кнопка Authorize в Swagger UI не подставляет токен в запросы —
+    // требование должно быть явно привязано к операциям.
+    options.AddSecurityRequirement(doc => new OpenApiSecurityRequirement
+    {
+        { new OpenApiSecuritySchemeReference("Bearer", doc), new List<string>() }
     });
 });
 
@@ -111,5 +129,6 @@ app.UseAuthentication();
 app.UseAuthorization();
 
 app.MapControllers();
+app.MapHealthChecks("/health").AllowAnonymous();
 
 app.Run();

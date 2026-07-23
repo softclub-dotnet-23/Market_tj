@@ -1,9 +1,11 @@
 using MarketTJ.Application.Dto.FarmerDocumentDto;
 using MarketTJ.Application.Interfaces.Services;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 
 namespace MarketTJ.WebApi.Controllers;
 
+[Authorize(Roles = "Farmer,Admin")]
 [Route("api/farmer-documents")]
 public class FarmerDocumentController(IFarmerDocumentService service) : ApiControllerBase
 {

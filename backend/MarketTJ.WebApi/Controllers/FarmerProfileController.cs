@@ -1,16 +1,23 @@
 using MarketTJ.Application.Dto.FarmerProfileDto;
 using MarketTJ.Application.Interfaces.Services;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 
 namespace MarketTJ.WebApi.Controllers;
 
+// Профиль фермера (название хозяйства, регион) публично виден покупателю на
+// странице объявления; заполняет/меняет сам фермер (раздел 23 ТЗ, Этап 3 —
+// "заполнение профиля") или Admin.
+[Authorize(Roles = "Farmer,Admin")]
 [Route("api/farmer-profiles")]
 public class FarmerProfileController(IFarmerProfileService service) : ApiControllerBase
 {
+    [AllowAnonymous]
     [HttpGet]
     public async Task<IActionResult> GetAll()
         => HandleResult(await service.GetAllAsync());
 
+    [AllowAnonymous]
     [HttpGet("{id:int}")]
     public async Task<IActionResult> GetById(int id)
         => HandleResult(await service.GetByIdAsync(id));

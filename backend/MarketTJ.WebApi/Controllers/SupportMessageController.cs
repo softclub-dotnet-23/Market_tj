@@ -1,9 +1,11 @@
 using MarketTJ.Application.Dto.SupportMessageDto;
 using MarketTJ.Application.Interfaces.Services;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 
 namespace MarketTJ.WebApi.Controllers;
 
+[Authorize]
 [Route("api/support-messages")]
 public class SupportMessageController(ISupportMessageService service) : ApiControllerBase
 {

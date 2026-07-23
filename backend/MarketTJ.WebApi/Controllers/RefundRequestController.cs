@@ -1,9 +1,11 @@
 using MarketTJ.Application.Dto.RefundRequestDto;
 using MarketTJ.Application.Interfaces.Services;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 
 namespace MarketTJ.WebApi.Controllers;
 
+[Authorize]
 [Route("api/refund-requests")]
 public class RefundRequestController(IRefundRequestService service) : ApiControllerBase
 {

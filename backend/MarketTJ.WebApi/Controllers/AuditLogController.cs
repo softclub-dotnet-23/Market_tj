@@ -1,9 +1,11 @@
 using MarketTJ.Application.Dto.AuditLogDto;
 using MarketTJ.Application.Interfaces.Services;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 
 namespace MarketTJ.WebApi.Controllers;
 
+[Authorize(Roles = "Admin")]
 [Route("api/audit-logs")]
 public class AuditLogController(IAuditLogService service) : ApiControllerBase
 {

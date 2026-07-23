@@ -1023,6 +1023,40 @@ namespace MarketTJ.Infrastructure.Migrations
                     b.ToTable("ProductListings");
                 });
 
+            modelBuilder.Entity("MarketTJ.Domain.Entities.RefreshToken", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("integer");
+
+                    NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<int>("Id"));
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<DateTime>("ExpiresAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<bool>("IsRevoked")
+                        .HasColumnType("boolean");
+
+                    b.Property<string>("Token")
+                        .IsRequired()
+                        .HasColumnType("text");
+
+                    b.Property<int>("UserId")
+                        .HasColumnType("integer");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("Token")
+                        .IsUnique();
+
+                    b.HasIndex("UserId");
+
+                    b.ToTable("RefreshTokens");
+                });
+
             modelBuilder.Entity("MarketTJ.Domain.Entities.RefundRequest", b =>
                 {
                     b.Property<int>("Id")
@@ -1593,6 +1627,17 @@ namespace MarketTJ.Infrastructure.Migrations
                     b.Navigation("FarmerProfile");
 
                     b.Navigation("Product");
+                });
+
+            modelBuilder.Entity("MarketTJ.Domain.Entities.RefreshToken", b =>
+                {
+                    b.HasOne("MarketTJ.Domain.Entities.User", "User")
+                        .WithMany()
+                        .HasForeignKey("UserId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("User");
                 });
 
             modelBuilder.Entity("MarketTJ.Domain.Entities.RefundRequest", b =>
