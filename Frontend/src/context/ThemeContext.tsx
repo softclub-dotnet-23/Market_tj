@@ -7,9 +7,7 @@ interface ThemeContextValue {
   toggleTheme: () => void;
 }
 
-interface DocumentWithViewTransitions extends Document {
-  startViewTransition?: (callback: () => void) => unknown;
-}
+type StartViewTransitionFn = (callback: () => void) => unknown;
 
 const ThemeContext = createContext<ThemeContextValue | null>(null);
 
@@ -35,14 +33,15 @@ export function ThemeProvider({ children }: { children: ReactNode }) {
       return;
     }
 
-    const doc = document as DocumentWithViewTransitions;
+    const startViewTransition = (document as unknown as { startViewTransition?: StartViewTransitionFn })
+      .startViewTransition;
     const prefersReducedMotion = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
 
     // The View Transitions API cross-fades a snapshot of the old/new screen
     // via the compositor instead of recalculating styles on every DOM node,
     // so the switch stays smooth even on a page this animation-heavy.
-    if (doc.startViewTransition && !prefersReducedMotion) {
-      doc.startViewTransition(applyClass);
+    if (startViewTransition && !prefersReducedMotion) {
+      startViewTransition.call(document, applyClass);
     } else {
       applyClass();
     }

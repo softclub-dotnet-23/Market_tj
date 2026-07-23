@@ -132,7 +132,7 @@ function RegionDonutCard() {
                 ))}
               </Pie>
               <Tooltip
-                formatter={(value: number) => [`${formatSomoni(value)} ${t("common.somoni")}`, ""]}
+                formatter={(value) => [`${formatSomoni(Number(value))} ${t("common.somoni")}`, ""]}
                 contentStyle={{
                   background: surface,
                   border: "1px solid rgba(11,11,11,0.10)",
@@ -209,7 +209,7 @@ function SiteVisitsCard() {
             />
             <Tooltip
               cursor={{ fill: isDark ? "rgba(255,255,255,0.04)" : "rgba(11,11,11,0.04)" }}
-              formatter={(value: number) => formatNumber(value)}
+              formatter={(value) => formatNumber(Number(value))}
               contentStyle={{
                 background: surface,
                 border: "1px solid rgba(11,11,11,0.10)",

@@ -7,3 +7,7 @@ backend/MarketTJ.WebApi/appsettings.*.json
 # между ветками: скомпилированные .dll/.pdb расходятся при каждой сборке).
 backend/*/bin/
 backend/*/obj/
+
+# Секреты docker-compose (POSTGRES_PASSWORD, ANTHROPIC_API_KEY, JWT_SECRET и т.д.) —
+# см. .env.example для списка переменных.
+.env
