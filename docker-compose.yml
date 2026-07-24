@@ -43,6 +43,7 @@ services:
       Jwt__Audience: MarketTJ.Client
       Jwt__Secret: ${JWT_SECRET:-dev-secret-change-in-production-32chars-min}
       Jwt__ExpiryMinutes: "60"
+      Jwt__RefreshTokenExpiryDays: "30"
     depends_on:
       db:
         condition: service_healthy

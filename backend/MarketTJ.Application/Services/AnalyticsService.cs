@@ -26,23 +26,20 @@ public class AnalyticsService(
         }
     }
 
-    public async Task<Result<FarmerDashboardDto>> GetFarmerDashboardAsync(int farmerId)
+    public async Task<Result<FarmerDashboardDto>> GetFarmerDashboardAsync(int userId)
     {
         try
         {
-            if (farmerId <= 0)
-                return Result<FarmerDashboardDto>.Fail("FarmerId обязателен", ErrorType.Validation);
-
-            var farmerProfile = await farmerProfileRepository.GetByIdAsync(farmerId);
+            var farmerProfile = await farmerProfileRepository.GetByUserIdAsync(userId);
             if (farmerProfile is null)
                 return Result<FarmerDashboardDto>.Fail("Профиль фермера не найден", ErrorType.NotFound);
 
-            var dashboard = await analyticsRepository.GetFarmerDashboardAsync(farmerId);
+            var dashboard = await analyticsRepository.GetFarmerDashboardAsync(farmerProfile.Id);
             return Result<FarmerDashboardDto>.Ok(dashboard);
         }
         catch (Exception ex)
         {
-            logger.LogError(ex, "Ошибка при получении дашборда аналитики фермера {FarmerId}", farmerId);
+            logger.LogError(ex, "Ошибка при получении дашборда аналитики фермера (userId={UserId})", userId);
             return Result<FarmerDashboardDto>.Fail("Не удалось получить данные аналитики фермера", ErrorType.InternalServerError);
         }
     }

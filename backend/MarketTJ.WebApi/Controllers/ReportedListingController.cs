@@ -1,9 +1,11 @@
 using MarketTJ.Application.Dto.ReportedListingDto;
 using MarketTJ.Application.Interfaces.Services;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 
 namespace MarketTJ.WebApi.Controllers;
 
+[Authorize]
 [Route("api/reported-listings")]
 public class ReportedListingController(IReportedListingService service) : ApiControllerBase
 {

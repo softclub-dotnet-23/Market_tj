@@ -1,9 +1,11 @@
 using MarketTJ.Application.Dto.AiAssistantDto;
 using MarketTJ.Application.Interfaces.Services;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 
 namespace MarketTJ.WebApi.Controllers;
 
+[Authorize]
 [Route("api/ai-assistant")]
 public class AiAssistantController(IAiAssistantService aiAssistantService) : ApiControllerBase
 {

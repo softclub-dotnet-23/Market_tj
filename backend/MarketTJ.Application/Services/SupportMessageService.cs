@@ -132,6 +132,29 @@ public class SupportMessageService(
         }
     }
 
+    public async Task<Result<IEnumerable<GetSupportMessageDto>>> GetByTicketIdAsync(int ticketId)
+    {
+        try
+        {
+            var ticket = await supportTicketRepository.GetByIdAsync(ticketId);
+            if (ticket is null)
+                return Result<IEnumerable<GetSupportMessageDto>>.Fail("Тикет не найден", ErrorType.NotFound);
+
+            var messages = await supportMessageRepository.GetAllAsync();
+            var ordered = messages
+                .Where(m => m.SupportTicketId == ticketId)
+                .OrderBy(m => m.CreatedAt)
+                .Select(ToGetDto);
+
+            return Result<IEnumerable<GetSupportMessageDto>>.Ok(ordered);
+        }
+        catch (Exception ex)
+        {
+            logger.LogError(ex, "Ошибка при получении сообщений тикета {TicketId}", ticketId);
+            return Result<IEnumerable<GetSupportMessageDto>>.Fail("Не удалось получить сообщения тикета", ErrorType.InternalServerError);
+        }
+    }
+
     private static GetSupportMessageDto ToGetDto(SupportMessage message) => new()
     {
         Id = message.Id,

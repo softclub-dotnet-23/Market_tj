@@ -1,16 +1,22 @@
 using MarketTJ.Application.Dto.ProductImageDto;
 using MarketTJ.Application.Interfaces.Services;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 
 namespace MarketTJ.WebApi.Controllers;
 
+// Фото объявления публично видно в каталоге; загружает/меняет их владелец
+// объявления (Farmer) или Admin.
+[Authorize(Roles = "Farmer,Admin")]
 [Route("api/product-images")]
 public class ProductImageController(IProductImageService service) : ApiControllerBase
 {
+    [AllowAnonymous]
     [HttpGet]
     public async Task<IActionResult> GetAll()
         => HandleResult(await service.GetAllAsync());
 
+    [AllowAnonymous]
     [HttpGet("{id:int}")]
     public async Task<IActionResult> GetById(int id)
         => HandleResult(await service.GetByIdAsync(id));

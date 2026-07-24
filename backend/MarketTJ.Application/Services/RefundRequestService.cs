@@ -1,4 +1,5 @@
 using MarketTJ.Application.Common;
+using MarketTJ.Application.Dto.AuditLogDto;
 using MarketTJ.Application.Dto.RefundRequestDto;
 using MarketTJ.Application.Interfaces.Repositories;
 using MarketTJ.Application.Interfaces.Services;
@@ -15,6 +16,7 @@ public class RefundRequestService(
     IOrderRepository orderRepository,
     ICustomerProfileRepository customerProfileRepository,
     IUserRepository userRepository,
+    IAuditLogService auditLogService,
     ILogger<RefundRequestService> logger) : IRefundRequestService
 {
     public async Task<Result<IEnumerable<GetRefundRequestDto>>> GetAllAsync()
@@ -183,6 +185,78 @@ public class RefundRequestService(
         {
             logger.LogError(ex, "Ошибка при удалении запроса на возврат {Id}", id);
             return Result<string>.Fail("Не удалось удалить запрос на возврат", ErrorType.InternalServerError);
+        }
+    }
+
+    public async Task<Result<PagedResult<GetRefundRequestDto>>> GetPagedAsync(PagedRequest request, RefundStatus? status)
+    {
+        try
+        {
+            var all = await refundRequestRepository.GetAllAsync();
+
+            IEnumerable<RefundRequest> filtered = all;
+            if (status is not null)
+                filtered = filtered.Where(r => r.Status == status);
+
+            filtered = request.SortDescending
+                ? filtered.OrderByDescending(r => r.CreatedAt)
+                : filtered.OrderBy(r => r.CreatedAt);
+
+            var materialized = filtered.ToList();
+            var page = materialized
+                .Skip((request.PageNumber - 1) * request.PageSize)
+                .Take(request.PageSize)
+                .Select(ToGetDto)
+                .ToList();
+
+            return Result<PagedResult<GetRefundRequestDto>>.Ok(
+                PagedResult<GetRefundRequestDto>.Ok(page, materialized.Count, request.PageNumber, request.PageSize));
+        }
+        catch (Exception ex)
+        {
+            logger.LogError(ex, "Ошибка при получении списка запросов на возврат (paged)");
+            return Result<PagedResult<GetRefundRequestDto>>.Fail("Не удалось получить список запросов на возврат", ErrorType.InternalServerError);
+        }
+    }
+
+    public async Task<Result<string>> ApproveAsync(int id, int adminId)
+        => await ProcessAsync(id, RefundStatus.Approved, "ApproveRefundRequest", adminId);
+
+    public async Task<Result<string>> RejectAsync(int id, int adminId)
+        => await ProcessAsync(id, RefundStatus.Rejected, "RejectRefundRequest", adminId);
+
+    private async Task<Result<string>> ProcessAsync(int id, RefundStatus status, string action, int adminId)
+    {
+        try
+        {
+            var request = await refundRequestRepository.GetByIdAsync(id);
+            if (request is null)
+                return Result<string>.Fail("Запрос на возврат не найден", ErrorType.NotFound);
+
+            if (request.Status != RefundStatus.Pending)
+                return Result<string>.Fail("Обработать можно только запрос в статусе Pending", ErrorType.Validation);
+
+            request.Status = status;
+            request.ProcessedAt = DateTime.UtcNow;
+            request.ProcessedByAdminId = adminId;
+
+            await refundRequestRepository.UpdateAsync(request);
+
+            await auditLogService.CreateAsync(new CreateAuditLogDto
+            {
+                AdminId = adminId,
+                Action = action,
+                EntityType = nameof(RefundRequest),
+                EntityId = id,
+                Details = $"Запрос на возврат переведён в статус {status}"
+            });
+
+            return Result<string>.Ok(status == RefundStatus.Approved ? "Запрос на возврат одобрен" : "Запрос на возврат отклонён");
+        }
+        catch (Exception ex)
+        {
+            logger.LogError(ex, "Ошибка при обработке запроса на возврат {Id}", id);
+            return Result<string>.Fail("Не удалось обработать запрос на возврат", ErrorType.InternalServerError);
         }
     }
 

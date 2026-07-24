@@ -5,5 +5,8 @@ namespace MarketTJ.Application.Interfaces.Services;
 
 public interface IAuthService
 {
-    Task<Result<LoginResponseDto>> LoginAsync(LoginRequestDto dto);
+    Task<Result<AuthResponseDto>> RegisterAsync(RegisterRequestDto dto);
+    Task<Result<AuthResponseDto>> LoginAsync(LoginRequestDto dto);
+    Task<Result<AuthResponseDto>> RefreshTokenAsync(RefreshTokenRequestDto dto);
+    Task<Result<string>> LogoutAsync(RefreshTokenRequestDto dto);
 }

@@ -1,9 +1,11 @@
 using MarketTJ.Application.Dto.CourierProfileDto;
 using MarketTJ.Application.Interfaces.Services;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 
 namespace MarketTJ.WebApi.Controllers;
 
+[Authorize(Roles = "Courier,Admin")]
 [Route("api/courier-profiles")]
 public class CourierProfileController(ICourierProfileService service) : ApiControllerBase
 {

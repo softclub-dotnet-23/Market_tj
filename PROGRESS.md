@@ -1,5 +1,42 @@
 # Прогресс Market.tj
 
+## 2026-07-22 — Admin-действия, pagination/filter/sort, Swagger
+- Сделано:
+  - `Application/Common/PagedRequest.cs` (PageNumber/PageSize с клампом ≤100/SortBy/SortDescending) — `PagedResult<T>` уже существовал (использовался в `ProductListingService`), переиспользован как есть, не продублирован.
+  - Пять новых admin-контроллеров в `WebApi/Controllers/Admin/` (`[Authorize(Roles="Admin")]`, `[Tags("Admin")]`): `AdminUserController` (paged-список + activate/deactivate/role), `AdminOrderController` (paged orders + status change, paged refund-requests + approve/reject), `AdminProductController` (paged reported-listings + resolve), `AdminAuditLogController` (paged/filtered, только чтение), `AdminSupportController` (paged tickets, сообщения тикета, ответ админа).
+  - `IUserService`/`IOrderService`/`IRefundRequestService`/`IReportedListingService`/`IAuditLogService`/`ISupportTicketService`/`ISupportMessageService` — новые методы добавлены поверх существующих сигнатур (аддитивно, ничего не сломано); pagination/filter/sort — в памяти в сервисе (Skip/Take/Where/OrderBy), как уже было в `ProductListingService` — репозитории не расширялись сверх generic `GetAllAsync()`.
+  - Каждое admin-действие (activate/deactivate/role/status change/approve/reject/resolve) пишет запись в `AuditLog` через уже существующий `IAuditLogService.CreateAsync` — AdminId берётся из JWT-claims (`ICurrentUserService`), не из тела запроса.
+  - Swagger: `AddSecurityRequirement` — без него кнопка Authorize в Swagger UI была декоративной (описывала схему, но не подставляла токен в запросы); `[Tags("Admin")]` на всех 5 admin-контроллерах группирует их отдельно в Swagger UI.
+  - 4 существующих unit-теста (`UserServiceTests`, `OrderServiceTests`, `ReportedListingServiceTests`, `RefundRequestServiceTests`) обновлены под новый конструкторный параметр `IAuditLogService`.
+  - Ручная проверка: логин Admin → `GET /api/admin/users` (paged), `PATCH .../4/deactivate` → запись реально появилась в `GET /api/admin/audit-logs` → `.../4/activate` обратно; без токена — 401.
+  - Проверено: `dotnet build` — 0 ошибок; `dotnet test` — 743/743.
+- Проблемы/блокеры:
+  - `GET /api/admin/products/pending` + `/approve` + `/reject` для `ProductListing` **не реализованы** — у `ListingStatus` (Draft/Active/OutOfStock/Archived) нет статуса "на модерации", переключение Draft/Active полностью в руках фермера. Задача сама это допускала ("если есть соответствующий статус/флаг"). Модерация в проекте устроена только через `ReportedListing` (жалобы) — эта часть реализована.
+  - Часть 2 задачи просила распространить pagination "на все GET-списочные эндпоинты, не только admin" — сделано выборочно: только для 6 сущностей, реально получивших admin-списки (User/Order/RefundRequest/ReportedListing/AuditLog/SupportTicket) + уже существовавший ProductListing. Остальные ~24 контроллера с generic CRUD (Category, CartItem, Favorite, ...) не тронуты — конвертация всех задела бы каждый сервис/контроллер/тест в проекте, а задача явно разрешала выбрать аддитивный путь "по месту".
+  - `AuditLogController.cs` (файл называется по заданию `Api/Controllers/Admin/AuditLogController.cs`) назван `AdminAuditLogController.cs` — иначе в проекте было бы два класса `AuditLogController` (уже существует один на `/api/audit-logs`, generic CRUD, из предыдущей сессии) с одинаковым именем в разных неймспейсах — путаница для IDE/чтения кода.
+- Что осталось на следующую сессию:
+  - Frontend всё ещё не подставляет JWT в `Authorization`-заголовок — admin-панель (уже есть в UI) не сможет реально дёргать новые эндпоинты без этого.
+  - Не запушено — коммит `add admin management actions, pagination, swagger` локально на ветке `Backend`.
+
+## 2026-07-22 — Полноценный JWT auth + [Authorize] на всех контроллерах
+- Сделано:
+  - `backend/MarketTJ.Domain/Entities/RefreshToken.cs` + `RefreshTokenConfiguration.cs` + `DbSet<RefreshToken>` в `AppDbContext` + `IRefreshTokenRepository`/`RefreshTokenRepository`; миграция `20260722135016_AddRefreshToken`.
+  - `Application/Dto/AuthDto/`: `LoginResponseDto` переименован в `AuthResponseDto` (добавлены `RefreshToken`, `ExpiresAt`), новые `RegisterRequestDto`, `RefreshTokenRequestDto`; `Validators/AuthValidator.cs` (самостоятельная регистрация — только Customer/Farmer).
+  - `ITokenService`/`TokenService`: добавлены `GenerateRefreshToken()`, `AccessTokenExpiryMinutes`, `RefreshTokenExpiryDays` (Application не читает `IConfiguration` напрямую).
+  - `IAuthService`/`AuthService`: `RegisterAsync`, `LoginAsync` (теперь выдаёт пару access+refresh), `RefreshTokenAsync` (ротация — старый токен отзывается), `LogoutAsync` (отзыв refresh token).
+  - `AuthController`: `/api/auth/register`, `/refresh`, `/logout` рядом с уже существующим `/login`, весь контроллер `[AllowAnonymous]`.
+  - `ICurrentUserService`/`CurrentUserService` (WebApi, читает claims через `IHttpContextAccessor`) — `AnalyticsController.GetFarmerDashboard` больше не принимает `farmerId` как query-параметр, берёт `UserId` из JWT; `IFarmerProfileRepository` получил `GetByUserIdAsync`; `IAnalyticsService.GetFarmerDashboardAsync` теперь резолвит `FarmerProfile` по `UserId` сам.
+  - `Program.cs`: `AddHttpContextAccessor()` + регистрация `ICurrentUserService` (сам JWT-пайплайн — `AddAuthentication`/`AddJwtBearer`/`UseAuthentication` — уже был в проекте с прошлой сессии, раскомментированного кода не было).
+  - **[Authorize]/[Authorize(Roles=...)] добавлен на все 33 контроллера** (кроме `AuthController`) — из них только `AnalyticsController` содержал явные TODO-комментарии про Auth; на остальных 31 роль/анонимность назначены самостоятельно по разделу 16 ТЗ ("endpoints защищать через [Authorize]") — **самостоятельное решение, требует проверки**: каталог (Category/Product/ProductListing/ProductImage/FarmerProfile/DeliveryZone/Review) — чтение анонимное, запись Admin/Farmer; admin-only сущности (AppSetting/AuditLog/Commission/DailySalesSnapshot/User) — `Roles="Admin"`; профильные контроллеры — своя роль+Admin; всё остальное — просто `[Authorize]` (сервисы не фильтруют по владельцу, поэтому точечные роли не расставлялись там, где это могло бы запереть легитимный доступ).
+  - `Jwt:Secret` перенесён из `appsettings.json` в User Secrets (`dotnet user-secrets set`, `UserSecretsId` уже был в `.csproj`); `docker-compose.yml` дополнен `Jwt__RefreshTokenExpiryDays`.
+  - Попутно: убрана задвоенная регистрация `IAuthService` в `Application/DependencyInjection.cs` (была прописана дважды ещё до этой сессии).
+  - Проверено: `dotnet build` — 0 ошибок; `dotnet test` — 743/743.
+- Проблемы/блокеры: нет.
+- Что осталось на следующую сессию:
+  - Frontend не подставляет JWT в `Authorization`-заголовок для запросов после логина — теперь это блокирует уже намного больше эндпоинтов, чем раньше (весь API, кроме auth и публичного чтения каталога).
+  - Заполнение FarmerProfile/CustomerProfile после регистрации остаётся отдельным шагом (раздел 23 ТЗ, Этап 3) — Register не создаёт профиль автоматически.
+  - Не запушено — коммит `add JWT auth and enforce authorization` локально на ветке `Backend`.
+
 ## 2026-07-22 — Второй merge-конфликт origin/main → Backend (remember-me, роль Farmer, admin/farmer-дашборды)
 - Сделано:
   - После предыдущего merge-коммита пришёл ещё один `git pull origin main` (пользователь запустил его сам), снова зацепивший те же 3 файла: `AuthContext.tsx`, `lib/api.ts`, `pages/Login.tsx` — плюс безконфликтно добавился большой пласт новых страниц (`AdminStatistics`, `AdminOrders`, `AdminProducts`, `AdminFarmers`, `AdminUsers`, `AdminCommissions`, `AdminReviews`, `AdminSettings`, `FarmerDashboard`, `FarmerProducts`, `FarmerLayout`).

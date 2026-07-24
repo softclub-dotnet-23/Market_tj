@@ -12,6 +12,9 @@ public class FarmerProfileRepository(AppDbContext context) : IFarmerProfileRepos
     public async Task<FarmerProfile?> GetByIdAsync(int id)
         => await context.FarmerProfiles.FindAsync(id);
 
+    public async Task<FarmerProfile?> GetByUserIdAsync(int userId)
+        => await context.FarmerProfiles.FirstOrDefaultAsync(x => x.UserId == userId);
+
     public async Task AddAsync(FarmerProfile farmerProfile)
     {
         await context.FarmerProfiles.AddAsync(farmerProfile);

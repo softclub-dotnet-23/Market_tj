@@ -1,4 +1,5 @@
 using MarketTJ.Application.Common;
+using MarketTJ.Application.Dto.AuditLogDto;
 using MarketTJ.Application.Dto.OrderDto;
 using MarketTJ.Application.Interfaces.Repositories;
 using MarketTJ.Application.Interfaces.Services;
@@ -15,6 +16,7 @@ public class OrderService(
     ICustomerProfileRepository customerProfileRepository,
     IFarmerProfileRepository farmerProfileRepository,
     IUserRepository userRepository,
+    IAuditLogService auditLogService,
     ILogger<OrderService> logger) : IOrderService
 {
     public async Task<Result<IEnumerable<GetOrderDto>>> GetAllAsync()
@@ -184,6 +186,92 @@ public class OrderService(
             logger.LogError(ex, "Ошибка при удалении заказа {Id}", id);
             return Result<string>.Fail("Не удалось удалить заказ", ErrorType.InternalServerError);
         }
+    }
+
+    public async Task<Result<PagedResult<GetOrderDto>>> GetPagedAsync(PagedRequest request, OrderStatus? status)
+    {
+        try
+        {
+            var all = await orderRepository.GetAllAsync();
+
+            IEnumerable<Order> filtered = all;
+            if (status is not null)
+                filtered = filtered.Where(o => o.Status == status);
+
+            filtered = Sort(filtered, request.SortBy, request.SortDescending);
+
+            var materialized = filtered.ToList();
+            var page = materialized
+                .Skip((request.PageNumber - 1) * request.PageSize)
+                .Take(request.PageSize)
+                .Select(ToGetDto)
+                .ToList();
+
+            return Result<PagedResult<GetOrderDto>>.Ok(
+                PagedResult<GetOrderDto>.Ok(page, materialized.Count, request.PageNumber, request.PageSize));
+        }
+        catch (Exception ex)
+        {
+            logger.LogError(ex, "Ошибка при получении списка заказов (paged)");
+            return Result<PagedResult<GetOrderDto>>.Fail("Не удалось получить список заказов", ErrorType.InternalServerError);
+        }
+    }
+
+    public async Task<Result<string>> ChangeStatusAsync(int id, OrderStatus status, int adminId)
+    {
+        try
+        {
+            if (!Enum.IsDefined(status))
+                return Result<string>.Fail("Указан несуществующий статус заказа", ErrorType.Validation);
+
+            var order = await orderRepository.GetByIdAsync(id);
+            if (order is null)
+                return Result<string>.Fail("Заказ не найден", ErrorType.NotFound);
+
+            // Раздел 10.4 ТЗ: завершённый заказ нельзя редактировать.
+            if (order.Status == OrderStatus.Completed)
+                return Result<string>.Fail("Завершённый заказ нельзя редактировать", ErrorType.Validation);
+
+            if (order.Status == status)
+                return Result<string>.Ok("У заказа уже этот статус");
+
+            var previousStatus = order.Status;
+            order.Status = status;
+            order.AcceptedAt = status == OrderStatus.Accepted && order.AcceptedAt is null ? DateTime.UtcNow : order.AcceptedAt;
+            order.CompletedAt = status == OrderStatus.Completed && order.CompletedAt is null ? DateTime.UtcNow : order.CompletedAt;
+            order.CancelledAt = status == OrderStatus.Cancelled && order.CancelledAt is null ? DateTime.UtcNow : order.CancelledAt;
+
+            await orderRepository.UpdateAsync(order);
+
+            await auditLogService.CreateAsync(new CreateAuditLogDto
+            {
+                AdminId = adminId,
+                Action = "ChangeOrderStatus",
+                EntityType = nameof(Order),
+                EntityId = id,
+                Details = $"Статус изменён с {previousStatus} на {status}"
+            });
+
+            return Result<string>.Ok("Статус заказа изменён");
+        }
+        catch (Exception ex)
+        {
+            logger.LogError(ex, "Ошибка при изменении статуса заказа {Id}", id);
+            return Result<string>.Fail("Не удалось изменить статус заказа", ErrorType.InternalServerError);
+        }
+    }
+
+    private static IEnumerable<Order> Sort(IEnumerable<Order> orders, string? sortBy, bool descending)
+    {
+        Func<Order, object> keySelector = sortBy?.ToLowerInvariant() switch
+        {
+            "totalamount" => o => o.TotalAmount,
+            "status" => o => o.Status,
+            "ordernumber" => o => o.OrderNumber,
+            _ => o => o.CreatedAt
+        };
+
+        return descending ? orders.OrderByDescending(keySelector) : orders.OrderBy(keySelector);
     }
 
     private static GetOrderDto ToGetDto(Order order) => new()

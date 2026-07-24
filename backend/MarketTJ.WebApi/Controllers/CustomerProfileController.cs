@@ -1,9 +1,11 @@
 using MarketTJ.Application.Dto.CustomerProfileDto;
 using MarketTJ.Application.Interfaces.Services;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 
 namespace MarketTJ.WebApi.Controllers;
 
+[Authorize(Roles = "Customer,Admin")]
 [Route("api/customer-profiles")]
 public class CustomerProfileController(ICustomerProfileService service) : ApiControllerBase
 {

@@ -1,16 +1,22 @@
 using MarketTJ.Application.Dto.DeliveryZoneDto;
 using MarketTJ.Application.Interfaces.Services;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 
 namespace MarketTJ.WebApi.Controllers;
 
+// Зоны доставки показываются гостю при оформлении заказа/на карточке товара
+// (доступна ли доставка в регион), меняет их только Admin.
+[Authorize(Roles = "Admin")]
 [Route("api/delivery-zones")]
 public class DeliveryZoneController(IDeliveryZoneService service) : ApiControllerBase
 {
+    [AllowAnonymous]
     [HttpGet]
     public async Task<IActionResult> GetAll()
         => HandleResult(await service.GetAllAsync());
 
+    [AllowAnonymous]
     [HttpGet("{id:int}")]
     public async Task<IActionResult> GetById(int id)
         => HandleResult(await service.GetByIdAsync(id));

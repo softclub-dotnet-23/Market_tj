@@ -1,9 +1,11 @@
 using MarketTJ.Application.Dto.NotificationDto;
 using MarketTJ.Application.Interfaces.Services;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 
 namespace MarketTJ.WebApi.Controllers;
 
+[Authorize]
 [Route("api/notifications")]
 public class NotificationController(INotificationService service) : ApiControllerBase
 {

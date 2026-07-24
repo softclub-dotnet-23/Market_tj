@@ -1,9 +1,11 @@
 using MarketTJ.Application.Dto.ChatMessageDto;
 using MarketTJ.Application.Interfaces.Services;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 
 namespace MarketTJ.WebApi.Controllers;
 
+[Authorize]
 [Route("api/chat-messages")]
 public class ChatMessageController(IChatMessageService service) : ApiControllerBase
 {

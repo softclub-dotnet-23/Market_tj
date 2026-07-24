@@ -1,6 +1,7 @@
 using MarketTJ.Application.Common;
 using MarketTJ.Application.Dto.ReportedListingDto;
 using MarketTJ.Application.Interfaces.Repositories;
+using MarketTJ.Application.Interfaces.Services;
 using MarketTJ.Application.Services;
 using MarketTJ.Domain.Entities;
 using MarketTJ.Domain.Enums;
@@ -14,12 +15,13 @@ public class ReportedListingServiceTests
     private readonly Mock<IReportedListingRepository> _reportedListingRepository = new();
     private readonly Mock<IProductListingRepository> _productListingRepository = new();
     private readonly Mock<IUserRepository> _userRepository = new();
+    private readonly Mock<IAuditLogService> _auditLogService = new();
     private readonly Mock<ILogger<ReportedListingService>> _logger = new();
     private readonly ReportedListingService _service;
 
     public ReportedListingServiceTests()
     {
-        _service = new ReportedListingService(_reportedListingRepository.Object, _productListingRepository.Object, _userRepository.Object, _logger.Object);
+        _service = new ReportedListingService(_reportedListingRepository.Object, _productListingRepository.Object, _userRepository.Object, _auditLogService.Object, _logger.Object);
         _productListingRepository.Setup(r => r.GetByIdAsync(It.IsAny<int>())).ReturnsAsync((int id) => new ProductListing
         {
             Id = id, FarmerProfileId = 1, ProductId = 1, Title = "Listing", RetailPricePerKg = 10,

@@ -1,9 +1,11 @@
 using MarketTJ.Application.Dto.OrderDto;
 using MarketTJ.Application.Interfaces.Services;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 
 namespace MarketTJ.WebApi.Controllers;
 
+[Authorize]
 [Route("api/orders")]
 public class OrderController(IOrderService service) : ApiControllerBase
 {
