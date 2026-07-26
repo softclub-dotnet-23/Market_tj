@@ -1,28 +1,27 @@
 import { Link } from "react-router-dom";
 import { useTranslation } from "react-i18next";
-import { BadgeCheck, MapPin, MessageCircle, Package, Star } from "lucide-react";
+import { BadgeCheck, MapPin, Package, Star } from "lucide-react";
 import type { Farmer } from "@/types";
 import { Avatar } from "@/components/ui/Avatar";
 import { Badge } from "@/components/ui/Badge";
 import { Button } from "@/components/ui/Button";
-import { farmerPhotos } from "@/assets/photos";
+import { resolveMediaUrl } from "@/lib/api";
 
 export function FarmerProfileCard({ farmer }: { farmer: Farmer }) {
   const { t } = useTranslation("product");
   return (
     <div className="flex flex-col gap-5 rounded-3xl border border-stone-100 bg-white p-6 sm:flex-row sm:items-center sm:justify-between dark:border-stone-800 dark:bg-stone-900">
-      <div className="flex items-center gap-4">
-        <Avatar name={farmer.ownerName} src={farmerPhotos[farmer.id]} size={60} />
+      <Link to={`/farmers/${farmer.id}`} className="flex items-center gap-4">
+        <Avatar name={farmer.farmName} src={farmer.avatarUrl ? resolveMediaUrl(farmer.avatarUrl) : undefined} size={60} />
         <div className="flex flex-col gap-1">
           <div className="flex items-center gap-2">
-            <h3 className="font-display text-lg text-stone-900 dark:text-stone-50">{farmer.farmName}</h3>
+            <h3 className="font-display text-lg text-stone-900 transition-colors hover:text-grove-700 dark:text-stone-50 dark:hover:text-grove-400">{farmer.farmName}</h3>
             {farmer.verified && (
               <span title={t("verifiedFarmerTitle")}>
                 <BadgeCheck size={16} className="text-grove-600 dark:text-grove-400" />
               </span>
             )}
           </div>
-          <p className="text-sm text-stone-500 dark:text-stone-400">{farmer.ownerName}</p>
           <div className="mt-1 flex flex-wrap items-center gap-x-4 gap-y-1 text-xs text-stone-400 dark:text-stone-500">
             <span className="flex items-center gap-1">
               <MapPin size={12} />
@@ -45,7 +44,7 @@ export function FarmerProfileCard({ farmer }: { farmer: Farmer }) {
             ))}
           </div>
         </div>
-      </div>
+      </Link>
 
       <div className="flex shrink-0 gap-2">
         <Link to={`/catalog?farmer=${farmer.id}`}>
@@ -53,9 +52,6 @@ export function FarmerProfileCard({ farmer }: { farmer: Farmer }) {
             {t("allProducts")}
           </Button>
         </Link>
-        <Button variant="ghost" size="sm" leftIcon={<MessageCircle size={14} />}>
-          {t("writeMessage")}
-        </Button>
       </div>
     </div>
   );

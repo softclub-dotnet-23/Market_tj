@@ -12,6 +12,9 @@ public class CustomerProfileRepository(AppDbContext context) : ICustomerProfileR
     public async Task<CustomerProfile?> GetByIdAsync(int id)
         => await context.CustomerProfiles.FindAsync(id);
 
+    public async Task<CustomerProfile?> GetByUserIdAsync(int userId)
+        => await context.CustomerProfiles.FirstOrDefaultAsync(x => x.UserId == userId);
+
     public async Task AddAsync(CustomerProfile customerProfile)
     {
         await context.CustomerProfiles.AddAsync(customerProfile);

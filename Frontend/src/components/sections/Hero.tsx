@@ -6,17 +6,16 @@ import { PhotoTile } from "@/components/ui/PhotoTile";
 import { Avatar } from "@/components/ui/Avatar";
 import { useProducts } from "@/data/products";
 import { useFarmers } from "@/data/farmers";
-import { productPhotos, heroPhoto, farmerPhotos } from "@/assets/photos";
-
-const floatingIds = [201, 401, 501, 601];
-const avatarFarmerIds = [1, 2, 3, 8];
+import { resolveMediaUrl } from "@/lib/api";
+import { heroPhoto } from "@/assets/photos";
 
 export function Hero() {
   const { t } = useTranslation(["sections", "layout", "common"]);
   const navigate = useNavigate();
   const farmers = useFarmers();
   const products = useProducts();
-  const floaters = floatingIds.map((id) => products.find((p) => p.id === id)!).filter(Boolean);
+  const floaters = products.slice(0, 4);
+  const avatarFarmers = farmers.slice(0, 4);
 
   return (
     <section className="relative overflow-hidden pb-10 pt-14 sm:pb-14 sm:pt-20">
@@ -75,14 +74,13 @@ export function Hero() {
             className="flex items-center gap-3 pt-2"
           >
             <div className="flex -space-x-3">
-              {avatarFarmerIds.map((id) => {
-                const farmer = farmers.find((f) => f.id === id)!;
-                return <Avatar key={id} name={farmer.ownerName} src={farmerPhotos[id]} size={36} ring />;
-              })}
+              {avatarFarmers.map((farmer) => (
+                <Avatar key={farmer.id} name={farmer.farmName} src={farmer.avatarUrl ? resolveMediaUrl(farmer.avatarUrl) : undefined} size={36} ring />
+              ))}
             </div>
             <p className="text-sm text-stone-500 dark:text-stone-400">
-              <span className="font-semibold text-stone-800 dark:text-stone-200">32 400+</span>{" "}
-              {t("sections:hero.ordersDeliveredSuffix")}
+              <span className="font-semibold text-stone-800 dark:text-stone-200">{products.length}+</span>{" "}
+              {t("sections:hero.productsAvailableSuffix")}
             </p>
           </motion.div>
         </div>
@@ -114,7 +112,7 @@ export function Hero() {
                 style={{ animation: `float 6s ease-in-out ${i * 0.7}s infinite` }}
               >
                 <div className="mb-2 aspect-square overflow-hidden rounded-xl">
-                  <PhotoTile src={productPhotos[product.id]} alt={product.title} className="h-full w-full" />
+                  <PhotoTile src={product.photoUrl} alt={product.title} className="h-full w-full" />
                 </div>
                 <p className="truncate text-[11px] font-medium text-stone-700">{product.title}</p>
                 <p className="text-xs font-semibold text-grove-700">

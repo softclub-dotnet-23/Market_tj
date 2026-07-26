@@ -1,10 +1,11 @@
-import type { ReactNode } from "react";
 import { Link } from "react-router-dom";
 import { useTranslation } from "react-i18next";
 import { ArrowRight, Clock, PackageCheck, ShoppingBag, Wallet } from "lucide-react";
 import { PageLoader } from "@/components/layout/PageLoader";
+import { Card } from "@/components/ui/Card";
+import { StatCard } from "@/components/ui/StatCard";
 import { EmptyState } from "@/components/ui/EmptyState";
-import { formatNumber, formatSomoni, formatDate } from "@/lib/utils";
+import { formatNumber, formatSomoni, formatDateTime } from "@/lib/utils";
 import { OrderStatus, useCustomerOrders, useCustomerProfile } from "@/data/customer";
 
 const ACTIVE_STATUSES = new Set<number>([
@@ -46,32 +47,6 @@ const STATUS_KEYS: Record<number, string> = {
   [OrderStatus.Cancelled]: "cancelled",
 };
 
-function Card({ className, children }: { className?: string; children: ReactNode }) {
-  return (
-    <div className={"rounded-3xl border border-stone-100 bg-white p-6 dark:border-stone-800 dark:bg-stone-900 " + (className ?? "")}>
-      {children}
-    </div>
-  );
-}
-
-function StatCard({ icon: Icon, accent, label, value }: { icon: typeof ShoppingBag; accent: "grove" | "blue" | "orange"; label: string; value: string }) {
-  const ACCENT = {
-    grove: "bg-grove-100 text-grove-700 dark:bg-grove-900 dark:text-grove-300",
-    blue: "bg-blue-100 text-blue-700 dark:bg-blue-900 dark:text-blue-300",
-    orange: "bg-orange-100 text-orange-700 dark:bg-orange-900 dark:text-orange-300",
-  } as const;
-  return (
-    <Card className="flex flex-col gap-4">
-      <span className={`flex h-11 w-11 items-center justify-center rounded-2xl ${ACCENT[accent]}`}>
-        <Icon size={20} />
-      </span>
-      <div>
-        <p className="text-sm text-stone-500 dark:text-stone-400">{label}</p>
-        <p className="font-display text-2xl text-stone-900 dark:text-stone-50">{value}</p>
-      </div>
-    </Card>
-  );
-}
 
 export function CustomerDashboard() {
   const { t } = useTranslation("customer");
@@ -128,7 +103,7 @@ export function CustomerDashboard() {
               <li key={order.id} className="flex items-center justify-between gap-3 py-3.5">
                 <div className="min-w-0">
                   <p className="truncate text-sm font-medium text-stone-800 dark:text-stone-100">{order.orderNumber}</p>
-                  <p className="text-xs text-stone-400 dark:text-stone-500">{formatDate(order.createdAt)}</p>
+                  <p className="text-xs text-stone-400 dark:text-stone-500">{formatDateTime(order.createdAt)}</p>
                 </div>
                 <div className="flex shrink-0 items-center gap-4">
                   <span className="text-sm font-semibold text-stone-800 dark:text-stone-100">

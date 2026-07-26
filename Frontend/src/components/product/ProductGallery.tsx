@@ -2,10 +2,10 @@ import { useState } from "react";
 import type { MouseEvent } from "react";
 import { motion } from "framer-motion";
 import { useTranslation } from "react-i18next";
-import { X, ZoomIn } from "lucide-react";
+import { Sprout, X, ZoomIn } from "lucide-react";
 import { Modal } from "@/components/ui/Modal";
 
-export function ProductGallery({ src, title }: { src: string; title: string }) {
+export function ProductGallery({ src, title }: { src?: string; title: string }) {
   const { t } = useTranslation("common");
   const [zoomStyle, setZoomStyle] = useState<{ x: number; y: number } | null>(null);
   const [lightboxOpen, setLightboxOpen] = useState(false);
@@ -16,6 +16,14 @@ export function ProductGallery({ src, title }: { src: string; title: string }) {
     const y = ((e.clientY - rect.top) / rect.height) * 100;
     setZoomStyle({ x, y });
   };
+
+  if (!src) {
+    return (
+      <div className="flex aspect-square items-center justify-center rounded-3xl border border-stone-100 bg-stone-100 dark:border-stone-800 dark:bg-stone-800">
+        <Sprout size={64} className="text-stone-300 dark:text-stone-600" />
+      </div>
+    );
+  }
 
   return (
     <div className="flex flex-col gap-4">

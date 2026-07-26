@@ -1,10 +1,13 @@
 import { useState } from "react";
-import { Link, useParams } from "react-router-dom";
+import { Link, useNavigate, useParams } from "react-router-dom";
 import { motion } from "framer-motion";
 import { useTranslation } from "react-i18next";
+import { toast } from "sonner";
 import {
   CalendarDays,
+  CheckCircle2,
   Heart,
+  MessageCircle,
   Minus,
   PackageCheck,
   Plus,
@@ -15,6 +18,7 @@ import {
 } from "lucide-react";
 import { Breadcrumbs } from "@/components/ui/Breadcrumbs";
 import { Badge } from "@/components/ui/Badge";
+import { Avatar } from "@/components/ui/Avatar";
 import { RatingStars } from "@/components/ui/RatingStars";
 import { Button } from "@/components/ui/Button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/Tabs";
@@ -24,14 +28,17 @@ import { ProductGallery } from "@/components/product/ProductGallery";
 import { FarmerProfileCard } from "@/components/product/FarmerProfileCard";
 import { ReviewsSection } from "@/components/product/ReviewsSection";
 import { ProductCard } from "@/components/product/ProductCard";
-import { useProducts } from "@/data/products";
+import { ChatModal } from "@/components/chat/ChatModal";
+import { useProducts, useCatalogLoaded } from "@/data/products";
 import { useCategories } from "@/data/categories";
 import { useFarmers } from "@/data/farmers";
 import { getReviewsForProduct } from "@/data/reviews";
-import { productPhotos, farmerPhotos } from "@/assets/photos";
+import { PageLoader } from "@/components/layout/PageLoader";
+import { useAuth } from "@/context/AuthContext";
 import { useCart } from "@/context/CartContext";
 import { useFavorites } from "@/context/FavoritesContext";
-import { cn, formatDate, formatSomoni } from "@/lib/utils";
+import { resolveMediaUrl } from "@/lib/api";
+import { cn, formatDate, formatSomoni, getUnitPrice } from "@/lib/utils";
 
 const BADGE_VARIANTS: Record<string, "grove" | "harvest" | "clay" | "dark"> = {
   organic: "grove",
@@ -44,13 +51,19 @@ const BADGE_VARIANTS: Record<string, "grove" | "harvest" | "clay" | "dark"> = {
 export function ProductDetails() {
   const { t } = useTranslation(["pages", "product", "common", "layout", "data"]);
   const { slug } = useParams();
+  const navigate = useNavigate();
+  const { user } = useAuth();
   const products = useProducts();
   const product = products.find((p) => p.slug === slug);
   const { addItem } = useCart();
   const { isFavorite, toggleFavorite } = useFavorites();
   const [quantity, setQuantity] = useState(product?.minimumOrderQuantity ?? 1);
+  const [askFarmerOpen, setAskFarmerOpen] = useState(false);
   const categories = useCategories();
   const farmers = useFarmers();
+  const catalogLoaded = useCatalogLoaded();
+
+  if (!product && !catalogLoaded) return <PageLoader />;
 
   if (!product) {
     return (
@@ -89,6 +102,19 @@ export function ProductDetails() {
     setQuantity((q) => Math.max(product.minimumOrderQuantity, Math.min(product.availableQuantity, q + delta)));
   };
 
+  const handleAskFarmer = () => {
+    if (!user) {
+      toast.error(t("pages:productDetails.chatLoginRequired"));
+      navigate("/login");
+      return;
+    }
+    if (user.role !== "Customer") {
+      toast.error(t("pages:productDetails.chatCustomersOnly"));
+      return;
+    }
+    setAskFarmerOpen(true);
+  };
+
   return (
     <div className="container-page py-8 sm:py-12">
       <Breadcrumbs
@@ -101,7 +127,7 @@ export function ProductDetails() {
 
       <div className="grid grid-cols-1 gap-12 lg:grid-cols-2">
         <ProductGallery
-          src={productPhotos[product.id]}
+          src={product.photoUrl}
           title={product.title}
         />
 
@@ -121,29 +147,34 @@ export function ProductDetails() {
 
           <div className="flex flex-wrap items-center gap-4">
             <RatingStars rating={product.rating} size={15} showValue reviewCount={product.reviewCount} />
-            <span className="h-4 w-px bg-stone-200 dark:bg-stone-700" />
-            <span className="text-sm text-stone-400 dark:text-stone-500">
-              {t("pages:productDetails.viewsCount", { count: product.viewCount })}
-            </span>
-            <span className="h-4 w-px bg-stone-200 dark:bg-stone-700" />
-            <span className="text-sm text-stone-400 dark:text-stone-500">
-              {t("pages:productDetails.ordersCount", { count: product.orderCount })}
-            </span>
+            {product.orderCount > 0 && (
+              <>
+                <span className="h-4 w-px bg-stone-200 dark:bg-stone-700" />
+                <span className="text-sm text-stone-400 dark:text-stone-500">
+                  {t("pages:productDetails.ordersCount", { count: product.orderCount })}
+                </span>
+              </>
+            )}
           </div>
 
           {farmer && (
-            <Link
-              to={`/catalog?farmer=${farmer.id}`}
-              className="flex w-fit items-center gap-2 rounded-full bg-stone-50 py-1.5 pl-1.5 pr-4 text-sm text-stone-600 transition hover:bg-stone-100 dark:bg-stone-800 dark:text-stone-300 dark:hover:bg-stone-700"
-            >
-              <img
-                src={farmerPhotos[farmer.id]}
-                alt={farmer.ownerName}
-                className="h-7 w-7 shrink-0 rounded-full object-cover"
-              />
-              {t("pages:productDetails.farmerPrefix")}{" "}
-              <span className="font-medium text-stone-800 dark:text-stone-100">{farmer.farmName}</span>
-            </Link>
+            <div className="flex flex-wrap items-center gap-2">
+              <Link
+                to={`/catalog?farmer=${farmer.id}`}
+                className="flex w-fit items-center gap-2 rounded-full bg-stone-50 py-1.5 pl-1.5 pr-4 text-sm text-stone-600 transition hover:bg-stone-100 dark:bg-stone-800 dark:text-stone-300 dark:hover:bg-stone-700"
+              >
+                <Avatar name={farmer.farmName} src={farmer.avatarUrl ? resolveMediaUrl(farmer.avatarUrl) : undefined} size={28} />
+                {t("pages:productDetails.farmerPrefix")}{" "}
+                <span className="font-medium text-stone-800 dark:text-stone-100">{farmer.farmName}</span>
+              </Link>
+              <button
+                onClick={handleAskFarmer}
+                className="flex items-center gap-1.5 rounded-full border border-stone-200 py-1.5 px-3.5 text-sm text-stone-600 transition hover:border-grove-400 hover:text-grove-700 dark:border-stone-700 dark:text-stone-300 dark:hover:border-grove-600 dark:hover:text-grove-400"
+              >
+                <MessageCircle size={14} />
+                {t("pages:productDetails.askFarmer")}
+              </button>
+            </div>
           )}
 
           <div className="flex items-end gap-3 rounded-2xl bg-stone-50 p-5 dark:bg-stone-800/60">
@@ -163,16 +194,23 @@ export function ProductDetails() {
                 </span>
               )}
             </div>
-            {product.wholesalePricePerKg && (
+            {product.wholesalePricePerKg && product.wholesaleMinimumQuantity && (
               <div className="ml-auto text-right text-xs text-stone-500 dark:text-stone-400">
                 <p className="font-semibold text-stone-700 dark:text-stone-200">
                   {t("pages:productDetails.wholesalePrefix")} {formatSomoni(product.wholesalePricePerKg)}{" "}
                   {t("common:currencySomoni")}/{t(`product:units.${product.unit}`)}
                 </p>
-                <p>
-                  {t("pages:productDetails.fromPrefix")} {product.wholesaleMinimumQuantity}{" "}
-                  {t(`product:units.${product.unit}`)}
-                </p>
+                {quantity >= product.wholesaleMinimumQuantity ? (
+                  <p className="flex items-center justify-end gap-1 font-semibold text-grove-600 dark:text-grove-400">
+                    <CheckCircle2 size={12} />
+                    {t("pages:productDetails.wholesaleActive")}
+                  </p>
+                ) : (
+                  <p>
+                    {t("pages:productDetails.fromPrefix")} {product.wholesaleMinimumQuantity}{" "}
+                    {t(`product:units.${product.unit}`)}
+                  </p>
+                )}
               </div>
             )}
           </div>
@@ -180,7 +218,7 @@ export function ProductDetails() {
           <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
             {[
               { icon: CalendarDays, label: t("pages:productDetails.harvestDate"), value: formatDate(product.harvestDate) },
-              { icon: Sprout, label: t("pages:productDetails.region"), value: t(`data:districtLabels.${product.district}`) },
+              { icon: Sprout, label: t("pages:productDetails.region"), value: product.district },
               { icon: PackageCheck, label: t("pages:productDetails.inStock"), value: `${product.availableQuantity} ${t(`product:units.${product.unit}`)}` },
               { icon: Truck, label: t("pages:productDetails.minOrder"), value: `${product.minimumOrderQuantity} ${t(`product:units.${product.unit}`)}` },
             ].map((item) => (
@@ -224,7 +262,7 @@ export function ProductDetails() {
               {outOfStock
                 ? t("product:outOfStock")
                 : t("pages:productDetails.addToCartWithPrice", {
-                    price: `${formatSomoni(product.retailPricePerKg * quantity)} ${t("common:currencySomoni")}`,
+                    price: `${formatSomoni(getUnitPrice(product, quantity) * quantity)} ${t("common:currencySomoni")}`,
                   })}
             </Button>
 
@@ -275,12 +313,6 @@ export function ProductDetails() {
                     <dd className="font-medium text-stone-800 dark:text-stone-100">{spec.value}</dd>
                   </div>
                 ))}
-                <div className="flex justify-between bg-white px-5 py-3.5 text-sm dark:bg-stone-900">
-                  <dt className="text-stone-500 dark:text-stone-400">{t("pages:productDetails.originRegion")}</dt>
-                  <dd className="font-medium text-stone-800 dark:text-stone-100">
-                    {t(`data:regionLabels.${product.region}`)}, {t(`data:districtLabels.${product.district}`)}
-                  </dd>
-                </div>
               </dl>
             </TabsContent>
             <TabsContent value="reviews">
@@ -333,6 +365,20 @@ export function ProductDetails() {
             ))}
           </div>
         </section>
+      )}
+
+      {farmer && (
+        <ChatModal
+          open={askFarmerOpen}
+          onClose={() => setAskFarmerOpen(false)}
+          orderId={null}
+          orderNumber={null}
+          customerUserId={user?.userId ?? null}
+          farmerUserId={farmer.userId}
+          currentUserId={user?.userId ?? 0}
+          otherPartyName={farmer.farmName}
+          ns="customer"
+        />
       )}
     </div>
   );

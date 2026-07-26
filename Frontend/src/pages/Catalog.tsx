@@ -16,7 +16,6 @@ import { CatalogFilters, type CatalogFilterState } from "@/components/product/Ca
 import { useProducts } from "@/data/products";
 import { useCategories } from "@/data/categories";
 import { useFarmers } from "@/data/farmers";
-import { regions } from "@/data/site";
 import { useFavorites } from "@/context/FavoritesContext";
 
 const PAGE_SIZE = 12;
@@ -39,6 +38,15 @@ export function Catalog() {
   const categories = useCategories();
   const resultsTopRef = useRef<HTMLDivElement>(null);
   const isFirstPageRender = useRef(true);
+
+  // Регион теперь свободный текст на бэкенде (то, что фермер указал в
+  // профиле), а не фиксированный список — показываем только те значения,
+  // которые реально встречаются среди товаров в каталоге.
+  const allRegionsLabel = t("pages:catalog.allRegions");
+  const regions = useMemo(
+    () => [allRegionsLabel, ...Array.from(new Set(products.map((p) => p.region))).sort()],
+    [products, allRegionsLabel],
+  );
 
   const search = searchParams.get("search") ?? "";
   const [searchInput, setSearchInput] = useState(search);
@@ -118,7 +126,7 @@ export function Catalog() {
         list.sort((a, b) => b.orderCount - a.orderCount);
     }
     return list;
-  }, [search, categorySlugs, region, farmerId, onlyAvailable, priceMin, priceMax, sortBy, favoritesOnly, favoriteIds, categories, products]);
+  }, [search, categorySlugs, region, regions, farmerId, onlyAvailable, priceMin, priceMax, sortBy, favoritesOnly, favoriteIds, categories, products]);
 
   const totalPages = Math.max(1, Math.ceil(filtered.length / PAGE_SIZE));
   const currentPage = Math.min(page, totalPages);
@@ -146,7 +154,7 @@ export function Catalog() {
     const c = categories.find((cat) => cat.slug === slug);
     if (c) activeChips.push({ key: `cat-${slug}`, label: c.name, onRemove: () => handleFilterChange({ categorySlugs: categorySlugs.filter((s) => s !== slug) }) });
   });
-  if (region !== regions[0]) activeChips.push({ key: "region", label: t(`data:regionLabels.${region}`), onRemove: () => handleFilterChange({ region: regions[0] }) });
+  if (region !== regions[0]) activeChips.push({ key: "region", label: region, onRemove: () => handleFilterChange({ region: regions[0] }) });
   if (farmerId) {
     const f = farmers.find((farmer) => farmer.id === farmerId);
     if (f) activeChips.push({ key: "farmer", label: f.farmName, onRemove: () => updateParams({ farmer: null }) });
@@ -171,7 +179,7 @@ export function Catalog() {
       <div className="grid grid-cols-1 gap-10 lg:grid-cols-[260px_1fr]">
         <aside className="hidden lg:block">
           <div className="sticky top-24 rounded-3xl border border-stone-100 bg-white p-6 dark:border-stone-800 dark:bg-stone-900">
-            <CatalogFilters state={filterState} onChange={handleFilterChange} onReset={resetFilters} />
+            <CatalogFilters state={filterState} regions={regions} onChange={handleFilterChange} onReset={resetFilters} />
           </div>
         </aside>
 
@@ -283,6 +291,7 @@ export function Catalog() {
       <Modal open={mobileFiltersOpen} onClose={() => setMobileFiltersOpen(false)} className="max-w-sm">
         <CatalogFilters
           state={filterState}
+          regions={regions}
           onChange={handleFilterChange}
           onReset={() => {
             resetFilters();

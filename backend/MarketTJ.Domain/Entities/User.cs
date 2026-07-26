@@ -9,6 +9,7 @@ public class User
     public string Email { get; set; } = null!;
     public string PhoneNumber { get; set; } = null!;
     public string PasswordHash { get; set; } = null!;
+    public string? AvatarUrl { get; set; }
     public UserRole Role { get; set; }
     public bool IsActive { get; set; }
     public bool IsDeleted { get; set; }

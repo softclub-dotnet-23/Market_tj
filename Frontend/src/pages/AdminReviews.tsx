@@ -1,11 +1,13 @@
 import { useState } from "react";
 import { useTranslation } from "react-i18next";
-import { MessageSquare, Star } from "lucide-react";
+import { toast } from "sonner";
+import { MessageSquare, Star, Trash2 } from "lucide-react";
 import { PageLoader } from "@/components/layout/PageLoader";
 import { EmptyState } from "@/components/ui/EmptyState";
 import { Pagination } from "@/components/ui/Pagination";
+import { ConfirmDialog } from "@/components/ui/ConfirmDialog";
 import { formatDate } from "@/lib/utils";
-import { useAdminReviews, type AdminReviewDto } from "@/data/adminEntities";
+import { deleteReview, useAdminReviews, type AdminReviewDto } from "@/data/adminEntities";
 
 const PAGE_SIZE = 10;
 
@@ -26,7 +28,9 @@ function RatingStars({ rating }: { rating: number }) {
 export function AdminReviews() {
   const { t } = useTranslation("admin");
   const [page, setPage] = useState(1);
-  const { reviews, loading, error } = useAdminReviews();
+  const [refreshKey, setRefreshKey] = useState(0);
+  const [deleting, setDeleting] = useState<AdminReviewDto | null>(null);
+  const { reviews, loading, error } = useAdminReviews(refreshKey);
 
   if (loading) return <PageLoader />;
 
@@ -42,6 +46,17 @@ export function AdminReviews() {
   const currentPage = Math.min(page, totalPages);
   const pageItems: AdminReviewDto[] = reviews.slice((currentPage - 1) * PAGE_SIZE, currentPage * PAGE_SIZE);
 
+  const handleDelete = async () => {
+    if (!deleting) return;
+    try {
+      await deleteReview(deleting.id);
+      toast.success(t("reviews.deleteSuccess"));
+      setRefreshKey((k) => k + 1);
+    } catch (err) {
+      toast.error(t("reviews.deleteError"), { description: err instanceof Error ? err.message : undefined });
+    }
+  };
+
   return (
     <div className="rounded-3xl border border-stone-100 bg-white dark:border-stone-800 dark:bg-stone-900">
       <div className="overflow-x-auto">
@@ -54,6 +69,7 @@ export function AdminReviews() {
               <th className="px-6 py-4 font-medium">{t("reviews.columns.rating")}</th>
               <th className="px-6 py-4 font-medium">{t("reviews.columns.comment")}</th>
               <th className="px-6 py-4 font-medium">{t("reviews.columns.createdAt")}</th>
+              <th className="px-6 py-4 font-medium text-right">{t("reviews.columns.actions")}</th>
             </tr>
           </thead>
           <tbody>
@@ -65,8 +81,19 @@ export function AdminReviews() {
                 <td className="px-6 py-4">
                   <RatingStars rating={review.rating} />
                 </td>
-                <td className="max-w-80 truncate px-6 py-4 text-stone-500 dark:text-stone-400">{review.comment ?? "—"}</td>
+                <td className="max-w-80 whitespace-normal wrap-break-word px-6 py-4 text-stone-500 dark:text-stone-400">{review.comment ?? "—"}</td>
                 <td className="px-6 py-4 text-stone-500 dark:text-stone-400">{formatDate(review.createdAt)}</td>
+                <td className="px-6 py-4">
+                  <div className="flex items-center justify-end">
+                    <button
+                      onClick={() => setDeleting(review)}
+                      aria-label={t("reviews.deleteAction")}
+                      className="flex h-8 w-8 items-center justify-center rounded-lg text-stone-400 transition hover:bg-rose-50 hover:text-rose-600 dark:text-stone-500 dark:hover:bg-rose-950 dark:hover:text-rose-400"
+                    >
+                      <Trash2 size={15} />
+                    </button>
+                  </div>
+                </td>
               </tr>
             ))}
           </tbody>
@@ -78,6 +105,15 @@ export function AdminReviews() {
           <Pagination page={currentPage} totalPages={totalPages} onPageChange={setPage} />
         </div>
       )}
+
+      <ConfirmDialog
+        open={!!deleting}
+        onClose={() => setDeleting(null)}
+        onConfirm={handleDelete}
+        title={t("reviews.deleteConfirmTitle")}
+        description={t("reviews.deleteConfirmDescription")}
+        confirmLabel={t("reviews.deleteAction")}
+      />
     </div>
   );
 }

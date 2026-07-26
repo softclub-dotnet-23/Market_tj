@@ -13,6 +13,8 @@ namespace MarketTJ.Application.Services;
 
 public class OrderService(
     IOrderRepository orderRepository,
+    IOrderItemRepository orderItemRepository,
+    IProductListingRepository productListingRepository,
     ICustomerProfileRepository customerProfileRepository,
     IFarmerProfileRepository farmerProfileRepository,
     IUserRepository userRepository,
@@ -141,6 +143,15 @@ public class OrderService(
             if (all.Any(o => o.Id != id && o.OrderNumber == dto.OrderNumber))
                 return Result<string>.Fail("Заказ с таким номером уже существует", ErrorType.Conflict);
 
+            // Раздел 10.4 ТЗ: остаток по объявлениям списывается сразу при
+            // добавлении позиции заказа (OrderItemService.CreateAsync) — если
+            // заказ отклоняют/отменяют впервые, списанное нужно вернуть назад,
+            // иначе товар "теряется" из остатка навсегда без реальной продажи.
+            var previousStatus = order.Status;
+            var becameRejectedOrCancelled =
+                previousStatus != OrderStatus.Rejected && previousStatus != OrderStatus.Cancelled &&
+                (dto.Status == OrderStatus.Rejected || dto.Status == OrderStatus.Cancelled);
+
             order.OrderNumber = dto.OrderNumber;
             order.CustomerId = dto.CustomerId;
             order.FarmerId = dto.FarmerId;
@@ -157,6 +168,10 @@ public class OrderService(
             order.CancelledAt = dto.Status == OrderStatus.Cancelled && order.CancelledAt is null ? DateTime.UtcNow : dto.CancelledAt;
 
             await orderRepository.UpdateAsync(order);
+
+            if (becameRejectedOrCancelled)
+                await RestoreStockForOrderAsync(id);
+
             return Result<string>.Ok("Заказ обновлён");
         }
         catch (Exception ex)
@@ -258,6 +273,19 @@ public class OrderService(
         {
             logger.LogError(ex, "Ошибка при изменении статуса заказа {Id}", id);
             return Result<string>.Fail("Не удалось изменить статус заказа", ErrorType.InternalServerError);
+        }
+    }
+
+    private async Task RestoreStockForOrderAsync(int orderId)
+    {
+        var items = await orderItemRepository.GetAllAsync();
+        foreach (var item in items.Where(i => i.OrderId == orderId))
+        {
+            var listing = await productListingRepository.GetByIdAsync(item.ProductListingId);
+            if (listing is null) continue;
+
+            listing.AvailableQuantity += item.Quantity;
+            await productListingRepository.UpdateAsync(listing);
         }
     }
 

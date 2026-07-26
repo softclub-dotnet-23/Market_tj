@@ -266,6 +266,50 @@ public class OrderItemServiceTests
         _orderItemRepository.Verify(r => r.AddAsync(It.IsAny<OrderItem>()), Times.Never);
     }
 
+    // Раздел 10.4 ТЗ: остаток по объявлению должен реально уменьшаться при
+    // оформлении заказа, а не оставаться неизменным при обещанной цифре.
+    [Fact]
+    public async Task CreateAsync_ValidData_DecreasesListingAvailableQuantity()
+    {
+        var listing = new ProductListing
+        {
+            Id = 1, FarmerProfileId = 1, ProductId = 1, Title = "Listing", RetailPricePerKg = 10,
+            AvailableQuantity = 100, MinimumOrderQuantity = 1, QualityGrade = "A", Region = "Хатлон",
+            District = "Бохтар", Address = "A", Status = ListingStatus.Active
+        };
+        _productListingRepository.Setup(r => r.GetByIdAsync(1)).ReturnsAsync(listing);
+        var dto = ValidCreateDto();
+        dto.Quantity = 12;
+
+        var result = await _service.CreateAsync(dto);
+
+        Assert.True(result.IsSuccess);
+        Assert.Equal(88, listing.AvailableQuantity);
+        _productListingRepository.Verify(r => r.UpdateAsync(listing), Times.Once);
+    }
+
+    [Fact]
+    public async Task CreateAsync_QuantityExceedsAvailable_ReturnsValidationErrorAndDoesNotDecrease()
+    {
+        var listing = new ProductListing
+        {
+            Id = 1, FarmerProfileId = 1, ProductId = 1, Title = "Listing", RetailPricePerKg = 10,
+            AvailableQuantity = 4, MinimumOrderQuantity = 1, QualityGrade = "A", Region = "Хатлон",
+            District = "Бохтар", Address = "A", Status = ListingStatus.Active
+        };
+        _productListingRepository.Setup(r => r.GetByIdAsync(1)).ReturnsAsync(listing);
+        var dto = ValidCreateDto();
+        dto.Quantity = 5;
+
+        var result = await _service.CreateAsync(dto);
+
+        Assert.False(result.IsSuccess);
+        Assert.Equal(ErrorType.Validation, result.ErrorType);
+        Assert.Equal(4, listing.AvailableQuantity);
+        _orderItemRepository.Verify(r => r.AddAsync(It.IsAny<OrderItem>()), Times.Never);
+        _productListingRepository.Verify(r => r.UpdateAsync(It.IsAny<ProductListing>()), Times.Never);
+    }
+
     [Fact]
     public async Task CreateAsync_RepositoryThrows_ReturnsInternalServerError()
     {
@@ -362,6 +406,48 @@ public class OrderItemServiceTests
         _orderItemRepository.Verify(r => r.UpdateAsync(It.IsAny<OrderItem>()), Times.Never);
     }
 
+    // CreateItem() — Quantity=5 на том же объявлении (Id=1, AvailableQuantity=100
+    // из конструктора) — увеличение до 9 должно списать разницу (4).
+    [Fact]
+    public async Task UpdateAsync_QuantityIncreasedOnSameListing_DecreasesAvailableByDelta()
+    {
+        var item = CreateItem(1);
+        var listing = new ProductListing
+        {
+            Id = 1, FarmerProfileId = 1, ProductId = 1, Title = "Listing", RetailPricePerKg = 10,
+            AvailableQuantity = 100, MinimumOrderQuantity = 1, QualityGrade = "A", Region = "Хатлон",
+            District = "Бохтар", Address = "A", Status = ListingStatus.Active
+        };
+        _orderItemRepository.Setup(r => r.GetByIdAsync(1)).ReturnsAsync(item);
+        _productListingRepository.Setup(r => r.GetByIdAsync(1)).ReturnsAsync(listing);
+        var dto = ValidUpdateDto(1);
+        dto.Quantity = 9;
+
+        await _service.UpdateAsync(1, dto);
+
+        Assert.Equal(96, listing.AvailableQuantity);
+    }
+
+    [Fact]
+    public async Task UpdateAsync_QuantityDecreasedOnSameListing_RestoresDeltaToAvailable()
+    {
+        var item = CreateItem(1);
+        var listing = new ProductListing
+        {
+            Id = 1, FarmerProfileId = 1, ProductId = 1, Title = "Listing", RetailPricePerKg = 10,
+            AvailableQuantity = 100, MinimumOrderQuantity = 1, QualityGrade = "A", Region = "Хатлон",
+            District = "Бохтар", Address = "A", Status = ListingStatus.Active
+        };
+        _orderItemRepository.Setup(r => r.GetByIdAsync(1)).ReturnsAsync(item);
+        _productListingRepository.Setup(r => r.GetByIdAsync(1)).ReturnsAsync(listing);
+        var dto = ValidUpdateDto(1);
+        dto.Quantity = 2;
+
+        await _service.UpdateAsync(1, dto);
+
+        Assert.Equal(103, listing.AvailableQuantity);
+    }
+
     [Fact]
     public async Task UpdateAsync_RepositoryThrows_ReturnsInternalServerError()
     {
@@ -385,6 +471,25 @@ public class OrderItemServiceTests
 
         Assert.True(result.IsSuccess);
         _orderItemRepository.Verify(r => r.DeleteAsync(item), Times.Once);
+    }
+
+    [Fact]
+    public async Task DeleteAsync_ExistingItem_RestoresQuantityToListing()
+    {
+        var item = CreateItem(1); // ProductListingId=1, Quantity=5
+        var listing = new ProductListing
+        {
+            Id = 1, FarmerProfileId = 1, ProductId = 1, Title = "Listing", RetailPricePerKg = 10,
+            AvailableQuantity = 100, MinimumOrderQuantity = 1, QualityGrade = "A", Region = "Хатлон",
+            District = "Бохтар", Address = "A", Status = ListingStatus.Active
+        };
+        _orderItemRepository.Setup(r => r.GetByIdAsync(1)).ReturnsAsync(item);
+        _productListingRepository.Setup(r => r.GetByIdAsync(1)).ReturnsAsync(listing);
+
+        await _service.DeleteAsync(1);
+
+        Assert.Equal(105, listing.AvailableQuantity);
+        _productListingRepository.Verify(r => r.UpdateAsync(listing), Times.Once);
     }
 
     [Fact]

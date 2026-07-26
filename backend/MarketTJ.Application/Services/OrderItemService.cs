@@ -66,6 +66,9 @@ public class OrderItemService(
             if (listing is null)
                 return Result<string>.Fail("Объявление не найдено", ErrorType.NotFound);
 
+            if (dto.Quantity > listing.AvailableQuantity)
+                return Result<string>.Fail("Недостаточно товара в наличии", ErrorType.Validation);
+
             var item = new OrderItem
             {
                 OrderId = dto.OrderId,
@@ -80,6 +83,13 @@ public class OrderItemService(
             };
 
             await orderItemRepository.AddAsync(item);
+
+            // Остаток списывается сразу при оформлении, а не только при
+            // завершении заказа — возвращается обратно (OrderService.UpdateAsync),
+            // если заказ потом отклонят/отменят.
+            listing.AvailableQuantity -= dto.Quantity;
+            await productListingRepository.UpdateAsync(listing);
+
             return Result<string>.Ok("Позиция заказа создана");
         }
         catch (Exception ex)
@@ -112,6 +122,35 @@ public class OrderItemService(
             if (listing is null)
                 return Result<string>.Fail("Объявление не найдено", ErrorType.NotFound);
 
+            // Меняем остаток объявления на разницу между старым и новым
+            // количеством — если объявление то же самое, считаем дельту;
+            // если позицию перевесили на другое объявление, возвращаем
+            // старому остаток целиком и списываем с нового.
+            if (item.ProductListingId == dto.ProductListingId)
+            {
+                var delta = dto.Quantity - item.Quantity;
+                if (delta > listing.AvailableQuantity)
+                    return Result<string>.Fail("Недостаточно товара в наличии", ErrorType.Validation);
+
+                listing.AvailableQuantity -= delta;
+                await productListingRepository.UpdateAsync(listing);
+            }
+            else
+            {
+                if (dto.Quantity > listing.AvailableQuantity)
+                    return Result<string>.Fail("Недостаточно товара в наличии", ErrorType.Validation);
+
+                var oldListing = await productListingRepository.GetByIdAsync(item.ProductListingId);
+                if (oldListing is not null)
+                {
+                    oldListing.AvailableQuantity += item.Quantity;
+                    await productListingRepository.UpdateAsync(oldListing);
+                }
+
+                listing.AvailableQuantity -= dto.Quantity;
+                await productListingRepository.UpdateAsync(listing);
+            }
+
             item.OrderId = dto.OrderId;
             item.ProductListingId = dto.ProductListingId;
             item.ProductName = dto.ProductName;
@@ -136,6 +175,13 @@ public class OrderItemService(
             var item = await orderItemRepository.GetByIdAsync(id);
             if (item is null)
                 return Result<string>.Fail("Позиция заказа не найдена", ErrorType.NotFound);
+
+            var listing = await productListingRepository.GetByIdAsync(item.ProductListingId);
+            if (listing is not null)
+            {
+                listing.AvailableQuantity += item.Quantity;
+                await productListingRepository.UpdateAsync(listing);
+            }
 
             await orderItemRepository.DeleteAsync(item);
             return Result<string>.Ok("Позиция заказа удалена");

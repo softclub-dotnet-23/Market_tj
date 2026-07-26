@@ -20,6 +20,7 @@ public class FarmerProfileServiceTests
     {
         _service = new FarmerProfileService(_farmerProfileRepository.Object, _userRepository.Object, _logger.Object);
         _userRepository.Setup(r => r.GetByIdAsync(It.IsAny<int>())).ReturnsAsync((int id) => new User { Id = id, Role = UserRole.Farmer, FullName = "Farmer", Email = "f@example.com", PhoneNumber = "+992900000000", PasswordHash = "hash" });
+        _userRepository.Setup(r => r.GetAllAsync()).ReturnsAsync([]);
         _farmerProfileRepository.Setup(r => r.GetAllAsync()).ReturnsAsync([]);
     }
 

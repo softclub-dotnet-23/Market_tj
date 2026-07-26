@@ -12,6 +12,7 @@ namespace MarketTJ.Application.Services;
 public class ProductImageService(
     IProductImageRepository productImageRepository,
     IProductListingRepository productListingRepository,
+    IFileStorageService fileStorageService,
     ILogger<ProductImageService> logger) : IProductImageService
 {
     // Раздел 8.8 ТЗ: максимум 5 изображений на объявление.
@@ -60,10 +61,9 @@ public class ProductImageService(
             if (listing is null)
                 return Result<string>.Fail("Объявление не найдено", ErrorType.NotFound);
 
-            var all = await productImageRepository.GetAllAsync();
-            var currentCount = all.Count(i => i.ProductListingId == dto.ProductListingId);
-            if (currentCount >= MaxImagesPerListing)
-                return Result<string>.Fail("У объявления уже максимум 5 изображений", ErrorType.Validation);
+            var limitError = await ValidateImageLimitAsync(dto.ProductListingId);
+            if (limitError is not null)
+                return limitError;
 
             var image = new ProductImage
             {
@@ -122,6 +122,12 @@ public class ProductImageService(
                 return Result<string>.Fail("Изображение не найдено", ErrorType.NotFound);
 
             await productImageRepository.DeleteAsync(image);
+
+            // Не мешает записи в БД, даже если ImageUrl — внешняя ссылка, а не
+            // файл, загруженный через UploadAsync (Delete тихо игнорирует
+            // всё, что не лежит в нашем wwwroot/uploads).
+            fileStorageService.Delete(image.ImageUrl);
+
             return Result<string>.Ok("Изображение удалено");
         }
         catch (Exception ex)
@@ -129,6 +135,51 @@ public class ProductImageService(
             logger.LogError(ex, "Ошибка при удалении изображения {Id}", id);
             return Result<string>.Fail("Не удалось удалить изображение", ErrorType.InternalServerError);
         }
+    }
+
+    public async Task<Result<GetProductImageDto>> UploadAsync(int productListingId, bool isMain, Stream fileContent, string fileName, long fileSizeBytes)
+    {
+        try
+        {
+            var fileValidation = FileUploadValidator.ValidateImage(fileName, fileSizeBytes);
+            if (fileValidation is not null)
+                return Result<GetProductImageDto>.Fail(fileValidation.Error!, fileValidation.ErrorType!.Value);
+
+            var listing = await productListingRepository.GetByIdAsync(productListingId);
+            if (listing is null)
+                return Result<GetProductImageDto>.Fail("Объявление не найдено", ErrorType.NotFound);
+
+            var limitError = await ValidateImageLimitAsync(productListingId);
+            if (limitError is not null)
+                return Result<GetProductImageDto>.Fail(limitError.Error!, limitError.ErrorType!.Value);
+
+            var imageUrl = await fileStorageService.SaveAsync(fileContent, fileName, $"listings/{productListingId}");
+
+            var image = new ProductImage
+            {
+                ProductListingId = productListingId,
+                ImageUrl = imageUrl,
+                IsMain = isMain,
+                CreatedAt = DateTime.UtcNow
+            };
+
+            await productImageRepository.AddAsync(image);
+            return Result<GetProductImageDto>.Ok(ToGetDto(image));
+        }
+        catch (Exception ex)
+        {
+            logger.LogError(ex, "Ошибка при загрузке изображения для объявления {ListingId}", productListingId);
+            return Result<GetProductImageDto>.Fail("Не удалось загрузить изображение", ErrorType.InternalServerError);
+        }
+    }
+
+    private async Task<Result<string>?> ValidateImageLimitAsync(int productListingId)
+    {
+        var all = await productImageRepository.GetAllAsync();
+        var currentCount = all.Count(i => i.ProductListingId == productListingId);
+        return currentCount >= MaxImagesPerListing
+            ? Result<string>.Fail("У объявления уже максимум 5 изображений", ErrorType.Validation)
+            : null;
     }
 
     private static GetProductImageDto ToGetDto(ProductImage image) => new()

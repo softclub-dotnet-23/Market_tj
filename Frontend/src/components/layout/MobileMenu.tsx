@@ -4,8 +4,10 @@ import { useTranslation } from "react-i18next";
 import { LayoutDashboard, Leaf, LogOut, User, UserPlus, X } from "lucide-react";
 import { createPortal } from "react-dom";
 import { Avatar } from "@/components/ui/Avatar";
+import { AvatarMenuItem } from "@/components/layout/AvatarMenuItem";
 import { useAuth } from "@/context/AuthContext";
 import { useCategories } from "@/data/categories";
+import { resolveMediaUrl } from "@/lib/api";
 import { cn } from "@/lib/utils";
 
 export function MobileMenu({ onClose }: { onClose: () => void }) {
@@ -95,12 +97,13 @@ export function MobileMenu({ onClose }: { onClose: () => void }) {
           {user ? (
             <>
               <div className="flex items-center gap-3 px-1 pb-1">
-                <Avatar name={user.fullName} size={38} />
+                <Avatar name={user.fullName} src={user.avatarUrl ? resolveMediaUrl(user.avatarUrl) : undefined} size={38} />
                 <div className="min-w-0">
                   <p className="truncate text-sm font-semibold text-stone-800 dark:text-stone-100">{user.fullName}</p>
                   <p className="truncate text-xs text-stone-400 dark:text-stone-500">{user.email}</p>
                 </div>
               </div>
+              <AvatarMenuItem />
               {panelPath && (
                 <Link
                   to={panelPath}

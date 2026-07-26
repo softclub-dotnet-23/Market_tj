@@ -1,7 +1,5 @@
 import type { LucideIcon } from "lucide-react";
 
-export type QualityGrade = "Premium" | "Grade A" | "Standard";
-
 export interface Category {
   id: number;
   name: string;
@@ -14,8 +12,10 @@ export interface Category {
 
 export interface Farmer {
   id: number;
+  userId: number;
   farmName: string;
   ownerName: string;
+  avatarUrl?: string;
   region: string;
   district: string;
   village: string;
@@ -26,7 +26,7 @@ export interface Farmer {
   productCount: number;
   yearsActive: number;
   verified: boolean;
-  responseRate: number;
+  responseRate?: number;
   tags: string[];
   joinedAt: string;
 }
@@ -41,7 +41,8 @@ export interface Product {
   farmerId: number;
   description: string;
   shortDescription: string;
-  unit: "кг" | "шт" | "пучок" | "литр";
+  unit: string;
+  photoUrl?: string;
   retailPricePerKg: number;
   oldPrice?: number;
   wholesalePricePerKg?: number;
@@ -49,7 +50,7 @@ export interface Product {
   availableQuantity: number;
   minimumOrderQuantity: number;
   harvestDate: string;
-  qualityGrade: QualityGrade;
+  qualityGrade: string;
   region: string;
   district: string;
   rating: number;

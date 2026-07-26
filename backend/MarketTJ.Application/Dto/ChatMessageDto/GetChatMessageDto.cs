@@ -6,6 +6,7 @@ public class GetChatMessageDto
     public int ConversationId { get; set; }
     public int SenderId { get; set; }
     public string Message { get; set; } = null!;
+    public string? ImageUrl { get; set; }
     public bool IsRead { get; set; }
     public DateTime CreatedAt { get; set; }
 }

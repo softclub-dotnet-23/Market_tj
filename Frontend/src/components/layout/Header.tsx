@@ -6,6 +6,7 @@ import { ChevronDown, Heart, LayoutDashboard, Leaf, LogOut, Menu, Search, Shoppi
 import { MegaMenu } from "@/components/layout/MegaMenu";
 import { MobileMenu } from "@/components/layout/MobileMenu";
 import { MiniCart } from "@/components/layout/MiniCart";
+import { AvatarMenuItem } from "@/components/layout/AvatarMenuItem";
 import { Button } from "@/components/ui/Button";
 import { Avatar } from "@/components/ui/Avatar";
 import { ThemeToggle } from "@/components/ui/ThemeToggle";
@@ -13,6 +14,7 @@ import { LanguageSwitcher } from "@/components/ui/LanguageSwitcher";
 import { useAuth } from "@/context/AuthContext";
 import { useCart } from "@/context/CartContext";
 import { useFavorites } from "@/context/FavoritesContext";
+import { resolveMediaUrl } from "@/lib/api";
 import { cn } from "@/lib/utils";
 
 export function Header() {
@@ -215,7 +217,7 @@ export function Header() {
                 onClick={() => setAccountMenuOpen((o) => !o)}
                 className="flex items-center gap-1.5 rounded-full py-1 pl-1 pr-2 transition hover:bg-stone-100 dark:hover:bg-stone-800"
               >
-                <Avatar name={user.fullName} size={32} />
+                <Avatar name={user.fullName} src={user.avatarUrl ? resolveMediaUrl(user.avatarUrl) : undefined} size={32} />
                 <ChevronDown
                   size={14}
                   className={cn("text-stone-400 transition-transform dark:text-stone-500", accountMenuOpen && "rotate-180")}
@@ -238,6 +240,7 @@ export function Header() {
                       {t("common:auth.goToPanel")}
                     </Link>
                   )}
+                  <AvatarMenuItem />
                   <button
                     onClick={handleLogout}
                     className="flex w-full items-center gap-2.5 rounded-xl px-2.5 py-2 text-left text-sm text-stone-600 transition hover:bg-stone-50 dark:text-stone-300 dark:hover:bg-stone-800"

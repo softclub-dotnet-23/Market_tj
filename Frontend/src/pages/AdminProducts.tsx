@@ -1,11 +1,21 @@
 import { useState } from "react";
 import { useTranslation } from "react-i18next";
-import { Package } from "lucide-react";
+import { toast } from "sonner";
+import { Package, Trash2 } from "lucide-react";
 import { PageLoader } from "@/components/layout/PageLoader";
 import { EmptyState } from "@/components/ui/EmptyState";
 import { Pagination } from "@/components/ui/Pagination";
+import { ConfirmDialog } from "@/components/ui/ConfirmDialog";
 import { formatSomoni } from "@/lib/utils";
-import { ListingStatus, useAdminProducts } from "@/data/adminEntities";
+import {
+  ListingStatus,
+  OrderStatus,
+  deleteAdminProductListing,
+  useAdminOrderItems,
+  useAdminOrders,
+  useAdminProducts,
+  type AdminProductListingDto,
+} from "@/data/adminEntities";
 
 const PAGE_SIZE = 10;
 
@@ -19,7 +29,11 @@ const STATUS_CLASSES: Record<number, string> = {
 export function AdminProducts() {
   const { t } = useTranslation("admin");
   const [page, setPage] = useState(1);
-  const { data, loading, error } = useAdminProducts(page, PAGE_SIZE);
+  const [refreshKey, setRefreshKey] = useState(0);
+  const [deleting, setDeleting] = useState<AdminProductListingDto | null>(null);
+  const { data, loading, error } = useAdminProducts(page, PAGE_SIZE, refreshKey);
+  const { orders } = useAdminOrders();
+  const { orderItems } = useAdminOrderItems();
 
   if (loading) return <PageLoader />;
 
@@ -36,6 +50,28 @@ export function AdminProducts() {
 
   const totalPages = Math.max(1, Math.ceil(data.totalCount / PAGE_SIZE));
 
+  // "Изначально" = остаток сейчас + всё, что реально списано активными
+  // (не отклонёнными/отменёнными) заказами — см. тот же расчёт в FarmerProducts.tsx.
+  const activeOrderIds = new Set(
+    (orders ?? []).filter((o) => o.status !== OrderStatus.Rejected && o.status !== OrderStatus.Cancelled).map((o) => o.id),
+  );
+  const soldByListingId = new Map<number, number>();
+  (orderItems ?? []).forEach((item) => {
+    if (!activeOrderIds.has(item.orderId)) return;
+    soldByListingId.set(item.productListingId, (soldByListingId.get(item.productListingId) ?? 0) + item.quantity);
+  });
+
+  const handleDelete = async () => {
+    if (!deleting) return;
+    try {
+      await deleteAdminProductListing(deleting.id);
+      toast.success(t("products.deleteSuccess"));
+      setRefreshKey((k) => k + 1);
+    } catch (err) {
+      toast.error(t("products.deleteError"), { description: err instanceof Error ? err.message : undefined });
+    }
+  };
+
   return (
     <div className="rounded-3xl border border-stone-100 bg-white dark:border-stone-800 dark:bg-stone-900">
       <div className="overflow-x-auto">
@@ -48,6 +84,7 @@ export function AdminProducts() {
               <th className="px-6 py-4 font-medium">{t("products.columns.quantity")}</th>
               <th className="px-6 py-4 font-medium">{t("products.columns.status")}</th>
               <th className="px-6 py-4 font-medium">{t("products.columns.region")}</th>
+              <th className="px-6 py-4 font-medium text-right">{t("products.columns.actions")}</th>
             </tr>
           </thead>
           <tbody>
@@ -59,7 +96,21 @@ export function AdminProducts() {
                   {formatSomoni(product.retailPricePerKg)} {t("products.perKg")}
                 </td>
                 <td className="px-6 py-4 text-stone-600 dark:text-stone-300">
-                  {product.availableQuantity} {t("products.kg")}
+                  {(() => {
+                    const sold = soldByListingId.get(product.id) ?? 0;
+                    return (
+                      <div className="flex flex-col">
+                        <span>
+                          {product.availableQuantity} {t("products.kg")}
+                        </span>
+                        {sold > 0 && (
+                          <span className="text-xs text-stone-400 dark:text-stone-500">
+                            {t("products.originallyOf", { count: product.availableQuantity + sold })}
+                          </span>
+                        )}
+                      </div>
+                    );
+                  })()}
                 </td>
                 <td className="px-6 py-4">
                   <span className={`rounded-full px-2.5 py-1 text-xs font-semibold ${STATUS_CLASSES[product.status] ?? STATUS_CLASSES[ListingStatus.Draft]}`}>
@@ -68,6 +119,17 @@ export function AdminProducts() {
                 </td>
                 <td className="px-6 py-4 text-stone-500 dark:text-stone-400">
                   {product.region}, {product.district}
+                </td>
+                <td className="px-6 py-4">
+                  <div className="flex items-center justify-end">
+                    <button
+                      onClick={() => setDeleting(product)}
+                      aria-label={t("products.deleteAction")}
+                      className="flex h-8 w-8 items-center justify-center rounded-lg text-stone-400 transition hover:bg-rose-50 hover:text-rose-600 dark:text-stone-500 dark:hover:bg-rose-950 dark:hover:text-rose-400"
+                    >
+                      <Trash2 size={15} />
+                    </button>
+                  </div>
                 </td>
               </tr>
             ))}
@@ -80,6 +142,15 @@ export function AdminProducts() {
           <Pagination page={Math.min(page, totalPages)} totalPages={totalPages} onPageChange={setPage} />
         </div>
       )}
+
+      <ConfirmDialog
+        open={!!deleting}
+        onClose={() => setDeleting(null)}
+        onConfirm={handleDelete}
+        title={t("products.deleteConfirmTitle")}
+        description={deleting ? t("products.deleteConfirmDescription", { title: deleting.title }) : undefined}
+        confirmLabel={t("products.deleteAction")}
+      />
     </div>
   );
 }

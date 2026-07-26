@@ -4,7 +4,8 @@
     "кг": "кг",
     "шт": "дона",
     "пучок": "даста",
-    "литр": "литр"
+    "литр": "литр",
+    "л": "л"
   },
   "filters": {
     "title": "Филтрҳо",
@@ -28,7 +29,7 @@
   "removeFromFavorites": "Аз дӯстдоштаҳо баровардан",
   "addToFavorites": "Ба дӯстдоштаҳо илова кардан",
   "addToCart": "Ба сабад илова кардан",
-  "reviewsCount": "{{count}} тақриз",
+  "reviewsCount": "{{count}} шарҳ",
   "verifiedPurchase": "Хариди тасдиқшуда",
   "farmerReply": "Ҷавоби деҳқон",
   "helpful": "Муфид ({{count}})",

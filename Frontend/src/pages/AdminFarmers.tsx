@@ -1,11 +1,13 @@
 import { useState } from "react";
 import { useTranslation } from "react-i18next";
-import { Sprout } from "lucide-react";
+import { toast } from "sonner";
+import { Check, Sprout, X } from "lucide-react";
 import { PageLoader } from "@/components/layout/PageLoader";
 import { EmptyState } from "@/components/ui/EmptyState";
 import { Pagination } from "@/components/ui/Pagination";
+import { useAuth } from "@/context/AuthContext";
 import { formatDate } from "@/lib/utils";
-import { FarmerVerificationStatus, useAdminFarmers, type AdminFarmerDto } from "@/data/adminEntities";
+import { FarmerVerificationStatus, updateFarmerVerification, useAdminFarmers, type AdminFarmerDto } from "@/data/adminEntities";
 
 const PAGE_SIZE = 10;
 
@@ -23,8 +25,11 @@ const STATUS_KEYS: Record<number, string> = {
 
 export function AdminFarmers() {
   const { t } = useTranslation("admin");
+  const { user } = useAuth();
   const [page, setPage] = useState(1);
-  const { farmers, loading, error } = useAdminFarmers();
+  const [refreshKey, setRefreshKey] = useState(0);
+  const [busyId, setBusyId] = useState<number | null>(null);
+  const { farmers, loading, error } = useAdminFarmers(refreshKey);
 
   if (loading) return <PageLoader />;
 
@@ -40,6 +45,19 @@ export function AdminFarmers() {
   const currentPage = Math.min(page, totalPages);
   const pageItems: AdminFarmerDto[] = farmers.slice((currentPage - 1) * PAGE_SIZE, currentPage * PAGE_SIZE);
 
+  const handleSetStatus = async (farmer: AdminFarmerDto, status: number) => {
+    setBusyId(farmer.id);
+    try {
+      await updateFarmerVerification(farmer, status, user?.userId ?? 0);
+      toast.success(status === FarmerVerificationStatus.Verified ? t("farmers.verifySuccess") : t("farmers.rejectSuccess"));
+      setRefreshKey((k) => k + 1);
+    } catch (err) {
+      toast.error(t("farmers.actionError"), { description: err instanceof Error ? err.message : undefined });
+    } finally {
+      setBusyId(null);
+    }
+  };
+
   return (
     <div className="rounded-3xl border border-stone-100 bg-white dark:border-stone-800 dark:bg-stone-900">
       <div className="overflow-x-auto">
@@ -50,6 +68,7 @@ export function AdminFarmers() {
               <th className="px-6 py-4 font-medium">{t("farmers.columns.region")}</th>
               <th className="px-6 py-4 font-medium">{t("farmers.columns.status")}</th>
               <th className="px-6 py-4 font-medium">{t("farmers.columns.createdAt")}</th>
+              <th className="px-6 py-4 font-medium text-right">{t("farmers.columns.actions")}</th>
             </tr>
           </thead>
           <tbody>
@@ -67,6 +86,30 @@ export function AdminFarmers() {
                   </span>
                 </td>
                 <td className="px-6 py-4 text-stone-500 dark:text-stone-400">{formatDate(farmer.createdAt)}</td>
+                <td className="px-6 py-4">
+                  <div className="flex items-center justify-end gap-1.5">
+                    {farmer.verificationStatus !== FarmerVerificationStatus.Verified && (
+                      <button
+                        onClick={() => handleSetStatus(farmer, FarmerVerificationStatus.Verified)}
+                        disabled={busyId === farmer.id}
+                        aria-label={t("farmers.verifyAction")}
+                        className="flex h-8 w-8 items-center justify-center rounded-lg text-stone-400 transition hover:bg-grove-50 hover:text-grove-700 disabled:opacity-50 dark:text-stone-500 dark:hover:bg-grove-950 dark:hover:text-grove-400"
+                      >
+                        <Check size={15} />
+                      </button>
+                    )}
+                    {farmer.verificationStatus !== FarmerVerificationStatus.Rejected && (
+                      <button
+                        onClick={() => handleSetStatus(farmer, FarmerVerificationStatus.Rejected)}
+                        disabled={busyId === farmer.id}
+                        aria-label={t("farmers.rejectAction")}
+                        className="flex h-8 w-8 items-center justify-center rounded-lg text-stone-400 transition hover:bg-rose-50 hover:text-rose-600 disabled:opacity-50 dark:text-stone-500 dark:hover:bg-rose-950 dark:hover:text-rose-400"
+                      >
+                        <X size={15} />
+                      </button>
+                    )}
+                  </div>
+                </td>
               </tr>
             ))}
           </tbody>

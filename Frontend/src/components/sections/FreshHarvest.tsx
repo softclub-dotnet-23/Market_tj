@@ -5,7 +5,6 @@ import { ArrowRight, Clock } from "lucide-react";
 import { PhotoTile } from "@/components/ui/PhotoTile";
 import { RatingStars } from "@/components/ui/RatingStars";
 import { useProducts } from "@/data/products";
-import { productPhotos } from "@/assets/photos";
 import { formatSomoni, timeAgo } from "@/lib/utils";
 
 export function FreshHarvest() {
@@ -15,6 +14,8 @@ export function FreshHarvest() {
     .sort((a, b) => new Date(b.harvestDate).getTime() - new Date(a.harvestDate).getTime())
     .slice(0, 5);
   const [big, ...rest] = freshest;
+
+  if (!big) return null;
 
   return (
     <section className="py-14 sm:py-20">
@@ -44,7 +45,7 @@ export function FreshHarvest() {
             className="col-span-2 flex overflow-hidden rounded-2xl border border-stone-100 bg-white sm:h-56 dark:border-stone-800 dark:bg-stone-900"
           >
             <div className="relative w-2/5 shrink-0">
-              <PhotoTile src={productPhotos[big.id]} alt={big.title} className="h-full w-full" />
+              <PhotoTile src={big.photoUrl} alt={big.title} className="h-full w-full" />
             </div>
             <div className="flex flex-1 flex-col justify-center gap-2 p-5">
               <span className="inline-flex w-fit items-center gap-1 rounded-full bg-grove-100 px-2.5 py-1 text-[11px] font-semibold text-grove-800 dark:bg-grove-900 dark:text-grove-200">
@@ -75,7 +76,7 @@ export function FreshHarvest() {
                   className="flex items-center gap-3 rounded-2xl border border-stone-100 bg-white p-3 transition hover:shadow-(--shadow-card) dark:border-stone-800 dark:bg-stone-900"
                 >
                   <div className="h-16 w-16 shrink-0 overflow-hidden rounded-xl">
-                    <PhotoTile src={productPhotos[product.id]} alt={product.title} className="h-full w-full" />
+                    <PhotoTile src={product.photoUrl} alt={product.title} className="h-full w-full" />
                   </div>
                   <div className="min-w-0">
                     <p className="truncate text-sm font-medium text-stone-800 dark:text-stone-100">{product.title}</p>

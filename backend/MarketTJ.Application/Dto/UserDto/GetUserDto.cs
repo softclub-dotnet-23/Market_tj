@@ -8,6 +8,7 @@ public class GetUserDto
     public string FullName { get; set; } = null!;
     public string Email { get; set; } = null!;
     public string PhoneNumber { get; set; } = null!;
+    public string? AvatarUrl { get; set; }
     public UserRole Role { get; set; }
     public bool IsActive { get; set; }
     public DateTime CreatedAt { get; set; }
