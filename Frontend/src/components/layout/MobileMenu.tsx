@@ -1,14 +1,21 @@
 import { Link, NavLink } from "react-router-dom";
 import { motion } from "framer-motion";
 import { useTranslation } from "react-i18next";
-import { Leaf, User, UserPlus, X } from "lucide-react";
+import { LayoutDashboard, Leaf, LogOut, User, UserPlus, X } from "lucide-react";
 import { createPortal } from "react-dom";
+import { Avatar } from "@/components/ui/Avatar";
+import { AvatarMenuItem } from "@/components/layout/AvatarMenuItem";
+import { useAuth } from "@/context/AuthContext";
 import { useCategories } from "@/data/categories";
+import { resolveMediaUrl } from "@/lib/api";
 import { cn } from "@/lib/utils";
 
 export function MobileMenu({ onClose }: { onClose: () => void }) {
   const { t } = useTranslation(["layout", "common"]);
   const categories = useCategories();
+  const { user, logout } = useAuth();
+  const panelPath =
+    user?.role === "Admin" ? "/admin" : user?.role === "Farmer" ? "/farmer" : user?.role === "Customer" ? "/customer" : null;
   const NAV_LINKS = [
     { to: "/", label: t("layout:nav.home"), end: true },
     { to: "/catalog", label: t("layout:nav.catalog") },
@@ -87,22 +94,57 @@ export function MobileMenu({ onClose }: { onClose: () => void }) {
         </div>
 
         <div className="mt-auto flex flex-col gap-2.5 border-t border-stone-100 pt-6 dark:border-stone-800">
-          <Link
-            to="/login"
-            onClick={onClose}
-            className="flex h-11 items-center justify-center gap-2 rounded-xl border border-stone-200 text-sm font-medium text-stone-700 dark:border-stone-700 dark:text-stone-200"
-          >
-            <User size={16} />
-            {t("common:auth.login")}
-          </Link>
-          <Link
-            to="/register"
-            onClick={onClose}
-            className="flex h-11 items-center justify-center gap-2 rounded-xl bg-grove-700 text-sm font-medium text-white"
-          >
-            <UserPlus size={16} />
-            {t("common:auth.register")}
-          </Link>
+          {user ? (
+            <>
+              <div className="flex items-center gap-3 px-1 pb-1">
+                <Avatar name={user.fullName} src={user.avatarUrl ? resolveMediaUrl(user.avatarUrl) : undefined} size={38} />
+                <div className="min-w-0">
+                  <p className="truncate text-sm font-semibold text-stone-800 dark:text-stone-100">{user.fullName}</p>
+                  <p className="truncate text-xs text-stone-400 dark:text-stone-500">{user.email}</p>
+                </div>
+              </div>
+              <AvatarMenuItem />
+              {panelPath && (
+                <Link
+                  to={panelPath}
+                  onClick={onClose}
+                  className="flex h-11 items-center justify-center gap-2 rounded-xl border border-stone-200 text-sm font-medium text-stone-700 dark:border-stone-700 dark:text-stone-200"
+                >
+                  <LayoutDashboard size={16} />
+                  {t("common:auth.goToPanel")}
+                </Link>
+              )}
+              <button
+                onClick={() => {
+                  logout();
+                  onClose();
+                }}
+                className="flex h-11 items-center justify-center gap-2 rounded-xl bg-grove-700 text-sm font-medium text-white"
+              >
+                <LogOut size={16} />
+                {t("common:auth.logout")}
+              </button>
+            </>
+          ) : (
+            <>
+              <Link
+                to="/login"
+                onClick={onClose}
+                className="flex h-11 items-center justify-center gap-2 rounded-xl border border-stone-200 text-sm font-medium text-stone-700 dark:border-stone-700 dark:text-stone-200"
+              >
+                <User size={16} />
+                {t("common:auth.login")}
+              </Link>
+              <Link
+                to="/register"
+                onClick={onClose}
+                className="flex h-11 items-center justify-center gap-2 rounded-xl bg-grove-700 text-sm font-medium text-white"
+              >
+                <UserPlus size={16} />
+                {t("common:auth.register")}
+              </Link>
+            </>
+          )}
         </div>
       </motion.div>
     </div>,

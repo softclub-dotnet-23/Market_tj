@@ -19,4 +19,11 @@ public interface IUserService
     Task<Result<string>> ActivateAsync(int id, int adminId);
     Task<Result<string>> DeactivateAsync(int id, int adminId);
     Task<Result<string>> ChangeRoleAsync(int id, UserRole role, int adminId);
+
+    // Самообслуживание (см. MeController) — UserId берётся из JWT-claims
+    // авторизованного пользователя, а не принимается от клиента (раздел 16
+    // ТЗ), поэтому доступно любой роли, не только Admin, в отличие от
+    // остальных методов этого сервиса.
+    Task<Result<AvatarDto>> UploadAvatarAsync(int userId, Stream fileContent, string fileName, long fileSizeBytes);
+    Task<Result<string>> DeleteAvatarAsync(int userId);
 }

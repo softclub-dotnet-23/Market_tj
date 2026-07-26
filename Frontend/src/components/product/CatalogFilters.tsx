@@ -1,7 +1,6 @@
 import { useTranslation } from "react-i18next";
 import { Leaf } from "lucide-react";
 import { useCategories } from "@/data/categories";
-import { regions } from "@/data/site";
 import { Checkbox } from "@/components/ui/Field";
 import { Dropdown } from "@/components/ui/Dropdown";
 import { Button } from "@/components/ui/Button";
@@ -16,14 +15,16 @@ export interface CatalogFilterState {
 
 export function CatalogFilters({
   state,
+  regions,
   onChange,
   onReset,
 }: {
   state: CatalogFilterState;
+  regions: string[];
   onChange: (patch: Partial<CatalogFilterState>) => void;
   onReset: () => void;
 }) {
-  const { t } = useTranslation(["product", "data"]);
+  const { t } = useTranslation("product");
   const categories = useCategories();
   const toggleCategory = (slug: string) => {
     const next = state.categorySlugs.includes(slug)
@@ -63,7 +64,7 @@ export function CatalogFilters({
       <div>
         <p className="mb-3 text-sm font-semibold text-stone-700 dark:text-stone-300">{t("filters.region")}</p>
         <Dropdown
-          options={regions.map((r) => ({ value: r, label: t(`data:regionLabels.${r}`) }))}
+          options={regions.map((r) => ({ value: r, label: r }))}
           value={state.region}
           onChange={(v) => onChange({ region: v })}
         />

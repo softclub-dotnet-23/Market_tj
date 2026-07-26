@@ -8,6 +8,11 @@ backend/MarketTJ.WebApi/appsettings.*.json
 backend/*/bin/
 backend/*/obj/
 
+# Загруженные пользователями файлы (аватарки, фото объявлений, фото в чате) —
+# реальные данные, а не исходный код; папка создаётся сама при первой загрузке
+# через IFileStorageService/LocalFileStorageService.
+backend/MarketTJ.WebApi/wwwroot/uploads/
+
 # Секреты docker-compose (POSTGRES_PASSWORD, ANTHROPIC_API_KEY, JWT_SECRET и т.д.) —
 # см. .env.example для списка переменных.
 .env

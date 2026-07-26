@@ -2,15 +2,19 @@ import { useEffect, useRef, useState } from "react";
 import { Link, NavLink, useLocation, useNavigate } from "react-router-dom";
 import { AnimatePresence, motion } from "framer-motion";
 import { useTranslation } from "react-i18next";
-import { Heart, Leaf, Menu, Search, ShoppingBag, User, X } from "lucide-react";
+import { ChevronDown, Heart, LayoutDashboard, Leaf, LogOut, Menu, Search, ShoppingBag, User, X } from "lucide-react";
 import { MegaMenu } from "@/components/layout/MegaMenu";
 import { MobileMenu } from "@/components/layout/MobileMenu";
 import { MiniCart } from "@/components/layout/MiniCart";
+import { AvatarMenuItem } from "@/components/layout/AvatarMenuItem";
 import { Button } from "@/components/ui/Button";
+import { Avatar } from "@/components/ui/Avatar";
 import { ThemeToggle } from "@/components/ui/ThemeToggle";
 import { LanguageSwitcher } from "@/components/ui/LanguageSwitcher";
+import { useAuth } from "@/context/AuthContext";
 import { useCart } from "@/context/CartContext";
 import { useFavorites } from "@/context/FavoritesContext";
+import { resolveMediaUrl } from "@/lib/api";
 import { cn } from "@/lib/utils";
 
 export function Header() {
@@ -27,12 +31,15 @@ export function Header() {
   const [cartOpen, setCartOpen] = useState(false);
   const [searchOpen, setSearchOpen] = useState(false);
   const [searchValue, setSearchValue] = useState("");
+  const [accountMenuOpen, setAccountMenuOpen] = useState(false);
   const closeTimer = useRef<ReturnType<typeof setTimeout>>(undefined);
+  const accountMenuRef = useRef<HTMLDivElement>(null);
   const navigate = useNavigate();
   const { pathname } = useLocation();
 
   const { totalItems } = useCart();
   const { favoriteIds } = useFavorites();
+  const { user, logout } = useAuth();
 
   useEffect(() => {
     const onScroll = () => setScrolled(window.scrollY > 12);
@@ -40,6 +47,23 @@ export function Header() {
     window.addEventListener("scroll", onScroll, { passive: true });
     return () => window.removeEventListener("scroll", onScroll);
   }, []);
+
+  useEffect(() => {
+    function onClick(e: MouseEvent) {
+      if (accountMenuRef.current && !accountMenuRef.current.contains(e.target as Node)) setAccountMenuOpen(false);
+    }
+    document.addEventListener("mousedown", onClick);
+    return () => document.removeEventListener("mousedown", onClick);
+  }, []);
+
+  const handleLogout = () => {
+    logout();
+    setAccountMenuOpen(false);
+    navigate("/");
+  };
+
+  const panelPath =
+    user?.role === "Admin" ? "/admin" : user?.role === "Farmer" ? "/farmer" : user?.role === "Customer" ? "/customer" : null;
 
   useEffect(() => {
     clearTimeout(closeTimer.current);
@@ -187,14 +211,56 @@ export function Header() {
             <AnimatePresence>{cartOpen && <MiniCart onClose={() => setCartOpen(false)} />}</AnimatePresence>
           </div>
 
-          <div className="hidden items-center gap-2 pl-1 md:flex">
-            <Button variant="ghost" size="sm" onClick={() => navigate("/login")} leftIcon={<User size={15} />}>
-              {t("common:auth.login")}
-            </Button>
-            <Button size="sm" onClick={() => navigate("/register")}>
-              {t("common:auth.register")}
-            </Button>
-          </div>
+          {user ? (
+            <div ref={accountMenuRef} className="relative hidden md:block">
+              <button
+                onClick={() => setAccountMenuOpen((o) => !o)}
+                className="flex items-center gap-1.5 rounded-full py-1 pl-1 pr-2 transition hover:bg-stone-100 dark:hover:bg-stone-800"
+              >
+                <Avatar name={user.fullName} src={user.avatarUrl ? resolveMediaUrl(user.avatarUrl) : undefined} size={32} />
+                <ChevronDown
+                  size={14}
+                  className={cn("text-stone-400 transition-transform dark:text-stone-500", accountMenuOpen && "rotate-180")}
+                />
+              </button>
+
+              {accountMenuOpen && (
+                <div className="absolute right-0 top-full z-50 mt-2 w-56 overflow-hidden rounded-2xl border border-stone-100 bg-white p-1.5 shadow-(--shadow-lifted) dark:border-stone-800 dark:bg-stone-900">
+                  <div className="px-2.5 py-2">
+                    <p className="truncate text-sm font-semibold text-stone-800 dark:text-stone-100">{user.fullName}</p>
+                    <p className="truncate text-xs text-stone-400 dark:text-stone-500">{user.email}</p>
+                  </div>
+                  {panelPath && (
+                    <Link
+                      to={panelPath}
+                      onClick={() => setAccountMenuOpen(false)}
+                      className="flex w-full items-center gap-2.5 rounded-xl px-2.5 py-2 text-left text-sm text-stone-600 transition hover:bg-stone-50 dark:text-stone-300 dark:hover:bg-stone-800"
+                    >
+                      <LayoutDashboard size={15} />
+                      {t("common:auth.goToPanel")}
+                    </Link>
+                  )}
+                  <AvatarMenuItem />
+                  <button
+                    onClick={handleLogout}
+                    className="flex w-full items-center gap-2.5 rounded-xl px-2.5 py-2 text-left text-sm text-stone-600 transition hover:bg-stone-50 dark:text-stone-300 dark:hover:bg-stone-800"
+                  >
+                    <LogOut size={15} />
+                    {t("common:auth.logout")}
+                  </button>
+                </div>
+              )}
+            </div>
+          ) : (
+            <div className="hidden items-center gap-2 pl-1 md:flex">
+              <Button variant="ghost" size="sm" onClick={() => navigate("/login")} leftIcon={<User size={15} />}>
+                {t("common:auth.login")}
+              </Button>
+              <Button size="sm" onClick={() => navigate("/register")}>
+                {t("common:auth.register")}
+              </Button>
+            </div>
+          )}
 
           <button
             onClick={() => setMobileOpen(true)}

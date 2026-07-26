@@ -1,10 +1,14 @@
 {
-  "productsCount": "{{count}} товаров",
+  "productsCount_one": "{{count}} товар",
+  "productsCount_few": "{{count}} товара",
+  "productsCount_many": "{{count}} товаров",
+  "productsCount_other": "{{count}} товаров",
   "units": {
     "кг": "кг",
     "шт": "шт",
     "пучок": "пучок",
-    "литр": "литр"
+    "литр": "литр",
+    "л": "л"
   },
   "filters": {
     "title": "Фильтры",
@@ -28,7 +32,10 @@
   "removeFromFavorites": "Убрать из избранного",
   "addToFavorites": "Добавить в избранное",
   "addToCart": "Добавить в корзину",
-  "reviewsCount": "{{count}} отзывов",
+  "reviewsCount_one": "{{count}} отзыв",
+  "reviewsCount_few": "{{count}} отзыва",
+  "reviewsCount_many": "{{count}} отзывов",
+  "reviewsCount_other": "{{count}} отзывов",
   "verifiedPurchase": "Подтверждённая покупка",
   "farmerReply": "Ответ фермера",
   "helpful": "Полезно ({{count}})",

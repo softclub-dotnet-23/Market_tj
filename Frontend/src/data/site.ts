@@ -1,25 +1,26 @@
 import { useTranslation } from "react-i18next";
+import { useProducts } from "@/data/products";
+import { useFarmers } from "@/data/farmers";
 
-const platformStatsBase = [
-  { id: 1, value: 214, suffix: "+" },
-  { id: 2, value: 1860, suffix: "+" },
-  { id: 3, value: 32400, suffix: "+" },
-  { id: 4, value: 5, suffix: "" },
-];
-
+// Раньше все 4 числа были захардкожены (214/1860/32400/5) — теперь настоящие
+// счётчики из каталога. "Отзывов покупателей" вместо "Выполненных заказов" —
+// /api/orders и /api/order-items требуют входа (см. data/catalogStore.ts),
+// гостю недоступны, поэтому для главной страницы взят реальный публичный
+// сигнал (отзывы уже посчитаны на фермера в useFarmers()), а не подделан ноль.
 export function usePlatformStats() {
   const { t } = useTranslation("data");
-  return platformStatsBase.map((s) => ({ ...s, label: t(`platformStats.${s.id}`) }));
-}
+  const products = useProducts();
+  const farmers = useFarmers();
+  const reviewsCount = farmers.reduce((sum, f) => sum + f.reviewCount, 0);
+  const regionsCount = new Set(products.map((p) => p.region)).size;
 
-export const regions = [
-  "Все регионы",
-  "г. Душанбе",
-  "Согдийская область",
-  "Хатлонская область",
-  "Районы республиканского подчинения",
-  "ГБАО",
-];
+  return [
+    { id: 1, value: farmers.length, suffix: "+", label: t("platformStats.1") },
+    { id: 2, value: products.length, suffix: "+", label: t("platformStats.2") },
+    { id: 3, value: reviewsCount, suffix: "+", label: t("platformStats.3") },
+    { id: 4, value: regionsCount, suffix: "", label: t("platformStats.4") },
+  ];
+}
 
 const deliveryStepsBase = [{ id: 1 }, { id: 2 }, { id: 3 }, { id: 4 }];
 

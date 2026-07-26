@@ -14,12 +14,13 @@ public class UserServiceTests
 {
     private readonly Mock<IUserRepository> _userRepository = new();
     private readonly Mock<IAuditLogService> _auditLogService = new();
+    private readonly Mock<IFileStorageService> _fileStorageService = new();
     private readonly Mock<ILogger<UserService>> _logger = new();
     private readonly UserService _service;
 
     public UserServiceTests()
     {
-        _service = new UserService(_userRepository.Object, _auditLogService.Object, _logger.Object);
+        _service = new UserService(_userRepository.Object, _auditLogService.Object, _fileStorageService.Object, _logger.Object);
     }
 
     private static User CreateUser(int id = 1, string email = "user@example.com", string phone = "+992900000000") => new()
@@ -464,5 +465,119 @@ public class UserServiceTests
 
         Assert.False(result.IsSuccess);
         Assert.Equal(ErrorType.InternalServerError, result.ErrorType);
+    }
+
+    // ---------- UploadAvatarAsync ----------
+
+    [Fact]
+    public async Task UploadAvatarAsync_ValidFile_SavesAndReturnsUrl()
+    {
+        var user = CreateUser(1);
+        _userRepository.Setup(r => r.GetByIdAsync(1)).ReturnsAsync(user);
+        _fileStorageService.Setup(f => f.SaveAsync(It.IsAny<Stream>(), "photo.jpg", "avatars/1")).ReturnsAsync("/uploads/avatars/1/new.jpg");
+
+        var result = await _service.UploadAvatarAsync(1, Stream.Null, "photo.jpg", 1024);
+
+        Assert.True(result.IsSuccess);
+        Assert.Equal("/uploads/avatars/1/new.jpg", result.Data!.AvatarUrl);
+        Assert.Equal("/uploads/avatars/1/new.jpg", user.AvatarUrl);
+        _userRepository.Verify(r => r.UpdateAsync(user), Times.Once);
+    }
+
+    [Fact]
+    public async Task UploadAvatarAsync_PreviousAvatarExists_DeletesOldFile()
+    {
+        var user = CreateUser(1);
+        user.AvatarUrl = "/uploads/avatars/1/old.jpg";
+        _userRepository.Setup(r => r.GetByIdAsync(1)).ReturnsAsync(user);
+        _fileStorageService.Setup(f => f.SaveAsync(It.IsAny<Stream>(), It.IsAny<string>(), It.IsAny<string>())).ReturnsAsync("/uploads/avatars/1/new.jpg");
+
+        await _service.UploadAvatarAsync(1, Stream.Null, "photo.jpg", 1024);
+
+        _fileStorageService.Verify(f => f.Delete("/uploads/avatars/1/old.jpg"), Times.Once);
+    }
+
+    [Fact]
+    public async Task UploadAvatarAsync_DisallowedExtension_ReturnsValidationError()
+    {
+        var result = await _service.UploadAvatarAsync(1, Stream.Null, "photo.gif", 1024);
+
+        Assert.False(result.IsSuccess);
+        Assert.Equal(ErrorType.Validation, result.ErrorType);
+        _fileStorageService.Verify(f => f.SaveAsync(It.IsAny<Stream>(), It.IsAny<string>(), It.IsAny<string>()), Times.Never);
+    }
+
+    [Fact]
+    public async Task UploadAvatarAsync_FileTooLarge_ReturnsValidationError()
+    {
+        var result = await _service.UploadAvatarAsync(1, Stream.Null, "photo.jpg", 6 * 1024 * 1024);
+
+        Assert.False(result.IsSuccess);
+        Assert.Equal(ErrorType.Validation, result.ErrorType);
+        _fileStorageService.Verify(f => f.SaveAsync(It.IsAny<Stream>(), It.IsAny<string>(), It.IsAny<string>()), Times.Never);
+    }
+
+    [Fact]
+    public async Task UploadAvatarAsync_UserNotFound_ReturnsNotFound()
+    {
+        _userRepository.Setup(r => r.GetByIdAsync(It.IsAny<int>())).ReturnsAsync((User?)null);
+
+        var result = await _service.UploadAvatarAsync(999, Stream.Null, "photo.jpg", 1024);
+
+        Assert.False(result.IsSuccess);
+        Assert.Equal(ErrorType.NotFound, result.ErrorType);
+        _fileStorageService.Verify(f => f.SaveAsync(It.IsAny<Stream>(), It.IsAny<string>(), It.IsAny<string>()), Times.Never);
+    }
+
+    [Fact]
+    public async Task UploadAvatarAsync_RepositoryThrows_ReturnsInternalServerError()
+    {
+        _userRepository.Setup(r => r.GetByIdAsync(It.IsAny<int>())).ThrowsAsync(new Exception("db error"));
+
+        var result = await _service.UploadAvatarAsync(1, Stream.Null, "photo.jpg", 1024);
+
+        Assert.False(result.IsSuccess);
+        Assert.Equal(ErrorType.InternalServerError, result.ErrorType);
+    }
+
+    // ---------- DeleteAvatarAsync ----------
+
+    [Fact]
+    public async Task DeleteAvatarAsync_AvatarExists_DeletesFileAndClearsUrl()
+    {
+        var user = CreateUser(1);
+        user.AvatarUrl = "/uploads/avatars/1/old.jpg";
+        _userRepository.Setup(r => r.GetByIdAsync(1)).ReturnsAsync(user);
+
+        var result = await _service.DeleteAvatarAsync(1);
+
+        Assert.True(result.IsSuccess);
+        Assert.Null(user.AvatarUrl);
+        _fileStorageService.Verify(f => f.Delete("/uploads/avatars/1/old.jpg"), Times.Once);
+        _userRepository.Verify(r => r.UpdateAsync(user), Times.Once);
+    }
+
+    [Fact]
+    public async Task DeleteAvatarAsync_NoAvatarSet_ReturnsOkWithoutTouchingStorage()
+    {
+        var user = CreateUser(1);
+        _userRepository.Setup(r => r.GetByIdAsync(1)).ReturnsAsync(user);
+
+        var result = await _service.DeleteAvatarAsync(1);
+
+        Assert.True(result.IsSuccess);
+        _fileStorageService.Verify(f => f.Delete(It.IsAny<string>()), Times.Never);
+        _userRepository.Verify(r => r.UpdateAsync(It.IsAny<User>()), Times.Never);
+    }
+
+    [Fact]
+    public async Task DeleteAvatarAsync_UserNotFound_ReturnsNotFound()
+    {
+        _userRepository.Setup(r => r.GetByIdAsync(It.IsAny<int>())).ReturnsAsync((User?)null);
+
+        var result = await _service.DeleteAvatarAsync(999);
+
+        Assert.False(result.IsSuccess);
+        Assert.Equal(ErrorType.NotFound, result.ErrorType);
     }
 }

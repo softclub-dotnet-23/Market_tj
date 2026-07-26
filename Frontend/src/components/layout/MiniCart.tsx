@@ -1,17 +1,17 @@
 import { useEffect, useRef } from "react";
-import { Link } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
 import { motion } from "framer-motion";
 import { useTranslation } from "react-i18next";
 import { Minus, Plus, ShoppingBag, Trash2 } from "lucide-react";
 import { useCart } from "@/context/CartContext";
 import { useProducts } from "@/data/products";
 import { PhotoTile } from "@/components/ui/PhotoTile";
-import { productPhotos } from "@/assets/photos";
 import { Button } from "@/components/ui/Button";
-import { formatSomoni } from "@/lib/utils";
+import { formatSomoni, getUnitPrice } from "@/lib/utils";
 
 export function MiniCart({ onClose }: { onClose: () => void }) {
   const { t } = useTranslation(["layout", "common"]);
+  const navigate = useNavigate();
   const products = useProducts();
   const { lines, removeItem, setQuantity, totalPrice } = useCart();
   const ref = useRef<HTMLDivElement>(null);
@@ -63,7 +63,7 @@ export function MiniCart({ onClose }: { onClose: () => void }) {
                     onClick={onClose}
                     className="h-14 w-14 shrink-0 overflow-hidden rounded-xl"
                   >
-                    <PhotoTile src={productPhotos[product.id]} alt={product.title} className="h-full w-full" />
+                    <PhotoTile src={product.photoUrl} alt={product.title} className="h-full w-full" />
                   </Link>
                   <div className="flex min-w-0 flex-1 flex-col gap-1">
                     <p className="truncate text-sm font-medium text-stone-800 dark:text-stone-100">{product.title}</p>
@@ -88,7 +88,7 @@ export function MiniCart({ onClose }: { onClose: () => void }) {
                         </button>
                       </div>
                       <span className="text-sm font-semibold text-stone-900 dark:text-stone-100">
-                        {formatSomoni(product.retailPricePerKg * line.quantity)} {t("common:currencySomoni")}
+                        {formatSomoni(getUnitPrice(product, line.quantity) * line.quantity)} {t("common:currencySomoni")}
                       </span>
                     </div>
                   </div>
@@ -110,12 +110,16 @@ export function MiniCart({ onClose }: { onClose: () => void }) {
               {formatSomoni(totalPrice)} {t("common:currencySomoni")}
             </span>
           </div>
-          <Button className="mt-3 w-full" size="md">
+          <Button
+            className="mt-3 w-full"
+            size="md"
+            onClick={() => {
+              onClose();
+              navigate("/checkout");
+            }}
+          >
             {t("miniCart.checkout")}
           </Button>
-          <p className="mt-2 text-center text-[11px] text-stone-400 dark:text-stone-500">
-            {t("miniCart.checkoutNote")}
-          </p>
         </>
       )}
     </motion.div>

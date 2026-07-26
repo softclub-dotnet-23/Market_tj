@@ -13,6 +13,7 @@ public class ChatMessageService(
     IChatMessageRepository chatMessageRepository,
     IConversationRepository conversationRepository,
     IUserRepository userRepository,
+    IFileStorageService fileStorageService,
     ILogger<ChatMessageService> logger) : IChatMessageService
 {
     public async Task<Result<IEnumerable<GetChatMessageDto>>> GetAllAsync()
@@ -74,6 +75,7 @@ public class ChatMessageService(
                 ConversationId = dto.ConversationId,
                 SenderId = dto.SenderId,
                 Message = dto.Message,
+                ImageUrl = dto.ImageUrl,
                 IsRead = dto.IsRead,
                 CreatedAt = DateTime.UtcNow
             };
@@ -118,6 +120,7 @@ public class ChatMessageService(
             message.ConversationId = dto.ConversationId;
             message.SenderId = dto.SenderId;
             message.Message = dto.Message;
+            message.ImageUrl = dto.ImageUrl;
             message.IsRead = dto.IsRead;
 
             await chatMessageRepository.UpdateAsync(message);
@@ -148,12 +151,65 @@ public class ChatMessageService(
         }
     }
 
+    // Фото к сообщению — тот же приём, что и ProductImageService.UploadAsync
+    // (валидация файла отдельная от ChatMessageValidator.ValidateCreate,
+    // потому что здесь Message не обязателен — можно отправить одно фото
+    // без подписи).
+    public async Task<Result<GetChatMessageDto>> UploadAsync(int conversationId, int senderId, string? caption, Stream fileContent, string fileName, long fileSizeBytes)
+    {
+        try
+        {
+            var fileValidation = FileUploadValidator.ValidateImage(fileName, fileSizeBytes);
+            if (fileValidation is not null)
+                return Result<GetChatMessageDto>.Fail(fileValidation.Error!, fileValidation.ErrorType!.Value);
+
+            var conversation = await conversationRepository.GetByIdAsync(conversationId);
+            if (conversation is null)
+                return Result<GetChatMessageDto>.Fail("Чат не найден", ErrorType.NotFound);
+
+            if (senderId != conversation.CustomerId && senderId != conversation.FarmerId)
+                return Result<GetChatMessageDto>.Fail("Отправитель не является участником этого чата", ErrorType.Unauthorized);
+
+            if (conversation.IsClosed)
+                return Result<GetChatMessageDto>.Fail("Чат закрыт — отправка сообщений недоступна", ErrorType.Validation);
+
+            var sender = await userRepository.GetByIdAsync(senderId);
+            if (sender is null)
+                return Result<GetChatMessageDto>.Fail("Отправитель не найден", ErrorType.NotFound);
+
+            var imageUrl = await fileStorageService.SaveAsync(fileContent, fileName, $"chat/{conversationId}");
+
+            var message = new ChatMessage
+            {
+                ConversationId = conversationId,
+                SenderId = senderId,
+                Message = caption?.Trim() ?? "",
+                ImageUrl = imageUrl,
+                IsRead = false,
+                CreatedAt = DateTime.UtcNow
+            };
+
+            await chatMessageRepository.AddAsync(message);
+
+            conversation.UpdatedAt = DateTime.UtcNow;
+            await conversationRepository.UpdateAsync(conversation);
+
+            return Result<GetChatMessageDto>.Ok(ToGetDto(message));
+        }
+        catch (Exception ex)
+        {
+            logger.LogError(ex, "Ошибка при загрузке фото для чата {ConversationId}", conversationId);
+            return Result<GetChatMessageDto>.Fail("Не удалось отправить фото", ErrorType.InternalServerError);
+        }
+    }
+
     private static GetChatMessageDto ToGetDto(ChatMessage message) => new()
     {
         Id = message.Id,
         ConversationId = message.ConversationId,
         SenderId = message.SenderId,
         Message = message.Message,
+        ImageUrl = message.ImageUrl,
         IsRead = message.IsRead,
         CreatedAt = message.CreatedAt
     };

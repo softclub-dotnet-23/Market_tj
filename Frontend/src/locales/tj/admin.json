@@ -1,6 +1,6 @@
 {
   "nav": {
-    "overview": "Дурнамо",
+    "overview": "Хулоса",
     "analytics": "Таҳлил",
     "orders": "Фармоишҳо",
     "products": "Маҳсулот",
@@ -8,7 +8,10 @@
     "customers": "Харидорон",
     "payments": "Пардохтҳо",
     "reviews": "Шарҳҳо",
-    "settings": "Танзимот"
+    "notifications": "Огоҳиномаҳо",
+    "settings": "Танзимот",
+    "couriers": "Курерҳо",
+    "delivery": "Расонидан"
   },
   "collapseSidebar": "Пӯшидани меню",
   "expandSidebar": "Кушодани меню",
@@ -21,69 +24,71 @@
   },
   "dashboard": {
     "greeting": "Хуш омадед, маъмур 👋",
-    "greetingSubtitle": "Дар майдончаи шумо имрӯз чӣ рӯй медиҳад.",
+    "greetingSubtitle": "Дар платформаи шумо имрӯз чӣ рӯй медиҳад.",
+    "errorTitle": "Хулоса бор нашуд",
+    "errorDescription": "Пайвастшавии худро ба сервер санҷед ва аз нав кӯшиш кунед.",
     "stats": {
-      "revenue": "Даромад дар як ҳафта",
+      "revenue": "Даромад дар як моҳ",
       "customers": "Харидорони нав",
       "orders": "Фармоишҳо",
       "farmers": "Деҳқонони фаъол"
     },
-    "vsLastWeek": "нисбат ба ҳафтаи гузашта {{value}}",
+    "vsLastMonth": "нисбат ба моҳи гузашта {{value}}",
+    "newMetric": "Нав",
     "salesByRegion": "Фурӯш аз рӯи минтақаҳо",
     "total": "Ҳамагӣ",
-    "siteVisits": "Ташрифҳо ба сомона",
+    "ordersByMonth": "Фармоишҳо аз рӯи моҳҳо",
     "recentOrders": "Фармоишҳои охирин",
     "viewAll": "Ҳамаро дидан",
     "topFarmers": "Деҳқонони беҳтарин",
+    "noTopFarmersYet": "Ҳанӯз маълумот дар бораи деҳқонон нест",
     "popularCategories": "Категорияҳои маъмул",
-    "orderStatus": {
-      "new": "Нав",
-      "processing": "Дар коркард",
-      "shipped": "Фиристода шуд",
-      "delivered": "Расонида шуд"
-    },
-    "regions": {
-      "dushanbe": "Душанбе",
-      "khatlon": "Хатлон",
-      "sughd": "Суғд",
-      "gbao": "ВМКБ",
-      "rrp": "НТҶ"
-    },
-    "months": ["Янв", "Фев", "Мар", "Апр", "Май", "Июн"]
+    "noPopularCategoriesYet": "Ҳанӯз маълумот дар бораи категорияҳо нест"
+  },
+  "notificationsPage": {
+    "errorTitle": "Огоҳиномаҳо бор нашуданд",
+    "errorDescription": "Пайвастшавии худро ба сервер санҷед ва аз нав кӯшиш кунед.",
+    "emptyTitle": "Ҳанӯз огоҳинома нест",
+    "emptyDescription": "Дар ин ҷо огоҳиномаҳои системавии платформа пайдо мешаванд."
   },
   "orders": {
     "errorTitle": "Фармоишҳо бор нашуданд",
-    "errorDescription": "Пайвастшавӣ ба сервер тафтиш карда, аз нав кӯшиш кунед.",
+    "errorDescription": "Пайвастшавии худро ба сервер санҷед ва аз нав кӯшиш кунед.",
     "emptyTitle": "Ҳанӯз фармоише нест",
     "emptyDescription": "Дар ин ҷо фармоишҳои мизоҷон пас аз ба расмият даровардан пайдо мешаванд.",
     "columns": {
       "orderNumber": "№ фармоиш",
-      "customer": "Мизоҷ",
+      "customer": "Харидор",
       "farmer": "Деҳқон",
       "region": "Минтақа",
       "amount": "Маблағ",
       "status": "Ҳолат",
-      "createdAt": "Сана"
+      "createdAt": "Сана ва вақти фармоиш",
+      "receivedAt": "Сана ва вақти гирифтан"
     },
-    "customerLabel": "Мизоҷ #{{id}}",
+    "customerLabel": "Харидор #{{id}}",
     "farmerLabel": "Деҳқон #{{id}}",
+    "notReceivedYet": "Ҳанӯз гирифта нашудааст",
     "status": {
       "pending": "Дар интизорӣ",
       "accepted": "Қабул шуд",
       "rejected": "Рад шуд",
       "preparing": "Омода мешавад",
       "readyForPickup": "Омода барои гирифтан",
-      "courierAssigned": "Курьер таъин шуд",
-      "pickedUp": "Аз ҷониби курьер гирифта шуд",
+      "courierAssigned": "Курер таъин шуд",
+      "pickedUp": "Аз ҷониби курер гирифта шуд",
       "inDelivery": "Дар роҳ",
       "delivered": "Расонида шуд",
       "completed": "Анҷом ёфт",
       "cancelled": "Бекор карда шуд"
-    }
+    },
+    "updateSuccess": "Ҳолати фармоиш навсозӣ шуд",
+    "updateError": "Ҳолати фармоиш навсозӣ нашуд",
+    "statusLockedHint": "Ҳоло фармоишро деҳқон коркард карда истодааст — пас аз расидан ба ҳолати «Омода барои гирифтан» онро метавон аз ин ҷо идора кард."
   },
   "products": {
     "errorTitle": "Маҳсулот бор нашуд",
-    "errorDescription": "Пайвастшавӣ ба сервер тафтиш карда, аз нав кӯшиш кунед.",
+    "errorDescription": "Пайвастшавии худро ба сервер санҷед ва аз нав кӯшиш кунед.",
     "emptyTitle": "Ҳанӯз маҳсулот нест",
     "emptyDescription": "Дар ин ҷо маҳсулоти деҳқонон пас аз илова кардани эълони аввал пайдо мешаванд.",
     "columns": {
@@ -92,38 +97,51 @@
       "price": "Нарх",
       "quantity": "Боқимонда",
       "status": "Ҳолат",
-      "region": "Минтақа"
+      "region": "Минтақа",
+      "actions": "Амалҳо"
     },
     "farmerLabel": "Деҳқон #{{id}}",
     "perKg": "смн./кг",
     "kg": "кг",
+    "originallyOf": "аз {{count}} ибтидоӣ",
     "status": {
       "draft": "Пешнавис",
       "active": "Фаъол",
-      "outOfStock": "Тамом шудааст",
+      "outOfStock": "Мавҷуд нест",
       "archived": "Дар бойгонӣ"
-    }
+    },
+    "deleteAction": "Нест кардан",
+    "deleteSuccess": "Маҳсулот нест карда шуд",
+    "deleteError": "Маҳсулот нест карда нашуд",
+    "deleteConfirmTitle": "Маҳсулот нест карда шавад?",
+    "deleteConfirmDescription": "Эълони «{{title}}» нест карда мешавад. Ин амалро бекор кардан мумкин нест."
   },
   "farmers": {
     "errorTitle": "Деҳқонон бор нашуданд",
-    "errorDescription": "Пайвастшавӣ ба сервер тафтиш карда, аз нав кӯшиш кунед.",
+    "errorDescription": "Пайвастшавии худро ба сервер санҷед ва аз нав кӯшиш кунед.",
     "emptyTitle": "Ҳанӯз деҳқон нест",
     "emptyDescription": "Дар ин ҷо хоҷагиҳои деҳқонии сабтшуда пайдо мешаванд.",
     "columns": {
       "farmName": "Хоҷагӣ",
       "region": "Минтақа",
       "status": "Ҳолат",
-      "createdAt": "Санаи сабт"
+      "createdAt": "Санаи сабт",
+      "actions": "Амалҳо"
     },
     "status": {
       "pending": "Дар тафтиш",
       "verified": "Тасдиқшуда",
       "rejected": "Рад шуда"
-    }
+    },
+    "verifyAction": "Тасдиқ кардан",
+    "rejectAction": "Рад кардан",
+    "verifySuccess": "Деҳқон тасдиқ карда шуд",
+    "rejectSuccess": "Деҳқон рад карда шуд",
+    "actionError": "Ҳолат тағйир дода нашуд"
   },
   "users": {
     "errorTitle": "Харидорон бор нашуданд",
-    "errorDescription": "Пайвастшавӣ ба сервер тафтиш карда, аз нав кӯшиш кунед.",
+    "errorDescription": "Пайвастшавии худро ба сервер санҷед ва аз нав кӯшиш кунед.",
     "emptyTitle": "Ҳанӯз харидор нест",
     "emptyDescription": "Дар ин ҷо харидорони сабтшуда пайдо мешаванд.",
     "columns": {
@@ -140,7 +158,7 @@
   },
   "commissions": {
     "errorTitle": "Комиссияҳо бор нашуданд",
-    "errorDescription": "Пайвастшавӣ ба сервер тафтиш карда, аз нав кӯшиш кунед.",
+    "errorDescription": "Пайвастшавии худро ба сервер санҷед ва аз нав кӯшиш кунед.",
     "emptyTitle": "Ҳанӯз комиссия нест",
     "emptyDescription": "Дар ин ҷо меъёрҳои комиссияи платформа пайдо мешаванд.",
     "columns": {
@@ -148,52 +166,96 @@
       "percentage": "Фоиз",
       "effectiveFrom": "Аз санаи",
       "effectiveTo": "То санаи",
-      "status": "Ҳолат"
+      "status": "Ҳолат",
+      "actions": "Амалҳо"
     },
     "allCategories": "Ҳамаи категорияҳо",
     "categoryLabel": "Категория #{{id}}",
     "status": {
       "active": "Фаъол",
       "expired": "Анҷомёфта"
+    },
+    "addButton": "Илова кардани комиссия",
+    "createModalTitle": "Комиссияи нав",
+    "editModalTitle": "Таҳрири комиссия",
+    "editAction": "Таҳрир",
+    "deleteAction": "Нест кардан",
+    "createSuccess": "Комиссия илова карда шуд",
+    "createError": "Комиссия илова карда нашуд",
+    "updateSuccess": "Комиссия навсозӣ шуд",
+    "updateError": "Комиссия навсозӣ нашуд",
+    "deleteSuccess": "Комиссия нест карда шуд",
+    "deleteError": "Комиссия нест карда нашуд",
+    "deleteConfirmTitle": "Комиссия нест карда шавад?",
+    "deleteConfirmDescription": "Ин амалро бекор кардан мумкин нест.",
+    "form": {
+      "categoryId": "ID-и категория",
+      "categoryIdHint": "Барои ҳамаи категорияҳо холӣ гузоред",
+      "percentage": "Фоиз, %",
+      "effectiveFrom": "Амал мекунад аз",
+      "effectiveTo": "Амал мекунад то",
+      "required": "Майдони ҳатмӣ",
+      "percentageRange": "Аз 0 то 100",
+      "effectiveToBeforeFrom": "Бояд аз санаи оғоз дертар бошад",
+      "optional": "Ихтиёрӣ",
+      "cancel": "Бекор кардан",
+      "submit": "Сохтан",
+      "saveChanges": "Нигоҳ доштани тағйирот"
     }
   },
   "reviews": {
     "errorTitle": "Шарҳҳо бор нашуданд",
-    "errorDescription": "Пайвастшавӣ ба сервер тафтиш карда, аз нав кӯшиш кунед.",
+    "errorDescription": "Пайвастшавии худро ба сервер санҷед ва аз нав кӯшиш кунед.",
     "emptyTitle": "Ҳанӯз шарҳ нест",
     "emptyDescription": "Дар ин ҷо шарҳҳои харидорон дар бораи фармоишҳо пайдо мешаванд.",
     "columns": {
       "order": "Фармоиш",
-      "customer": "Мизоҷ",
+      "customer": "Харидор",
       "farmer": "Деҳқон",
       "rating": "Баҳо",
       "comment": "Шарҳ",
-      "createdAt": "Сана"
+      "createdAt": "Сана",
+      "actions": "Амалҳо"
     },
     "orderLabel": "Фармоиш #{{id}}",
-    "customerLabel": "Мизоҷ #{{id}}",
-    "farmerLabel": "Деҳқон #{{id}}"
+    "customerLabel": "Харидор #{{id}}",
+    "farmerLabel": "Деҳқон #{{id}}",
+    "deleteAction": "Нест кардан",
+    "deleteSuccess": "Шарҳ нест карда шуд",
+    "deleteError": "Шарҳ нест карда нашуд",
+    "deleteConfirmTitle": "Шарҳ нест карда шавад?",
+    "deleteConfirmDescription": "Ин амалро бекор кардан мумкин нест."
   },
   "settings": {
     "errorTitle": "Танзимот бор нашуд",
-    "errorDescription": "Пайвастшавӣ ба сервер тафтиш карда, аз нав кӯшиш кунед.",
+    "errorDescription": "Пайвастшавии худро ба сервер санҷед ва аз нав кӯшиш кунед.",
     "emptyTitle": "Ҳанӯз танзимот нест",
     "emptyDescription": "Дар ин ҷо танзимоти системавии платформа пайдо мешаванд.",
     "columns": {
       "key": "Калид",
       "value": "Қиммат",
       "description": "Тавсиф",
-      "updatedAt": "Навсозӣ шуд"
+      "updatedAt": "Навсозӣ шуд",
+      "actions": "Амалҳо"
+    },
+    "editAction": "Таҳрир",
+    "editModalTitle": "Таҳрири танзимот",
+    "updateSuccess": "Танзимот навсозӣ шуд",
+    "updateError": "Танзимот навсозӣ нашуд",
+    "form": {
+      "required": "Майдони ҳатмӣ",
+      "cancel": "Бекор кардан",
+      "saveChanges": "Нигоҳ доштани тағйирот"
     }
   },
   "statistics": {
     "errorTitle": "Таҳлил бор нашуд",
-    "errorDescription": "Пайвастшавӣ ба сервер тафтиш карда, аз нав кӯшиш кунед.",
+    "errorDescription": "Пайвастшавии худро ба сервер санҷед ва аз нав кӯшиш кунед.",
     "stats": {
       "totalUsers": "Ҳамаи корбарон",
       "totalFarmers": "Ҳамаи деҳқонон",
       "totalCustomers": "Ҳамаи харидорон",
-      "totalCouriers": "Ҳамаи курьерҳо",
+      "totalCouriers": "Ҳамаи курерҳо",
       "ordersThisMonth": "Фармоишҳо дар ин моҳ",
       "revenueThisMonth": "Даромад дар ин моҳ",
       "totalRevenue": "Даромад дар тамоми давра",
@@ -203,9 +265,86 @@
     "noRevenueYet": "Ҳанӯз маълумоти даромад нест",
     "topSellingProducts": "Фурӯши беҳтарин",
     "noSalesYet": "Ҳанӯз фурӯш нест",
+    "noSalesYetDescription": "Дар ин ҷо маҳсулоти беҳтарин фурӯхташуда пайдо мешаванд.",
+    "vsLastMonth": "нисбат ба моҳи гузашта",
     "kg": "кг",
     "ordersByStatus": "Фармоишҳо аз рӯи ҳолат",
     "noOrdersYet": "Ҳанӯз фармоише нест",
-    "months": ["Янв", "Фев", "Мар", "Апр", "Май", "Июн", "Июл", "Авг", "Сен", "Окт", "Ноя", "Дек"]
+    "months": [
+      "Янв",
+      "Фев",
+      "Мар",
+      "Апр",
+      "Май",
+      "Июн",
+      "Июл",
+      "Авг",
+      "Сен",
+      "Окт",
+      "Ноя",
+      "Дек"
+    ]
+  },
+  "couriers": {
+    "errorTitle": "Курерҳо бор нашуданд",
+    "errorDescription": "Пайвастшавии худро ба сервер санҷед ва аз нав кӯшиш кунед.",
+    "emptyTitle": "Ҳанӯз курер нест",
+    "emptyDescription": "Дар ин ҷо курерҳои сабтшудаи платформа пайдо мешаванд.",
+    "columns": {
+      "transport": "Нақлиёт",
+      "region": "Минтақа",
+      "available": "Дастрасӣ",
+      "active": "Ҳолат",
+      "createdAt": "Санаи сабт"
+    },
+    "available": "Дастрас",
+    "unavailable": "Дастрас нест",
+    "active": "Фаъол",
+    "inactive": "Хомӯш",
+    "updateSuccess": "Ҳолати курер навсозӣ шуд",
+    "updateError": "Ҳолати курер навсозӣ нашуд"
+  },
+  "deliveryZones": {
+    "errorTitle": "Минтақаҳои расонидан бор нашуданд",
+    "errorDescription": "Пайвастшавии худро ба сервер санҷед ва аз нав кӯшиш кунед.",
+    "emptyTitle": "Ҳанӯз минтақаи расонидан нест",
+    "emptyDescription": "Минтақаи аввалро илова кунед, то нархи расониданро аз рӯи минтақаҳо танзим кунед.",
+    "columns": {
+      "region": "Минтақа",
+      "basePrice": "Нархи асосӣ",
+      "pricePerKm": "Нарх барои км",
+      "status": "Ҳолат",
+      "actions": "Амалҳо"
+    },
+    "status": {
+      "active": "Фаъол",
+      "inactive": "Хомӯш"
+    },
+    "addButton": "Илова кардани минтақа",
+    "createModalTitle": "Минтақаи нави расонидан",
+    "editModalTitle": "Таҳрири минтақаи расонидан",
+    "editAction": "Таҳрир",
+    "deleteAction": "Нест кардан",
+    "createSuccess": "Минтақаи расонидан илова карда шуд",
+    "createError": "Минтақаи расонидан илова карда нашуд",
+    "updateSuccess": "Минтақаи расонидан навсозӣ шуд",
+    "updateError": "Минтақаи расонидан навсозӣ нашуд",
+    "deleteSuccess": "Минтақаи расонидан нест карда шуд",
+    "deleteError": "Минтақаи расонидан нест карда нашуд",
+    "deleteConfirmTitle": "Минтақаи расонидан нест карда шавад?",
+    "deleteConfirmDescription": "Ин амалро бекор кардан мумкин нест.",
+    "form": {
+      "region": "Минтақа",
+      "district": "Ноҳия",
+      "basePrice": "Нархи асосӣ, сомонӣ",
+      "pricePerKm": "Нарх барои км, сомонӣ",
+      "status": "Ҳолат",
+      "required": "Майдони ҳатмӣ",
+      "nonNegative": "Наметавонад манфӣ бошад",
+      "optional": "Ихтиёрӣ",
+      "cancel": "Бекор кардан",
+      "submit": "Сохтан",
+      "saveChanges": "Нигоҳ доштани тағйирот"
+    }
   }
 }

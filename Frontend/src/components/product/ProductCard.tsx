@@ -9,7 +9,6 @@ import { Badge } from "@/components/ui/Badge";
 import { useFarmers } from "@/data/farmers";
 import { useCart } from "@/context/CartContext";
 import { useFavorites } from "@/context/FavoritesContext";
-import { productPhotos } from "@/assets/photos";
 import { cn, formatSomoni } from "@/lib/utils";
 
 const BADGE_VARIANTS: Record<string, "grove" | "harvest" | "clay" | "dark"> = {
@@ -34,13 +33,13 @@ export function ProductCard({ product, className }: { product: Product; classNam
       whileHover={{ y: -6 }}
       transition={{ type: "spring", stiffness: 300, damping: 22 }}
       className={cn(
-        "group relative flex flex-col overflow-hidden rounded-2xl border border-stone-100 bg-white transition-shadow duration-300 hover:shadow-(--shadow-card) dark:border-stone-800 dark:bg-stone-900",
+        "group relative flex h-full flex-col overflow-hidden rounded-2xl border border-stone-100 bg-white transition-shadow duration-300 hover:shadow-(--shadow-card) dark:border-stone-800 dark:bg-stone-900",
         className,
       )}
     >
       <Link to={`/product/${product.slug}`} className="relative block aspect-[4/3.4] overflow-hidden">
         <motion.div whileHover={{ scale: 1.06 }} transition={{ duration: 0.5, ease: [0.25, 1, 0.5, 1] }} className="h-full w-full">
-          <PhotoTile src={productPhotos[product.id]} alt={product.title} className="h-full w-full" />
+          <PhotoTile src={product.photoUrl} alt={product.title} className="h-full w-full" />
         </motion.div>
 
         <div className="absolute left-3 top-3 flex flex-col gap-1.5">
@@ -76,7 +75,7 @@ export function ProductCard({ product, className }: { product: Product; classNam
         <div className="flex items-center justify-between gap-2 text-xs text-stone-400 dark:text-stone-500">
           <span className="inline-flex items-center gap-1">
             <MapPin size={12} />
-            {t(`data:districtLabels.${product.district}`)}
+            {product.district}
           </span>
           <RatingStars rating={product.rating} size={12} />
         </div>

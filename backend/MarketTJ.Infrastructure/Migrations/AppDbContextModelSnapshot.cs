@@ -176,6 +176,9 @@ namespace MarketTJ.Infrastructure.Migrations
                     b.Property<DateTime>("CreatedAt")
                         .HasColumnType("timestamp with time zone");
 
+                    b.Property<string>("ImageUrl")
+                        .HasColumnType("text");
+
                     b.Property<bool>("IsRead")
                         .HasColumnType("boolean");
 
@@ -246,7 +249,7 @@ namespace MarketTJ.Infrastructure.Migrations
                     b.Property<bool>("IsClosed")
                         .HasColumnType("boolean");
 
-                    b.Property<int>("OrderId")
+                    b.Property<int?>("OrderId")
                         .HasColumnType("integer");
 
                     b.Property<DateTime>("UpdatedAt")
@@ -1262,6 +1265,9 @@ namespace MarketTJ.Infrastructure.Migrations
 
                     NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<int>("Id"));
 
+                    b.Property<string>("AvatarUrl")
+                        .HasColumnType("text");
+
                     b.Property<DateTime>("CreatedAt")
                         .HasColumnType("timestamp with time zone");
 
@@ -1393,8 +1399,7 @@ namespace MarketTJ.Infrastructure.Migrations
                     b.HasOne("MarketTJ.Domain.Entities.Order", "Order")
                         .WithOne("Conversation")
                         .HasForeignKey("MarketTJ.Domain.Entities.Conversation", "OrderId")
-                        .OnDelete(DeleteBehavior.Restrict)
-                        .IsRequired();
+                        .OnDelete(DeleteBehavior.Restrict);
 
                     b.Navigation("Customer");
 

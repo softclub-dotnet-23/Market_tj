@@ -12,10 +12,12 @@ public static class ConversationValidator
     public static Result<string>? ValidateUpdate(UpdateConversationDto dto)
         => Validate(dto.OrderId, dto.CustomerId, dto.FarmerId);
 
-    private static Result<string>? Validate(int orderId, int customerId, int farmerId)
+    // OrderId необязателен (null — чат до заказа, вопрос фермеру про товар),
+    // но если он передан, то должен быть положительным.
+    private static Result<string>? Validate(int? orderId, int customerId, int farmerId)
     {
-        if (orderId <= 0)
-            return Result<string>.Fail("OrderId обязателен", ErrorType.Validation);
+        if (orderId.HasValue && orderId.Value <= 0)
+            return Result<string>.Fail("OrderId должен быть положительным", ErrorType.Validation);
 
         if (customerId <= 0)
             return Result<string>.Fail("CustomerId обязателен", ErrorType.Validation);

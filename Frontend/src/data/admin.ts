@@ -1,17 +1,16 @@
 import { useTranslation } from "react-i18next";
-import { Wallet, Users, ShoppingBag, Sprout } from "lucide-react";
+import { Sprout, ShoppingBag, Users, Wallet } from "lucide-react";
 import type { LucideIcon } from "lucide-react";
-import { useFarmers } from "@/data/farmers";
-import { useCategories } from "@/data/categories";
-import { farmerPhotos } from "@/assets/photos";
-
-export type OrderStatus = "new" | "processing" | "shipped" | "delivered";
+import { computeMonthlyTrend, formatNumber } from "@/lib/utils";
+import { OrderStatus } from "@/lib/orderStatus";
+import type { AdminAnalyticsDto, AdminOrderDto, AdminUserDto } from "@/data/adminEntities";
+import type { Category, Farmer } from "@/types";
 
 export interface AdminStat {
   key: "revenue" | "customers" | "orders" | "farmers";
   value: number;
   suffix?: string;
-  changePercent: number;
+  changePercent: number | null;
   compareValue: string;
   icon: LucideIcon;
   accent: "grove" | "blue" | "orange" | "rose";
@@ -23,7 +22,6 @@ export interface RegionSales {
   name: string;
   amount: number;
   percent: number;
-  color: string;
 }
 
 export interface SiteVisitPoint {
@@ -33,13 +31,13 @@ export interface SiteVisitPoint {
 }
 
 export interface RecentOrder {
-  id: string;
-  customerName: string;
-  categoryKey: string;
-  city: string;
-  time: string;
+  orderNumber: string;
+  customerId: number;
+  region: string;
+  district: string;
   amount: number;
-  status: OrderStatus;
+  status: number;
+  createdAt: string;
 }
 
 export interface TopFarmerRow {
@@ -48,134 +46,205 @@ export interface TopFarmerRow {
   region: string;
   rating: number;
   revenue: number;
-  photo?: string;
+  avatarUrl?: string;
 }
 
 export interface PopularCategoryRow {
   slug: string;
   name: string;
   icon: LucideIcon;
-  amount: number;
   percent: number;
 }
 
 const REGION_COLORS_LIGHT = ["#2a78d6", "#008300", "#e87ba4", "#eda100", "#4a3aa7"];
 const REGION_COLORS_DARK = ["#3987e5", "#008300", "#d55181", "#c98500", "#7c3aed"];
 
-export function useAdminStats(): AdminStat[] {
-  const { t } = useTranslation("admin");
-  return [
-    {
-      key: "revenue",
-      value: 124850,
-      suffix: t("common.somoni"),
-      changePercent: 18.6,
-      compareValue: "105 420",
-      icon: Wallet,
-      accent: "grove",
-      trend: [58, 62, 60, 68, 72, 78, 90, 100],
-    },
-    {
-      key: "customers",
-      value: 1247,
-      changePercent: 24.3,
-      compareValue: "1 003",
-      icon: Users,
-      accent: "blue",
-      trend: [40, 46, 44, 52, 58, 64, 70, 82],
-    },
-    {
-      key: "orders",
-      value: 2358,
-      changePercent: 15.2,
-      compareValue: "2 047",
-      icon: ShoppingBag,
-      accent: "orange",
-      trend: [55, 58, 54, 60, 66, 68, 74, 84],
-    },
-    {
-      key: "farmers",
-      value: 482,
-      changePercent: 9.8,
-      compareValue: "439",
-      icon: Sprout,
-      accent: "rose",
-      trend: [70, 72, 71, 75, 78, 80, 85, 92],
-    },
-  ];
+export function getRegionColor(index: number, isDark: boolean) {
+  const palette = isDark ? REGION_COLORS_DARK : REGION_COLORS_LIGHT;
+  return palette[index % palette.length];
 }
 
-export function useRegionSales(): RegionSales[] {
-  const { t } = useTranslation("admin");
-  const amounts = [42700, 30860, 23100, 15740, 12450];
-  const keys = ["dushanbe", "khatlon", "sughd", "gbao", "rrp"];
-  const total = amounts.reduce((a, b) => a + b, 0);
-  return keys.map((key, i) => ({
-    key,
-    name: t(`dashboard.regions.${key}`),
-    amount: amounts[i],
-    percent: Math.round((amounts[i] / total) * 1000) / 10,
-    color: REGION_COLORS_LIGHT[i],
+// Последние N календарных месяцев, заканчивая текущим — тот же принцип
+// окна, что и у бэкенда в AnalyticsRepository.GetRevenueByMonthAsync
+// (раздел 10.4 ТЗ), только считается на фронте для метрик, для которых
+// бэкенд не готовит помесячную выборку (заказы/новые покупатели/фермеры).
+function monthsWindow(count: number): { year: number; month: number }[] {
+  const now = new Date();
+  const result: { year: number; month: number }[] = [];
+  for (let i = count - 1; i >= 0; i--) {
+    const d = new Date(now.getFullYear(), now.getMonth() - i, 1);
+    result.push({ year: d.getFullYear(), month: d.getMonth() + 1 });
+  }
+  return result;
+}
+
+function countByMonth(dates: string[], count: number) {
+  const parsed = dates.map((d) => new Date(d));
+  return monthsWindow(count).map(({ year, month }) => ({
+    year,
+    month,
+    revenue: parsed.filter((d) => d.getFullYear() === year && d.getMonth() + 1 === month).length,
   }));
 }
 
-export function getRegionColor(index: number, isDark: boolean) {
-  return (isDark ? REGION_COLORS_DARK : REGION_COLORS_LIGHT)[index];
+function cumulativeCountByMonth(dates: string[], count: number) {
+  const parsed = dates.map((d) => new Date(d));
+  return monthsWindow(count).map(({ year, month }) => {
+    const monthEnd = new Date(year, month, 1);
+    return { year, month, revenue: parsed.filter((d) => d < monthEnd).length };
+  });
 }
 
-export function useSiteVisits(): SiteVisitPoint[] {
+// Единственный источник помесячной выручки, который реально считает бэкенд
+// (revenueByMonth в /analytics/admin/dashboard, только Completed-заказы —
+// раздел 10.4 ТЗ) — для заказов/покупателей/фермеров такой готовой выборки
+// нет, поэтому считаем её на фронте из уже загруженных сырых списков (тот же
+// приём "грузим всё, агрегируем на фронте", что и везде в проекте).
+export function useAdminStats(analytics: AdminAnalyticsDto, orders: AdminOrderDto[], customers: AdminUserDto[], farmers: Farmer[]): AdminStat[] {
   const { t } = useTranslation("admin");
-  const previous = [32000, 28000, 35000, 40000, 38000, 36000];
-  const current = [42000, 36000, 52000, 58000, 62000, 55000];
-  const months = t("dashboard.months", { returnObjects: true }) as string[];
-  return months.map((month, i) => ({ month, current: current[i], previous: previous[i] }));
-}
 
-export function useRecentOrders(): RecentOrder[] {
+  const revenueSeries = [...analytics.revenueByMonth].sort((a, b) => a.year - b.year || a.month - b.month);
+  const revenueTrend = computeMonthlyTrend(analytics.revenueByMonth);
+  const prevRevenue = revenueSeries.length >= 2 ? revenueSeries[revenueSeries.length - 2].revenue : 0;
+
+  const ordersMonthly = countByMonth(orders.map((o) => o.createdAt), 6);
+  const ordersTrend = computeMonthlyTrend(ordersMonthly);
+  const prevOrders = ordersMonthly.length >= 2 ? ordersMonthly[ordersMonthly.length - 2].revenue : 0;
+
+  const customersMonthly = countByMonth(customers.map((c) => c.createdAt), 6);
+  const customersTrend = computeMonthlyTrend(customersMonthly);
+  const prevCustomers = customersMonthly.length >= 2 ? customersMonthly[customersMonthly.length - 2].revenue : 0;
+
+  const farmersCumulative = cumulativeCountByMonth(farmers.map((f) => f.joinedAt), 6);
+  const farmersTrend = computeMonthlyTrend(farmersCumulative);
+  const prevFarmers = farmersCumulative.length >= 2 ? farmersCumulative[farmersCumulative.length - 2].revenue : 0;
+
   return [
-    { id: "MT-154672", customerName: "Файзали Н.", categoryKey: "vegetables", city: "Душанбе", time: "10:12", amount: 320, status: "new" },
-    { id: "MT-154671", customerName: "Мирзоев А.", categoryKey: "vegetables", city: "Душанбе", time: "09:15", amount: 185, status: "processing" },
-    { id: "MT-154670", customerName: "Сайдова Ю.", categoryKey: "fruits", city: "Бохтар", time: "08:21", amount: 95, status: "shipped" },
-    { id: "MT-154669", customerName: "Негмат Т.", categoryKey: "vegetables", city: "Бохтар", time: "07:33", amount: 275, status: "delivered" },
+    {
+      key: "revenue",
+      value: analytics.revenueThisMonth,
+      suffix: t("common.somoni"),
+      changePercent: revenueTrend.changePercent,
+      compareValue: formatNumber(prevRevenue),
+      icon: Wallet,
+      accent: "grove",
+      trend: revenueTrend.sparkline,
+    },
+    {
+      key: "customers",
+      value: customersMonthly.at(-1)?.revenue ?? 0,
+      changePercent: customersTrend.changePercent,
+      compareValue: formatNumber(prevCustomers),
+      icon: Users,
+      accent: "blue",
+      trend: customersTrend.sparkline,
+    },
+    {
+      key: "orders",
+      value: analytics.ordersThisMonth,
+      changePercent: ordersTrend.changePercent,
+      compareValue: formatNumber(prevOrders),
+      icon: ShoppingBag,
+      accent: "orange",
+      trend: ordersTrend.sparkline,
+    },
+    {
+      key: "farmers",
+      value: farmers.length,
+      changePercent: farmersTrend.changePercent,
+      compareValue: formatNumber(prevFarmers),
+      icon: Sprout,
+      accent: "rose",
+      trend: farmersTrend.sparkline,
+    },
   ];
 }
 
-const TOP_FARMER_IDS = [2, 3, 5, 9];
-const TOP_FARMER_REVENUE: Record<number, number> = { 2: 12450, 3: 9870, 5: 8230, 9: 7640 };
-
-export function useTopFarmers(): TopFarmerRow[] {
-  const farmers = useFarmers();
-  return TOP_FARMER_IDS.map((id) => {
-    const farmer = farmers.find((f) => f.id === id)!;
-    return {
-      id,
-      name: farmer.ownerName,
-      region: farmer.region,
-      rating: farmer.rating,
-      revenue: TOP_FARMER_REVENUE[id],
-      photo: farmerPhotos[id],
-    };
-  }).sort((a, b) => b.revenue - a.revenue);
+// Раздел 10.4 ТЗ: "выручка" = сумма Completed-заказов. Регион берётся из
+// Order.Region — это свободный текст, введённый покупателем при оформлении
+// (см. Checkout.tsx), поэтому список регионов складывается из того, что
+// реально встретилось в заказах, а не из фиксированного списка областей.
+export function computeRegionSales(orders: AdminOrderDto[]): RegionSales[] {
+  const sums = new Map<string, number>();
+  for (const o of orders) {
+    if (o.status !== OrderStatus.Completed) continue;
+    sums.set(o.region, (sums.get(o.region) ?? 0) + o.totalAmount);
+  }
+  const total = [...sums.values()].reduce((a, b) => a + b, 0);
+  return [...sums.entries()]
+    .sort((a, b) => b[1] - a[1])
+    .map(([name, amount]) => ({
+      key: name,
+      name,
+      amount,
+      percent: total > 0 ? Math.round((amount / total) * 1000) / 10 : 0,
+    }));
 }
 
-export function usePopularCategories(): PopularCategoryRow[] {
-  const categories = useCategories();
-  const amounts: Record<string, number> = {
-    vegetables: 42560,
-    fruits: 31240,
-    dairy: 16300,
-    "dried-fruits": 15780,
-    nuts: 12760,
-  };
-  const total = Object.values(amounts).reduce((a, b) => a + b, 0);
+// Честная замена "посещений сайта" — в проекте нет трекинга трафика, но есть
+// реальные заказы с датой создания, так что вместо выдуманных цифр показываем
+// такое же по форме (месяц-к-месяцу, текущий год/прошлый год) сравнение по
+// количеству заказов.
+export function useOrdersByMonth(orders: AdminOrderDto[]): SiteVisitPoint[] {
+  const { t } = useTranslation("admin");
+  const monthNames = t("statistics.months", { returnObjects: true }) as string[];
+  const dates = orders.map((o) => new Date(o.createdAt));
+
+  return monthsWindow(6).map(({ year, month }) => {
+    const current = dates.filter((d) => d.getFullYear() === year && d.getMonth() + 1 === month).length;
+    const previous = dates.filter((d) => d.getFullYear() === year - 1 && d.getMonth() + 1 === month).length;
+    return { month: monthNames[month - 1] ?? String(month), current, previous };
+  });
+}
+
+export function computeRecentOrders(orders: AdminOrderDto[]): RecentOrder[] {
+  return orders.slice(0, 4).map((o) => ({
+    orderNumber: o.orderNumber,
+    customerId: o.customerId,
+    region: o.region,
+    district: o.district,
+    amount: o.totalAmount,
+    status: o.status,
+    createdAt: o.createdAt,
+  }));
+}
+
+// Топ фермеры по реальной выручке (сумма Completed-заказов по farmerId) —
+// имя/регион/рейтинг уже реальные из useFarmers() (реальные отзывы, раздел
+// 8.13 ТЗ), выручку бэкенд по фермеру массово не отдаёт (только для самого
+// фермера через /analytics/farmer/dashboard), поэтому считаем на фронте.
+export function computeTopFarmers(orders: AdminOrderDto[], farmers: Farmer[]): TopFarmerRow[] {
+  const revenueByFarmerId = new Map<number, number>();
+  for (const o of orders) {
+    if (o.status !== OrderStatus.Completed) continue;
+    revenueByFarmerId.set(o.farmerId, (revenueByFarmerId.get(o.farmerId) ?? 0) + o.totalAmount);
+  }
+  return farmers
+    .map((f) => ({
+      id: f.id,
+      name: f.farmName,
+      region: f.region,
+      rating: f.rating,
+      revenue: revenueByFarmerId.get(f.id) ?? 0,
+      avatarUrl: f.avatarUrl,
+    }))
+    .sort((a, b) => b.revenue - a.revenue || b.rating - a.rating)
+    .slice(0, 4);
+}
+
+// Популярность категории — доля активных объявлений этой категории от всех
+// активных объявлений (то же реальное productCount, что уже используется в
+// каталоге, data/catalogStore.ts) — честная замена выдуманной доли выручки.
+export function computePopularCategories(categories: Category[]): PopularCategoryRow[] {
+  const total = categories.reduce((sum, c) => sum + c.productCount, 0);
   return categories
-    .filter((c) => amounts[c.slug] !== undefined)
+    .filter((c) => c.productCount > 0)
+    .sort((a, b) => b.productCount - a.productCount)
+    .slice(0, 5)
     .map((c) => ({
       slug: c.slug,
       name: c.name,
       icon: c.icon,
-      amount: amounts[c.slug],
-      percent: Math.round((amounts[c.slug] / total) * 1000) / 10,
-    }))
-    .sort((a, b) => b.amount - a.amount);
+      percent: total > 0 ? Math.round((c.productCount / total) * 1000) / 10 : 0,
+    }));
 }

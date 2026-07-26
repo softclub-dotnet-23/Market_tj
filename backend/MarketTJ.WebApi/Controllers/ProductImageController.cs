@@ -1,5 +1,6 @@
 using MarketTJ.Application.Dto.ProductImageDto;
 using MarketTJ.Application.Interfaces.Services;
+using MarketTJ.WebApi.Models;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 
@@ -24,6 +25,10 @@ public class ProductImageController(IProductImageService service) : ApiControlle
     [HttpPost]
     public async Task<IActionResult> Create([FromBody] CreateProductImageDto dto)
         => HandleResult(await service.CreateAsync(dto));
+
+    [HttpPost("upload")]
+    public async Task<IActionResult> Upload([FromForm] UploadProductImageRequest request)
+        => HandleResult(await service.UploadAsync(request.ProductListingId, request.IsMain, request.File.OpenReadStream(), request.File.FileName, request.File.Length));
 
     [HttpPut("{id:int}")]
     public async Task<IActionResult> Update(int id, [FromBody] UpdateProductImageDto dto)

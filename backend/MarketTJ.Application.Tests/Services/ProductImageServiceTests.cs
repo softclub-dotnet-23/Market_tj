@@ -1,6 +1,7 @@
 using MarketTJ.Application.Common;
 using MarketTJ.Application.Dto.ProductImageDto;
 using MarketTJ.Application.Interfaces.Repositories;
+using MarketTJ.Application.Interfaces.Services;
 using MarketTJ.Application.Services;
 using MarketTJ.Domain.Entities;
 using MarketTJ.Domain.Enums;
@@ -13,12 +14,13 @@ public class ProductImageServiceTests
 {
     private readonly Mock<IProductImageRepository> _productImageRepository = new();
     private readonly Mock<IProductListingRepository> _productListingRepository = new();
+    private readonly Mock<IFileStorageService> _fileStorageService = new();
     private readonly Mock<ILogger<ProductImageService>> _logger = new();
     private readonly ProductImageService _service;
 
     public ProductImageServiceTests()
     {
-        _service = new ProductImageService(_productImageRepository.Object, _productListingRepository.Object, _logger.Object);
+        _service = new ProductImageService(_productImageRepository.Object, _productListingRepository.Object, _fileStorageService.Object, _logger.Object);
         _productListingRepository.Setup(r => r.GetByIdAsync(It.IsAny<int>())).ReturnsAsync((int id) => new ProductListing
         {
             Id = id, FarmerProfileId = 1, ProductId = 1, Title = "Listing", RetailPricePerKg = 10,
@@ -307,6 +309,89 @@ public class ProductImageServiceTests
         _productImageRepository.Setup(r => r.GetByIdAsync(It.IsAny<int>())).ThrowsAsync(new Exception("db error"));
 
         var result = await _service.DeleteAsync(1);
+
+        Assert.False(result.IsSuccess);
+        Assert.Equal(ErrorType.InternalServerError, result.ErrorType);
+    }
+
+    [Fact]
+    public async Task DeleteAsync_ExistingImage_DeletesFileFromStorage()
+    {
+        var image = CreateImage(1);
+        _productImageRepository.Setup(r => r.GetByIdAsync(1)).ReturnsAsync(image);
+
+        await _service.DeleteAsync(1);
+
+        _fileStorageService.Verify(f => f.Delete(image.ImageUrl), Times.Once);
+    }
+
+    // ---------- UploadAsync ----------
+
+    [Fact]
+    public async Task UploadAsync_ValidFile_SavesAndReturnsDto()
+    {
+        _fileStorageService.Setup(f => f.SaveAsync(It.IsAny<Stream>(), "photo.jpg", "listings/1")).ReturnsAsync("/uploads/listings/1/new.jpg");
+
+        var result = await _service.UploadAsync(1, true, Stream.Null, "photo.jpg", 1024);
+
+        Assert.True(result.IsSuccess);
+        Assert.Equal("/uploads/listings/1/new.jpg", result.Data!.ImageUrl);
+        Assert.True(result.Data!.IsMain);
+        _productImageRepository.Verify(r => r.AddAsync(It.IsAny<ProductImage>()), Times.Once);
+    }
+
+    [Fact]
+    public async Task UploadAsync_DisallowedExtension_ReturnsValidationError()
+    {
+        var result = await _service.UploadAsync(1, false, Stream.Null, "photo.gif", 1024);
+
+        Assert.False(result.IsSuccess);
+        Assert.Equal(ErrorType.Validation, result.ErrorType);
+        _fileStorageService.Verify(f => f.SaveAsync(It.IsAny<Stream>(), It.IsAny<string>(), It.IsAny<string>()), Times.Never);
+    }
+
+    [Fact]
+    public async Task UploadAsync_FileTooLarge_ReturnsValidationError()
+    {
+        var result = await _service.UploadAsync(1, false, Stream.Null, "photo.jpg", 6 * 1024 * 1024);
+
+        Assert.False(result.IsSuccess);
+        Assert.Equal(ErrorType.Validation, result.ErrorType);
+        _fileStorageService.Verify(f => f.SaveAsync(It.IsAny<Stream>(), It.IsAny<string>(), It.IsAny<string>()), Times.Never);
+    }
+
+    [Fact]
+    public async Task UploadAsync_ListingNotFound_ReturnsNotFound()
+    {
+        _productListingRepository.Setup(r => r.GetByIdAsync(It.IsAny<int>())).ReturnsAsync((ProductListing?)null);
+
+        var result = await _service.UploadAsync(1, false, Stream.Null, "photo.jpg", 1024);
+
+        Assert.False(result.IsSuccess);
+        Assert.Equal(ErrorType.NotFound, result.ErrorType);
+        _fileStorageService.Verify(f => f.SaveAsync(It.IsAny<Stream>(), It.IsAny<string>(), It.IsAny<string>()), Times.Never);
+    }
+
+    [Fact]
+    public async Task UploadAsync_ListingAlreadyHasFiveImages_ReturnsValidationError()
+    {
+        _productImageRepository.Setup(r => r.GetAllAsync()).ReturnsAsync([
+            CreateImage(1, 1), CreateImage(2, 1), CreateImage(3, 1), CreateImage(4, 1), CreateImage(5, 1)
+        ]);
+
+        var result = await _service.UploadAsync(1, false, Stream.Null, "photo.jpg", 1024);
+
+        Assert.False(result.IsSuccess);
+        Assert.Equal(ErrorType.Validation, result.ErrorType);
+        _fileStorageService.Verify(f => f.SaveAsync(It.IsAny<Stream>(), It.IsAny<string>(), It.IsAny<string>()), Times.Never);
+    }
+
+    [Fact]
+    public async Task UploadAsync_RepositoryThrows_ReturnsInternalServerError()
+    {
+        _productListingRepository.Setup(r => r.GetByIdAsync(It.IsAny<int>())).ThrowsAsync(new Exception("db error"));
+
+        var result = await _service.UploadAsync(1, false, Stream.Null, "photo.jpg", 1024);
 
         Assert.False(result.IsSuccess);
         Assert.Equal(ErrorType.InternalServerError, result.ErrorType);

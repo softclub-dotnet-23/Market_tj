@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { apiGet } from "@/lib/api";
+import { apiDelete, apiGet, apiPost, apiPut } from "@/lib/api";
 
 export const UserRole = { Admin: 1, Farmer: 2, Customer: 3, Courier: 4 } as const;
 export const FarmerVerificationStatus = { Pending: 1, Verified: 2, Rejected: 3 } as const;
@@ -24,10 +24,17 @@ export interface AdminOrderDto {
   customerId: number;
   farmerId: number;
   status: number;
+  deliveryAddress: string;
   region: string;
   district: string;
+  customerComment: string | null;
+  subtotal: number;
+  deliveryPrice: number;
   totalAmount: number;
   createdAt: string;
+  acceptedAt: string | null;
+  completedAt: string | null;
+  cancelledAt: string | null;
 }
 
 export interface AdminProductListingDto {
@@ -55,7 +62,12 @@ export interface AdminFarmerDto {
   farmName: string;
   region: string;
   district: string;
+  village: string;
+  address: string;
+  description: string | null;
   verificationStatus: number;
+  verifiedAt: string | null;
+  verifiedByAdminId: number | null;
   createdAt: string;
 }
 
@@ -94,6 +106,28 @@ export interface AdminSettingDto {
   value: string;
   description: string | null;
   updatedAt: string;
+}
+
+export interface AdminCourierDto {
+  id: number;
+  userId: number;
+  transportType: string;
+  vehicleNumber: string;
+  region: string;
+  district: string;
+  isAvailable: boolean;
+  isActive: boolean;
+  createdAt: string;
+}
+
+export interface AdminDeliveryZoneDto {
+  id: number;
+  region: string;
+  district: string;
+  basePrice: number;
+  pricePerKm: number | null;
+  isActive: boolean;
+  createdAt: string;
 }
 
 export interface TopSellingProductDto {
@@ -160,21 +194,37 @@ function useAsync<T>(fetcher: () => Promise<T>, deps: unknown[]): AsyncState<T> 
   return state;
 }
 
-export function useAdminOrders() {
-  const { data, loading, error } = useAsync(() => apiGet<AdminOrderDto[]>("/orders"), []);
+export function useAdminOrders(refreshKey = 0) {
+  const { data, loading, error } = useAsync(() => apiGet<AdminOrderDto[]>("/orders"), [refreshKey]);
   const orders = data ? [...data].sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()) : null;
   return { orders, loading, error };
+}
+
+export interface AdminOrderItemDto {
+  id: number;
+  orderId: number;
+  productListingId: number;
+  productName: string;
+  unitPrice: number;
+  quantity: number;
+  totalPrice: number;
+  createdAt: string;
+}
+
+export function useAdminOrderItems() {
+  const { data, loading, error } = useAsync(() => apiGet<AdminOrderItemDto[]>("/order-items"), []);
+  return { orderItems: data, loading, error };
 }
 
 // /api/product-listings — единственный список из этих семи с настоящей
 // серверной пагинацией (раздел 19 ТЗ) — передаём page напрямую, а не грузим
 // всё и режем на фронте, как для остальных.
-export function useAdminProducts(page: number, pageSize: number) {
-  return useAsync(() => apiGet<AdminProductsPage>(`/product-listings?pageNumber=${page}&pageSize=${pageSize}`), [page, pageSize]);
+export function useAdminProducts(page: number, pageSize: number, refreshKey = 0) {
+  return useAsync(() => apiGet<AdminProductsPage>(`/product-listings?pageNumber=${page}&pageSize=${pageSize}`), [page, pageSize, refreshKey]);
 }
 
-export function useAdminFarmers() {
-  const { data, loading, error } = useAsync(() => apiGet<AdminFarmerDto[]>("/farmer-profiles"), []);
+export function useAdminFarmers(refreshKey = 0) {
+  const { data, loading, error } = useAsync(() => apiGet<AdminFarmerDto[]>("/farmer-profiles"), [refreshKey]);
   return { farmers: data, loading, error };
 }
 
@@ -184,22 +234,177 @@ export function useAdminCustomers() {
   return { customers, loading, error };
 }
 
-export function useAdminCommissions() {
-  const { data, loading, error } = useAsync(() => apiGet<AdminCommissionDto[]>("/commissions"), []);
+export function useAdminCommissions(refreshKey = 0) {
+  const { data, loading, error } = useAsync(() => apiGet<AdminCommissionDto[]>("/commissions"), [refreshKey]);
   return { commissions: data, loading, error };
 }
 
-export function useAdminReviews() {
-  const { data, loading, error } = useAsync(() => apiGet<AdminReviewDto[]>("/reviews"), []);
+export function useAdminReviews(refreshKey = 0) {
+  const { data, loading, error } = useAsync(() => apiGet<AdminReviewDto[]>("/reviews"), [refreshKey]);
   return { reviews: data, loading, error };
 }
 
-export function useAdminSettings() {
-  const { data, loading, error } = useAsync(() => apiGet<AdminSettingDto[]>("/app-settings"), []);
+export function useAdminSettings(refreshKey = 0) {
+  const { data, loading, error } = useAsync(() => apiGet<AdminSettingDto[]>("/app-settings"), [refreshKey]);
   return { settings: data, loading, error };
+}
+
+export function useAdminCouriers(refreshKey = 0) {
+  const { data, loading, error } = useAsync(() => apiGet<AdminCourierDto[]>("/courier-profiles"), [refreshKey]);
+  return { couriers: data, loading, error };
+}
+
+export function useAdminDeliveryZones(refreshKey = 0) {
+  const { data, loading, error } = useAsync(() => apiGet<AdminDeliveryZoneDto[]>("/delivery-zones"), [refreshKey]);
+  return { zones: data, loading, error };
 }
 
 export function useAdminAnalytics() {
   const { data, loading, error } = useAsync(() => apiGet<AdminAnalyticsDto>("/analytics/admin/dashboard"), []);
   return { analytics: data, loading, error };
+}
+
+// --- Мутации (раздел 19 ТЗ — стандартный CRUD, уже готовый на бэкенде) ---
+
+// UpdateFarmerProfileDto требует все поля профиля, а не только те, что
+// меняются — реконструируем DTO из уже загруженной записи, меняя только
+// verificationStatus/verifiedAt/verifiedByAdminId.
+export function updateFarmerVerification(farmer: AdminFarmerDto, verificationStatus: number, adminUserId: number) {
+  return apiPut<string>(`/farmer-profiles/${farmer.id}`, {
+    id: farmer.id,
+    userId: farmer.userId,
+    farmName: farmer.farmName,
+    region: farmer.region,
+    district: farmer.district,
+    village: farmer.village,
+    address: farmer.address,
+    description: farmer.description,
+    verificationStatus,
+    verifiedAt: new Date().toISOString(),
+    verifiedByAdminId: adminUserId,
+  });
+}
+
+export interface CommissionFormDto {
+  categoryId: number | null;
+  percentage: number;
+  effectiveFrom: string;
+  effectiveTo: string | null;
+}
+
+export function createCommission(dto: CommissionFormDto) {
+  return apiPost<string>("/commissions", dto);
+}
+
+export function updateCommission(id: number, dto: CommissionFormDto) {
+  return apiPut<string>(`/commissions/${id}`, { id, ...dto });
+}
+
+export function deleteCommission(id: number) {
+  return apiDelete<string>(`/commissions/${id}`);
+}
+
+export function updateSettingValue(setting: AdminSettingDto, value: string, adminUserId: number) {
+  return apiPut<string>(`/app-settings/${setting.id}`, {
+    id: setting.id,
+    key: setting.key,
+    value,
+    description: setting.description,
+    updatedByAdminId: adminUserId,
+  });
+}
+
+// Бэкенд сам расставляет AcceptedAt/CompletedAt/CancelledAt при первом
+// переходе в соответствующий статус (см. OrderService.UpdateAsync) — просто
+// передаём остальные поля заказа без изменений и новый статус.
+export function updateOrderStatus(order: AdminOrderDto, status: number) {
+  return apiPut<string>(`/orders/${order.id}`, {
+    id: order.id,
+    orderNumber: order.orderNumber,
+    customerId: order.customerId,
+    farmerId: order.farmerId,
+    status,
+    deliveryAddress: order.deliveryAddress,
+    region: order.region,
+    district: order.district,
+    customerComment: order.customerComment,
+    subtotal: order.subtotal,
+    deliveryPrice: order.deliveryPrice,
+    totalAmount: order.totalAmount,
+    acceptedAt: order.acceptedAt,
+    completedAt: order.completedAt,
+    cancelledAt: order.cancelledAt,
+  });
+}
+
+// Notification.UserId — это User.Id, а Order.CustomerId — CustomerProfile.Id
+// (та же нестыковка, что и у Farmer, см. комментарий в data/customer.ts к
+// submitCustomerOrder) — резолвим через /customer-profiles. Уведомление не
+// часть самого обновления статуса, поэтому ошибку глушим, не пробрасываем.
+export async function notifyCustomerAboutOrderStatus(order: AdminOrderDto, status: number) {
+  if (status !== OrderStatus.Delivered && status !== OrderStatus.Completed) return;
+
+  try {
+    const profiles = await apiGet<{ id: number; userId: number }[]>("/customer-profiles");
+    const customerUserId = profiles.find((p) => p.id === order.customerId)?.userId;
+    if (!customerUserId) return;
+
+    const { title, message } =
+      status === OrderStatus.Completed
+        ? {
+            title: "Заказ завершён",
+            message: `Вы получили заказ ${order.orderNumber}. Спасибо за покупку! Будем рады, если оцените заказ.`,
+          }
+        : {
+            title: "Заказ доставлен",
+            message: `Ваш заказ ${order.orderNumber} доставлен.`,
+          };
+
+    await apiPost<string>("/notifications", { userId: customerUserId, title, message, isRead: false });
+  } catch (err) {
+    console.error("Не удалось отправить уведомление покупателю о статусе заказа", err);
+  }
+}
+
+export function deleteReview(id: number) {
+  return apiDelete<string>(`/reviews/${id}`);
+}
+
+export function deleteAdminProductListing(id: number) {
+  return apiDelete<string>(`/product-listings/${id}`);
+}
+
+// UpdateCourierProfileDto требует полный набор полей — переносим текущие
+// значения и меняем только isActive/isAvailable (быстрые действия в таблице).
+export function updateCourierStatus(courier: AdminCourierDto, changes: { isActive?: boolean; isAvailable?: boolean }) {
+  return apiPut<string>(`/courier-profiles/${courier.id}`, {
+    id: courier.id,
+    userId: courier.userId,
+    transportType: courier.transportType,
+    vehicleNumber: courier.vehicleNumber,
+    region: courier.region,
+    district: courier.district,
+    isAvailable: changes.isAvailable ?? courier.isAvailable,
+    isActive: changes.isActive ?? courier.isActive,
+  });
+}
+
+export interface DeliveryZoneFormDto {
+  region: string;
+  district: string;
+  basePrice: number;
+  pricePerKm: number | null;
+  isActive: boolean;
+}
+
+export function createDeliveryZone(dto: DeliveryZoneFormDto) {
+  return apiPost<string>("/delivery-zones", dto);
+}
+
+export function updateDeliveryZone(id: number, dto: DeliveryZoneFormDto) {
+  return apiPut<string>(`/delivery-zones/${id}`, { id, ...dto });
+}
+
+export function deleteDeliveryZone(id: number) {
+  return apiDelete<string>(`/delivery-zones/${id}`);
 }

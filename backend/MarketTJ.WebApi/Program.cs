@@ -62,6 +62,7 @@ builder.Services.AddAuthorization();
 
 builder.Services.AddHttpContextAccessor();
 builder.Services.AddScoped<ICurrentUserService, CurrentUserService>();
+builder.Services.AddScoped<IFileStorageService, LocalFileStorageService>();
 
 // GET /health — для docker-compose healthcheck / внешнего мониторинга,
 // без авторизации (см. app.MapHealthChecks ниже — не под UseAuthorization).

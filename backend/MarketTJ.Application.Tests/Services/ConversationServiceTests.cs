@@ -27,7 +27,9 @@ public class ConversationServiceTests
             DeliveryAddress = "A", Region = "Хатлон", District = "Бохтар", Subtotal = 100, DeliveryPrice = 10, TotalAmount = 110
         });
         _customerProfileRepository.Setup(r => r.GetByIdAsync(It.IsAny<int>())).ReturnsAsync((int id) => new CustomerProfile { Id = id, UserId = 10, CustomerType = CustomerType.Retail, Region = "Хатлон", District = "Бохтар" });
+        _customerProfileRepository.Setup(r => r.GetByUserIdAsync(10)).ReturnsAsync(new CustomerProfile { Id = 1, UserId = 10, CustomerType = CustomerType.Retail, Region = "Хатлон", District = "Бохтар" });
         _farmerProfileRepository.Setup(r => r.GetByIdAsync(It.IsAny<int>())).ReturnsAsync((int id) => new FarmerProfile { Id = id, UserId = 20, FarmName = "F", Region = "Хатлон", District = "Бохтар", Village = "V", Address = "A", VerificationStatus = FarmerVerificationStatus.Verified });
+        _farmerProfileRepository.Setup(r => r.GetByUserIdAsync(20)).ReturnsAsync(new FarmerProfile { Id = 1, UserId = 20, FarmName = "F", Region = "Хатлон", District = "Бохтар", Village = "V", Address = "A", VerificationStatus = FarmerVerificationStatus.Verified });
         _conversationRepository.Setup(r => r.GetAllAsync()).ReturnsAsync([]);
     }
 
@@ -54,6 +56,15 @@ public class ConversationServiceTests
     {
         Id = id,
         OrderId = orderId,
+        CustomerId = 10,
+        FarmerId = 20,
+        IsClosed = false
+    };
+
+    // OrderId = null — чат до заказа (вопрос фермеру про товар).
+    private static CreateConversationDto ValidPreOrderCreateDto() => new()
+    {
+        OrderId = null,
         CustomerId = 10,
         FarmerId = 20,
         IsClosed = false
@@ -239,6 +250,74 @@ public class ConversationServiceTests
 
         Assert.False(result.IsSuccess);
         Assert.Equal(ErrorType.InternalServerError, result.ErrorType);
+    }
+
+    // ---------- CreateAsync: чат до заказа (OrderId = null) ----------
+
+    [Fact]
+    public async Task CreateAsync_NullOrderId_ValidData_AddsConversationAndReturnsOk()
+    {
+        var result = await _service.CreateAsync(ValidPreOrderCreateDto());
+
+        Assert.True(result.IsSuccess);
+        _conversationRepository.Verify(r => r.AddAsync(It.Is<Conversation>(c => c.OrderId == null)), Times.Once);
+        _orderRepository.Verify(r => r.GetByIdAsync(It.IsAny<int>()), Times.Never);
+    }
+
+    [Fact]
+    public async Task CreateAsync_NullOrderId_CustomerNotFound_ReturnsValidationError()
+    {
+        _customerProfileRepository.Setup(r => r.GetByUserIdAsync(It.IsAny<int>())).ReturnsAsync((CustomerProfile?)null);
+
+        var result = await _service.CreateAsync(ValidPreOrderCreateDto());
+
+        Assert.False(result.IsSuccess);
+        Assert.Equal(ErrorType.Validation, result.ErrorType);
+        _conversationRepository.Verify(r => r.AddAsync(It.IsAny<Conversation>()), Times.Never);
+    }
+
+    [Fact]
+    public async Task CreateAsync_NullOrderId_FarmerNotVerified_ReturnsValidationError()
+    {
+        _farmerProfileRepository.Setup(r => r.GetByUserIdAsync(20)).ReturnsAsync(new FarmerProfile
+        {
+            Id = 1, UserId = 20, FarmName = "F", Region = "Хатлон", District = "Бохтар", Village = "V", Address = "A", VerificationStatus = FarmerVerificationStatus.Pending
+        });
+
+        var result = await _service.CreateAsync(ValidPreOrderCreateDto());
+
+        Assert.False(result.IsSuccess);
+        Assert.Equal(ErrorType.Validation, result.ErrorType);
+        _conversationRepository.Verify(r => r.AddAsync(It.IsAny<Conversation>()), Times.Never);
+    }
+
+    [Fact]
+    public async Task CreateAsync_NullOrderId_ConversationAlreadyExistsForPair_ReturnsConflict()
+    {
+        _conversationRepository.Setup(r => r.GetAllAsync()).ReturnsAsync([new Conversation
+        {
+            Id = 1, OrderId = null, CustomerId = 10, FarmerId = 20, IsClosed = false, CreatedAt = DateTime.UtcNow, UpdatedAt = DateTime.UtcNow
+        }]);
+
+        var result = await _service.CreateAsync(ValidPreOrderCreateDto());
+
+        Assert.False(result.IsSuccess);
+        Assert.Equal(ErrorType.Conflict, result.ErrorType);
+        _conversationRepository.Verify(r => r.AddAsync(It.IsAny<Conversation>()), Times.Never);
+    }
+
+    [Fact]
+    public async Task CreateAsync_NullOrderId_ExistingConversationForSameOrderDoesNotBlock()
+    {
+        // Чат по конкретному заказу и чат "до заказа" — разные ключи
+        // уникальности (OrderId vs пара CustomerId/FarmerId), поэтому
+        // существование одного не должно мешать создать другой.
+        _conversationRepository.Setup(r => r.GetAllAsync()).ReturnsAsync([CreateConversation(1, 1)]);
+
+        var result = await _service.CreateAsync(ValidPreOrderCreateDto());
+
+        Assert.True(result.IsSuccess);
+        _conversationRepository.Verify(r => r.AddAsync(It.IsAny<Conversation>()), Times.Once);
     }
 
     // ---------- UpdateAsync ----------

@@ -6,6 +6,7 @@ public interface ICustomerProfileRepository
 {
     Task<List<CustomerProfile>> GetAllAsync();
     Task<CustomerProfile?> GetByIdAsync(int id);
+    Task<CustomerProfile?> GetByUserIdAsync(int userId);
     Task AddAsync(CustomerProfile customerProfile);
     Task UpdateAsync(CustomerProfile customerProfile);
     Task DeleteAsync(CustomerProfile customerProfile);

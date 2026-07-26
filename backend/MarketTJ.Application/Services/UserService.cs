@@ -11,7 +11,11 @@ using Microsoft.Extensions.Logging;
 
 namespace MarketTJ.Application.Services;
 
-public class UserService(IUserRepository userRepository, IAuditLogService auditLogService, ILogger<UserService> logger) : IUserService
+public class UserService(
+    IUserRepository userRepository,
+    IAuditLogService auditLogService,
+    IFileStorageService fileStorageService,
+    ILogger<UserService> logger) : IUserService
 {
     public async Task<Result<IEnumerable<GetUserDto>>> GetAllAsync()
     {
@@ -258,6 +262,64 @@ public class UserService(IUserRepository userRepository, IAuditLogService auditL
         }
     }
 
+    public async Task<Result<AvatarDto>> UploadAvatarAsync(int userId, Stream fileContent, string fileName, long fileSizeBytes)
+    {
+        try
+        {
+            var validation = FileUploadValidator.ValidateImage(fileName, fileSizeBytes);
+            if (validation is not null)
+                return Result<AvatarDto>.Fail(validation.Error!, validation.ErrorType!.Value);
+
+            var user = await userRepository.GetByIdAsync(userId);
+            if (user is null)
+                return Result<AvatarDto>.Fail("Пользователь не найден", ErrorType.NotFound);
+
+            var previousAvatarUrl = user.AvatarUrl;
+            var newAvatarUrl = await fileStorageService.SaveAsync(fileContent, fileName, $"avatars/{userId}");
+
+            user.AvatarUrl = newAvatarUrl;
+            user.UpdatedAt = DateTime.UtcNow;
+            await userRepository.UpdateAsync(user);
+
+            // Старый файл удаляется уже после успешного сохранения нового и
+            // записи в базу — если что-то из этого упадёт, старый аватар не
+            // потеряется.
+            fileStorageService.Delete(previousAvatarUrl);
+
+            return Result<AvatarDto>.Ok(new AvatarDto { AvatarUrl = newAvatarUrl });
+        }
+        catch (Exception ex)
+        {
+            logger.LogError(ex, "Ошибка при загрузке аватара пользователя {Id}", userId);
+            return Result<AvatarDto>.Fail("Не удалось загрузить аватар", ErrorType.InternalServerError);
+        }
+    }
+
+    public async Task<Result<string>> DeleteAvatarAsync(int userId)
+    {
+        try
+        {
+            var user = await userRepository.GetByIdAsync(userId);
+            if (user is null)
+                return Result<string>.Fail("Пользователь не найден", ErrorType.NotFound);
+
+            if (user.AvatarUrl is null)
+                return Result<string>.Ok("У пользователя нет аватара");
+
+            fileStorageService.Delete(user.AvatarUrl);
+            user.AvatarUrl = null;
+            user.UpdatedAt = DateTime.UtcNow;
+            await userRepository.UpdateAsync(user);
+
+            return Result<string>.Ok("Аватар удалён");
+        }
+        catch (Exception ex)
+        {
+            logger.LogError(ex, "Ошибка при удалении аватара пользователя {Id}", userId);
+            return Result<string>.Fail("Не удалось удалить аватар", ErrorType.InternalServerError);
+        }
+    }
+
     private static IEnumerable<User> Sort(IEnumerable<User> users, string? sortBy, bool descending)
     {
         Func<User, object> keySelector = sortBy?.ToLowerInvariant() switch
@@ -278,6 +340,7 @@ public class UserService(IUserRepository userRepository, IAuditLogService auditL
         FullName = user.FullName,
         Email = user.Email,
         PhoneNumber = user.PhoneNumber,
+        AvatarUrl = user.AvatarUrl,
         Role = user.Role,
         IsActive = user.IsActive,
         CreatedAt = user.CreatedAt,

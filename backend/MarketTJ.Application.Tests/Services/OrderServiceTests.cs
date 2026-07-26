@@ -13,6 +13,8 @@ namespace MarketTJ.Application.Tests.Services;
 public class OrderServiceTests
 {
     private readonly Mock<IOrderRepository> _orderRepository = new();
+    private readonly Mock<IOrderItemRepository> _orderItemRepository = new();
+    private readonly Mock<IProductListingRepository> _productListingRepository = new();
     private readonly Mock<ICustomerProfileRepository> _customerProfileRepository = new();
     private readonly Mock<IFarmerProfileRepository> _farmerProfileRepository = new();
     private readonly Mock<IUserRepository> _userRepository = new();
@@ -22,11 +24,12 @@ public class OrderServiceTests
 
     public OrderServiceTests()
     {
-        _service = new OrderService(_orderRepository.Object, _customerProfileRepository.Object, _farmerProfileRepository.Object, _userRepository.Object, _auditLogService.Object, _logger.Object);
+        _service = new OrderService(_orderRepository.Object, _orderItemRepository.Object, _productListingRepository.Object, _customerProfileRepository.Object, _farmerProfileRepository.Object, _userRepository.Object, _auditLogService.Object, _logger.Object);
         _customerProfileRepository.Setup(r => r.GetByIdAsync(It.IsAny<int>())).ReturnsAsync((int id) => new CustomerProfile { Id = id, UserId = 10, CustomerType = CustomerType.Retail, Region = "Хатлон", District = "Бохтар" });
         _farmerProfileRepository.Setup(r => r.GetByIdAsync(It.IsAny<int>())).ReturnsAsync((int id) => new FarmerProfile { Id = id, UserId = 20, FarmName = "Farm", Region = "Хатлон", District = "Бохтар", Village = "V", Address = "A", VerificationStatus = FarmerVerificationStatus.Verified });
         _userRepository.Setup(r => r.GetByIdAsync(10)).ReturnsAsync(new User { Id = 10, IsActive = true, Role = UserRole.Customer, FullName = "C", Email = "c@e.com", PhoneNumber = "1", PasswordHash = "h" });
         _orderRepository.Setup(r => r.GetAllAsync()).ReturnsAsync([]);
+        _orderItemRepository.Setup(r => r.GetAllAsync()).ReturnsAsync([]);
     }
 
     private static Order CreateOrder(int id = 1, OrderStatus status = OrderStatus.Pending, string orderNumber = "ORD-1") => new()
@@ -516,6 +519,75 @@ public class OrderServiceTests
         await _service.UpdateAsync(1, ValidUpdateDto(1, OrderStatus.Cancelled));
 
         Assert.NotNull(order.CancelledAt);
+    }
+
+    // Раздел 10.4 ТЗ: остаток по объявлению списывается при создании
+    // OrderItem (см. OrderItemServiceTests) — при отмене/отклонении заказа он
+    // должен возвращаться обратно, иначе товар "теряется" без продажи.
+    [Fact]
+    public async Task UpdateAsync_StatusChangedToCancelled_RestoresStockForOrderItems()
+    {
+        var order = CreateOrder(1, OrderStatus.Pending);
+        var listing = new ProductListing
+        {
+            Id = 5, FarmerProfileId = 1, ProductId = 1, Title = "Listing", RetailPricePerKg = 10,
+            AvailableQuantity = 20, MinimumOrderQuantity = 1, QualityGrade = "A", Region = "Хатлон",
+            District = "Бохтар", Address = "A", Status = ListingStatus.Active
+        };
+        _orderRepository.Setup(r => r.GetByIdAsync(1)).ReturnsAsync(order);
+        _orderItemRepository.Setup(r => r.GetAllAsync()).ReturnsAsync([
+            new OrderItem { Id = 1, OrderId = 1, ProductListingId = 5, ProductName = "P", UnitPrice = 10, Quantity = 7, TotalPrice = 70 }
+        ]);
+        _productListingRepository.Setup(r => r.GetByIdAsync(5)).ReturnsAsync(listing);
+
+        await _service.UpdateAsync(1, ValidUpdateDto(1, OrderStatus.Cancelled));
+
+        Assert.Equal(27, listing.AvailableQuantity);
+        _productListingRepository.Verify(r => r.UpdateAsync(listing), Times.Once);
+    }
+
+    [Fact]
+    public async Task UpdateAsync_StatusChangedToRejected_RestoresStockForOrderItems()
+    {
+        var order = CreateOrder(1, OrderStatus.Pending);
+        var listing = new ProductListing
+        {
+            Id = 5, FarmerProfileId = 1, ProductId = 1, Title = "Listing", RetailPricePerKg = 10,
+            AvailableQuantity = 20, MinimumOrderQuantity = 1, QualityGrade = "A", Region = "Хатлон",
+            District = "Бохтар", Address = "A", Status = ListingStatus.Active
+        };
+        _orderRepository.Setup(r => r.GetByIdAsync(1)).ReturnsAsync(order);
+        _orderItemRepository.Setup(r => r.GetAllAsync()).ReturnsAsync([
+            new OrderItem { Id = 1, OrderId = 1, ProductListingId = 5, ProductName = "P", UnitPrice = 10, Quantity = 3, TotalPrice = 30 }
+        ]);
+        _productListingRepository.Setup(r => r.GetByIdAsync(5)).ReturnsAsync(listing);
+
+        await _service.UpdateAsync(1, ValidUpdateDto(1, OrderStatus.Rejected));
+
+        Assert.Equal(23, listing.AvailableQuantity);
+    }
+
+    [Fact]
+    public async Task UpdateAsync_StatusChangedToAccepted_DoesNotTouchStock()
+    {
+        var order = CreateOrder(1, OrderStatus.Pending);
+        _orderRepository.Setup(r => r.GetByIdAsync(1)).ReturnsAsync(order);
+
+        await _service.UpdateAsync(1, ValidUpdateDto(1, OrderStatus.Accepted));
+
+        _orderItemRepository.Verify(r => r.GetAllAsync(), Times.Never);
+        _productListingRepository.Verify(r => r.UpdateAsync(It.IsAny<ProductListing>()), Times.Never);
+    }
+
+    [Fact]
+    public async Task UpdateAsync_AlreadyCancelled_DoesNotRestoreStockAgain()
+    {
+        var order = CreateOrder(1, OrderStatus.Cancelled);
+        _orderRepository.Setup(r => r.GetByIdAsync(1)).ReturnsAsync(order);
+
+        await _service.UpdateAsync(1, ValidUpdateDto(1, OrderStatus.Cancelled));
+
+        _orderItemRepository.Verify(r => r.GetAllAsync(), Times.Never);
     }
 
     [Fact]

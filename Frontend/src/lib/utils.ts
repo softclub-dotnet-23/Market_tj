@@ -21,10 +21,36 @@ export function formatNumber(amount: number) {
   return new Intl.NumberFormat(numberLocale()).format(amount);
 }
 
+// Единственное место, где решается, розничная цена применяется или оптовая —
+// используется везде, где считается сумма по товару (корзина, мини-корзина,
+// страница товара, чекаут), чтобы не разъезжались между собой: раньше цена
+// заказа везде считалась только по retailPricePerKg, из-за чего порог
+// "от N кг — оптовая цена" был просто текстом на странице и на сумму не влиял.
+export function getUnitPrice(
+  product: { retailPricePerKg: number; wholesalePricePerKg?: number; wholesaleMinimumQuantity?: number },
+  quantity: number,
+): number {
+  if (
+    product.wholesalePricePerKg != null &&
+    product.wholesaleMinimumQuantity != null &&
+    quantity >= product.wholesaleMinimumQuantity
+  ) {
+    return product.wholesalePricePerKg;
+  }
+  return product.retailPricePerKg;
+}
+
 export function formatDate(iso: string) {
   const d = new Date(iso);
   const months = i18n.t("dates.months", { ns: "common", returnObjects: true }) as string[];
   return `${d.getDate()} ${months[d.getMonth()]} ${d.getFullYear()}`;
+}
+
+export function formatDateTime(iso: string) {
+  const d = new Date(iso);
+  const hours = String(d.getHours()).padStart(2, "0");
+  const minutes = String(d.getMinutes()).padStart(2, "0");
+  return `${formatDate(iso)}, ${hours}:${minutes}`;
 }
 
 export function timeAgo(iso: string) {
@@ -37,6 +63,16 @@ export function timeAgo(iso: string) {
   if (days < 30) return i18n.t("dates.weeksAgo", { ns: "common", count: Math.floor(days / 7) });
   if (days < 365) return i18n.t("dates.monthsAgo", { ns: "common", count: Math.floor(days / 30) });
   return i18n.t("dates.yearsAgo", { ns: "common", count: Math.floor(days / 365) });
+}
+
+// Бэкенд (Npgsql/Postgres `timestamp with time zone`) требует DateTime с
+// Kind=Utc — голая дата из <input type="date"> ("2026-07-24") при разборе
+// System.Text.Json получает Kind=Unspecified и роняет запрос 500-й ошибкой
+// (ArgumentException: "Cannot write DateTime with Kind=Unspecified...").
+// Достаточно самим дописать время+Z, не трогая бэкенд.
+export function dateInputToIso(value: string): string | null {
+  if (!value) return null;
+  return `${value}T00:00:00.000Z`;
 }
 
 export function daysAgoISO(days: number) {
@@ -54,4 +90,23 @@ export function slugify(value: string) {
     .toLowerCase()
     .replace(/[^a-zа-я0-9]+/gi, "-")
     .replace(/(^-|-$)/g, "");
+}
+
+// Реальный тренд для StatCard из помесячного ряда (AdminAnalyticsDto.revenueByMonth /
+// FarmerDashboardDto.revenueByMonth — единственные метрики в проекте, у которых
+// вообще есть история). changePercent: null, если сравнивать не с чем (меньше
+// двух месяцев данных) — компонент в этом случае покажет "—", а не подделает число.
+export function computeMonthlyTrend(entries: { year: number; month: number; revenue: number }[]) {
+  const sorted = [...entries].sort((a, b) => a.year - b.year || a.month - b.month);
+  const sparkline = sorted.slice(-6).map((e) => e.revenue);
+
+  if (sorted.length < 2) {
+    return { changePercent: null as number | null, sparkline };
+  }
+
+  const previous = sorted[sorted.length - 2].revenue;
+  const current = sorted[sorted.length - 1].revenue;
+  const changePercent = previous === 0 ? (current === 0 ? 0 : null) : ((current - previous) / previous) * 100;
+
+  return { changePercent, sparkline };
 }

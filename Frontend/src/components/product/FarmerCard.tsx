@@ -3,8 +3,9 @@ import { motion } from "framer-motion";
 import { useTranslation } from "react-i18next";
 import { BadgeCheck, MapPin, Package } from "lucide-react";
 import type { Farmer } from "@/types";
+import { Avatar } from "@/components/ui/Avatar";
 import { RatingStars } from "@/components/ui/RatingStars";
-import { farmerPhotos } from "@/assets/photos";
+import { resolveMediaUrl } from "@/lib/api";
 import { cn } from "@/lib/utils";
 
 export function FarmerCard({ farmer, className }: { farmer: Farmer; className?: string }) {
@@ -18,15 +19,13 @@ export function FarmerCard({ farmer, className }: { farmer: Farmer; className?: 
         className,
       )}
     >
-      <Link to={`/catalog?farmer=${farmer.id}`} className="relative block aspect-[4/3.2] overflow-hidden bg-stone-100 dark:bg-stone-800">
-        <motion.img
-          src={farmerPhotos[farmer.id]}
-          alt={farmer.ownerName}
-          loading="lazy"
-          whileHover={{ scale: 1.06 }}
-          transition={{ duration: 0.5, ease: [0.25, 1, 0.5, 1] }}
-          className="h-full w-full object-cover object-top"
-        />
+      <Link
+        to={`/farmers/${farmer.id}`}
+        className="relative flex aspect-[4/3.2] items-center justify-center overflow-hidden bg-linear-to-br from-grove-50 via-stone-50 to-harvest-50 dark:from-grove-950 dark:via-stone-900 dark:to-stone-900"
+      >
+        <motion.div whileHover={{ scale: 1.08 }} transition={{ duration: 0.5, ease: [0.25, 1, 0.5, 1] }}>
+          <Avatar name={farmer.farmName} src={farmer.avatarUrl ? resolveMediaUrl(farmer.avatarUrl) : undefined} size={84} ring />
+        </motion.div>
         {farmer.verified && (
           <span className="absolute right-3 top-3 flex items-center gap-1 rounded-full bg-white/95 px-2.5 py-1 text-xs font-semibold text-grove-700 shadow-sm backdrop-blur dark:bg-stone-800/95 dark:text-grove-400">
             <BadgeCheck size={13} />
@@ -42,7 +41,6 @@ export function FarmerCard({ farmer, className }: { farmer: Farmer; className?: 
               {farmer.farmName}
             </h3>
           </Link>
-          <p className="text-sm text-stone-500 dark:text-stone-400">{farmer.ownerName}</p>
         </div>
 
         <div className="flex items-center gap-1.5 text-xs text-stone-400 dark:text-stone-500">

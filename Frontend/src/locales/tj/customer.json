@@ -1,0 +1,130 @@
+{
+  "nav": {
+    "overview": "Хулоса",
+    "catalog": "Каталог",
+    "favorites": "Дӯстдоштаҳо",
+    "cart": "Сабад",
+    "orders": "Фармоишҳои ман",
+    "messages": "Паёмҳо",
+    "notifications": "Огоҳиномаҳо",
+    "profile": "Профил"
+  },
+  "collapseSidebar": "Пӯшидани меню",
+  "expandSidebar": "Кушодани меню",
+  "search": "Ҷустуҷӯ...",
+  "notifications": "Огоҳиномаҳо",
+  "customerName": "Харидор",
+  "logout": "Баромадан",
+  "common": {
+    "somoni": "сомонӣ"
+  },
+  "dashboard": {
+    "greeting": "Боз хуш омадед 👋",
+    "greetingSubtitle": "Дар бораи фармоишҳои шумо чӣ рӯй медиҳад.",
+    "stats": {
+      "totalOrders": "Ҳамаи фармоишҳо",
+      "activeOrders": "Фармоишҳои фаъол",
+      "totalSpent": "Дар маҷмӯъ сарф шуд"
+    },
+    "recentOrders": "Фармоишҳои охирин",
+    "viewAll": "Ҳамаи фармоишҳо",
+    "noOrdersYet": "Шумо ҳанӯз фармоише надоред",
+    "goToCatalog": "Гузаштан ба каталог",
+    "errorTitle": "Маълумот бор нашуд",
+    "errorDescription": "Пайвастшавии худро ба сервер санҷед ва аз нав кӯшиш кунед."
+  },
+  "orders": {
+    "errorTitle": "Фармоишҳо бор нашуданд",
+    "errorDescription": "Пайвастшавии худро ба сервер санҷед ва аз нав кӯшиш кунед.",
+    "emptyTitle": "Ҳанӯз фармоише нест",
+    "emptyDescription": "Фармоиши аввалро дар каталог ба расмият дароред — он дар ин ҷо пайдо мешавад.",
+    "columns": {
+      "orderNumber": "№ фармоиш",
+      "address": "Суроғаи расонидан",
+      "amount": "Маблағ",
+      "status": "Ҳолат",
+      "createdAt": "Сана ва вақти фармоиш",
+      "receivedAt": "Сана ва вақти гирифтан",
+      "review": "Шарҳ"
+    },
+    "farmerLabel": "Деҳқон #{{id}}",
+    "notReceivedYet": "Ҳанӯз гирифта нашудааст",
+    "status": {
+      "pending": "Дар интизорӣ",
+      "accepted": "Қабул шуд",
+      "rejected": "Рад шуд",
+      "preparing": "Омода мешавад",
+      "readyForPickup": "Омода барои гирифтан",
+      "courierAssigned": "Курьер таъин шуд",
+      "pickedUp": "Аз ҷониби курьер гирифта шуд",
+      "inDelivery": "Дар роҳ",
+      "delivered": "Расонида шуд",
+      "completed": "Анҷом ёфт",
+      "cancelled": "Бекор карда шуд"
+    },
+    "writeReview": "Шарҳ гузоштан",
+    "alreadyReviewed": "Шарҳ гузошта шуд",
+    "reviewModalTitle": "Фармоишро баҳо диҳед",
+    "reviewModalSubtitle": "Фармоиш {{orderNumber}}",
+    "reviewRatingLabel": "Баҳои шумо",
+    "reviewRatingRequired": "Баҳоро аз 1 то 5 гузоред",
+    "reviewCommentLabel": "Шарҳ",
+    "reviewCommentPlaceholder": "Нақл кунед, ҳама чиз чӣ гуна гузашт...",
+    "reviewSubmit": "Шарҳро фиристодан",
+    "reviewSuccess": "Барои шарҳ ташаккур!",
+    "reviewError": "Фиристодани шарҳ муяссар нашуд"
+  },
+  "profile": {
+    "errorTitle": "Профил бор нашуд",
+    "errorDescription": "Пайвастшавии худро ба сервер санҷед ва аз нав кӯшиш кунед.",
+    "accountTitle": "Ҳисоб",
+    "deliveryTitle": "Расонидан",
+    "fullName": "Ному насаб",
+    "email": "Email",
+    "customerType": "Навъи харидор",
+    "typeRetail": "Чакана",
+    "typeWholesale": "Яклухт",
+    "region": "Минтақа",
+    "defaultAddress": "Суроғаи пешфарз",
+    "noAddress": "Нишон дода нашуд",
+    "memberSince": "Бо мо аз",
+    "editAction": "Таҳрир кардан",
+    "editModalTitle": "Таҳрири суроғаи расонидан",
+    "updateSuccess": "Профил навсозӣ шуд",
+    "updateError": "Навсозии профил муяссар нашуд",
+    "form": {
+      "district": "Ноҳия",
+      "required": "Майдони ҳатмӣ",
+      "optional": "Ихтиёрӣ",
+      "cancel": "Бекор кардан",
+      "saveChanges": "Нигоҳ доштани тағйирот"
+    }
+  },
+  "notificationsPage": {
+    "errorTitle": "Огоҳиномаҳо бор нашуданд",
+    "errorDescription": "Пайвастшавии худро ба сервер санҷед ва аз нав кӯшиш кунед.",
+    "emptyTitle": "Ҳанӯз огоҳинома нест",
+    "emptyDescription": "Дар ин ҷо огоҳиномаҳо дар бораи ҳолати фармоишҳои шумо пайдо мешаванд."
+  },
+  "chat": {
+    "aboutOrder": "Дар бораи фармоиши {{orderNumber}}",
+    "generalInquiry": "Савол дар бораи маҳсулот",
+    "loading": "Чат боз мешавад...",
+    "emptyDescription": "Ҳанӯз паём нест — аввалин шуда нависед.",
+    "placeholder": "Паём нависед...",
+    "send": "Фиристодан",
+    "sendError": "Фиристодани паём муяссар нашуд",
+    "attachPhoto": "Замима кардани акс",
+    "photoInvalidType": "Танҳо форматҳои jpg, png, webp иҷозат дода мешаванд",
+    "photoTooLarge": "Андозаи ҳадди аксари файл — 5 МБ",
+    "photoUploadError": "Фиристодани акс муяссар нашуд"
+  },
+  "messages": {
+    "errorTitle": "Паёмҳо бор нашуданд",
+    "errorDescription": "Пайвастшавии худро ба сервер санҷед ва аз нав кӯшиш кунед.",
+    "emptyTitle": "Ҳанӯз мукотиба нест",
+    "emptyDescription": "Ба деҳқон аз саҳифаи маҳсулот нависед — мукотиба дар ин ҷо пайдо мешавад.",
+    "noMessagesYet": "Ҳанӯз паём нест",
+    "photoPreview": "Акс"
+  }
+}

@@ -1,5 +1,6 @@
 using MarketTJ.Application.Dto.ChatMessageDto;
 using MarketTJ.Application.Interfaces.Services;
+using MarketTJ.WebApi.Models;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 
@@ -20,6 +21,10 @@ public class ChatMessageController(IChatMessageService service) : ApiControllerB
     [HttpPost]
     public async Task<IActionResult> Create([FromBody] CreateChatMessageDto dto)
         => HandleResult(await service.CreateAsync(dto));
+
+    [HttpPost("upload")]
+    public async Task<IActionResult> Upload([FromForm] UploadChatMessageRequest request)
+        => HandleResult(await service.UploadAsync(request.ConversationId, request.SenderId, request.Caption, request.File.OpenReadStream(), request.File.FileName, request.File.Length));
 
     [HttpPut("{id:int}")]
     public async Task<IActionResult> Update(int id, [FromBody] UpdateChatMessageDto dto)

@@ -1,9 +1,8 @@
 import { useTranslation } from "react-i18next";
-import { BadgeCheck, ThumbsUp } from "lucide-react";
+import { BadgeCheck } from "lucide-react";
 import type { Review } from "@/types";
 import { Avatar } from "@/components/ui/Avatar";
 import { RatingStars } from "@/components/ui/RatingStars";
-import { getCustomerPhoto } from "@/assets/photos";
 import { formatDate } from "@/lib/utils";
 
 function RatingBreakdown({ reviews, rating, count }: { reviews: Review[]; rating: number; count: number }) {
@@ -48,7 +47,7 @@ export function ReviewsSection({ reviews, rating, count }: { reviews: Review[]; 
       <div className="flex flex-col divide-y divide-stone-100 dark:divide-stone-800">
         {reviews.map((review) => (
           <div key={review.id} className="flex gap-4 py-6 first:pt-0">
-            <Avatar name={review.customerName} src={getCustomerPhoto(review.id)} size={44} />
+            <Avatar name={review.customerName} size={44} />
             <div className="flex flex-1 flex-col gap-2">
               <div className="flex flex-wrap items-center justify-between gap-2">
                 <div className="flex items-center gap-2">
@@ -71,11 +70,6 @@ export function ReviewsSection({ reviews, rating, count }: { reviews: Review[]; 
                   <p className="text-sm text-stone-500 dark:text-stone-400">{review.farmerReply.message}</p>
                 </div>
               )}
-
-              <button className="mt-1 flex w-fit items-center gap-1.5 text-xs text-stone-400 transition hover:text-grove-700 dark:text-stone-500 dark:hover:text-grove-400">
-                <ThumbsUp size={12} />
-                {t("helpful", { count: review.helpfulCount })}
-              </button>
             </div>
           </div>
         ))}

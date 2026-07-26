@@ -20,7 +20,15 @@ public class FarmerProfileService(
         try
         {
             var profiles = await farmerProfileRepository.GetAllAsync();
-            return Result<IEnumerable<GetFarmerProfileDto>>.Ok(profiles.Select(ToGetDto));
+            // Публичная витрина (каталог/страница фермера) показывает аватарку
+            // хозяйства — это аватар пользователя-владельца (User.AvatarUrl),
+            // отдельного поля под фото у FarmerProfile нет. GetAllAsync() без
+            // фильтра — тот же приём "грузим всё, сопоставляем в памяти", что и
+            // везде в этом сервисе (проверка дублей UserId и т.п.).
+            var users = await userRepository.GetAllAsync();
+            var avatarByUserId = users.ToDictionary(u => u.Id, u => u.AvatarUrl);
+            return Result<IEnumerable<GetFarmerProfileDto>>.Ok(
+                profiles.Select(p => ToGetDto(p, avatarByUserId.GetValueOrDefault(p.UserId))));
         }
         catch (Exception ex)
         {
@@ -37,7 +45,8 @@ public class FarmerProfileService(
             if (profile is null)
                 return Result<GetFarmerProfileDto?>.Fail("Профиль фермера не найден", ErrorType.NotFound);
 
-            return Result<GetFarmerProfileDto?>.Ok(ToGetDto(profile));
+            var user = await userRepository.GetByIdAsync(profile.UserId);
+            return Result<GetFarmerProfileDto?>.Ok(ToGetDto(profile, user?.AvatarUrl));
         }
         catch (Exception ex)
         {
@@ -163,7 +172,7 @@ public class FarmerProfileService(
         }
     }
 
-    private static GetFarmerProfileDto ToGetDto(FarmerProfile profile) => new()
+    private static GetFarmerProfileDto ToGetDto(FarmerProfile profile, string? avatarUrl = null) => new()
     {
         Id = profile.Id,
         UserId = profile.UserId,
@@ -173,6 +182,7 @@ public class FarmerProfileService(
         Village = profile.Village,
         Address = profile.Address,
         Description = profile.Description,
+        AvatarUrl = avatarUrl,
         VerificationStatus = profile.VerificationStatus,
         VerifiedAt = profile.VerifiedAt,
         VerifiedByAdminId = profile.VerifiedByAdminId,

@@ -12,6 +12,7 @@ public class GetFarmerProfileDto
     public string Village { get; set; } = null!;
     public string Address { get; set; } = null!;
     public string? Description { get; set; }
+    public string? AvatarUrl { get; set; }
     public FarmerVerificationStatus VerificationStatus { get; set; }
     public DateTime? VerifiedAt { get; set; }
     public int? VerifiedByAdminId { get; set; }

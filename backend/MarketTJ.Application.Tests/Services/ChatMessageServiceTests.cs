@@ -1,6 +1,7 @@
 using MarketTJ.Application.Common;
 using MarketTJ.Application.Dto.ChatMessageDto;
 using MarketTJ.Application.Interfaces.Repositories;
+using MarketTJ.Application.Interfaces.Services;
 using MarketTJ.Application.Services;
 using MarketTJ.Domain.Entities;
 using MarketTJ.Domain.Enums;
@@ -14,17 +15,19 @@ public class ChatMessageServiceTests
     private readonly Mock<IChatMessageRepository> _chatMessageRepository = new();
     private readonly Mock<IConversationRepository> _conversationRepository = new();
     private readonly Mock<IUserRepository> _userRepository = new();
+    private readonly Mock<IFileStorageService> _fileStorageService = new();
     private readonly Mock<ILogger<ChatMessageService>> _logger = new();
     private readonly ChatMessageService _service;
 
     public ChatMessageServiceTests()
     {
-        _service = new ChatMessageService(_chatMessageRepository.Object, _conversationRepository.Object, _userRepository.Object, _logger.Object);
+        _service = new ChatMessageService(_chatMessageRepository.Object, _conversationRepository.Object, _userRepository.Object, _fileStorageService.Object, _logger.Object);
         _conversationRepository.Setup(r => r.GetByIdAsync(It.IsAny<int>())).ReturnsAsync((int id) => new Conversation
         {
             Id = id, OrderId = 1, CustomerId = 10, FarmerId = 20, IsClosed = false, CreatedAt = DateTime.UtcNow, UpdatedAt = DateTime.UtcNow
         });
         _userRepository.Setup(r => r.GetByIdAsync(It.IsAny<int>())).ReturnsAsync((int id) => new User { Id = id, Role = UserRole.Customer, FullName = "U", Email = "u@e.com", PhoneNumber = "1", PasswordHash = "h" });
+        _fileStorageService.Setup(f => f.SaveAsync(It.IsAny<Stream>(), It.IsAny<string>(), It.IsAny<string>())).ReturnsAsync("/uploads/chat/1/photo.jpg");
     }
 
     private static ChatMessage CreateMessage(int id = 1, int conversationId = 1, int senderId = 10) => new()
@@ -239,6 +242,24 @@ public class ChatMessageServiceTests
     // ---------- UpdateAsync ----------
 
     [Fact]
+    public async Task UpdateAsync_EmptyMessageWithImageUrl_Succeeds()
+    {
+        // Фото-сообщение без подписи (Message = "") — например, пометка
+        // прочитанным через markChatMessageRead на фронте — не должно падать
+        // с "Message обязателен", если у сообщения есть ImageUrl.
+        var message = CreateMessage(1);
+        _chatMessageRepository.Setup(r => r.GetByIdAsync(1)).ReturnsAsync(message);
+        var dto = ValidUpdateDto(1);
+        dto.Message = "";
+        dto.ImageUrl = "/uploads/chat/1/photo.jpg";
+
+        var result = await _service.UpdateAsync(1, dto);
+
+        Assert.True(result.IsSuccess);
+        _chatMessageRepository.Verify(r => r.UpdateAsync(It.IsAny<ChatMessage>()), Times.Once);
+    }
+
+    [Fact]
     public async Task UpdateAsync_ValidData_UpdatesMessageAndReturnsOk()
     {
         var message = CreateMessage(1);
@@ -349,5 +370,75 @@ public class ChatMessageServiceTests
 
         Assert.False(result.IsSuccess);
         Assert.Equal(ErrorType.InternalServerError, result.ErrorType);
+    }
+
+    // ---------- UploadAsync ----------
+
+    private static MemoryStream FakeImageStream() => new([1, 2, 3]);
+
+    [Fact]
+    public async Task UploadAsync_ValidPhoto_SavesFileAndAddsMessage()
+    {
+        var result = await _service.UploadAsync(1, 10, "Вот фото", FakeImageStream(), "photo.jpg", 1024);
+
+        Assert.True(result.IsSuccess);
+        Assert.Equal("/uploads/chat/1/photo.jpg", result.Data!.ImageUrl);
+        Assert.Equal("Вот фото", result.Data!.Message);
+        _chatMessageRepository.Verify(r => r.AddAsync(It.IsAny<ChatMessage>()), Times.Once);
+    }
+
+    [Fact]
+    public async Task UploadAsync_NoCaption_SavesWithEmptyMessage()
+    {
+        var result = await _service.UploadAsync(1, 10, null, FakeImageStream(), "photo.jpg", 1024);
+
+        Assert.True(result.IsSuccess);
+        Assert.Equal("", result.Data!.Message);
+    }
+
+    [Fact]
+    public async Task UploadAsync_InvalidExtension_ReturnsValidationErrorAndDoesNotSave()
+    {
+        var result = await _service.UploadAsync(1, 10, null, FakeImageStream(), "photo.gif", 1024);
+
+        Assert.False(result.IsSuccess);
+        Assert.Equal(ErrorType.Validation, result.ErrorType);
+        _fileStorageService.Verify(f => f.SaveAsync(It.IsAny<Stream>(), It.IsAny<string>(), It.IsAny<string>()), Times.Never);
+        _chatMessageRepository.Verify(r => r.AddAsync(It.IsAny<ChatMessage>()), Times.Never);
+    }
+
+    [Fact]
+    public async Task UploadAsync_ConversationNotFound_ReturnsNotFound()
+    {
+        _conversationRepository.Setup(r => r.GetByIdAsync(It.IsAny<int>())).ReturnsAsync((Conversation?)null);
+
+        var result = await _service.UploadAsync(1, 10, null, FakeImageStream(), "photo.jpg", 1024);
+
+        Assert.False(result.IsSuccess);
+        Assert.Equal(ErrorType.NotFound, result.ErrorType);
+    }
+
+    [Fact]
+    public async Task UploadAsync_SenderNotParticipant_ReturnsUnauthorized()
+    {
+        var result = await _service.UploadAsync(1, 999, null, FakeImageStream(), "photo.jpg", 1024);
+
+        Assert.False(result.IsSuccess);
+        Assert.Equal(ErrorType.Unauthorized, result.ErrorType);
+        _fileStorageService.Verify(f => f.SaveAsync(It.IsAny<Stream>(), It.IsAny<string>(), It.IsAny<string>()), Times.Never);
+    }
+
+    [Fact]
+    public async Task UploadAsync_ClosedConversation_ReturnsValidationError()
+    {
+        _conversationRepository.Setup(r => r.GetByIdAsync(It.IsAny<int>())).ReturnsAsync(new Conversation
+        {
+            Id = 1, OrderId = 1, CustomerId = 10, FarmerId = 20, IsClosed = true, CreatedAt = DateTime.UtcNow, UpdatedAt = DateTime.UtcNow
+        });
+
+        var result = await _service.UploadAsync(1, 10, null, FakeImageStream(), "photo.jpg", 1024);
+
+        Assert.False(result.IsSuccess);
+        Assert.Equal(ErrorType.Validation, result.ErrorType);
     }
 }

@@ -1,0 +1,130 @@
+{
+  "nav": {
+    "overview": "Обзор",
+    "catalog": "Каталог",
+    "favorites": "Избранное",
+    "cart": "Корзина",
+    "orders": "Мои заказы",
+    "messages": "Сообщения",
+    "notifications": "Уведомления",
+    "profile": "Профиль"
+  },
+  "collapseSidebar": "Свернуть меню",
+  "expandSidebar": "Развернуть меню",
+  "search": "Поиск...",
+  "notifications": "Уведомления",
+  "customerName": "Покупатель",
+  "logout": "Выйти",
+  "common": {
+    "somoni": "сомони"
+  },
+  "dashboard": {
+    "greeting": "С возвращением 👋",
+    "greetingSubtitle": "Вот что происходит с вашими заказами.",
+    "stats": {
+      "totalOrders": "Всего заказов",
+      "activeOrders": "Активные заказы",
+      "totalSpent": "Потрачено всего"
+    },
+    "recentOrders": "Последние заказы",
+    "viewAll": "Все заказы",
+    "noOrdersYet": "У вас пока нет заказов",
+    "goToCatalog": "Перейти в каталог",
+    "errorTitle": "Не удалось загрузить данные",
+    "errorDescription": "Проверьте подключение к серверу и попробуйте снова."
+  },
+  "orders": {
+    "errorTitle": "Не удалось загрузить заказы",
+    "errorDescription": "Проверьте подключение к серверу и попробуйте снова.",
+    "emptyTitle": "Пока нет заказов",
+    "emptyDescription": "Оформите первый заказ в каталоге — он появится здесь.",
+    "columns": {
+      "orderNumber": "№ заказа",
+      "address": "Адрес доставки",
+      "amount": "Сумма",
+      "status": "Статус",
+      "createdAt": "Дата и время заказа",
+      "receivedAt": "Дата и время получения",
+      "review": "Отзыв"
+    },
+    "farmerLabel": "Фермер #{{id}}",
+    "notReceivedYet": "Ещё не получен",
+    "status": {
+      "pending": "Ожидает",
+      "accepted": "Принят",
+      "rejected": "Отклонён",
+      "preparing": "Готовится",
+      "readyForPickup": "Готов к выдаче",
+      "courierAssigned": "Назначен курьер",
+      "pickedUp": "Забран курьером",
+      "inDelivery": "В пути",
+      "delivered": "Доставлен",
+      "completed": "Завершён",
+      "cancelled": "Отменён"
+    },
+    "writeReview": "Оставить отзыв",
+    "alreadyReviewed": "Отзыв оставлен",
+    "reviewModalTitle": "Оценить заказ",
+    "reviewModalSubtitle": "Заказ {{orderNumber}}",
+    "reviewRatingLabel": "Ваша оценка",
+    "reviewRatingRequired": "Поставьте оценку от 1 до 5",
+    "reviewCommentLabel": "Комментарий",
+    "reviewCommentPlaceholder": "Расскажите, как всё прошло...",
+    "reviewSubmit": "Отправить отзыв",
+    "reviewSuccess": "Спасибо за отзыв!",
+    "reviewError": "Не удалось отправить отзыв"
+  },
+  "profile": {
+    "errorTitle": "Не удалось загрузить профиль",
+    "errorDescription": "Проверьте подключение к серверу и попробуйте снова.",
+    "accountTitle": "Аккаунт",
+    "deliveryTitle": "Доставка",
+    "fullName": "ФИО",
+    "email": "Email",
+    "customerType": "Тип покупателя",
+    "typeRetail": "Розничный",
+    "typeWholesale": "Оптовый",
+    "region": "Регион",
+    "defaultAddress": "Адрес по умолчанию",
+    "noAddress": "Не указан",
+    "memberSince": "С нами с",
+    "editAction": "Редактировать",
+    "editModalTitle": "Редактировать адрес доставки",
+    "updateSuccess": "Профиль обновлён",
+    "updateError": "Не удалось обновить профиль",
+    "form": {
+      "district": "Район",
+      "required": "Обязательное поле",
+      "optional": "Необязательно",
+      "cancel": "Отмена",
+      "saveChanges": "Сохранить изменения"
+    }
+  },
+  "notificationsPage": {
+    "errorTitle": "Не удалось загрузить уведомления",
+    "errorDescription": "Проверьте подключение к серверу и попробуйте снова.",
+    "emptyTitle": "Пока нет уведомлений",
+    "emptyDescription": "Здесь появятся уведомления о статусе ваших заказов."
+  },
+  "chat": {
+    "aboutOrder": "О заказе {{orderNumber}}",
+    "generalInquiry": "Вопрос о товаре",
+    "loading": "Открываем чат...",
+    "emptyDescription": "Сообщений пока нет — напишите первым.",
+    "placeholder": "Напишите сообщение...",
+    "send": "Отправить",
+    "sendError": "Не удалось отправить сообщение",
+    "attachPhoto": "Прикрепить фото",
+    "photoInvalidType": "Разрешены только форматы jpg, png, webp",
+    "photoTooLarge": "Максимальный размер файла — 5 МБ",
+    "photoUploadError": "Не удалось отправить фото"
+  },
+  "messages": {
+    "errorTitle": "Не удалось загрузить сообщения",
+    "errorDescription": "Проверьте подключение к серверу и попробуйте снова.",
+    "emptyTitle": "Пока нет переписок",
+    "emptyDescription": "Напишите фермеру с карточки товара — переписка появится здесь.",
+    "noMessagesYet": "Сообщений пока нет",
+    "photoPreview": "Фото"
+  }
+}

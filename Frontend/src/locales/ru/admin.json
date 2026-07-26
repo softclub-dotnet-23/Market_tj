@@ -8,7 +8,10 @@
     "customers": "Покупатели",
     "payments": "Платежи",
     "reviews": "Отзывы",
-    "settings": "Настройки"
+    "notifications": "Уведомления",
+    "settings": "Настройки",
+    "couriers": "Курьеры",
+    "delivery": "Доставка"
   },
   "collapseSidebar": "Свернуть меню",
   "expandSidebar": "Развернуть меню",
@@ -22,34 +25,31 @@
   "dashboard": {
     "greeting": "С возвращением, администратор 👋",
     "greetingSubtitle": "Вот что происходит на вашей площадке сегодня.",
+    "errorTitle": "Не удалось загрузить обзор",
+    "errorDescription": "Проверьте подключение к серверу и попробуйте снова.",
     "stats": {
-      "revenue": "Выручка за неделю",
+      "revenue": "Выручка за месяц",
       "customers": "Новые покупатели",
       "orders": "Заказы",
       "farmers": "Активные фермеры"
     },
-    "vsLastWeek": "vs прошлой недели {{value}}",
+    "vsLastMonth": "vs прошлого месяца {{value}}",
+    "newMetric": "Новое",
     "salesByRegion": "Продажи по регионам",
     "total": "Всего",
-    "siteVisits": "Посещения сайта",
+    "ordersByMonth": "Заказы по месяцам",
     "recentOrders": "Последние заказы",
     "viewAll": "Смотреть все",
     "topFarmers": "Топ фермеры",
+    "noTopFarmersYet": "Пока нет данных о фермерах",
     "popularCategories": "Популярные категории",
-    "orderStatus": {
-      "new": "Новый",
-      "processing": "В обработке",
-      "shipped": "Отправлен",
-      "delivered": "Доставлен"
-    },
-    "regions": {
-      "dushanbe": "Душанбе",
-      "khatlon": "Хатлонская обл.",
-      "sughd": "Согдийская обл.",
-      "gbao": "ГБАО",
-      "rrp": "РРП"
-    },
-    "months": ["Янв", "Фев", "Мар", "Апр", "Май", "Июн"]
+    "noPopularCategoriesYet": "Пока нет данных о категориях"
+  },
+  "notificationsPage": {
+    "errorTitle": "Не удалось загрузить уведомления",
+    "errorDescription": "Проверьте подключение к серверу и попробуйте снова.",
+    "emptyTitle": "Пока нет уведомлений",
+    "emptyDescription": "Здесь появятся системные уведомления платформы."
   },
   "orders": {
     "errorTitle": "Не удалось загрузить заказы",
@@ -63,10 +63,12 @@
       "region": "Регион",
       "amount": "Сумма",
       "status": "Статус",
-      "createdAt": "Дата"
+      "createdAt": "Дата и время заказа",
+      "receivedAt": "Дата и время получения"
     },
     "customerLabel": "Клиент #{{id}}",
     "farmerLabel": "Фермер #{{id}}",
+    "notReceivedYet": "Ещё не получен",
     "status": {
       "pending": "Ожидает",
       "accepted": "Принят",
@@ -79,7 +81,10 @@
       "delivered": "Доставлен",
       "completed": "Завершён",
       "cancelled": "Отменён"
-    }
+    },
+    "updateSuccess": "Статус заказа обновлён",
+    "updateError": "Не удалось обновить статус заказа",
+    "statusLockedHint": "Пока заказ обрабатывает фермер — с \"Готов к выдаче\" им можно будет управлять здесь"
   },
   "products": {
     "errorTitle": "Не удалось загрузить товары",
@@ -92,17 +97,24 @@
       "price": "Цена",
       "quantity": "Остаток",
       "status": "Статус",
-      "region": "Регион"
+      "region": "Регион",
+      "actions": "Действия"
     },
     "farmerLabel": "Фермер #{{id}}",
     "perKg": "с./кг",
     "kg": "кг",
+    "originallyOf": "из {{count}} изначально",
     "status": {
       "draft": "Черновик",
       "active": "Активен",
       "outOfStock": "Нет в наличии",
       "archived": "В архиве"
-    }
+    },
+    "deleteAction": "Удалить",
+    "deleteSuccess": "Товар удалён",
+    "deleteError": "Не удалось удалить товар",
+    "deleteConfirmTitle": "Удалить товар?",
+    "deleteConfirmDescription": "Объявление «{{title}}» будет удалено. Это действие нельзя отменить."
   },
   "farmers": {
     "errorTitle": "Не удалось загрузить фермеров",
@@ -113,13 +125,19 @@
       "farmName": "Хозяйство",
       "region": "Регион",
       "status": "Статус",
-      "createdAt": "Дата регистрации"
+      "createdAt": "Дата регистрации",
+      "actions": "Действия"
     },
     "status": {
       "pending": "На проверке",
       "verified": "Подтверждён",
       "rejected": "Отклонён"
-    }
+    },
+    "verifyAction": "Подтвердить",
+    "rejectAction": "Отклонить",
+    "verifySuccess": "Фермер подтверждён",
+    "rejectSuccess": "Фермер отклонён",
+    "actionError": "Не удалось изменить статус"
   },
   "users": {
     "errorTitle": "Не удалось загрузить покупателей",
@@ -148,13 +166,41 @@
       "percentage": "Процент",
       "effectiveFrom": "Действует с",
       "effectiveTo": "Действует до",
-      "status": "Статус"
+      "status": "Статус",
+      "actions": "Действия"
     },
     "allCategories": "Все категории",
     "categoryLabel": "Категория #{{id}}",
     "status": {
       "active": "Активна",
       "expired": "Завершена"
+    },
+    "addButton": "Добавить комиссию",
+    "createModalTitle": "Новая комиссия",
+    "editModalTitle": "Редактировать комиссию",
+    "editAction": "Редактировать",
+    "deleteAction": "Удалить",
+    "createSuccess": "Комиссия добавлена",
+    "createError": "Не удалось создать комиссию",
+    "updateSuccess": "Комиссия обновлена",
+    "updateError": "Не удалось обновить комиссию",
+    "deleteSuccess": "Комиссия удалена",
+    "deleteError": "Не удалось удалить комиссию",
+    "deleteConfirmTitle": "Удалить комиссию?",
+    "deleteConfirmDescription": "Это действие нельзя отменить.",
+    "form": {
+      "categoryId": "ID категории",
+      "categoryIdHint": "Оставьте пустым для всех категорий",
+      "percentage": "Процент, %",
+      "effectiveFrom": "Действует с",
+      "effectiveTo": "Действует до",
+      "required": "Обязательное поле",
+      "percentageRange": "От 0 до 100",
+      "effectiveToBeforeFrom": "Должно быть позже даты начала",
+      "optional": "Необязательно",
+      "cancel": "Отмена",
+      "submit": "Создать",
+      "saveChanges": "Сохранить изменения"
     }
   },
   "reviews": {
@@ -168,11 +214,17 @@
       "farmer": "Фермер",
       "rating": "Оценка",
       "comment": "Комментарий",
-      "createdAt": "Дата"
+      "createdAt": "Дата",
+      "actions": "Действия"
     },
     "orderLabel": "Заказ #{{id}}",
     "customerLabel": "Клиент #{{id}}",
-    "farmerLabel": "Фермер #{{id}}"
+    "farmerLabel": "Фермер #{{id}}",
+    "deleteAction": "Удалить",
+    "deleteSuccess": "Отзыв удалён",
+    "deleteError": "Не удалось удалить отзыв",
+    "deleteConfirmTitle": "Удалить отзыв?",
+    "deleteConfirmDescription": "Это действие нельзя отменить."
   },
   "settings": {
     "errorTitle": "Не удалось загрузить настройки",
@@ -183,7 +235,17 @@
       "key": "Ключ",
       "value": "Значение",
       "description": "Описание",
-      "updatedAt": "Обновлено"
+      "updatedAt": "Обновлено",
+      "actions": "Действия"
+    },
+    "editAction": "Редактировать",
+    "editModalTitle": "Редактировать настройку",
+    "updateSuccess": "Настройка обновлена",
+    "updateError": "Не удалось обновить настройку",
+    "form": {
+      "required": "Обязательное поле",
+      "cancel": "Отмена",
+      "saveChanges": "Сохранить изменения"
     }
   },
   "statistics": {
@@ -203,9 +265,86 @@
     "noRevenueYet": "Пока нет данных о выручке",
     "topSellingProducts": "Топ продаж",
     "noSalesYet": "Пока нет продаж",
+    "noSalesYetDescription": "Здесь появятся самые продаваемые товары.",
+    "vsLastMonth": "vs прошлый месяц",
     "kg": "кг",
     "ordersByStatus": "Заказы по статусам",
     "noOrdersYet": "Пока нет заказов",
-    "months": ["Янв", "Фев", "Мар", "Апр", "Май", "Июн", "Июл", "Авг", "Сен", "Окт", "Ноя", "Дек"]
+    "months": [
+      "Янв",
+      "Фев",
+      "Мар",
+      "Апр",
+      "Май",
+      "Июн",
+      "Июл",
+      "Авг",
+      "Сен",
+      "Окт",
+      "Ноя",
+      "Дек"
+    ]
+  },
+  "couriers": {
+    "errorTitle": "Не удалось загрузить курьеров",
+    "errorDescription": "Проверьте подключение к серверу и попробуйте снова.",
+    "emptyTitle": "Пока нет курьеров",
+    "emptyDescription": "Здесь появятся зарегистрированные курьеры платформы.",
+    "columns": {
+      "transport": "Транспорт",
+      "region": "Регион",
+      "available": "Доступность",
+      "active": "Статус",
+      "createdAt": "Дата регистрации"
+    },
+    "available": "Доступен",
+    "unavailable": "Недоступен",
+    "active": "Активен",
+    "inactive": "Отключён",
+    "updateSuccess": "Статус курьера обновлён",
+    "updateError": "Не удалось обновить статус курьера"
+  },
+  "deliveryZones": {
+    "errorTitle": "Не удалось загрузить зоны доставки",
+    "errorDescription": "Проверьте подключение к серверу и попробуйте снова.",
+    "emptyTitle": "Пока нет зон доставки",
+    "emptyDescription": "Добавьте первую зону, чтобы настроить стоимость доставки по регионам.",
+    "columns": {
+      "region": "Регион",
+      "basePrice": "Базовая цена",
+      "pricePerKm": "Цена за км",
+      "status": "Статус",
+      "actions": "Действия"
+    },
+    "status": {
+      "active": "Активна",
+      "inactive": "Отключена"
+    },
+    "addButton": "Добавить зону",
+    "createModalTitle": "Новая зона доставки",
+    "editModalTitle": "Редактировать зону доставки",
+    "editAction": "Редактировать",
+    "deleteAction": "Удалить",
+    "createSuccess": "Зона доставки добавлена",
+    "createError": "Не удалось создать зону доставки",
+    "updateSuccess": "Зона доставки обновлена",
+    "updateError": "Не удалось обновить зону доставки",
+    "deleteSuccess": "Зона доставки удалена",
+    "deleteError": "Не удалось удалить зону доставки",
+    "deleteConfirmTitle": "Удалить зону доставки?",
+    "deleteConfirmDescription": "Это действие нельзя отменить.",
+    "form": {
+      "region": "Регион",
+      "district": "Район",
+      "basePrice": "Базовая цена, сомони",
+      "pricePerKm": "Цена за км, сомони",
+      "status": "Статус",
+      "required": "Обязательное поле",
+      "nonNegative": "Не может быть отрицательным",
+      "optional": "Необязательно",
+      "cancel": "Отмена",
+      "submit": "Создать",
+      "saveChanges": "Сохранить изменения"
+    }
   }
 }
