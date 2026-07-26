@@ -16,6 +16,8 @@ public static class Seeder
         var farmerProfileRepository = scope.ServiceProvider.GetRequiredService<IFarmerProfileRepository>();
         var customerProfileRepository = scope.ServiceProvider.GetRequiredService<ICustomerProfileRepository>();
         var courierProfileRepository = scope.ServiceProvider.GetRequiredService<ICourierProfileRepository>();
+        var orderRepository = scope.ServiceProvider.GetRequiredService<IOrderRepository>();
+        var orderItemRepository = scope.ServiceProvider.GetRequiredService<IOrderItemRepository>();
 
         var (admin, farmer, customer, courier) = await SeedUsersAsync(context, userRepository);
         var farmerProfile = await SeedFarmerProfileAsync(context, farmerProfileRepository, farmer, admin);
@@ -25,6 +27,11 @@ public static class Seeder
         var categoryIds = await SeedCategoriesAsync(context);
         var productIds = await SeedProductsAsync(context, categoryIds);
         await SeedProductListingsAsync(context, productIds, farmerProfile);
+
+        // Без этого Admin/Farmer dashboard-аналитика (выручка, заказы по месяцам,
+        // рейтинг фермера) показывает одни нули — не ошибка, а просто нет заказов
+        // в тестовых данных.
+        await SeedOrdersAsync(context, orderRepository, orderItemRepository, customer, farmerProfile);
     }
 
     // Раздел 22 ТЗ: роли Admin/Farmer/Customer/Customer/Courier — по одному
@@ -264,6 +271,110 @@ public static class Seeder
         });
 
         context.ProductListings.AddRange(entities);
+        await context.SaveChangesAsync();
+    }
+
+    // Тестовые заказы для единственных сидированных Customer/Farmer — чтобы
+    // Admin/Farmer dashboard (выручка, заказы по месяцам, топ-фермеры) и
+    // раздел отзывов на фронте не были пустыми "из коробки". 4 завершённых
+    // заказа (с Payment + Review) разнесены по последним месяцам — для
+    // графика "Фармоишҳо аз рӯи моҳҳо"; ещё 2 — в процессе (без Payment/Review).
+    private static async Task SeedOrdersAsync(
+        AppDbContext context, IOrderRepository orderRepository, IOrderItemRepository orderItemRepository,
+        User customer, FarmerProfile farmerProfile)
+    {
+        if (await context.Orders.AnyAsync())
+            return;
+
+        var customerProfile = await context.CustomerProfiles.FirstAsync(c => c.UserId == customer.Id);
+        var listings = await context.ProductListings
+            .Where(p => p.FarmerProfileId == farmerProfile.Id)
+            .OrderBy(p => p.Id)
+            .Take(6)
+            .ToListAsync();
+
+        var now = DateTime.UtcNow;
+
+        var orderDefs = new (string Number, OrderStatus Status, int MonthsAgo, decimal DeliveryPrice, int Rating, string? ReviewComment)[]
+        {
+            ("ORD-1001", OrderStatus.Completed, 4, 15m, 5, "Всё свежее, привезли вовремя."),
+            ("ORD-1002", OrderStatus.Completed, 3, 15m, 4, "Хорошее качество, доставка чуть задержалась."),
+            ("ORD-1003", OrderStatus.Completed, 2, 20m, 5, null),
+            ("ORD-1004", OrderStatus.Completed, 1, 15m, 5, "Буду заказывать ещё."),
+            ("ORD-1005", OrderStatus.Accepted, 0, 15m, 0, null),
+            ("ORD-1006", OrderStatus.Pending, 0, 15m, 0, null)
+        };
+
+        for (var i = 0; i < orderDefs.Length; i++)
+        {
+            var def = orderDefs[i];
+            var items = new[]
+            {
+                (Listing: listings[i % listings.Count], Quantity: 2m),
+                (Listing: listings[(i + 1) % listings.Count], Quantity: 3m)
+            };
+
+            var subtotal = items.Sum(x => x.Listing.RetailPricePerKg * x.Quantity);
+            var createdAt = now.AddMonths(-def.MonthsAgo).AddDays(-i);
+
+            var order = new Order
+            {
+                OrderNumber = def.Number,
+                CustomerId = customerProfile.Id,
+                FarmerId = farmerProfile.Id,
+                Status = def.Status,
+                DeliveryAddress = customerProfile.DefaultAddress ?? "г. Душанбе, ул. Рудаки, 45",
+                Region = customerProfile.Region,
+                District = customerProfile.District,
+                Subtotal = subtotal,
+                DeliveryPrice = def.DeliveryPrice,
+                TotalAmount = subtotal + def.DeliveryPrice,
+                IsDeleted = false,
+                CreatedAt = createdAt,
+                AcceptedAt = def.Status is OrderStatus.Accepted or OrderStatus.Completed ? createdAt.AddHours(2) : null,
+                CompletedAt = def.Status == OrderStatus.Completed ? createdAt.AddDays(1) : null
+            };
+
+            await orderRepository.AddAsync(order);
+
+            foreach (var (listing, quantity) in items)
+            {
+                await orderItemRepository.AddAsync(new OrderItem
+                {
+                    OrderId = order.Id,
+                    ProductListingId = listing.Id,
+                    ProductName = listing.Title,
+                    UnitPrice = listing.RetailPricePerKg,
+                    Quantity = quantity,
+                    TotalPrice = listing.RetailPricePerKg * quantity,
+                    CreatedAt = createdAt
+                });
+            }
+
+            if (def.Status == OrderStatus.Completed)
+            {
+                context.Payments.Add(new Payment
+                {
+                    OrderId = order.Id,
+                    Amount = order.TotalAmount,
+                    Method = PaymentMethod.Cash,
+                    Status = PaymentStatus.Completed,
+                    PaidAt = order.CompletedAt,
+                    CreatedAt = order.CreatedAt
+                });
+
+                context.Reviews.Add(new Review
+                {
+                    OrderId = order.Id,
+                    CustomerId = customerProfile.Id,
+                    FarmerId = farmerProfile.Id,
+                    Rating = def.Rating,
+                    Comment = def.ReviewComment,
+                    CreatedAt = order.CompletedAt!.Value
+                });
+            }
+        }
+
         await context.SaveChangesAsync();
     }
 }
