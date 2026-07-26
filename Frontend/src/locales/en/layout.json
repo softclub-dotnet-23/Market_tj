@@ -1,0 +1,48 @@
+{
+  "nav": {
+    "home": "Home",
+    "catalog": "Catalog",
+    "about": "About",
+    "contact": "Contact"
+  },
+  "megaMenu": {
+    "viewAllCatalog": "View full catalog"
+  },
+  "mobileMenu": {
+    "closeMenu": "Close menu",
+    "categoriesLabel": "Categories"
+  },
+  "miniCart": {
+    "title": "Cart",
+    "itemsCount": "{{count}} item(s)",
+    "empty": "Your cart is empty",
+    "goToCatalog": "Go to catalog",
+    "remove": "Remove",
+    "total": "Total",
+    "checkout": "Checkout"
+  },
+  "authPanel": {
+    "heroAlt": "Apple tree with ripe fruit",
+    "quote": "\"I order every week now — the freshness difference compared to market produce is huge. I don't want to shop any other way.\"",
+    "customerName": "Farida Nazarova",
+    "customerRole": "Customer, Dushanbe",
+    "farmersLabel": "farmers",
+    "ordersLabel": "orders",
+    "verifiedFarms1": "Verified",
+    "verifiedFarms2": "farms"
+  },
+  "footer": {
+    "columnCustomers": "For customers",
+    "login": "Log in",
+    "categoriesTitle": "Categories",
+    "description": "A marketplace that connects Tajikistan's farmers directly with buyers — fresh produce from the field, no middlemen.",
+    "newsletterTitle": "News and offers",
+    "newsletterSubtitle": "Once a week — seasonal picks and tips from farmers.",
+    "emailPlaceholder": "Your email",
+    "toastTitle": "Thanks for subscribing!",
+    "toastDescription": "We'll only send you useful updates.",
+    "copyright": "© {{year}} Market.tj. All rights reserved.",
+    "terms": "Terms of use",
+    "privacy": "Privacy policy"
+  }
+}

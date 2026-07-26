@@ -1,0 +1,42 @@
+{
+  "productsCount_one": "{{count}} product",
+  "productsCount_other": "{{count}} products",
+  "units": {
+    "кг": "kg",
+    "шт": "pcs",
+    "пучок": "bunch",
+    "литр": "liter",
+    "л": "l"
+  },
+  "filters": {
+    "title": "Filters",
+    "resetAll": "Reset all",
+    "category": "Category",
+    "region": "Region",
+    "price": "Price, somoni",
+    "priceFrom": "From",
+    "priceTo": "To",
+    "onlyAvailable": "In stock only",
+    "resetFilters": "Reset filters"
+  },
+  "badges": {
+    "organic": "Organic",
+    "new": "New",
+    "bestseller": "Bestseller",
+    "discount": "Discount",
+    "premium": "Premium"
+  },
+  "outOfStock": "Out of stock",
+  "removeFromFavorites": "Remove from favorites",
+  "addToFavorites": "Add to favorites",
+  "addToCart": "Add to cart",
+  "reviewsCount_one": "{{count}} review",
+  "reviewsCount_other": "{{count}} reviews",
+  "verifiedPurchase": "Verified purchase",
+  "farmerReply": "Farmer's reply",
+  "helpful": "Helpful ({{count}})",
+  "verified": "Verified",
+  "verifiedFarmerTitle": "Verified farmer",
+  "allProducts": "All products",
+  "writeMessage": "Message"
+}

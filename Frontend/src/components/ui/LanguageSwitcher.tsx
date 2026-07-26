@@ -34,6 +34,18 @@ function FlagRU() {
   );
 }
 
+function FlagEN() {
+  return (
+    <svg viewBox="0 0 24 24" className="h-full w-full">
+      <rect width="24" height="24" fill="#00247D" />
+      <path d="M0 0L24 24M24 0L0 24" stroke="#FFFFFF" strokeWidth="3" />
+      <path d="M0 0L24 24M24 0L0 24" stroke="#CF142B" strokeWidth="1.4" />
+      <path d="M12 0V24M0 12H24" stroke="#FFFFFF" strokeWidth="5" />
+      <path d="M12 0V24M0 12H24" stroke="#CF142B" strokeWidth="2.4" />
+    </svg>
+  );
+}
+
 interface LanguageOption {
   code: SupportedLanguage;
   name: string;
@@ -45,6 +57,7 @@ interface LanguageOption {
 const LANGUAGES: LanguageOption[] = [
   { code: "tj", name: "Тоҷикӣ", short: "ТҶ", Flag: FlagTJ },
   { code: "ru", name: "Русский", short: "РУ", Flag: FlagRU },
+  { code: "en", name: "English", short: "EN", Flag: FlagEN },
 ];
 
 export function LanguageSwitcher({ className }: { className?: string }) {

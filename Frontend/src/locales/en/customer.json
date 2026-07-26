@@ -1,0 +1,130 @@
+{
+  "nav": {
+    "overview": "Overview",
+    "catalog": "Catalog",
+    "favorites": "Favorites",
+    "cart": "Cart",
+    "orders": "My orders",
+    "messages": "Messages",
+    "notifications": "Notifications",
+    "profile": "Profile"
+  },
+  "collapseSidebar": "Collapse menu",
+  "expandSidebar": "Expand menu",
+  "search": "Search...",
+  "notifications": "Notifications",
+  "customerName": "Customer",
+  "logout": "Log out",
+  "common": {
+    "somoni": "somoni"
+  },
+  "dashboard": {
+    "greeting": "Welcome back 👋",
+    "greetingSubtitle": "Here's what's happening with your orders.",
+    "stats": {
+      "totalOrders": "Total orders",
+      "activeOrders": "Active orders",
+      "totalSpent": "Total spent"
+    },
+    "recentOrders": "Recent orders",
+    "viewAll": "All orders",
+    "noOrdersYet": "You don't have any orders yet",
+    "goToCatalog": "Go to catalog",
+    "errorTitle": "Failed to load data",
+    "errorDescription": "Check your connection to the server and try again."
+  },
+  "orders": {
+    "errorTitle": "Failed to load orders",
+    "errorDescription": "Check your connection to the server and try again.",
+    "emptyTitle": "No orders yet",
+    "emptyDescription": "Place your first order in the catalog — it will appear here.",
+    "columns": {
+      "orderNumber": "Order #",
+      "address": "Delivery address",
+      "amount": "Amount",
+      "status": "Status",
+      "createdAt": "Order date & time",
+      "receivedAt": "Received date & time",
+      "review": "Review"
+    },
+    "farmerLabel": "Farmer #{{id}}",
+    "notReceivedYet": "Not received yet",
+    "status": {
+      "pending": "Pending",
+      "accepted": "Accepted",
+      "rejected": "Rejected",
+      "preparing": "Preparing",
+      "readyForPickup": "Ready for pickup",
+      "courierAssigned": "Courier assigned",
+      "pickedUp": "Picked up",
+      "inDelivery": "In delivery",
+      "delivered": "Delivered",
+      "completed": "Completed",
+      "cancelled": "Cancelled"
+    },
+    "writeReview": "Write a review",
+    "alreadyReviewed": "Review submitted",
+    "reviewModalTitle": "Rate your order",
+    "reviewModalSubtitle": "Order {{orderNumber}}",
+    "reviewRatingLabel": "Your rating",
+    "reviewRatingRequired": "Give a rating from 1 to 5",
+    "reviewCommentLabel": "Comment",
+    "reviewCommentPlaceholder": "Tell us how it went...",
+    "reviewSubmit": "Submit review",
+    "reviewSuccess": "Thanks for your review!",
+    "reviewError": "Failed to submit review"
+  },
+  "profile": {
+    "errorTitle": "Failed to load profile",
+    "errorDescription": "Check your connection to the server and try again.",
+    "accountTitle": "Account",
+    "deliveryTitle": "Delivery",
+    "fullName": "Full name",
+    "email": "Email",
+    "customerType": "Customer type",
+    "typeRetail": "Retail",
+    "typeWholesale": "Wholesale",
+    "region": "Region",
+    "defaultAddress": "Default address",
+    "noAddress": "Not specified",
+    "memberSince": "Member since",
+    "editAction": "Edit",
+    "editModalTitle": "Edit delivery address",
+    "updateSuccess": "Profile updated",
+    "updateError": "Failed to update profile",
+    "form": {
+      "district": "District",
+      "required": "Required field",
+      "optional": "Optional",
+      "cancel": "Cancel",
+      "saveChanges": "Save changes"
+    }
+  },
+  "notificationsPage": {
+    "errorTitle": "Failed to load notifications",
+    "errorDescription": "Check your connection to the server and try again.",
+    "emptyTitle": "No notifications yet",
+    "emptyDescription": "Notifications about your order status will appear here."
+  },
+  "chat": {
+    "aboutOrder": "About order {{orderNumber}}",
+    "generalInquiry": "Product question",
+    "loading": "Opening chat...",
+    "emptyDescription": "No messages yet — be the first to write.",
+    "placeholder": "Write a message...",
+    "send": "Send",
+    "sendError": "Failed to send message",
+    "attachPhoto": "Attach photo",
+    "photoInvalidType": "Only jpg, png, webp formats are allowed",
+    "photoTooLarge": "Maximum file size is 5 MB",
+    "photoUploadError": "Failed to send photo"
+  },
+  "messages": {
+    "errorTitle": "Failed to load messages",
+    "errorDescription": "Check your connection to the server and try again.",
+    "emptyTitle": "No conversations yet",
+    "emptyDescription": "Message a farmer from a product page — the conversation will appear here.",
+    "noMessagesYet": "No messages yet",
+    "photoPreview": "Photo"
+  }
+}

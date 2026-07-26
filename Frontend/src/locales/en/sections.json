@@ -1,0 +1,60 @@
+{
+  "popularCategories": {
+    "eyebrow": "Categories",
+    "title": "Browse by category"
+  },
+  "hero": {
+    "badge": "Over 200 verified farmers across Tajikistan",
+    "titleLine1": "Fresh from the field —",
+    "titleLine2": "straight to your table",
+    "description": "Market.tj connects farms directly with buyers — no middlemen, markups, or extra days in transit. Just fresh harvest and a fair price.",
+    "viewCatalog": "View catalog",
+    "howItWorks": "How it works",
+    "productsAvailableSuffix": "products from verified farmers",
+    "farmerVerifiedTitle": "Farmer verified",
+    "farmerVerifiedSubtitle": "Documents and address confirmed"
+  },
+  "whyChooseUs": {
+    "eyebrow": "Our advantages",
+    "title": "Why choose Market.tj"
+  },
+  "featuredProducts": {
+    "eyebrow": "Catalog",
+    "title": "Popular products this week",
+    "viewAll": "Full catalog",
+    "tabBestsellers": "Bestsellers",
+    "tabNew": "New",
+    "tabPremium": "Premium"
+  },
+  "freshHarvest": {
+    "badge": "Fresh harvest",
+    "title": "From harvest to delivery — 18 hours on average",
+    "description": "We deliberately limit the time between harvest and delivery. The farmer publishes a listing on the day of harvest, and the courier picks up the order the very next morning — so the product doesn't have time to lose its taste and nutritional value.",
+    "viewFresh": "View fresh arrivals"
+  },
+  "bestFarmers": {
+    "eyebrow": "Farmers",
+    "title": "Best farms",
+    "description": "Verified farms with high ratings and consistent supply quality.",
+    "viewAll": "All farmers"
+  },
+  "testimonials": {
+    "eyebrow": "Reviews",
+    "title": "What our customers say"
+  },
+  "faq": {
+    "eyebrow": "Questions",
+    "title": "Frequently asked questions",
+    "description": "Didn't find an answer? Write to us — the \"Contact\" section is always here to help."
+  },
+  "cta": {
+    "title": "Ready to try fresh produce straight from the farmer?",
+    "description": "Join thousands of buyers and farmers who have already cut out the middlemen.",
+    "becomeCustomer": "Become a customer",
+    "becomeFarmer": "Become a farmer"
+  },
+  "deliveryProcess": {
+    "eyebrow": "How it works",
+    "title": "The order's journey from cart to doorstep"
+  }
+}

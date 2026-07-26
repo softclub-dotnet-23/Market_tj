@@ -7,7 +7,14 @@ export function cn(...inputs: ClassValue[]) {
 }
 
 function numberLocale() {
-  return i18n.resolvedLanguage === "tj" ? "tg-TJ" : "ru-RU";
+  switch (i18n.resolvedLanguage) {
+    case "tj":
+      return "tg-TJ";
+    case "en":
+      return "en-US";
+    default:
+      return "ru-RU";
+  }
 }
 
 export function formatSomoni(amount: number) {
