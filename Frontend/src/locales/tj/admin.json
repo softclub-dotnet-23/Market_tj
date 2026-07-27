@@ -60,6 +60,8 @@
       "orderNumber": "№ фармоиш",
       "customer": "Харидор",
       "farmer": "Деҳқон",
+      "participants": "Иштирокчиён",
+      "products": "Маҳсулот",
       "region": "Минтақа",
       "amount": "Маблағ",
       "status": "Ҳолат",
@@ -68,6 +70,8 @@
     },
     "customerLabel": "Харидор #{{id}}",
     "farmerLabel": "Деҳқон #{{id}}",
+    "moreItems": "боз {{count}}",
+    "showLess": "пинҳон кардан",
     "notReceivedYet": "Ҳанӯз гирифта нашудааст",
     "status": {
       "pending": "Дар интизорӣ",

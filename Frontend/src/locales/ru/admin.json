@@ -60,6 +60,8 @@
       "orderNumber": "№ заказа",
       "customer": "Клиент",
       "farmer": "Фермер",
+      "participants": "Участники",
+      "products": "Товары",
       "region": "Регион",
       "amount": "Сумма",
       "status": "Статус",
@@ -68,6 +70,8 @@
     },
     "customerLabel": "Клиент #{{id}}",
     "farmerLabel": "Фермер #{{id}}",
+    "moreItems": "ещё {{count}}",
+    "showLess": "свернуть",
     "notReceivedYet": "Ещё не получен",
     "status": {
       "pending": "Ожидает",

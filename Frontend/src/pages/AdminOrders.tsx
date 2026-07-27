@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { toast } from "sonner";
 import { ShoppingCart } from "lucide-react";
@@ -6,9 +6,17 @@ import { PageLoader } from "@/components/layout/PageLoader";
 import { EmptyState } from "@/components/ui/EmptyState";
 import { Pagination } from "@/components/ui/Pagination";
 import { StatusMenu } from "@/components/ui/StatusMenu";
+import { OrderItemsCell } from "@/components/ui/OrderItemsCell";
 import { formatDateTime, formatSomoni } from "@/lib/utils";
 import { ORDER_STATUS_CLASSES, ORDER_STATUS_ICONS, ORDER_STATUS_KEYS, getAdminNextStatuses, resolveReceivedAt } from "@/lib/orderStatus";
-import { notifyCustomerAboutOrderStatus, updateOrderStatus, useAdminOrders, type AdminOrderDto } from "@/data/adminEntities";
+import {
+  markAdminOrdersSeen,
+  notifyCustomerAboutOrderStatus,
+  updateOrderStatus,
+  useAdminOrderItems,
+  useAdminOrders,
+  type AdminOrderDto,
+} from "@/data/adminEntities";
 // Delivery — общий для всех ролей список (та же схема, что уже используется
 // у Farmer/Customer): грузим все записи о доставке и сопоставляем с заказом
 // по orderId, чтобы показать реальное время получения.
@@ -23,6 +31,14 @@ export function AdminOrders() {
   const [busyId, setBusyId] = useState<number | null>(null);
   const { orders, loading, error } = useAdminOrders(refreshKey);
   const { deliveriesByOrderId, loading: deliveriesLoading } = useDeliveriesByOrder();
+  const { orderItems } = useAdminOrderItems();
+
+  // Всё, что видно на этой странице, считается просмотренным — бейдж
+  // "Заказы" в сайдбаре (AdminLayout) сразу пересчитывается через
+  // markAdminOrdersSeen (см. data/adminEntities.ts), без перезагрузки.
+  useEffect(() => {
+    if (orders) markAdminOrdersSeen(orders);
+  }, [orders]);
 
   if (loading || deliveriesLoading) return <PageLoader />;
 
@@ -53,59 +69,119 @@ export function AdminOrders() {
     }
   };
 
+  const participants = (order: AdminOrderDto) => (
+    <div className="flex flex-col gap-1">
+      <span>
+        <span className="text-stone-400 dark:text-stone-500">{t("orders.columns.customer")}: </span>
+        {order.customerFullName ?? t("orders.customerLabel", { id: order.customerId })}
+      </span>
+      <span>
+        <span className="text-stone-400 dark:text-stone-500">{t("orders.columns.farmer")}: </span>
+        {t("orders.farmerLabel", { id: order.farmerId })}
+      </span>
+    </div>
+  );
+
+  const statusCell = (order: AdminOrderDto, receivedAt: string | null) => (
+    <div className="flex flex-col items-start gap-1.5">
+      <StatusMenu
+        value={order.status}
+        busy={busyId === order.id}
+        lockedLabel={t("orders.statusLockedHint")}
+        onChange={(status) => handleStatusChange(order, status)}
+        options={[order.status, ...getAdminNextStatuses(order.status)].map((s) => ({
+          value: s,
+          label: t(`orders.status.${ORDER_STATUS_KEYS[s]}`),
+          className: ORDER_STATUS_CLASSES[s],
+          icon: ORDER_STATUS_ICONS[s],
+        }))}
+      />
+      <span className="text-xs text-stone-400 dark:text-stone-500">
+        {receivedAt ? t("orders.columns.receivedAt") + ": " + formatDateTime(receivedAt) : t("orders.notReceivedYet")}
+      </span>
+    </div>
+  );
+
   return (
     <div className="rounded-3xl border border-stone-100 bg-white dark:border-stone-800 dark:bg-stone-900">
-      <div className="overflow-x-auto">
+      {/* Десктоп/планшет — обычная таблица, компактно сжатая до 6 колонок,
+          чтобы не требовался горизонтальный скролл на типичном ноутбучном
+          экране (даже с учётом сайдбара ~256px). */}
+      <div className="hidden overflow-x-auto lg:block">
         <table className="w-full text-left text-sm">
           <thead>
             <tr className="border-b border-stone-100 text-xs uppercase tracking-wide text-stone-400 dark:border-stone-800 dark:text-stone-500">
               <th className="px-6 py-4 font-medium">{t("orders.columns.orderNumber")}</th>
-              <th className="px-6 py-4 font-medium">{t("orders.columns.customer")}</th>
-              <th className="px-6 py-4 font-medium">{t("orders.columns.farmer")}</th>
+              <th className="px-6 py-4 font-medium">{t("orders.columns.participants")}</th>
+              <th className="px-6 py-4 font-medium">{t("orders.columns.products")}</th>
               <th className="px-6 py-4 font-medium">{t("orders.columns.region")}</th>
               <th className="px-6 py-4 font-medium">{t("orders.columns.amount")}</th>
               <th className="px-6 py-4 font-medium">{t("orders.columns.status")}</th>
-              <th className="px-6 py-4 font-medium">{t("orders.columns.createdAt")}</th>
-              <th className="px-6 py-4 font-medium">{t("orders.columns.receivedAt")}</th>
             </tr>
           </thead>
           <tbody>
             {pageItems.map((order) => {
               const receivedAt = resolveReceivedAt(order.status, order.completedAt, deliveriesByOrderId.get(order.id)?.deliveredAt);
+              const items = orderItems?.filter((i) => i.orderId === order.id) ?? [];
               return (
                 <tr key={order.id} className="border-b border-stone-50 last:border-0 dark:border-stone-800/60">
-                  <td className="px-6 py-4 font-medium text-stone-800 dark:text-stone-100">{order.orderNumber}</td>
-                  <td className="px-6 py-4 text-stone-600 dark:text-stone-300">{t("orders.customerLabel", { id: order.customerId })}</td>
-                  <td className="px-6 py-4 text-stone-600 dark:text-stone-300">{t("orders.farmerLabel", { id: order.farmerId })}</td>
+                  <td className="px-6 py-4">
+                    <span className="font-medium text-stone-800 dark:text-stone-100">{order.orderNumber}</span>
+                    <span className="mt-0.5 block text-xs text-stone-400 dark:text-stone-500">{formatDateTime(order.createdAt)}</span>
+                  </td>
+                  <td className="max-w-48 px-6 py-4 text-stone-600 dark:text-stone-300">{participants(order)}</td>
                   <td className="px-6 py-4 text-stone-500 dark:text-stone-400">
+                    <OrderItemsCell items={items} ns="admin" />
+                  </td>
+                  <td className="max-w-32 truncate px-6 py-4 text-stone-500 dark:text-stone-400">
                     {order.region}, {order.district}
                   </td>
                   <td className="px-6 py-4 font-semibold text-stone-800 dark:text-stone-100">
                     {formatSomoni(order.totalAmount)} {t("common.somoni")}
                   </td>
-                  <td className="px-6 py-4">
-                    <StatusMenu
-                      value={order.status}
-                      busy={busyId === order.id}
-                      lockedLabel={t("orders.statusLockedHint")}
-                      onChange={(status) => handleStatusChange(order, status)}
-                      options={[order.status, ...getAdminNextStatuses(order.status)].map((s) => ({
-                        value: s,
-                        label: t(`orders.status.${ORDER_STATUS_KEYS[s]}`),
-                        className: ORDER_STATUS_CLASSES[s],
-                        icon: ORDER_STATUS_ICONS[s],
-                      }))}
-                    />
-                  </td>
-                  <td className="px-6 py-4 text-stone-500 dark:text-stone-400">{formatDateTime(order.createdAt)}</td>
-                  <td className="px-6 py-4 text-stone-500 dark:text-stone-400">
-                    {receivedAt ? formatDateTime(receivedAt) : <span className="text-stone-300 dark:text-stone-600">{t("orders.notReceivedYet")}</span>}
-                  </td>
+                  <td className="px-6 py-4">{statusCell(order, receivedAt)}</td>
                 </tr>
               );
             })}
           </tbody>
         </table>
+      </div>
+
+      {/* Мобильный/узкий экран — карточки вместо таблицы, вертикальный список
+          без горизонтального скролла вообще. */}
+      <div className="flex flex-col divide-y divide-stone-50 lg:hidden dark:divide-stone-800/60">
+        {pageItems.map((order) => {
+          const receivedAt = resolveReceivedAt(order.status, order.completedAt, deliveriesByOrderId.get(order.id)?.deliveredAt);
+          const items = orderItems?.filter((i) => i.orderId === order.id) ?? [];
+          return (
+            <div key={order.id} className="flex flex-col gap-3 p-5">
+              <div className="flex items-start justify-between gap-3">
+                <div>
+                  <p className="font-medium text-stone-800 dark:text-stone-100">{order.orderNumber}</p>
+                  <p className="text-xs text-stone-400 dark:text-stone-500">{formatDateTime(order.createdAt)}</p>
+                </div>
+                <p className="font-semibold text-stone-800 dark:text-stone-100">
+                  {formatSomoni(order.totalAmount)} {t("common.somoni")}
+                </p>
+              </div>
+              <div className="grid grid-cols-[auto_1fr] gap-x-3 gap-y-1.5 text-sm">
+                <span className="text-stone-400 dark:text-stone-500">{t("orders.columns.customer")}</span>
+                <span className="text-stone-700 dark:text-stone-200">{order.customerFullName ?? t("orders.customerLabel", { id: order.customerId })}</span>
+                <span className="text-stone-400 dark:text-stone-500">{t("orders.columns.farmer")}</span>
+                <span className="text-stone-700 dark:text-stone-200">{t("orders.farmerLabel", { id: order.farmerId })}</span>
+                <span className="text-stone-400 dark:text-stone-500">{t("orders.columns.products")}</span>
+                <div className="text-stone-700 dark:text-stone-200">
+                  <OrderItemsCell items={items} ns="admin" />
+                </div>
+                <span className="text-stone-400 dark:text-stone-500">{t("orders.columns.region")}</span>
+                <span className="text-stone-700 dark:text-stone-200">
+                  {order.region}, {order.district}
+                </span>
+              </div>
+              <div className="pt-1">{statusCell(order, receivedAt)}</div>
+            </div>
+          );
+        })}
       </div>
 
       {totalPages > 1 && (

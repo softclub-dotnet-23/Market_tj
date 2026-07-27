@@ -46,11 +46,17 @@ export function formatDate(iso: string) {
   return `${d.getDate()} ${months[d.getMonth()]} ${d.getFullYear()}`;
 }
 
+// Компактный числовой формат (не "27 июля 2026, 06:31") — специально короче
+// formatDate: используется в плотных таблицах заказов и в чате, где
+// многословный формат с названием месяца переносился на 2-3 строки и раздувал
+// высоту строк/пузырей сообщений.
 export function formatDateTime(iso: string) {
   const d = new Date(iso);
+  const day = String(d.getDate()).padStart(2, "0");
+  const month = String(d.getMonth() + 1).padStart(2, "0");
   const hours = String(d.getHours()).padStart(2, "0");
   const minutes = String(d.getMinutes()).padStart(2, "0");
-  return `${formatDate(iso)}, ${hours}:${minutes}`;
+  return `${day}.${month}.${d.getFullYear()}, ${hours}:${minutes}`;
 }
 
 export function timeAgo(iso: string) {
