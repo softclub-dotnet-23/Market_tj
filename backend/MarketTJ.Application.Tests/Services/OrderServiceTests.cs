@@ -26,8 +26,10 @@ public class OrderServiceTests
     {
         _service = new OrderService(_orderRepository.Object, _orderItemRepository.Object, _productListingRepository.Object, _customerProfileRepository.Object, _farmerProfileRepository.Object, _userRepository.Object, _auditLogService.Object, _logger.Object);
         _customerProfileRepository.Setup(r => r.GetByIdAsync(It.IsAny<int>())).ReturnsAsync((int id) => new CustomerProfile { Id = id, UserId = 10, CustomerType = CustomerType.Retail, Region = "Хатлон", District = "Бохтар" });
+        _customerProfileRepository.Setup(r => r.GetAllAsync()).ReturnsAsync([new CustomerProfile { Id = 1, UserId = 10, CustomerType = CustomerType.Retail, Region = "Хатлон", District = "Бохтар" }]);
         _farmerProfileRepository.Setup(r => r.GetByIdAsync(It.IsAny<int>())).ReturnsAsync((int id) => new FarmerProfile { Id = id, UserId = 20, FarmName = "Farm", Region = "Хатлон", District = "Бохтар", Village = "V", Address = "A", VerificationStatus = FarmerVerificationStatus.Verified });
         _userRepository.Setup(r => r.GetByIdAsync(10)).ReturnsAsync(new User { Id = 10, IsActive = true, Role = UserRole.Customer, FullName = "C", Email = "c@e.com", PhoneNumber = "1", PasswordHash = "h" });
+        _userRepository.Setup(r => r.GetAllAsync()).ReturnsAsync([new User { Id = 10, IsActive = true, Role = UserRole.Customer, FullName = "C", Email = "c@e.com", PhoneNumber = "1", PasswordHash = "h" }]);
         _orderRepository.Setup(r => r.GetAllAsync()).ReturnsAsync([]);
         _orderItemRepository.Setup(r => r.GetAllAsync()).ReturnsAsync([]);
     }
@@ -125,6 +127,33 @@ public class OrderServiceTests
         Assert.True(result.IsSuccess);
         Assert.Equal(order.Id, result.Data!.Id);
         Assert.Equal(order.OrderNumber, result.Data!.OrderNumber);
+    }
+
+    [Fact]
+    public async Task GetByIdAsync_ExistingCustomer_ResolvesCustomerFullNameAndPhone()
+    {
+        var order = CreateOrder(5);
+        _orderRepository.Setup(r => r.GetByIdAsync(5)).ReturnsAsync(order);
+
+        var result = await _service.GetByIdAsync(5);
+
+        Assert.True(result.IsSuccess);
+        Assert.Equal("C", result.Data!.CustomerFullName);
+        Assert.Equal("1", result.Data!.CustomerPhone);
+    }
+
+    [Fact]
+    public async Task GetByIdAsync_CustomerProfileWithoutMatchingUser_LeavesNameAndPhoneNull()
+    {
+        var order = CreateOrder(5);
+        _orderRepository.Setup(r => r.GetByIdAsync(5)).ReturnsAsync(order);
+        _userRepository.Setup(r => r.GetAllAsync()).ReturnsAsync([]);
+
+        var result = await _service.GetByIdAsync(5);
+
+        Assert.True(result.IsSuccess);
+        Assert.Null(result.Data!.CustomerFullName);
+        Assert.Null(result.Data!.CustomerPhone);
     }
 
     [Fact]

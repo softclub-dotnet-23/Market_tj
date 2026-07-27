@@ -25,9 +25,9 @@ public class OrderService(
     {
         try
         {
-            
             var orders = await orderRepository.GetAllAsync();
-            return Result<IEnumerable<GetOrderDto>>.Ok(orders.Select(ToGetDto));
+            var customers = await ResolveCustomerContactsAsync(orders.Select(o => o.CustomerId));
+            return Result<IEnumerable<GetOrderDto>>.Ok(orders.Select(o => ToGetDto(o, customers)));
         }
         catch (Exception ex)
         {
@@ -44,7 +44,8 @@ public class OrderService(
             if (order is null)
                 return Result<GetOrderDto?>.Fail("Заказ не найден", ErrorType.NotFound);
 
-            return Result<GetOrderDto?>.Ok(ToGetDto(order));
+            var customers = await ResolveCustomerContactsAsync([order.CustomerId]);
+            return Result<GetOrderDto?>.Ok(ToGetDto(order, customers));
         }
         catch (Exception ex)
         {
@@ -216,11 +217,12 @@ public class OrderService(
             filtered = Sort(filtered, request.SortBy, request.SortDescending);
 
             var materialized = filtered.ToList();
-            var page = materialized
+            var pageOrders = materialized
                 .Skip((request.PageNumber - 1) * request.PageSize)
                 .Take(request.PageSize)
-                .Select(ToGetDto)
                 .ToList();
+            var customers = await ResolveCustomerContactsAsync(pageOrders.Select(o => o.CustomerId));
+            var page = pageOrders.Select(o => ToGetDto(o, customers)).ToList();
 
             return Result<PagedResult<GetOrderDto>>.Ok(
                 PagedResult<GetOrderDto>.Ok(page, materialized.Count, request.PageNumber, request.PageSize));
@@ -302,23 +304,53 @@ public class OrderService(
         return descending ? orders.OrderByDescending(keySelector) : orders.OrderBy(keySelector);
     }
 
-    private static GetOrderDto ToGetDto(Order order) => new()
+    // Order.CustomerId — это CustomerProfile.Id, а имя/телефон лежат в User
+    // (раздел 9 ТЗ: связь через профиль, не напрямую). /api/users доступен
+    // только Admin (UserController), поэтому резолвим здесь, на сервере, и
+    // отдаём уже готовую строку — так у Farmer/Admin один и тот же честный
+    // источник данных, без похода на закрытый эндпоинт.
+    private async Task<Dictionary<int, (string? FullName, string? Phone)>> ResolveCustomerContactsAsync(IEnumerable<int> customerProfileIds)
     {
-        Id = order.Id,
-        OrderNumber = order.OrderNumber,
-        CustomerId = order.CustomerId,
-        FarmerId = order.FarmerId,
-        Status = order.Status,
-        DeliveryAddress = order.DeliveryAddress,
-        Region = order.Region,
-        District = order.District,
-        CustomerComment = order.CustomerComment,
-        Subtotal = order.Subtotal,
-        DeliveryPrice = order.DeliveryPrice,
-        TotalAmount = order.TotalAmount,
-        CreatedAt = order.CreatedAt,
-        AcceptedAt = order.AcceptedAt,
-        CompletedAt = order.CompletedAt,
-        CancelledAt = order.CancelledAt
-    };
+        var neededIds = customerProfileIds.Distinct().ToHashSet();
+        var profiles = await customerProfileRepository.GetAllAsync();
+        var relevantProfiles = profiles.Where(p => neededIds.Contains(p.Id)).ToList();
+
+        var neededUserIds = relevantProfiles.Select(p => p.UserId).Distinct().ToHashSet();
+        var users = await userRepository.GetAllAsync();
+        var usersById = users.Where(u => neededUserIds.Contains(u.Id)).ToDictionary(u => u.Id);
+
+        var result = new Dictionary<int, (string?, string?)>();
+        foreach (var profile in relevantProfiles)
+        {
+            if (usersById.TryGetValue(profile.UserId, out var user))
+                result[profile.Id] = (user.FullName, user.PhoneNumber);
+        }
+        return result;
+    }
+
+    private static GetOrderDto ToGetDto(Order order, IReadOnlyDictionary<int, (string? FullName, string? Phone)> customers)
+    {
+        customers.TryGetValue(order.CustomerId, out var customer);
+        return new()
+        {
+            Id = order.Id,
+            OrderNumber = order.OrderNumber,
+            CustomerId = order.CustomerId,
+            FarmerId = order.FarmerId,
+            Status = order.Status,
+            DeliveryAddress = order.DeliveryAddress,
+            Region = order.Region,
+            District = order.District,
+            CustomerComment = order.CustomerComment,
+            Subtotal = order.Subtotal,
+            DeliveryPrice = order.DeliveryPrice,
+            TotalAmount = order.TotalAmount,
+            CreatedAt = order.CreatedAt,
+            AcceptedAt = order.AcceptedAt,
+            CompletedAt = order.CompletedAt,
+            CancelledAt = order.CancelledAt,
+            CustomerFullName = customer.FullName,
+            CustomerPhone = customer.Phone
+        };
+    }
 }
