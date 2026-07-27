@@ -1,0 +1,350 @@
+{
+  "nav": {
+    "overview": "Overview",
+    "analytics": "Analytics",
+    "orders": "Orders",
+    "products": "Products",
+    "farmers": "Farmers",
+    "customers": "Customers",
+    "payments": "Payments",
+    "reviews": "Reviews",
+    "notifications": "Notifications",
+    "settings": "Settings",
+    "couriers": "Couriers",
+    "delivery": "Delivery"
+  },
+  "collapseSidebar": "Collapse menu",
+  "expandSidebar": "Expand menu",
+  "search": "Search...",
+  "notifications": "Notifications",
+  "adminName": "Administrator",
+  "logout": "Log out",
+  "common": {
+    "somoni": "somoni"
+  },
+  "dashboard": {
+    "greeting": "Welcome back, admin 👋",
+    "greetingSubtitle": "Here's what's happening on your platform today.",
+    "errorTitle": "Failed to load overview",
+    "errorDescription": "Check your connection to the server and try again.",
+    "stats": {
+      "revenue": "Revenue this month",
+      "customers": "New customers",
+      "orders": "Orders",
+      "farmers": "Active farmers"
+    },
+    "vsLastMonth": "vs last month {{value}}",
+    "newMetric": "New",
+    "salesByRegion": "Sales by region",
+    "total": "Total",
+    "ordersByMonth": "Orders by month",
+    "recentOrders": "Recent orders",
+    "viewAll": "View all",
+    "topFarmers": "Top farmers",
+    "noTopFarmersYet": "No farmer data yet",
+    "popularCategories": "Popular categories",
+    "noPopularCategoriesYet": "No category data yet"
+  },
+  "notificationsPage": {
+    "errorTitle": "Failed to load notifications",
+    "errorDescription": "Check your connection to the server and try again.",
+    "emptyTitle": "No notifications yet",
+    "emptyDescription": "Platform system notifications will appear here."
+  },
+  "orders": {
+    "errorTitle": "Failed to load orders",
+    "errorDescription": "Check your connection to the server and try again.",
+    "emptyTitle": "No orders yet",
+    "emptyDescription": "Customer orders will appear here once they start placing them.",
+    "columns": {
+      "orderNumber": "Order #",
+      "customer": "Customer",
+      "farmer": "Farmer",
+      "region": "Region",
+      "amount": "Amount",
+      "status": "Status",
+      "createdAt": "Order date & time",
+      "receivedAt": "Received date & time"
+    },
+    "customerLabel": "Customer #{{id}}",
+    "farmerLabel": "Farmer #{{id}}",
+    "notReceivedYet": "Not received yet",
+    "status": {
+      "pending": "Pending",
+      "accepted": "Accepted",
+      "rejected": "Rejected",
+      "preparing": "Preparing",
+      "readyForPickup": "Ready for pickup",
+      "courierAssigned": "Courier assigned",
+      "pickedUp": "Picked up",
+      "inDelivery": "In delivery",
+      "delivered": "Delivered",
+      "completed": "Completed",
+      "cancelled": "Cancelled"
+    },
+    "updateSuccess": "Order status updated",
+    "updateError": "Failed to update order status",
+    "statusLockedHint": "While the farmer is processing this order — from \"Ready for pickup\" onward it can be managed here"
+  },
+  "products": {
+    "errorTitle": "Failed to load products",
+    "errorDescription": "Check your connection to the server and try again.",
+    "emptyTitle": "No products yet",
+    "emptyDescription": "Farmer products will appear here once they add their first listings.",
+    "columns": {
+      "title": "Title",
+      "farmer": "Farmer",
+      "price": "Price",
+      "quantity": "Stock",
+      "status": "Status",
+      "region": "Region",
+      "actions": "Actions"
+    },
+    "farmerLabel": "Farmer #{{id}}",
+    "perKg": "TJS/kg",
+    "kg": "kg",
+    "originallyOf": "of {{count}} originally",
+    "status": {
+      "draft": "Draft",
+      "active": "Active",
+      "outOfStock": "Out of stock",
+      "archived": "Archived"
+    },
+    "deleteAction": "Delete",
+    "deleteSuccess": "Product deleted",
+    "deleteError": "Failed to delete product",
+    "deleteConfirmTitle": "Delete this product?",
+    "deleteConfirmDescription": "The listing \"{{title}}\" will be deleted. This action cannot be undone."
+  },
+  "farmers": {
+    "errorTitle": "Failed to load farmers",
+    "errorDescription": "Check your connection to the server and try again.",
+    "emptyTitle": "No farmers yet",
+    "emptyDescription": "Registered farms will appear here.",
+    "columns": {
+      "farmName": "Farm",
+      "region": "Region",
+      "status": "Status",
+      "createdAt": "Registration date",
+      "actions": "Actions"
+    },
+    "status": {
+      "pending": "Under review",
+      "verified": "Verified",
+      "rejected": "Rejected"
+    },
+    "verifyAction": "Verify",
+    "rejectAction": "Reject",
+    "verifySuccess": "Farmer verified",
+    "rejectSuccess": "Farmer rejected",
+    "actionError": "Failed to change status"
+  },
+  "users": {
+    "errorTitle": "Failed to load customers",
+    "errorDescription": "Check your connection to the server and try again.",
+    "emptyTitle": "No customers yet",
+    "emptyDescription": "Registered customers will appear here.",
+    "columns": {
+      "fullName": "Full name",
+      "email": "Email",
+      "phone": "Phone",
+      "status": "Status",
+      "createdAt": "Registration date"
+    },
+    "status": {
+      "active": "Active",
+      "inactive": "Inactive"
+    }
+  },
+  "commissions": {
+    "errorTitle": "Failed to load commissions",
+    "errorDescription": "Check your connection to the server and try again.",
+    "emptyTitle": "No commissions yet",
+    "emptyDescription": "Configured platform commission rates will appear here.",
+    "columns": {
+      "category": "Category",
+      "percentage": "Percentage",
+      "effectiveFrom": "Effective from",
+      "effectiveTo": "Effective to",
+      "status": "Status",
+      "actions": "Actions"
+    },
+    "allCategories": "All categories",
+    "categoryLabel": "Category #{{id}}",
+    "status": {
+      "active": "Active",
+      "expired": "Expired"
+    },
+    "addButton": "Add commission",
+    "createModalTitle": "New commission",
+    "editModalTitle": "Edit commission",
+    "editAction": "Edit",
+    "deleteAction": "Delete",
+    "createSuccess": "Commission added",
+    "createError": "Failed to create commission",
+    "updateSuccess": "Commission updated",
+    "updateError": "Failed to update commission",
+    "deleteSuccess": "Commission deleted",
+    "deleteError": "Failed to delete commission",
+    "deleteConfirmTitle": "Delete this commission?",
+    "deleteConfirmDescription": "This action cannot be undone.",
+    "form": {
+      "categoryId": "Category ID",
+      "categoryIdHint": "Leave empty for all categories",
+      "percentage": "Percentage, %",
+      "effectiveFrom": "Effective from",
+      "effectiveTo": "Effective to",
+      "required": "Required field",
+      "percentageRange": "From 0 to 100",
+      "effectiveToBeforeFrom": "Must be later than the start date",
+      "optional": "Optional",
+      "cancel": "Cancel",
+      "submit": "Create",
+      "saveChanges": "Save changes"
+    }
+  },
+  "reviews": {
+    "errorTitle": "Failed to load reviews",
+    "errorDescription": "Check your connection to the server and try again.",
+    "emptyTitle": "No reviews yet",
+    "emptyDescription": "Customer reviews of orders will appear here.",
+    "columns": {
+      "order": "Order",
+      "customer": "Customer",
+      "farmer": "Farmer",
+      "rating": "Rating",
+      "comment": "Comment",
+      "createdAt": "Date",
+      "actions": "Actions"
+    },
+    "orderLabel": "Order #{{id}}",
+    "customerLabel": "Customer #{{id}}",
+    "farmerLabel": "Farmer #{{id}}",
+    "deleteAction": "Delete",
+    "deleteSuccess": "Review deleted",
+    "deleteError": "Failed to delete review",
+    "deleteConfirmTitle": "Delete this review?",
+    "deleteConfirmDescription": "This action cannot be undone."
+  },
+  "settings": {
+    "errorTitle": "Failed to load settings",
+    "errorDescription": "Check your connection to the server and try again.",
+    "emptyTitle": "No settings yet",
+    "emptyDescription": "Platform system settings will appear here.",
+    "columns": {
+      "key": "Key",
+      "value": "Value",
+      "description": "Description",
+      "updatedAt": "Updated",
+      "actions": "Actions"
+    },
+    "editAction": "Edit",
+    "editModalTitle": "Edit setting",
+    "updateSuccess": "Setting updated",
+    "updateError": "Failed to update setting",
+    "form": {
+      "required": "Required field",
+      "cancel": "Cancel",
+      "saveChanges": "Save changes"
+    }
+  },
+  "statistics": {
+    "errorTitle": "Failed to load analytics",
+    "errorDescription": "Check your connection to the server and try again.",
+    "stats": {
+      "totalUsers": "Total users",
+      "totalFarmers": "Total farmers",
+      "totalCustomers": "Total customers",
+      "totalCouriers": "Total couriers",
+      "ordersThisMonth": "Orders this month",
+      "revenueThisMonth": "Revenue this month",
+      "totalRevenue": "All-time revenue",
+      "activeProductListings": "Active products"
+    },
+    "revenueByMonth": "Revenue by month",
+    "noRevenueYet": "No revenue data yet",
+    "topSellingProducts": "Top sellers",
+    "noSalesYet": "No sales yet",
+    "noSalesYetDescription": "The best-selling products will appear here.",
+    "vsLastMonth": "vs last month",
+    "kg": "kg",
+    "ordersByStatus": "Orders by status",
+    "noOrdersYet": "No orders yet",
+    "months": [
+      "Jan",
+      "Feb",
+      "Mar",
+      "Apr",
+      "May",
+      "Jun",
+      "Jul",
+      "Aug",
+      "Sep",
+      "Oct",
+      "Nov",
+      "Dec"
+    ]
+  },
+  "couriers": {
+    "errorTitle": "Failed to load couriers",
+    "errorDescription": "Check your connection to the server and try again.",
+    "emptyTitle": "No couriers yet",
+    "emptyDescription": "Registered platform couriers will appear here.",
+    "columns": {
+      "transport": "Transport",
+      "region": "Region",
+      "available": "Availability",
+      "active": "Status",
+      "createdAt": "Registration date"
+    },
+    "available": "Available",
+    "unavailable": "Unavailable",
+    "active": "Active",
+    "inactive": "Disabled",
+    "updateSuccess": "Courier status updated",
+    "updateError": "Failed to update courier status"
+  },
+  "deliveryZones": {
+    "errorTitle": "Failed to load delivery zones",
+    "errorDescription": "Check your connection to the server and try again.",
+    "emptyTitle": "No delivery zones yet",
+    "emptyDescription": "Add the first zone to set up delivery pricing by region.",
+    "columns": {
+      "region": "Region",
+      "basePrice": "Base price",
+      "pricePerKm": "Price per km",
+      "status": "Status",
+      "actions": "Actions"
+    },
+    "status": {
+      "active": "Active",
+      "inactive": "Disabled"
+    },
+    "addButton": "Add zone",
+    "createModalTitle": "New delivery zone",
+    "editModalTitle": "Edit delivery zone",
+    "editAction": "Edit",
+    "deleteAction": "Delete",
+    "createSuccess": "Delivery zone added",
+    "createError": "Failed to create delivery zone",
+    "updateSuccess": "Delivery zone updated",
+    "updateError": "Failed to update delivery zone",
+    "deleteSuccess": "Delivery zone deleted",
+    "deleteError": "Failed to delete delivery zone",
+    "deleteConfirmTitle": "Delete this delivery zone?",
+    "deleteConfirmDescription": "This action cannot be undone.",
+    "form": {
+      "region": "Region",
+      "district": "District",
+      "basePrice": "Base price, somoni",
+      "pricePerKm": "Price per km, somoni",
+      "status": "Status",
+      "required": "Required field",
+      "nonNegative": "Cannot be negative",
+      "optional": "Optional",
+      "cancel": "Cancel",
+      "submit": "Create",
+      "saveChanges": "Save changes"
+    }
+  }
+}

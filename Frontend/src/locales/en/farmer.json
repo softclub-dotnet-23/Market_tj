@@ -1,0 +1,296 @@
+{
+  "nav": {
+    "overview": "Overview",
+    "products": "My products",
+    "orders": "Orders",
+    "messages": "Messages",
+    "reviews": "Reviews",
+    "profile": "Farm profile",
+    "documents": "Documents",
+    "staff": "Staff",
+    "notifications": "Notifications"
+  },
+  "collapseSidebar": "Collapse menu",
+  "expandSidebar": "Expand menu",
+  "search": "Search...",
+  "notifications": "Notifications",
+  "farmerName": "Farmer",
+  "logout": "Log out",
+  "common": {
+    "somoni": "somoni"
+  },
+  "dashboard": {
+    "greeting": "Welcome back 👋",
+    "greetingSubtitle": "Here's what's happening with your farm today.",
+    "stats": {
+      "totalProducts": "Total products",
+      "activeProducts": "Active products",
+      "ordersThisMonth": "Orders this month",
+      "revenueThisMonth": "Revenue this month",
+      "totalRevenue": "All-time revenue",
+      "averageRating": "Average rating"
+    },
+    "noRatingYet": "No reviews yet",
+    "revenueByMonth": "Revenue by month",
+    "topSelling": "Top sellers",
+    "noSalesYet": "No sales yet",
+    "noSalesYetDescription": "Your most popular products will appear here.",
+    "vsLastMonth": "vs last month",
+    "kg": "kg",
+    "months": [
+      "Jan",
+      "Feb",
+      "Mar",
+      "Apr",
+      "May",
+      "Jun",
+      "Jul",
+      "Aug",
+      "Sep",
+      "Oct",
+      "Nov",
+      "Dec"
+    ],
+    "errorTitle": "Failed to load dashboard",
+    "errorDescription": "Check your connection to the server and try again."
+  },
+  "products": {
+    "errorTitle": "Failed to load products",
+    "errorDescription": "Check your connection to the server and try again.",
+    "emptyTitle": "No products yet",
+    "emptyDescription": "Your listings will appear here once you add your first product.",
+    "columns": {
+      "title": "Title",
+      "price": "Price",
+      "quantity": "Stock",
+      "status": "Status",
+      "harvestDate": "Harvest date",
+      "actions": "Actions"
+    },
+    "perKg": "TJS/kg",
+    "kg": "kg",
+    "originallyOf": "of {{count}} originally",
+    "status": {
+      "draft": "Draft",
+      "active": "Active",
+      "outOfStock": "Out of stock",
+      "archived": "Archived"
+    },
+    "addButton": "Add product",
+    "modalTitle": "New product",
+    "createSuccess": "Product added",
+    "createError": "Failed to create product",
+    "form": {
+      "product": "Product",
+      "productPlaceholder": "Select a product from the catalog",
+      "title": "Listing title",
+      "titlePlaceholder": "e.g. Field-grown tomato, freshly picked",
+      "titleLength": "Title must be 3 to 150 characters",
+      "qualityGrade": "Grade / quality",
+      "qualityOptions": {
+        "premium": "Premium",
+        "first": "First grade",
+        "standard": "Standard"
+      },
+      "status": "Status on creation",
+      "retailPrice": "Retail price, somoni/kg",
+      "availableQuantity": "Stock, kg",
+      "minimumOrderQuantity": "Min. order quantity, kg",
+      "minOrderExceedsAvailable": "Cannot exceed the available stock",
+      "harvestDate": "Harvest date",
+      "wholesalePrice": "Wholesale price, somoni/kg",
+      "wholesaleMinQuantity": "Min. quantity for wholesale, kg",
+      "wholesaleExceedsRetail": "Cannot be higher than the retail price",
+      "wholesaleMinRequired": "Specify the minimum wholesale quantity",
+      "optional": "Optional",
+      "description": "Description",
+      "descriptionLength": "No more than 2000 characters",
+      "required": "Required field",
+      "mustBePositive": "Must be greater than 0",
+      "submit": "Create listing",
+      "cancel": "Cancel",
+      "saveChanges": "Save changes",
+      "photos": "Product photos",
+      "photosHint": "Up to 5 photos, jpg/png/webp formats, up to 5 MB each",
+      "photosAfterCreate": "Photos can be added after the product is created",
+      "photoDelete": "Delete photo",
+      "photoInvalidType": "Only jpg, png, webp formats are allowed",
+      "photoTooLarge": "Maximum file size is 5 MB",
+      "photoUploadError": "Failed to upload photo",
+      "photoDeleteError": "Failed to delete photo"
+    },
+    "editAction": "Edit",
+    "deleteAction": "Delete",
+    "editModalTitle": "Edit product",
+    "updateSuccess": "Product updated",
+    "updateError": "Failed to update product",
+    "deleteSuccess": "Product deleted",
+    "deleteError": "Failed to delete product",
+    "deleteConfirmTitle": "Delete this product?",
+    "deleteConfirmDescription": "The listing \"{{title}}\" will be deleted. This action cannot be undone."
+  },
+  "profile": {
+    "errorTitle": "Failed to load farm profile",
+    "errorDescription": "Check your connection to the server and try again.",
+    "detailsTitle": "Farm details",
+    "editAction": "Edit",
+    "editModalTitle": "Edit farm profile",
+    "updateSuccess": "Farm profile updated",
+    "updateError": "Failed to update farm profile",
+    "memberSince": "On the platform since",
+    "noDescription": "No description added yet",
+    "pendingHint": "Your farm is still being reviewed by an administrator — you can't publish active listings until it's verified.",
+    "rejectedHint": "The farm verification request was rejected by an administrator. Contact support if you think this is a mistake.",
+    "status": {
+      "pending": "Under review",
+      "verified": "Verified",
+      "rejected": "Rejected"
+    },
+    "form": {
+      "farmName": "Farm name",
+      "region": "Region",
+      "district": "District",
+      "village": "Village",
+      "address": "Address",
+      "description": "Description",
+      "optional": "Optional",
+      "required": "Required field",
+      "cancel": "Cancel",
+      "saveChanges": "Save changes"
+    }
+  },
+  "orders": {
+    "errorTitle": "Failed to load orders",
+    "errorDescription": "Check your connection to the server and try again.",
+    "emptyTitle": "No orders yet",
+    "emptyDescription": "Customer orders for your products will appear here.",
+    "columns": {
+      "orderNumber": "Order #",
+      "customer": "Customer",
+      "address": "Delivery address",
+      "amount": "Amount",
+      "status": "Status",
+      "delivery": "Delivery",
+      "createdAt": "Order date & time",
+      "receivedAt": "Received date & time"
+    },
+    "customerLabel": "Customer #{{id}}",
+    "courierLabel": "Courier #{{id}}",
+    "noCourierYet": "No courier assigned",
+    "noDeliveryYet": "—",
+    "notReceivedYet": "Not received yet",
+    "updateSuccess": "Order status updated",
+    "updateError": "Failed to update order status",
+    "statusLockedHint": "The order is then processed by an administrator",
+    "status": {
+      "pending": "Pending",
+      "accepted": "Accepted",
+      "rejected": "Rejected",
+      "preparing": "Preparing",
+      "readyForPickup": "Ready for pickup",
+      "courierAssigned": "Courier assigned",
+      "pickedUp": "Picked up",
+      "inDelivery": "In delivery",
+      "delivered": "Delivered",
+      "completed": "Completed",
+      "cancelled": "Cancelled"
+    },
+    "deliveryStatus": {
+      "pending": "Awaiting assignment",
+      "assigned": "Courier assigned",
+      "pickedUp": "Picked up",
+      "inDelivery": "In delivery",
+      "delivered": "Delivered",
+      "cancelled": "Cancelled"
+    }
+  },
+  "reviews": {
+    "errorTitle": "Failed to load reviews",
+    "errorDescription": "Check your connection to the server and try again.",
+    "emptyTitle": "No reviews yet",
+    "emptyDescription": "Customer reviews of your orders will appear here.",
+    "averageRating": "Average rating",
+    "columns": {
+      "order": "Order",
+      "customer": "Customer",
+      "rating": "Rating",
+      "comment": "Comment",
+      "createdAt": "Date"
+    },
+    "orderLabel": "Order #{{id}}",
+    "customerLabel": "Customer #{{id}}"
+  },
+  "notificationsPage": {
+    "errorTitle": "Failed to load notifications",
+    "errorDescription": "Check your connection to the server and try again.",
+    "emptyTitle": "No notifications yet",
+    "emptyDescription": "Notifications about orders and your farm's status will appear here."
+  },
+  "documents": {
+    "errorTitle": "Failed to load documents",
+    "errorDescription": "Check your connection to the server and try again.",
+    "emptyTitle": "No documents yet",
+    "emptyDescription": "Your farm's uploaded documents will appear here.",
+    "columns": {
+      "type": "Document type",
+      "status": "Status",
+      "rejectionReason": "Rejection reason",
+      "uploadedAt": "Upload date"
+    },
+    "type": {
+      "passport": "Passport",
+      "landDeed": "Land deed",
+      "other": "Other"
+    },
+    "status": {
+      "pending": "Under review",
+      "approved": "Approved",
+      "rejected": "Rejected"
+    },
+    "uploadHint": "Uploading new documents will be available once a file API is added on the backend — for now you can only view already uploaded documents and their review status."
+  },
+  "staff": {
+    "errorTitle": "Failed to load staff",
+    "errorDescription": "Check your connection to the server and try again.",
+    "emptyTitle": "No staff yet",
+    "emptyDescription": "Staff members added to your farm will appear here.",
+    "columns": {
+      "user": "Staff member",
+      "permissions": "Permissions",
+      "status": "Status",
+      "createdAt": "Date added"
+    },
+    "userLabel": "Staff member #{{id}}",
+    "permissions": {
+      "manageProducts": "Manage products",
+      "manageStock": "Manage stock",
+      "none": "No permissions"
+    },
+    "status": {
+      "active": "Active",
+      "inactive": "Disabled"
+    },
+    "addHint": "Adding new staff members will be available once full user registration is ready on the backend — for now you can only view those already added."
+  },
+  "chat": {
+    "aboutOrder": "About order {{orderNumber}}",
+    "generalInquiry": "Product question",
+    "loading": "Opening chat...",
+    "emptyDescription": "No messages yet — be the first to write.",
+    "placeholder": "Write a message...",
+    "send": "Send",
+    "sendError": "Failed to send message",
+    "attachPhoto": "Attach photo",
+    "photoInvalidType": "Only jpg, png, webp formats are allowed",
+    "photoTooLarge": "Maximum file size is 5 MB",
+    "photoUploadError": "Failed to send photo"
+  },
+  "messages": {
+    "errorTitle": "Failed to load messages",
+    "errorDescription": "Check your connection to the server and try again.",
+    "emptyTitle": "No conversations yet",
+    "emptyDescription": "Customer questions and order conversations will appear here.",
+    "noMessagesYet": "No messages yet",
+    "photoPreview": "Photo"
+  }
+}

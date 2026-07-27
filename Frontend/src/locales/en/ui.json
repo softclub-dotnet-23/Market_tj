@@ -1,0 +1,14 @@
+{
+  "pagination": "Pagination",
+  "previousPage": "Previous page",
+  "nextPage": "Next page",
+  "carouselPrev": "Back",
+  "carouselNext": "Next",
+  "slideNumber": "Slide {{number}}",
+  "breadcrumbs": "Breadcrumbs",
+  "selectPlaceholder": "Select",
+  "themeToLight": "Switch to light theme",
+  "themeToDark": "Switch to dark theme",
+  "lightTheme": "Light theme",
+  "darkTheme": "Dark theme"
+}

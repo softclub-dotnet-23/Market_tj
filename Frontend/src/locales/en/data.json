@@ -1,0 +1,552 @@
+{
+  "categories": {
+    "vegetables": {
+      "name": "Vegetables",
+      "description": "Tomatoes, cucumbers, potatoes and other vegetables straight from the field"
+    },
+    "fruits": {
+      "name": "Fruits",
+      "description": "Sweet seasonal fruit from trusted orchards"
+    },
+    "greens": {
+      "name": "Greens",
+      "description": "Aromatic herbs and leafy greens with a bright flavor"
+    },
+    "dried-fruits": {
+      "name": "Dried fruits",
+      "description": "Dried apricots, raisins and other dried fruit with no added sugar"
+    },
+    "nuts": {
+      "name": "Nuts",
+      "description": "Walnuts, almonds and pistachios from this year's harvest"
+    },
+    "dairy": {
+      "name": "Dairy",
+      "description": "Homemade milk, qurut and suzma from local farms"
+    }
+  },
+  "farmers": {
+    "1": {
+      "region": "Sughd Region",
+      "district": "Panjakent District",
+      "village": "Yori village",
+      "bio": "Open-field vegetables and greens, a family farm since 2014.",
+      "story": "The \"Gulzor\" farm started as a single small field in the foothills of Panjakent. Today the Rahimov family works 4 hectares of land and supplies fresh vegetables to Khujand and Dushanbe, keeping to traditional irrigation methods without chemical growth boosters.",
+      "tags": ["Chemical-free", "Fast order picking"]
+    },
+    "2": {
+      "region": "Khatlon Region",
+      "district": "Bokhtar District",
+      "village": "Tuti village",
+      "bio": "Tomatoes, cucumbers and eggplants, greenhouse and open field.",
+      "story": "Munira Saidova inherited the farm from her father and turned it into one of the district's largest greenhouse operations. \"Zamindor\" grows tomatoes using gentle agrotechniques and was the first in the district to switch to drip irrigation.",
+      "tags": ["Greenhouse farm", "Drip irrigation"]
+    },
+    "3": {
+      "region": "Sughd Region",
+      "district": "Istaravshan District",
+      "village": "Chorgultepa village",
+      "bio": "Apple orchards with a century of Istaravshan growing tradition.",
+      "story": "The \"Sebzor\" orchards were planted by the current owner's grandfather back in the 1970s. Today more than 12 apple varieties grow here, and the harvest is picked by hand to avoid damaging the skin — which is exactly why these apples keep so well.",
+      "tags": ["Hand-picked", "Family orchard"]
+    },
+    "4": {
+      "region": "Khatlon Region",
+      "district": "Vakhsh District",
+      "village": "Chagam village",
+      "bio": "Vineyards and stone fruit in the Vakhsh river valley.",
+      "story": "The \"Anguri Khatlon\" vineyards spread across sunny terraces along the Vakhsh river. The farm grows 5 grape varieties and prides itself on hand-sorting every bunch before it's sent to the buyer.",
+      "tags": ["Sunny valley", "Hand-sorted"]
+    },
+    "5": {
+      "region": "GBAO",
+      "district": "Rushan District",
+      "village": "Barzud village",
+      "bio": "Mountain apricots and dried fruit with no sugar or preservatives.",
+      "story": "At an altitude of nearly 2,000 meters, apricots ripen more slowly and become sweeter. \"Kuhdara\" sun-dries the harvest outdoors using traditional Pamir techniques — no sugar, sulfur or other additives.",
+      "tags": ["Mountain farming", "No additives"]
+    },
+    "6": {
+      "region": "Districts of Republican Subordination",
+      "district": "Vahdat District",
+      "village": "Roboti Khoja village",
+      "bio": "Milk, qurut and suzma from a farm with its own herd of cows.",
+      "story": "The small \"Shiri Vahdat\" dairy farm keeps 26 cows and processes the milk the same day. Qurut and suzma are made by hand following a recipe passed down through four generations of the family.",
+      "tags": ["Own herd", "Homemade processing"]
+    },
+    "7": {
+      "region": "Districts of Republican Subordination",
+      "district": "Hisor District",
+      "village": "Romit village",
+      "bio": "Fresh greens and herbs, picked in the morning on delivery day.",
+      "story": "\"Sabzai Orom\" is a family greenhouse at the foot of the Hisor range. Dill, cilantro and basil are cut early in the morning so they reach the buyer's table by evening — hence this farm's especially fresh greens.",
+      "tags": ["Picked on delivery day", "Greenhouse greens"]
+    },
+    "8": {
+      "region": "Khatlon Region",
+      "district": "Dangara District",
+      "village": "Oqsu village",
+      "bio": "Pomegranates, persimmons and quince from the southern slopes of Dangara District.",
+      "story": "The \"Mevazor\" orchard specializes in pomegranates and persimmons — crops that need plenty of sun. The farm was one of the first in the region to sort fruit by size, so buyers always know exactly what they're getting.",
+      "tags": ["Sized fruit", "Southern slopes"]
+    },
+    "9": {
+      "region": "GBAO",
+      "district": "Khorog District",
+      "village": "Porshi village",
+      "bio": "Walnuts and apricot kernels — a traditional Pamir trade.",
+      "story": "The \"Chormaghzi Pomir\" walnut groves have grown along mountain rivers for generations. The nuts are hand-picked and naturally dried in ventilated sheds — no artificial drying or processing.",
+      "tags": ["Naturally dried", "Hand-picked"]
+    },
+    "10": {
+      "region": "Sughd Region",
+      "district": "Kanibadam District",
+      "village": "Robot village",
+      "bio": "The famous Kanibadam almond and dried fruit, no added sugar.",
+      "story": "The land around Kanibadam has been famous for its almonds for centuries. \"Gulboghi Robot\" carefully tends its old almond trees and finishes drying the harvest under open sheds — keeping the nut's rich flavor without drying it out.",
+      "tags": ["Old orchards", "Shed-dried"]
+    },
+    "11": {
+      "region": "Dushanbe",
+      "district": "Sino District",
+      "village": "Zarafshon microdistrict",
+      "bio": "An urban hydroponic farm — lettuce and microgreens year-round.",
+      "story": "\"Greenhouse Dushanbe\" is a modern hydroponic greenhouse right in the city. Leaf lettuce, arugula and microgreens are grown here year-round regardless of season, and orders are delivered just hours after picking.",
+      "tags": ["Hydroponics", "Year-round"]
+    }
+  },
+  "regionLabels": {
+    "Все регионы": "All regions",
+    "г. Душанбе": "Dushanbe",
+    "Согдийская область": "Sughd Region",
+    "Хатлонская область": "Khatlon Region",
+    "Районы республиканского подчинения": "Districts of Republican Subordination",
+    "ГБАО": "GBAO"
+  },
+  "districtLabels": {
+    "Бохтарский район": "Bokhtar District",
+    "Панджакентский район": "Panjakent District",
+    "Истаравшанский район": "Istaravshan District",
+    "Вахшский район": "Vakhsh District",
+    "Дангаринский район": "Dangara District",
+    "Гиссарский район": "Hisor District",
+    "Сино район": "Sino District",
+    "Рушанский район": "Rushan District",
+    "Хорогский район": "Khorog District",
+    "Канибадамский район": "Kanibadam District",
+    "Вахдатский район": "Vahdat District"
+  },
+  "platformStats": {
+    "1": "Verified farmers",
+    "2": "Products in catalog",
+    "3": "Customer reviews",
+    "4": "Regions covered"
+  },
+  "deliverySteps": {
+    "1": { "title": "You choose products", "description": "Find what you need in the catalog and add it to your cart — sorted by farmer, region and price." },
+    "2": { "title": "The farmer confirms the order", "description": "The farmer gets notified, checks availability, and confirms the order within a few hours." },
+    "3": { "title": "The courier picks up the produce", "description": "The order is handed to the courier straight from the farm — freshness is preserved all the way to you." },
+    "4": { "title": "You receive your order", "description": "The courier delivers the order to the specified address within the agreed time window." }
+  },
+  "whyChooseUs": {
+    "1": { "title": "Straight from the farmer", "description": "No middlemen or reseller markups — you pay a fair price, and the farmer earns more." },
+    "2": { "title": "Verified quality", "description": "Every farm is verified before it's allowed to start selling on the platform." },
+    "3": { "title": "Transparent origin", "description": "You always know which region a product is from, when it was picked, and who grew it." },
+    "4": { "title": "Honest reviews", "description": "Only customers with a confirmed order can leave a rating — no rating manipulation." }
+  },
+  "officeInfo": {
+    "address": "42 Rudaki Avenue, Dushanbe",
+    "hours": "Mon–Sat: 09:00–19:00, Sun: 10:00–16:00"
+  },
+  "testimonials": {
+    "1": { "name": "Farida Nazarova", "role": "Customer, Dushanbe", "quote": "I've been ordering vegetables and greens every week for six months now. The difference from the market is huge — everything arrives fresh, as if I'd picked it myself that morning." },
+    "2": { "name": "Rustam Abdulloev", "role": "Owner, \"Oshkhona\" café", "quote": "Reliable supply and honest weight matter a lot for our café. Market.tj delivers on both — orders arrive on the same day, no surprises." },
+    "3": { "name": "Gulbahor Rahimova", "role": "Customer, Khujand", "quote": "What I love most is that you can see exactly which farmer you're buying from — with photos of the farm, reviews and history. It builds a trust the market never had." },
+    "4": { "name": "Sherali Yusupov", "role": "Customer, Bokhtar", "quote": "I used to have to drive across the whole city for fresh fruit. Now I just place an order in the evening — and everything's already at my door by morning." },
+    "5": { "name": "Nargis Karimova", "role": "Chef, \"Dastarkhon\" restaurant", "quote": "We work directly with several farms through the platform. The quality is noticeably higher than with our previous suppliers." }
+  },
+  "faqGroups": {
+    "Заказ и доставка": "Order & delivery",
+    "Оплата": "Payment",
+    "Фермерам": "For farmers",
+    "Качество": "Quality"
+  },
+  "faqItems": {
+    "1": { "question": "How fast is an order delivered?", "answer": "In most cases the order is delivered within 24 hours of the farmer's confirmation — many products are picked and shipped on the same day as the order." },
+    "2": { "question": "Can I order from several farmers at once?", "answer": "Yes. If your cart has items from different farmers, the system automatically splits the order — each farmer will pack and confirm only their part." },
+    "3": { "question": "What if a product turns out to be low quality?", "answer": "Contact us through the support section within 24 hours with a photo of the issue — we'll sort it out with the farmer and offer a solution: a replacement or a refund." },
+    "4": { "question": "What payment methods are available?", "answer": "At launch, cash payment to the courier on delivery is available. Online payment by card and mobile wallets will arrive in a future update." },
+    "5": { "question": "How do I become a seller on Market.tj?", "answer": "Sign up as a farmer, fill out your farm profile, and submit an application for review. Once approved by an administrator, you can start publishing listings." },
+    "6": { "question": "Is a commission charged on sales?", "answer": "Yes, the platform keeps a small percentage of each sale to support the service — the commission rate is shown in the farmer's dashboard before publishing a listing." },
+    "7": { "question": "How do you vet farmers before listing them on the platform?", "answer": "Every farm is reviewed by an administrator: documents and the farm's location are verified. Unreliable or inactive sellers are blocked." },
+    "8": { "question": "Can I leave a review for a farmer?", "answer": "Yes, once you've confirmed receiving your order you can leave a rating and comment — this helps other buyers choose reliable farmers." }
+  },
+  "aboutValues": {
+    "1": { "title": "Honesty", "description": "Transparent prices, accurate weight, and the origin of every product — no hidden markups." },
+    "2": { "title": "Direct connection", "description": "Minimal middlemen between field and table — the farmer earns more, the buyer pays less." },
+    "3": { "title": "Quality first", "description": "Every farm is verified, and buyers leave honest reviews of the produce." },
+    "4": { "title": "Supporting farmers", "description": "We give small and mid-sized farms the tools that used to be available only to large players." }
+  },
+  "impactStats": {
+    "1": "Farmer income growth",
+    "2": "Farms on the platform",
+    "3": "Regions covered",
+    "4": "Average delivery time"
+  },
+  "impactStatsHourSuffix": " h",
+  "timeline": {
+    "2024": { "title": "Idea and market research", "description": "We studied how a product travels from farmer to buyer and found out how much is lost to middlemen." },
+    "2025": { "title": "Pilot launch in three districts", "description": "The first 40 farms in Khatlon and Sughd started selling directly through the platform." },
+    "2026": { "title": "National launch", "description": "Market.tj expands to nationwide coverage — from Dushanbe to GBAO, with hundreds of active farms." }
+  },
+  "teamValues": {
+    "1": { "name": "Product team", "focus": "Platform development and user experience" },
+    "2": { "name": "Farmer support team", "focus": "Training, verification and farm support" },
+    "3": { "name": "Logistics team", "focus": "Courier coordination and delivery quality" }
+  },
+  "products": {
+    "101": {
+      "title": "Pink field-grown tomatoes",
+      "shortDescription": "Meaty \"Ox Heart\" tomatoes, sweet and juicy.",
+      "description": "Meaty pink \"Ox Heart\" tomatoes, grown in a greenhouse with drip irrigation and no growth stimulants. Perfect for salads and sauces — thin skin and few seeds.",
+      "specifications": [
+        { "label": "Variety", "value": "Ox Heart" },
+        { "label": "Growing method", "value": "Greenhouse, drip irrigation" },
+        { "label": "Shelf life", "value": "7–10 days" },
+        { "label": "Size", "value": "150–220 g" }
+      ]
+    },
+    "102": {
+      "title": "Crisp greenhouse cucumbers",
+      "shortDescription": "Crisp cucumbers with no bitterness, picked on delivery day.",
+      "description": "Crisp cucumbers with no bitterness, picked in the morning on delivery day. Thin skin, firm flesh — great for fresh salads and pickling.",
+      "specifications": [
+        { "label": "Variety", "value": "Murashka F1" },
+        { "label": "Growing method", "value": "Greenhouse" },
+        { "label": "Shelf life", "value": "5–7 days" }
+      ]
+    },
+    "103": {
+      "title": "New potatoes",
+      "shortDescription": "Thin-skinned new potatoes, dryland field.",
+      "description": "Thin-skinned new potatoes that don't need much peeling. Grown without herbicides on the dryland fields of Panjakent, holds its shape well when boiled.",
+      "specifications": [
+        { "label": "Variety", "value": "Sante" },
+        { "label": "Growing method", "value": "Open field" },
+        { "label": "Shelf life", "value": "14 days" }
+      ]
+    },
+    "104": {
+      "title": "Yellow onions",
+      "shortDescription": "Firm yellow onions, long shelf life.",
+      "description": "Firm yellow onions with a rich flavor, store well and don't release excess moisture when fried.",
+      "specifications": [
+        { "label": "Variety", "value": "Stuttgarter" },
+        { "label": "Shelf life", "value": "3–4 months" }
+      ]
+    },
+    "105": {
+      "title": "Juicy carrots",
+      "shortDescription": "Sweet carrots with no woody core.",
+      "description": "Sweet, juicy carrots with no woody core — good for both juicing and stewing.",
+      "specifications": [
+        { "label": "Variety", "value": "Nantes" },
+        { "label": "Growing method", "value": "No chemicals" }
+      ]
+    },
+    "106": {
+      "title": "Young eggplants",
+      "shortDescription": "Young eggplants with no bitterness or large seeds.",
+      "description": "Young eggplants with no bitterness or large seeds — no need to soak before cooking.",
+      "specifications": [
+        { "label": "Variety", "value": "Almaz" },
+        { "label": "Growing method", "value": "Greenhouse" }
+      ]
+    },
+    "107": {
+      "title": "Colorful bell peppers",
+      "shortDescription": "Thick-walled sweet peppers, mixed colors.",
+      "description": "A mix of red, yellow and green bell peppers — thick-walled, juicy, sweet.",
+      "specifications": [
+        { "label": "Wall thickness", "value": "6–8 mm" },
+        { "label": "Growing method", "value": "Greenhouse" }
+      ]
+    },
+    "108": {
+      "title": "White cabbage",
+      "shortDescription": "Firm heads with no gaps.",
+      "description": "Firm cabbage heads with no gaps, good for both fresh salads and fermenting.",
+      "specifications": [{ "label": "Average head weight", "value": "2.5–3.5 kg" }]
+    },
+    "109": {
+      "title": "Large dried garlic",
+      "shortDescription": "Large garlic bulbs, sharp rich flavor.",
+      "description": "Large garlic bulbs, fully matured in the field and dried under a shed — a sharp, robust flavor.",
+      "specifications": [
+        { "label": "Bulb size", "value": "5 cm and up" },
+        { "label": "Shelf life", "value": "6 months" }
+      ]
+    },
+    "110": {
+      "title": "Butternut squash",
+      "shortDescription": "Sweet squash with firm orange flesh.",
+      "description": "Sweet butternut squash with firm orange flesh — for porridge, pureed soups and baking.",
+      "specifications": [{ "label": "Shelf life", "value": "up to 3 months" }]
+    },
+    "201": {
+      "title": "Istaravshan apples",
+      "shortDescription": "Crisp sweet-tart apples of the \"Sitora\" variety.",
+      "description": "The \"Sitora\" variety with firm, crisp flesh and a balanced tartness. Hand-picked at full ripeness in the orchards of Istaravshan.",
+      "specifications": [
+        { "label": "Variety", "value": "Sitora" },
+        { "label": "Shelf life", "value": "up to 2 months" },
+        { "label": "Size", "value": "70–85 mm" }
+      ]
+    },
+    "202": {
+      "title": "Duchess pear",
+      "shortDescription": "Juicy, melt-in-your-mouth pear with a musky aroma.",
+      "description": "A juicy, melt-in-your-mouth pear with a subtle musky aroma, picked at peak ripeness.",
+      "specifications": [
+        { "label": "Variety", "value": "Duchess" },
+        { "label": "Shelf life", "value": "10 days" }
+      ]
+    },
+    "203": {
+      "title": "Lady finger grapes",
+      "shortDescription": "Elongated seedless grapes, crisp and sweet.",
+      "description": "The classic elongated seedless grape with firm, crisp flesh. Bunches are hand-selected — only whole, undamaged berries.",
+      "specifications": [
+        { "label": "Variety", "value": "Lady finger" },
+        { "label": "Shelf life", "value": "7 days" }
+      ]
+    },
+    "204": {
+      "title": "Large sweet pomegranate",
+      "shortDescription": "Large sweet pomegranate with dark red seeds.",
+      "description": "A large pomegranate with dark red seeds and minimal pits, grown on the southern slopes of Dangara.",
+      "specifications": [
+        { "label": "Size", "value": "300 g and up" },
+        { "label": "Shelf life", "value": "up to 1 month" }
+      ]
+    },
+    "205": {
+      "title": "Korolyok persimmon",
+      "shortDescription": "\"Korolyok\" persimmon, never astringent even when firm.",
+      "description": "The \"Korolyok\" variety persimmon with no astringent taste even when firm — can be eaten right after purchase.",
+      "specifications": [{ "label": "Variety", "value": "Korolyok" }]
+    },
+    "206": {
+      "title": "Hisor apricots",
+      "shortDescription": "Juicy, fragrant apricots, seasonal harvest.",
+      "description": "A juicy, fragrant apricot with an easily removable pit, picked strictly in season.",
+      "specifications": [{ "label": "Shelf life", "value": "3–4 days" }]
+    },
+    "207": {
+      "title": "Early cherries",
+      "shortDescription": "Large dark red cherries, firm flesh.",
+      "description": "Large dark red cherries with firm flesh and minimal skin cracking.",
+      "specifications": [{ "label": "Size", "value": "26 mm and up" }]
+    },
+    "208": {
+      "title": "Torpedo melon",
+      "shortDescription": "Fragrant honey-sweet \"Torpedo\" melon.",
+      "description": "A fragrant \"Torpedo\" variety melon with honey-sweet flesh and an ideal sugar level.",
+      "specifications": [{ "label": "Average weight", "value": "3–5 kg" }]
+    },
+    "209": {
+      "title": "Astrakhan watermelon",
+      "shortDescription": "Sweet watermelon with a thin rind, hand-selected.",
+      "description": "A sweet, sugary watermelon with a thin rind, hand-selected by sound and rind pattern.",
+      "specifications": [{ "label": "Average weight", "value": "6–9 kg" }]
+    },
+    "210": {
+      "title": "Fragrant quince",
+      "shortDescription": "Firm quince with a rich honey aroma.",
+      "description": "Firm, fragrant quince for jam, compotes and baking — a rich honey aroma.",
+      "specifications": [{ "label": "Shelf life", "value": "up to 2 months" }]
+    },
+    "301": {
+      "title": "Fragrant dill bunch",
+      "shortDescription": "Aromatic dill, cut in the morning on delivery day.",
+      "description": "Fresh dill with a strong aroma, cut in the morning on the day the order ships.",
+      "specifications": [{ "label": "Bunch weight", "value": "~150 g" }]
+    },
+    "302": {
+      "title": "Curly parsley",
+      "shortDescription": "Curly parsley, rich flavor and aroma.",
+      "description": "Curly parsley with a rich flavor, keeps well in the fridge for up to a week.",
+      "specifications": [{ "label": "Bunch weight", "value": "~150 g" }]
+    },
+    "303": {
+      "title": "Fresh cilantro",
+      "shortDescription": "Bright, fragrant cilantro for Eastern cuisine.",
+      "description": "Bright cilantro with a distinctive aroma — a must-have for Eastern cuisine and salads.",
+      "specifications": [{ "label": "Bunch weight", "value": "~150 g" }]
+    },
+    "304": {
+      "title": "Purple basil",
+      "shortDescription": "Spicy purple basil with a bold aroma.",
+      "description": "Fragrant purple basil with spicy notes — a garnish for salads and meat dishes.",
+      "specifications": [{ "label": "Bunch weight", "value": "~100 g" }]
+    },
+    "305": {
+      "title": "Fresh mint",
+      "shortDescription": "Fresh mint with a cool, menthol aroma.",
+      "description": "Cool mint for tea and summer drinks, a pleasant menthol aroma.",
+      "specifications": [{ "label": "Bunch weight", "value": "~100 g" }]
+    },
+    "306": {
+      "title": "Hydroponic lettuce",
+      "shortDescription": "Crisp hydroponic lettuce, no pesticides.",
+      "description": "Crisp leaf lettuce grown hydroponically with no pesticides — available year-round.",
+      "specifications": [{ "label": "Growing method", "value": "Hydroponics" }]
+    },
+    "307": {
+      "title": "Young spinach",
+      "shortDescription": "Tender young spinach leaves.",
+      "description": "Tender young spinach leaves, rich in iron — great for smoothies and salads.",
+      "specifications": [{ "label": "Growing method", "value": "Hydroponics" }]
+    },
+    "308": {
+      "title": "Green onion bunch",
+      "shortDescription": "Juicy green onion stalks, freshly cut.",
+      "description": "Juicy green onion stalks with a light sharpness, freshly cut every morning.",
+      "specifications": [{ "label": "Bunch weight", "value": "~120 g" }]
+    },
+    "401": {
+      "title": "Pamir dried apricots",
+      "shortDescription": "Dried apricots with no sugar or sulfur, sun-dried.",
+      "description": "Apricots sun-dried with no sugar, sulfur or preservatives, following traditional Pamir methods. Rich flavor and a natural dark color.",
+      "specifications": [
+        { "label": "No additives", "value": "Yes" },
+        { "label": "Shelf life", "value": "12 months" }
+      ]
+    },
+    "402": {
+      "title": "Light seedless raisins",
+      "shortDescription": "Light seedless raisins, naturally dried.",
+      "description": "Light raisins from seedless grapes, naturally dried with no oil treatment.",
+      "specifications": [{ "label": "Shelf life", "value": "12 months" }]
+    },
+    "403": {
+      "title": "Dried prunes",
+      "shortDescription": "Soft pitted prunes.",
+      "description": "Dried prunes with a soft texture and a deep sweet flavor, pitted.",
+      "specifications": [{ "label": "Shelf life", "value": "10 months" }]
+    },
+    "404": {
+      "title": "Dried persimmon rings",
+      "shortDescription": "Thin dried persimmon rings, naturally sweet.",
+      "description": "Persimmon dried into thin rings — concentrated sweetness with no added sugar.",
+      "specifications": [{ "label": "Shelf life", "value": "8 months" }]
+    },
+    "405": {
+      "title": "Dried melon strips",
+      "shortDescription": "Dried melon strips with a honey flavor.",
+      "description": "A rare treat — dried melon strips with a honey flavor, dried following a traditional recipe.",
+      "specifications": [{ "label": "Shelf life", "value": "12 months" }]
+    },
+    "406": {
+      "title": "Dried figs",
+      "shortDescription": "Fragrant dried figs, soft texture.",
+      "description": "Fragrant dried figs with soft seeds inside — great as a standalone dessert.",
+      "specifications": [{ "label": "Shelf life", "value": "12 months" }]
+    },
+    "501": {
+      "title": "Pamir walnuts",
+      "shortDescription": "Thin-shelled Pamir walnuts.",
+      "description": "Thin-shelled walnuts, hand-picked in the walnut groves of Khorog and naturally dried.",
+      "specifications": [
+        { "label": "Shell type", "value": "Thin" },
+        { "label": "Shelf life", "value": "12 months" }
+      ]
+    },
+    "502": {
+      "title": "Kanibadam almonds",
+      "shortDescription": "Sweet almonds from the old orchards of Kanibadam.",
+      "description": "Classic sweet almonds from the old orchards of Kanibadam — a region historically famous for the country's best almonds.",
+      "specifications": [{ "label": "Shelf life", "value": "12 months" }]
+    },
+    "503": {
+      "title": "Local pistachios",
+      "shortDescription": "Pistachios with a light natural salt.",
+      "description": "Pistachios with a light natural salt, gathered in the foothills and finished drying in the sun.",
+      "specifications": [{ "label": "Shelf life", "value": "10 months" }]
+    },
+    "504": {
+      "title": "Apricot kernel",
+      "shortDescription": "Sweet apricot kernel, a Pamir delicacy.",
+      "description": "Sweet apricot kernel — a traditional Pamir treat, rich in natural oils.",
+      "specifications": [{ "label": "Shelf life", "value": "10 months" }]
+    },
+    "505": {
+      "title": "Select hazelnuts",
+      "shortDescription": "Large select hazelnuts with a rich flavor.",
+      "description": "Large select hazelnuts with a rich, nutty flavor — perfect for confectionery.",
+      "specifications": [{ "label": "Shelf life", "value": "12 months" }]
+    },
+    "601": {
+      "title": "Whole cow's milk",
+      "shortDescription": "Whole milk, bottled the day it's milked.",
+      "description": "Whole cow's milk with no powdered additives, milked and bottled the same day.",
+      "specifications": [
+        { "label": "Fat content", "value": "3.8–4.2%" },
+        { "label": "Shelf life", "value": "3 days" }
+      ]
+    },
+    "602": {
+      "title": "Homemade qurut",
+      "shortDescription": "Firm hand-rolled qurut balls.",
+      "description": "Firm qurut balls made from whole milk, a salty-tart flavor following a traditional recipe.",
+      "specifications": [{ "label": "Shelf life", "value": "6 months" }]
+    },
+    "603": {
+      "title": "Suzma (strained yogurt)",
+      "shortDescription": "Thick suzma made from whole milk.",
+      "description": "Thick suzma made from whole milk — perfect for sauces, baking, or on its own with herbs.",
+      "specifications": [{ "label": "Shelf life", "value": "5 days" }]
+    },
+    "604": {
+      "title": "Fresh kaymak",
+      "shortDescription": "Delicate kaymak with a rich creamy crust.",
+      "description": "Delicate kaymak with a rich, creamy crust, skimmed from baked milk following a village recipe.",
+      "specifications": [{ "label": "Shelf life", "value": "5 days" }]
+    },
+    "605": {
+      "title": "Homemade cottage cheese",
+      "shortDescription": "Crumbly homemade cottage cheese, medium fat.",
+      "description": "Crumbly homemade cottage cheese with medium fat content, no stabilizers or preservatives.",
+      "specifications": [
+        { "label": "Fat content", "value": "9%" },
+        { "label": "Shelf life", "value": "5 days" }
+      ]
+    },
+    "606": {
+      "title": "Homemade brined cheese",
+      "shortDescription": "Soft homemade brined cheese.",
+      "description": "Soft brined cheese aged following a homemade recipe — firm texture and moderate saltiness.",
+      "specifications": [{ "label": "Shelf life", "value": "14 days" }]
+    }
+  },
+  "reviews": {
+    "commentsHigh": [
+      "Not our first order — quality is consistently excellent, everything is fresh and arrives on time.",
+      "Very happy! The product is exactly as described in the photo and listing. We'll order again.",
+      "Pleasantly surprised at how fresh everything was — you can tell it was picked recently, not sitting in a warehouse for a week.",
+      "Great taste and honest weight — nothing was spoiled, packed neatly.",
+      "The courier arrived on time, the product was in perfect condition. Definitely recommend this farmer.",
+      "Some of the best produce we've had in a while. You can tell the farmer cares about quality."
+    ],
+    "commentsMid": [
+      "Overall good, but a couple of pieces were a bit smaller than I'd have liked. No complaints otherwise.",
+      "Fresh, tasty, but the packaging could have been sturdier — one bag tore slightly in transit.",
+      "Good quality, matches the price. We'll order again, maybe a different batch size next time."
+    ],
+    "replies": [
+      "Thanks for the review! Glad you liked it — we'll keep the quality up.",
+      "Thanks for the feedback, we'll take the packaging notes into account for the next delivery.",
+      "Thank you for choosing our farm! We look forward to seeing you again."
+    ]
+  }
+}

@@ -1,0 +1,74 @@
+{
+  "auth": {
+    "login": "Log in",
+    "register": "Sign up",
+    "logout": "Log out",
+    "goToPanel": "Go to dashboard"
+  },
+  "avatar": {
+    "addPhoto": "Add photo",
+    "changePhoto": "Change photo",
+    "removePhoto": "Remove photo",
+    "invalidType": "Only jpg, png, webp formats are allowed",
+    "tooLarge": "Maximum file size is 5 MB",
+    "uploadSuccess": "Photo updated",
+    "uploadError": "Failed to upload photo",
+    "removeSuccess": "Photo removed",
+    "removeError": "Failed to remove photo"
+  },
+  "actions": {
+    "search": "Search",
+    "searchPlaceholder": "Search products...",
+    "favorites": "Favorites",
+    "cart": "Cart",
+    "close": "Close",
+    "openMenu": "Open menu",
+    "subscribe": "Subscribe",
+    "socialNetwork": "Social network",
+    "changeLanguage": "Change language",
+    "loading": "Loading...",
+    "cancel": "Cancel",
+    "confirm": "Confirm",
+    "save": "Save",
+    "edit": "Edit",
+    "delete": "Delete",
+    "add": "Add",
+    "actions": "Actions"
+  },
+  "currencySomoni": "TJS",
+  "cart": {
+    "addedToCart": "{{title}} added to cart",
+    "addedToCartDescription": "{{quantity}} {{unit}} × {{price}}"
+  },
+  "favorites": {
+    "removedItem": "{{title}} removed from favorites",
+    "addedItem": "{{title}} added to favorites",
+    "defaultItemName": "Item"
+  },
+  "dates": {
+    "months": [
+      "January",
+      "February",
+      "March",
+      "April",
+      "May",
+      "June",
+      "July",
+      "August",
+      "September",
+      "October",
+      "November",
+      "December"
+    ],
+    "today": "today",
+    "yesterday": "yesterday",
+    "daysAgo_one": "{{count}} day ago",
+    "daysAgo_other": "{{count}} days ago",
+    "weeksAgo_one": "{{count}} week ago",
+    "weeksAgo_other": "{{count}} weeks ago",
+    "monthsAgo_one": "{{count}} month ago",
+    "monthsAgo_other": "{{count}} months ago",
+    "yearsAgo_one": "{{count}} year ago",
+    "yearsAgo_other": "{{count}} years ago"
+  }
+}
