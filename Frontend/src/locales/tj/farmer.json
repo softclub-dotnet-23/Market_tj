@@ -167,6 +167,7 @@
     "columns": {
       "orderNumber": "№ фармоиш",
       "customer": "Харидор",
+      "products": "Маҳсулот",
       "address": "Суроғаи расонидан",
       "amount": "Маблағ",
       "status": "Ҳолат",
@@ -175,6 +176,8 @@
       "receivedAt": "Сана ва вақти гирифтан"
     },
     "customerLabel": "Харидор #{{id}}",
+    "moreItems": "боз {{count}}",
+    "showLess": "пинҳон кардан",
     "courierLabel": "Курер #{{id}}",
     "noCourierYet": "Курер таъин нашудааст",
     "noDeliveryYet": "—",

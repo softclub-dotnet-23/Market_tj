@@ -83,9 +83,38 @@ export function CustomerOrders() {
     }
   };
 
+  const statusBadge = (order: CustomerOrderDto) => (
+    <StatusBadge
+      label={t(`orders.status.${ORDER_STATUS_KEYS[order.status] ?? "pending"}`)}
+      className={ORDER_STATUS_CLASSES[order.status] ?? ORDER_STATUS_CLASSES[OrderStatus.Pending]}
+      icon={ORDER_STATUS_ICONS[order.status]}
+    />
+  );
+
+  const reviewAction = (order: CustomerOrderDto) => {
+    const alreadyReviewed = reviewedOrderIds.has(order.id);
+    if (order.status !== OrderStatus.Completed) return <span className="text-stone-300 dark:text-stone-600">—</span>;
+    if (alreadyReviewed) {
+      return (
+        <span className="inline-flex items-center gap-1.5 text-xs font-semibold text-grove-700 dark:text-grove-400">
+          <Star size={13} fill="currentColor" />
+          {t("orders.alreadyReviewed")}
+        </span>
+      );
+    }
+    return (
+      <Button size="sm" variant="outline" leftIcon={<Star size={13} />} onClick={() => setReviewingOrder(order)}>
+        {t("orders.writeReview")}
+      </Button>
+    );
+  };
+
   return (
     <div className="rounded-3xl border border-stone-100 bg-white dark:border-stone-800 dark:bg-stone-900">
-      <div className="overflow-x-auto">
+      {/* Десктоп/планшет — обычная таблица, компактно сжатая до 5 колонок,
+          чтобы не требовался горизонтальный скролл на типичном ноутбучном
+          экране (даже с учётом сайдбара ~256px). */}
+      <div className="hidden overflow-x-auto lg:block">
         <table className="w-full text-left text-sm">
           <thead>
             <tr className="border-b border-stone-100 text-xs uppercase tracking-wide text-stone-400 dark:border-stone-800 dark:text-stone-500">
@@ -93,54 +122,72 @@ export function CustomerOrders() {
               <th className="px-6 py-4 font-medium">{t("orders.columns.address")}</th>
               <th className="px-6 py-4 font-medium">{t("orders.columns.amount")}</th>
               <th className="px-6 py-4 font-medium">{t("orders.columns.status")}</th>
-              <th className="px-6 py-4 font-medium">{t("orders.columns.createdAt")}</th>
-              <th className="px-6 py-4 font-medium">{t("orders.columns.receivedAt")}</th>
               <th className="px-6 py-4 font-medium">{t("orders.columns.review")}</th>
             </tr>
           </thead>
           <tbody>
             {pageItems.map((order) => {
-              const alreadyReviewed = reviewedOrderIds.has(order.id);
               const receivedAt = resolveReceivedAt(order.status, order.completedAt, deliveriesByOrderId.get(order.id)?.deliveredAt);
               return (
                 <tr key={order.id} className="border-b border-stone-50 last:border-0 dark:border-stone-800/60">
-                  <td className="px-6 py-4 font-medium text-stone-800 dark:text-stone-100">{order.orderNumber}</td>
-                  <td className="max-w-64 truncate px-6 py-4 text-stone-500 dark:text-stone-400">
+                  <td className="px-6 py-4">
+                    <span className="font-medium text-stone-800 dark:text-stone-100">{order.orderNumber}</span>
+                    <span className="mt-0.5 block text-xs text-stone-400 dark:text-stone-500">{formatDateTime(order.createdAt)}</span>
+                  </td>
+                  <td className="max-w-56 truncate px-6 py-4 text-stone-500 dark:text-stone-400">
                     {order.region}, {order.district}
                   </td>
                   <td className="px-6 py-4 font-semibold text-stone-800 dark:text-stone-100">
                     {formatSomoni(order.totalAmount)} {t("common.somoni")}
                   </td>
                   <td className="px-6 py-4">
-                    <StatusBadge
-                      label={t(`orders.status.${ORDER_STATUS_KEYS[order.status] ?? "pending"}`)}
-                      className={ORDER_STATUS_CLASSES[order.status] ?? ORDER_STATUS_CLASSES[OrderStatus.Pending]}
-                      icon={ORDER_STATUS_ICONS[order.status]}
-                    />
-                  </td>
-                  <td className="px-6 py-4 text-stone-500 dark:text-stone-400">{formatDateTime(order.createdAt)}</td>
-                  <td className="px-6 py-4 text-stone-500 dark:text-stone-400">
-                    {receivedAt ? formatDateTime(receivedAt) : <span className="text-stone-300 dark:text-stone-600">{t("orders.notReceivedYet")}</span>}
-                  </td>
-                  <td className="px-6 py-4">
-                    {order.status !== OrderStatus.Completed ? (
-                      <span className="text-stone-300 dark:text-stone-600">—</span>
-                    ) : alreadyReviewed ? (
-                      <span className="inline-flex items-center gap-1.5 text-xs font-semibold text-grove-700 dark:text-grove-400">
-                        <Star size={13} fill="currentColor" />
-                        {t("orders.alreadyReviewed")}
+                    <div className="flex flex-col items-start gap-1.5">
+                      {statusBadge(order)}
+                      <span className="text-xs text-stone-400 dark:text-stone-500">
+                        {receivedAt ? t("orders.columns.receivedAt") + ": " + formatDateTime(receivedAt) : t("orders.notReceivedYet")}
                       </span>
-                    ) : (
-                      <Button size="sm" variant="outline" leftIcon={<Star size={13} />} onClick={() => setReviewingOrder(order)}>
-                        {t("orders.writeReview")}
-                      </Button>
-                    )}
+                    </div>
                   </td>
+                  <td className="px-6 py-4">{reviewAction(order)}</td>
                 </tr>
               );
             })}
           </tbody>
         </table>
+      </div>
+
+      {/* Мобильный/узкий экран — карточки вместо таблицы. */}
+      <div className="flex flex-col divide-y divide-stone-50 lg:hidden dark:divide-stone-800/60">
+        {pageItems.map((order) => {
+          const receivedAt = resolveReceivedAt(order.status, order.completedAt, deliveriesByOrderId.get(order.id)?.deliveredAt);
+          return (
+            <div key={order.id} className="flex flex-col gap-3 p-5">
+              <div className="flex items-start justify-between gap-3">
+                <div>
+                  <p className="font-medium text-stone-800 dark:text-stone-100">{order.orderNumber}</p>
+                  <p className="text-xs text-stone-400 dark:text-stone-500">{formatDateTime(order.createdAt)}</p>
+                </div>
+                <p className="font-semibold text-stone-800 dark:text-stone-100">
+                  {formatSomoni(order.totalAmount)} {t("common.somoni")}
+                </p>
+              </div>
+              <div className="grid grid-cols-[auto_1fr] gap-x-3 gap-y-1.5 text-sm">
+                <span className="text-stone-400 dark:text-stone-500">{t("orders.columns.address")}</span>
+                <span className="text-stone-700 dark:text-stone-200">
+                  {order.region}, {order.district}
+                </span>
+                <span className="text-stone-400 dark:text-stone-500">{t("orders.columns.receivedAt")}</span>
+                <span className="text-stone-700 dark:text-stone-200">
+                  {receivedAt ? formatDateTime(receivedAt) : t("orders.notReceivedYet")}
+                </span>
+              </div>
+              <div className="flex flex-wrap items-center justify-between gap-3 pt-1">
+                {statusBadge(order)}
+                {reviewAction(order)}
+              </div>
+            </div>
+          );
+        })}
       </div>
 
       {totalPages > 1 && (

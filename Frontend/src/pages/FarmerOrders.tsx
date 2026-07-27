@@ -6,6 +6,7 @@ import { PageLoader } from "@/components/layout/PageLoader";
 import { EmptyState } from "@/components/ui/EmptyState";
 import { Pagination } from "@/components/ui/Pagination";
 import { StatusMenu } from "@/components/ui/StatusMenu";
+import { OrderItemsCell } from "@/components/ui/OrderItemsCell";
 import { formatDateTime, formatSomoni } from "@/lib/utils";
 import { ORDER_STATUS_CLASSES, ORDER_STATUS_ICONS, ORDER_STATUS_KEYS, getFarmerNextStatuses, resolveReceivedAt } from "@/lib/orderStatus";
 import {
@@ -15,6 +16,8 @@ import {
   useDeliveriesByOrder,
   useFarmerOrders,
   useFarmerProfile,
+  useOrderItems,
+  type DeliveryDto,
   type FarmerOrderDto,
 } from "@/data/farmer";
 
@@ -36,6 +39,7 @@ export function FarmerOrders() {
   const { profile, loading: profileLoading, error: profileError } = useFarmerProfile();
   const { orders, loading: ordersLoading, error: ordersError } = useFarmerOrders(profile?.id ?? null);
   const { deliveriesByOrderId, loading: deliveriesLoading } = useDeliveriesByOrder();
+  const { orderItems } = useOrderItems();
 
   const handleStatusChange = async (order: FarmerOrderDto, status: number) => {
     if (status === order.status) return;
@@ -71,71 +75,122 @@ export function FarmerOrders() {
   const currentPage = Math.min(page, totalPages);
   const pageItems: FarmerOrderDto[] = orders.slice((currentPage - 1) * PAGE_SIZE, currentPage * PAGE_SIZE);
 
+  const deliveryInfo = (delivery: DeliveryDto | undefined) =>
+    delivery ? (
+      <span className="flex flex-col gap-0.5">
+        <span>{delivery.courierId ? t("orders.courierLabel", { id: delivery.courierId }) : t("orders.noCourierYet")}</span>
+        <span className="text-xs text-stone-400 dark:text-stone-500">{t(`orders.deliveryStatus.${DELIVERY_STATUS_KEYS[delivery.status] ?? "pending"}`)}</span>
+      </span>
+    ) : (
+      t("orders.noDeliveryYet")
+    );
+
+  const statusCell = (order: FarmerOrderDto, receivedAt: string | null) => (
+    <div className="flex flex-col items-start gap-1.5">
+      <StatusMenu
+        value={order.status}
+        busy={busyId === order.id}
+        lockedLabel={t("orders.statusLockedHint")}
+        onChange={(status) => handleStatusChange(order, status)}
+        options={[order.status, ...getFarmerNextStatuses(order.status)].map((s) => ({
+          value: s,
+          label: t(`orders.status.${ORDER_STATUS_KEYS[s]}`),
+          className: ORDER_STATUS_CLASSES[s],
+          icon: ORDER_STATUS_ICONS[s],
+        }))}
+      />
+      <span className="text-xs text-stone-400 dark:text-stone-500">
+        {receivedAt ? t("orders.columns.receivedAt") + ": " + formatDateTime(receivedAt) : t("orders.notReceivedYet")}
+      </span>
+    </div>
+  );
+
   return (
     <div className="rounded-3xl border border-stone-100 bg-white dark:border-stone-800 dark:bg-stone-900">
-      <div className="overflow-x-auto">
+      {/* Десктоп/планшет — обычная таблица, компактно сжатая до 6 колонок,
+          чтобы не требовался горизонтальный скролл на типичном ноутбучном
+          экране (даже с учётом сайдбара ~256px). */}
+      <div className="hidden overflow-x-auto lg:block">
         <table className="w-full text-left text-sm">
           <thead>
             <tr className="border-b border-stone-100 text-xs uppercase tracking-wide text-stone-400 dark:border-stone-800 dark:text-stone-500">
               <th className="px-6 py-4 font-medium">{t("orders.columns.orderNumber")}</th>
               <th className="px-6 py-4 font-medium">{t("orders.columns.customer")}</th>
+              <th className="px-6 py-4 font-medium">{t("orders.columns.products")}</th>
               <th className="px-6 py-4 font-medium">{t("orders.columns.address")}</th>
               <th className="px-6 py-4 font-medium">{t("orders.columns.amount")}</th>
               <th className="px-6 py-4 font-medium">{t("orders.columns.status")}</th>
-              <th className="px-6 py-4 font-medium">{t("orders.columns.delivery")}</th>
-              <th className="px-6 py-4 font-medium">{t("orders.columns.createdAt")}</th>
-              <th className="px-6 py-4 font-medium">{t("orders.columns.receivedAt")}</th>
             </tr>
           </thead>
           <tbody>
             {pageItems.map((order) => {
               const delivery = deliveriesByOrderId.get(order.id);
               const receivedAt = resolveReceivedAt(order.status, order.completedAt, delivery?.deliveredAt);
+              const items = orderItems?.filter((i) => i.orderId === order.id) ?? [];
               return (
                 <tr key={order.id} className="border-b border-stone-50 last:border-0 dark:border-stone-800/60">
-                  <td className="px-6 py-4 font-medium text-stone-800 dark:text-stone-100">{order.orderNumber}</td>
-                  <td className="px-6 py-4 text-stone-600 dark:text-stone-300">{t("orders.customerLabel", { id: order.customerId })}</td>
-                  <td className="max-w-56 truncate px-6 py-4 text-stone-500 dark:text-stone-400">
+                  <td className="px-6 py-4">
+                    <span className="font-medium text-stone-800 dark:text-stone-100">{order.orderNumber}</span>
+                    <span className="mt-0.5 block text-xs text-stone-400 dark:text-stone-500">{formatDateTime(order.createdAt)}</span>
+                  </td>
+                  <td className="max-w-40 px-6 py-4 text-stone-600 dark:text-stone-300">
+                    {order.customerFullName ?? t("orders.customerLabel", { id: order.customerId })}
+                  </td>
+                  <td className="px-6 py-4 text-stone-500 dark:text-stone-400">
+                    <OrderItemsCell items={items} ns="farmer" />
+                  </td>
+                  <td className="max-w-40 truncate px-6 py-4 text-stone-500 dark:text-stone-400">
                     {order.region}, {order.district}
                   </td>
                   <td className="px-6 py-4 font-semibold text-stone-800 dark:text-stone-100">
                     {formatSomoni(order.totalAmount)} {t("common.somoni")}
                   </td>
-                  <td className="px-6 py-4">
-                    <StatusMenu
-                      value={order.status}
-                      busy={busyId === order.id}
-                      lockedLabel={t("orders.statusLockedHint")}
-                      onChange={(status) => handleStatusChange(order, status)}
-                      options={[order.status, ...getFarmerNextStatuses(order.status)].map((s) => ({
-                        value: s,
-                        label: t(`orders.status.${ORDER_STATUS_KEYS[s]}`),
-                        className: ORDER_STATUS_CLASSES[s],
-                        icon: ORDER_STATUS_ICONS[s],
-                      }))}
-                    />
-                  </td>
-                  <td className="px-6 py-4 text-stone-500 dark:text-stone-400">
-                    {delivery ? (
-                      <span className="flex flex-col gap-0.5">
-                        <span>{delivery.courierId ? t("orders.courierLabel", { id: delivery.courierId }) : t("orders.noCourierYet")}</span>
-                        <span className="text-xs text-stone-400 dark:text-stone-500">
-                          {t(`orders.deliveryStatus.${DELIVERY_STATUS_KEYS[delivery.status] ?? "pending"}`)}
-                        </span>
-                      </span>
-                    ) : (
-                      t("orders.noDeliveryYet")
-                    )}
-                  </td>
-                  <td className="px-6 py-4 text-stone-500 dark:text-stone-400">{formatDateTime(order.createdAt)}</td>
-                  <td className="px-6 py-4 text-stone-500 dark:text-stone-400">
-                    {receivedAt ? formatDateTime(receivedAt) : <span className="text-stone-300 dark:text-stone-600">{t("orders.notReceivedYet")}</span>}
-                  </td>
+                  <td className="px-6 py-4">{statusCell(order, receivedAt)}</td>
                 </tr>
               );
             })}
           </tbody>
         </table>
+      </div>
+
+      {/* Мобильный/узкий экран — карточки вместо таблицы, вертикальный список
+          без горизонтального скролла вообще. */}
+      <div className="flex flex-col divide-y divide-stone-50 lg:hidden dark:divide-stone-800/60">
+        {pageItems.map((order) => {
+          const delivery = deliveriesByOrderId.get(order.id);
+          const receivedAt = resolveReceivedAt(order.status, order.completedAt, delivery?.deliveredAt);
+          const items = orderItems?.filter((i) => i.orderId === order.id) ?? [];
+          return (
+            <div key={order.id} className="flex flex-col gap-3 p-5">
+              <div className="flex items-start justify-between gap-3">
+                <div>
+                  <p className="font-medium text-stone-800 dark:text-stone-100">{order.orderNumber}</p>
+                  <p className="text-xs text-stone-400 dark:text-stone-500">{formatDateTime(order.createdAt)}</p>
+                </div>
+                <p className="font-semibold text-stone-800 dark:text-stone-100">
+                  {formatSomoni(order.totalAmount)} {t("common.somoni")}
+                </p>
+              </div>
+              <div className="grid grid-cols-[auto_1fr] gap-x-3 gap-y-1.5 text-sm">
+                <span className="text-stone-400 dark:text-stone-500">{t("orders.columns.customer")}</span>
+                <span className="text-stone-700 dark:text-stone-200">{order.customerFullName ?? t("orders.customerLabel", { id: order.customerId })}</span>
+                <span className="text-stone-400 dark:text-stone-500">{t("orders.columns.products")}</span>
+                <div className="text-stone-700 dark:text-stone-200">
+                  <OrderItemsCell items={items} ns="farmer" />
+                </div>
+                <span className="text-stone-400 dark:text-stone-500">{t("orders.columns.address")}</span>
+                <span className="text-stone-700 dark:text-stone-200">
+                  {order.region}, {order.district}
+                </span>
+                <span className="text-stone-400 dark:text-stone-500">{t("orders.columns.delivery")}</span>
+                <span className="text-stone-700 dark:text-stone-200">{deliveryInfo(delivery)}</span>
+              </div>
+              <div className="flex items-center justify-between gap-3 pt-1">
+                {statusCell(order, receivedAt)}
+              </div>
+            </div>
+          );
+        })}
       </div>
 
       {totalPages > 1 && (

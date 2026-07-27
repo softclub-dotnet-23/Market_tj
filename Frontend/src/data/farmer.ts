@@ -124,6 +124,11 @@ export interface FarmerOrderDto {
   orderNumber: string;
   customerId: number;
   farmerId: number;
+  // Резолвится на бэкенде через CustomerProfile.UserId → User (см.
+  // OrderService.ResolveCustomerContactsAsync) — null, если почему-то нет
+  // соответствующей записи (например, удалённый пользователь).
+  customerFullName: string | null;
+  customerPhone: string | null;
   status: number;
   deliveryAddress: string;
   region: string;

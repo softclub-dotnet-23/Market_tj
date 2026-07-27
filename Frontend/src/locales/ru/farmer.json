@@ -167,6 +167,7 @@
     "columns": {
       "orderNumber": "№ заказа",
       "customer": "Клиент",
+      "products": "Товары",
       "address": "Адрес доставки",
       "amount": "Сумма",
       "status": "Статус",
@@ -175,6 +176,8 @@
       "receivedAt": "Дата и время получения"
     },
     "customerLabel": "Клиент #{{id}}",
+    "moreItems": "ещё {{count}}",
+    "showLess": "свернуть",
     "courierLabel": "Курьер #{{id}}",
     "noCourierYet": "Курьер не назначен",
     "noDeliveryYet": "—",

@@ -23,6 +23,11 @@ export interface AdminOrderDto {
   orderNumber: string;
   customerId: number;
   farmerId: number;
+  // Резолвится на бэкенде через CustomerProfile.UserId → User (см.
+  // OrderService.ResolveCustomerContactsAsync) — null, если почему-то нет
+  // соответствующей записи (например, удалённый пользователь).
+  customerFullName: string | null;
+  customerPhone: string | null;
   status: number;
   deliveryAddress: string;
   region: string;
@@ -198,6 +203,57 @@ export function useAdminOrders(refreshKey = 0) {
   const { data, loading, error } = useAsync(() => apiGet<AdminOrderDto[]>("/orders"), [refreshKey]);
   const orders = data ? [...data].sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()) : null;
   return { orders, loading, error };
+}
+
+// Бейдж "Заказы" у админа — это "новые заказы с последнего просмотра
+// списка", а не общий счётчик всех заказов в базе (иначе цифра только
+// росла бы и никогда не отражала бы, что уже посмотрели). Так как заказ у
+// админа не привязан к какому-то одному ответственному пользователю (в
+// отличие от Notification.UserId), "просмотрено" — понятие чисто
+// фронтовое: запоминаем максимальный увиденный Order.Id в localStorage.
+const ADMIN_ORDERS_SEEN_KEY = "market-tj-admin-orders-last-seen-id";
+
+function readLastSeenAdminOrderId(): number {
+  try {
+    return Number(localStorage.getItem(ADMIN_ORDERS_SEEN_KEY)) || 0;
+  } catch {
+    return 0;
+  }
+}
+
+const adminOrdersSeenListeners = new Set<() => void>();
+
+// Вызывается со страницы "Заказы" после загрузки списка — всё, что там
+// сейчас видно, считается просмотренным. AdminLayout (бейдж в сайдбаре) и
+// AdminOrders (сама страница) — два разных компонента с двумя независимыми
+// вызовами хуков, поэтому бейдж пересчитывается через тот же
+// pub/sub-приём, что и notifyFarmerOrdersChanged/notifyNotificationsChanged.
+export function markAdminOrdersSeen(orders: AdminOrderDto[]) {
+  if (orders.length === 0) return;
+  const maxId = Math.max(...orders.map((o) => o.id));
+  try {
+    localStorage.setItem(ADMIN_ORDERS_SEEN_KEY, String(maxId));
+  } catch {
+    // localStorage недоступен (приватный режим и т.п.) — бейдж просто не
+    // сбросится, не критично для остального функционала.
+  }
+  adminOrdersSeenListeners.forEach((listener) => listener());
+}
+
+export function useAdminOrdersUnseenCount(orders: AdminOrderDto[] | null) {
+  const [, forceRerender] = useState(0);
+
+  useEffect(() => {
+    const listener = () => forceRerender((k) => k + 1);
+    adminOrdersSeenListeners.add(listener);
+    return () => {
+      adminOrdersSeenListeners.delete(listener);
+    };
+  }, []);
+
+  if (!orders) return 0;
+  const lastSeenId = readLastSeenAdminOrderId();
+  return orders.filter((o) => o.id > lastSeenId).length;
 }
 
 export interface AdminOrderItemDto {

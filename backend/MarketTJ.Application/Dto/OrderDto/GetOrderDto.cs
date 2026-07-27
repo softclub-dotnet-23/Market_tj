@@ -8,6 +8,13 @@ public class GetOrderDto
     public string OrderNumber { get; set; } = null!;
     public int CustomerId { get; set; }
     public int FarmerId { get; set; }
+    // Резолвится на сервере через CustomerProfile.UserId → User (раздел 8.10
+    // ТЗ описывает только CustomerId; имя/телефон покупателя нужны, чтобы
+    // фермер и админ реально могли понять, для кого заказ, и связаться с
+    // покупателем — без этого /api/users доступен только Admin, а фермеру
+    // взять имя покупателя было неоткуда).
+    public string? CustomerFullName { get; set; }
+    public string? CustomerPhone { get; set; }
     public OrderStatus Status { get; set; }
     public string DeliveryAddress { get; set; } = null!;
     public string Region { get; set; } = null!;
