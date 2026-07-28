@@ -22,7 +22,9 @@ COPY --from=build /app/publish .
 
 # Раздел 17 ТЗ: файлы объявлений в wwwroot/uploads/listings — каталог создаёт
 # сам Program.cs при старте, монтировать volume под него не обязательно для MVP.
-ENV ASPNETCORE_URLS=http://+:8080
+# Порт слушается динамически в Program.cs через переменную PORT (Railway
+# подставляет разный порт на каждый деплой) с дефолтом 8080, если PORT не
+# задана (docker-compose, dotnet run) — поэтому ASPNETCORE_URLS тут не фиксируется.
 EXPOSE 8080
 
 ENTRYPOINT ["dotnet", "MarketTJ.WebApi.dll"]
