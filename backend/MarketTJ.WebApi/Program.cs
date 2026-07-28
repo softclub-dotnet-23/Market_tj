@@ -11,6 +11,15 @@ using Microsoft.EntityFrameworkCore;
 using Microsoft.IdentityModel.Tokens;
 using Microsoft.OpenApi;
 
+// Раздел 17: файлы объявлений хранятся в wwwroot/uploads/listings/{listingId}/.
+// Создаётся ДО CreateBuilder — хост резолвит WebRootPath по факту
+// существования wwwroot на диске в момент своего построения, а не лениво.
+// На Railway контейнер стартует с чистого /app, поэтому создание каталога
+// ПОСЛЕ CreateBuilder оставляло WebRootPath как "not found" и UseStaticFiles()
+// переставал отдавать файлы вообще (локально маскировалось тем, что каталог
+// уже существовал с предыдущих запусков).
+Directory.CreateDirectory(Path.Combine(Directory.GetCurrentDirectory(), "wwwroot", "uploads", "listings"));
+
 var builder = WebApplication.CreateBuilder(args);
 
 // Railway передаёт порт через PORT (значение каждый раз разное), а не через
@@ -19,9 +28,6 @@ var builder = WebApplication.CreateBuilder(args);
 // docker-compose "5000:8080").
 var port = Environment.GetEnvironmentVariable("PORT") ?? "8080";
 builder.WebHost.UseUrls($"http://+:{port}");
-
-// Раздел 17: файлы объявлений хранятся в wwwroot/uploads/listings/{listingId}/.
-Directory.CreateDirectory(Path.Combine(builder.Environment.ContentRootPath, "wwwroot", "uploads", "listings"));
 
 // Railway Postgres даёт DATABASE_URL в виде URI (postgres://user:pass@host:port/db),
 // а Npgsql ждёт key=value строку — конвертируем и подкладываем обратно в
