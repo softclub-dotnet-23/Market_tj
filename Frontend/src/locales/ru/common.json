@@ -3,7 +3,20 @@
     "login": "Войти",
     "register": "Регистрация",
     "logout": "Выйти",
-    "goToPanel": "Перейти в панель"
+    "goToPanel": "Перейти в панель",
+    "goToDashboard": "Перейти в личный кабинет"
+  },
+  "account": {
+    "myOrders": "Мои заказы",
+    "myOrdersHint": "История и статус заказов",
+    "messages": "Сообщения",
+    "messagesHint": "Переписка с фермерами",
+    "notifications": "Уведомления",
+    "notificationsHint": "Важные события по заказам",
+    "favorites": "Избранное",
+    "favoritesHint": "Сохранённые товары",
+    "profile": "Профиль и настройки",
+    "profileHint": "Личные данные и адрес доставки"
   },
   "avatar": {
     "addPhoto": "Добавить фото",

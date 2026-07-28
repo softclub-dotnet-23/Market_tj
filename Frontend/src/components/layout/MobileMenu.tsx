@@ -5,6 +5,7 @@ import { LayoutDashboard, Leaf, LogOut, User, UserPlus, X } from "lucide-react";
 import { createPortal } from "react-dom";
 import { Avatar } from "@/components/ui/Avatar";
 import { AvatarMenuItem } from "@/components/layout/AvatarMenuItem";
+import { CustomerAccountLinks } from "@/components/layout/AccountMenu";
 import { useAuth } from "@/context/AuthContext";
 import { useCategories } from "@/data/categories";
 import { resolveMediaUrl } from "@/lib/api";
@@ -36,7 +37,7 @@ export function MobileMenu({ onClose }: { onClose: () => void }) {
         animate={{ x: 0 }}
         exit={{ x: "100%" }}
         transition={{ duration: 0.32, ease: [0.25, 1, 0.5, 1] }}
-        className="absolute right-0 top-0 flex h-full w-[85vw] max-w-sm flex-col bg-white p-6 dark:bg-stone-900"
+        className="absolute right-0 top-0 flex h-full w-[85vw] max-w-sm flex-col overflow-y-auto bg-white p-6 dark:bg-stone-900"
       >
         <div className="flex items-center justify-between">
           <Link to="/" onClick={onClose} className="flex items-center gap-2">
@@ -95,36 +96,67 @@ export function MobileMenu({ onClose }: { onClose: () => void }) {
 
         <div className="mt-auto flex flex-col gap-2.5 border-t border-stone-100 pt-6 dark:border-stone-800">
           {user ? (
-            <>
-              <div className="flex items-center gap-3 px-1 pb-1">
-                <Avatar name={user.fullName} src={user.avatarUrl ? resolveMediaUrl(user.avatarUrl) : undefined} size={38} />
-                <div className="min-w-0">
-                  <p className="truncate text-sm font-semibold text-stone-800 dark:text-stone-100">{user.fullName}</p>
-                  <p className="truncate text-xs text-stone-400 dark:text-stone-500">{user.email}</p>
+            user.role === "Customer" ? (
+              <>
+                <div className="flex items-center gap-3 px-1 pb-1">
+                  <Avatar name={user.fullName} src={user.avatarUrl ? resolveMediaUrl(user.avatarUrl) : undefined} size={38} />
+                  <div className="min-w-0">
+                    <p className="truncate text-sm font-semibold text-stone-800 dark:text-stone-100">{user.fullName}</p>
+                    <p className="truncate text-xs text-stone-400 dark:text-stone-500">{user.email}</p>
+                  </div>
                 </div>
-              </div>
-              <AvatarMenuItem />
-              {panelPath && (
+                <CustomerAccountLinks onNavigate={onClose} className="border-t border-stone-100 pt-2 dark:border-stone-800" />
                 <Link
-                  to={panelPath}
+                  to="/customer"
                   onClick={onClose}
                   className="flex h-11 items-center justify-center gap-2 rounded-xl border border-stone-200 text-sm font-medium text-stone-700 dark:border-stone-700 dark:text-stone-200"
                 >
                   <LayoutDashboard size={16} />
-                  {t("common:auth.goToPanel")}
+                  {t("common:auth.goToDashboard")}
                 </Link>
-              )}
-              <button
-                onClick={() => {
-                  logout();
-                  onClose();
-                }}
-                className="flex h-11 items-center justify-center gap-2 rounded-xl bg-grove-700 text-sm font-medium text-white"
-              >
-                <LogOut size={16} />
-                {t("common:auth.logout")}
-              </button>
-            </>
+                <button
+                  onClick={() => {
+                    logout();
+                    onClose();
+                  }}
+                  className="flex h-11 items-center justify-center gap-2 rounded-xl bg-grove-700 text-sm font-medium text-white"
+                >
+                  <LogOut size={16} />
+                  {t("common:auth.logout")}
+                </button>
+              </>
+            ) : (
+              <>
+                <div className="flex items-center gap-3 px-1 pb-1">
+                  <Avatar name={user.fullName} src={user.avatarUrl ? resolveMediaUrl(user.avatarUrl) : undefined} size={38} />
+                  <div className="min-w-0">
+                    <p className="truncate text-sm font-semibold text-stone-800 dark:text-stone-100">{user.fullName}</p>
+                    <p className="truncate text-xs text-stone-400 dark:text-stone-500">{user.email}</p>
+                  </div>
+                </div>
+                <AvatarMenuItem />
+                {panelPath && (
+                  <Link
+                    to={panelPath}
+                    onClick={onClose}
+                    className="flex h-11 items-center justify-center gap-2 rounded-xl border border-stone-200 text-sm font-medium text-stone-700 dark:border-stone-700 dark:text-stone-200"
+                  >
+                    <LayoutDashboard size={16} />
+                    {t("common:auth.goToPanel")}
+                  </Link>
+                )}
+                <button
+                  onClick={() => {
+                    logout();
+                    onClose();
+                  }}
+                  className="flex h-11 items-center justify-center gap-2 rounded-xl bg-grove-700 text-sm font-medium text-white"
+                >
+                  <LogOut size={16} />
+                  {t("common:auth.logout")}
+                </button>
+              </>
+            )
           ) : (
             <>
               <Link

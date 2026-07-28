@@ -15,12 +15,13 @@ public class ConversationServiceTests
     private readonly Mock<IOrderRepository> _orderRepository = new();
     private readonly Mock<ICustomerProfileRepository> _customerProfileRepository = new();
     private readonly Mock<IFarmerProfileRepository> _farmerProfileRepository = new();
+    private readonly Mock<IUserRepository> _userRepository = new();
     private readonly Mock<ILogger<ConversationService>> _logger = new();
     private readonly ConversationService _service;
 
     public ConversationServiceTests()
     {
-        _service = new ConversationService(_conversationRepository.Object, _orderRepository.Object, _customerProfileRepository.Object, _farmerProfileRepository.Object, _logger.Object);
+        _service = new ConversationService(_conversationRepository.Object, _orderRepository.Object, _customerProfileRepository.Object, _farmerProfileRepository.Object, _userRepository.Object, _logger.Object);
         _orderRepository.Setup(r => r.GetByIdAsync(It.IsAny<int>())).ReturnsAsync((int id) => new Order
         {
             Id = id, OrderNumber = "ORD-1", CustomerId = 1, FarmerId = 1, Status = OrderStatus.Pending,
@@ -30,6 +31,7 @@ public class ConversationServiceTests
         _customerProfileRepository.Setup(r => r.GetByUserIdAsync(10)).ReturnsAsync(new CustomerProfile { Id = 1, UserId = 10, CustomerType = CustomerType.Retail, Region = "Хатлон", District = "Бохтар" });
         _farmerProfileRepository.Setup(r => r.GetByIdAsync(It.IsAny<int>())).ReturnsAsync((int id) => new FarmerProfile { Id = id, UserId = 20, FarmName = "F", Region = "Хатлон", District = "Бохтар", Village = "V", Address = "A", VerificationStatus = FarmerVerificationStatus.Verified });
         _farmerProfileRepository.Setup(r => r.GetByUserIdAsync(20)).ReturnsAsync(new FarmerProfile { Id = 1, UserId = 20, FarmName = "F", Region = "Хатлон", District = "Бохтар", Village = "V", Address = "A", VerificationStatus = FarmerVerificationStatus.Verified });
+        _userRepository.Setup(r => r.GetAllAsync()).ReturnsAsync([new User { Id = 10, IsActive = true, Role = UserRole.Customer, FullName = "Иван Иванов", Email = "c@e.com", PhoneNumber = "1", PasswordHash = "h" }]);
         _conversationRepository.Setup(r => r.GetAllAsync()).ReturnsAsync([]);
     }
 
@@ -92,6 +94,29 @@ public class ConversationServiceTests
 
         Assert.True(result.IsSuccess);
         Assert.Empty(result.Data!);
+    }
+
+    [Fact]
+    public async Task GetAllAsync_ExistingUser_ResolvesCustomerFullName()
+    {
+        _conversationRepository.Setup(r => r.GetAllAsync()).ReturnsAsync([CreateConversation(1)]);
+
+        var result = await _service.GetAllAsync();
+
+        Assert.True(result.IsSuccess);
+        Assert.Equal("Иван Иванов", result.Data!.Single().CustomerFullName);
+    }
+
+    [Fact]
+    public async Task GetAllAsync_CustomerUserNotFound_LeavesFullNameNull()
+    {
+        _userRepository.Setup(r => r.GetAllAsync()).ReturnsAsync([]);
+        _conversationRepository.Setup(r => r.GetAllAsync()).ReturnsAsync([CreateConversation(1)]);
+
+        var result = await _service.GetAllAsync();
+
+        Assert.True(result.IsSuccess);
+        Assert.Null(result.Data!.Single().CustomerFullName);
     }
 
     [Fact]
@@ -307,17 +332,19 @@ public class ConversationServiceTests
     }
 
     [Fact]
-    public async Task CreateAsync_NullOrderId_ExistingConversationForSameOrderDoesNotBlock()
+    public async Task CreateAsync_NullOrderId_ExistingOrderLinkedConversationForSamePair_ReturnsConflict()
     {
-        // Чат по конкретному заказу и чат "до заказа" — разные ключи
-        // уникальности (OrderId vs пара CustomerId/FarmerId), поэтому
-        // существование одного не должно мешать создать другой.
+        // Один чат на пару покупатель-фермер, независимо от заказов — если у
+        // этой пары уже есть переписка по конкретному заказу, новый чат
+        // "до заказа" с ними же создавать не нужно, вся переписка идёт в уже
+        // существующий тред.
         _conversationRepository.Setup(r => r.GetAllAsync()).ReturnsAsync([CreateConversation(1, 1)]);
 
         var result = await _service.CreateAsync(ValidPreOrderCreateDto());
 
-        Assert.True(result.IsSuccess);
-        _conversationRepository.Verify(r => r.AddAsync(It.IsAny<Conversation>()), Times.Once);
+        Assert.False(result.IsSuccess);
+        Assert.Equal(ErrorType.Conflict, result.ErrorType);
+        _conversationRepository.Verify(r => r.AddAsync(It.IsAny<Conversation>()), Times.Never);
     }
 
     // ---------- UpdateAsync ----------

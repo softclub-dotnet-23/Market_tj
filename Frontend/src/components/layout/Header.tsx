@@ -7,6 +7,7 @@ import { MegaMenu } from "@/components/layout/MegaMenu";
 import { MobileMenu } from "@/components/layout/MobileMenu";
 import { MiniCart } from "@/components/layout/MiniCart";
 import { AvatarMenuItem } from "@/components/layout/AvatarMenuItem";
+import { CustomerAccountLinks, CustomerOrderShortcut } from "@/components/layout/AccountMenu";
 import { Button } from "@/components/ui/Button";
 import { Avatar } from "@/components/ui/Avatar";
 import { ThemeToggle } from "@/components/ui/ThemeToggle";
@@ -211,6 +212,8 @@ export function Header() {
             <AnimatePresence>{cartOpen && <MiniCart onClose={() => setCartOpen(false)} />}</AnimatePresence>
           </div>
 
+          {user?.role === "Customer" && <CustomerOrderShortcut />}
+
           {user ? (
             <div ref={accountMenuRef} className="relative hidden md:block">
               <button
@@ -224,32 +227,76 @@ export function Header() {
                 />
               </button>
 
-              {accountMenuOpen && (
-                <div className="absolute right-0 top-full z-50 mt-2 w-56 overflow-hidden rounded-2xl border border-stone-100 bg-white p-1.5 shadow-(--shadow-lifted) dark:border-stone-800 dark:bg-stone-900">
-                  <div className="px-2.5 py-2">
-                    <p className="truncate text-sm font-semibold text-stone-800 dark:text-stone-100">{user.fullName}</p>
-                    <p className="truncate text-xs text-stone-400 dark:text-stone-500">{user.email}</p>
-                  </div>
-                  {panelPath && (
+              <AnimatePresence>
+                {accountMenuOpen && user.role === "Customer" && (
+                  <motion.div
+                    initial={{ opacity: 0, y: -8, scale: 0.98 }}
+                    animate={{ opacity: 1, y: 0, scale: 1 }}
+                    exit={{ opacity: 0, y: -8, scale: 0.98 }}
+                    transition={{ duration: 0.18 }}
+                    className="absolute right-0 top-full z-50 mt-2 w-72 overflow-hidden rounded-2xl border border-stone-100 bg-white p-1.5 shadow-(--shadow-lifted) dark:border-stone-800 dark:bg-stone-900"
+                  >
+                    <div className="flex items-center gap-2.5 px-2 py-2">
+                      <Avatar name={user.fullName} src={user.avatarUrl ? resolveMediaUrl(user.avatarUrl) : undefined} size={36} />
+                      <div className="min-w-0">
+                        <p className="truncate text-sm font-semibold text-stone-800 dark:text-stone-100">{user.fullName}</p>
+                        <p className="truncate text-xs text-stone-400 dark:text-stone-500">{user.email}</p>
+                      </div>
+                    </div>
+                    <div className="my-1 border-t border-stone-100 dark:border-stone-800" />
+                    <CustomerAccountLinks onNavigate={() => setAccountMenuOpen(false)} />
+                    <div className="my-1 border-t border-stone-100 dark:border-stone-800" />
                     <Link
-                      to={panelPath}
+                      to="/customer"
                       onClick={() => setAccountMenuOpen(false)}
                       className="flex w-full items-center gap-2.5 rounded-xl px-2.5 py-2 text-left text-sm text-stone-600 transition hover:bg-stone-50 dark:text-stone-300 dark:hover:bg-stone-800"
                     >
                       <LayoutDashboard size={15} />
-                      {t("common:auth.goToPanel")}
+                      {t("common:auth.goToDashboard")}
                     </Link>
-                  )}
-                  <AvatarMenuItem />
-                  <button
-                    onClick={handleLogout}
-                    className="flex w-full items-center gap-2.5 rounded-xl px-2.5 py-2 text-left text-sm text-stone-600 transition hover:bg-stone-50 dark:text-stone-300 dark:hover:bg-stone-800"
+                    <button
+                      onClick={handleLogout}
+                      className="flex w-full items-center gap-2.5 rounded-xl px-2.5 py-2 text-left text-sm text-stone-600 transition hover:bg-stone-50 dark:text-stone-300 dark:hover:bg-stone-800"
+                    >
+                      <LogOut size={15} />
+                      {t("common:auth.logout")}
+                    </button>
+                  </motion.div>
+                )}
+
+                {accountMenuOpen && user.role !== "Customer" && (
+                  <motion.div
+                    initial={{ opacity: 0, y: -8, scale: 0.98 }}
+                    animate={{ opacity: 1, y: 0, scale: 1 }}
+                    exit={{ opacity: 0, y: -8, scale: 0.98 }}
+                    transition={{ duration: 0.18 }}
+                    className="absolute right-0 top-full z-50 mt-2 w-56 overflow-hidden rounded-2xl border border-stone-100 bg-white p-1.5 shadow-(--shadow-lifted) dark:border-stone-800 dark:bg-stone-900"
                   >
-                    <LogOut size={15} />
-                    {t("common:auth.logout")}
-                  </button>
-                </div>
-              )}
+                    <div className="px-2.5 py-2">
+                      <p className="truncate text-sm font-semibold text-stone-800 dark:text-stone-100">{user.fullName}</p>
+                      <p className="truncate text-xs text-stone-400 dark:text-stone-500">{user.email}</p>
+                    </div>
+                    {panelPath && (
+                      <Link
+                        to={panelPath}
+                        onClick={() => setAccountMenuOpen(false)}
+                        className="flex w-full items-center gap-2.5 rounded-xl px-2.5 py-2 text-left text-sm text-stone-600 transition hover:bg-stone-50 dark:text-stone-300 dark:hover:bg-stone-800"
+                      >
+                        <LayoutDashboard size={15} />
+                        {t("common:auth.goToPanel")}
+                      </Link>
+                    )}
+                    <AvatarMenuItem />
+                    <button
+                      onClick={handleLogout}
+                      className="flex w-full items-center gap-2.5 rounded-xl px-2.5 py-2 text-left text-sm text-stone-600 transition hover:bg-stone-50 dark:text-stone-300 dark:hover:bg-stone-800"
+                    >
+                      <LogOut size={15} />
+                      {t("common:auth.logout")}
+                    </button>
+                  </motion.div>
+                )}
+              </AnimatePresence>
             </div>
           ) : (
             <div className="hidden items-center gap-2 pl-1 md:flex">

@@ -66,6 +66,29 @@ export function formatDateTime(iso: string) {
   return `${day}.${month}.${d.getFullYear()}, ${hours}:${minutes}`;
 }
 
+// Только время (без даты) — для пузырей сообщений в чате, где дата и так
+// показана один раз отдельным разделителем над группой сообщений одного дня
+// (см. ChatModal.tsx), повторять её в каждом пузыре избыточно.
+export function formatTime(iso: string) {
+  const d = new Date(iso);
+  const hours = String(d.getHours()).padStart(2, "0");
+  const minutes = String(d.getMinutes()).padStart(2, "0");
+  return `${hours}:${minutes}`;
+}
+
+// Разделитель дат в чате — "Сегодня"/"Вчера" или полная дата, по календарному
+// дню (а не разнице в часах, как у timeAgo — иначе сообщение в 23:59 вчера
+// могло бы ошибочно показаться "сегодня", если сейчас 00:05).
+export function formatChatDate(iso: string) {
+  const d = new Date(iso);
+  const now = new Date();
+  const startOfDay = (date: Date) => new Date(date.getFullYear(), date.getMonth(), date.getDate()).getTime();
+  const diffDays = Math.round((startOfDay(now) - startOfDay(d)) / 86_400_000);
+  if (diffDays === 0) return i18n.t("dates.today", { ns: "common" });
+  if (diffDays === 1) return i18n.t("dates.yesterday", { ns: "common" });
+  return formatDate(iso);
+}
+
 export function timeAgo(iso: string) {
   const diffMs = Date.now() - new Date(iso).getTime();
   const day = 24 * 60 * 60 * 1000;

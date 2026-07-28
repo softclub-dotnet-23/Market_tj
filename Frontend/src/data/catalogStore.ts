@@ -6,6 +6,7 @@ import { apiGet, resolveMediaUrl } from "@/lib/api";
 import { slugify } from "@/lib/utils";
 import { productPhotos } from "@/assets/photos";
 import { FarmerVerificationStatus, ListingStatus } from "@/data/farmer";
+import { FALLBACK_PHOTO_ID_BY_PRODUCT_NAME } from "@/data/productPhotoFallback";
 
 // Единый реальный источник каталога (категории/товары/фермеры) для публичного
 // сайта — раньше все три были захардкожены в data/{products,farmers,categories}.ts.
@@ -86,29 +87,6 @@ interface RawOrderItem {
 interface RawPagedResult<T> {
   items: T[];
 }
-
-// Каталог покупателя пока единственный на всё приложение, где нужны реальные
-// фото товаров — а у только что созданных реальных ProductListing своих фото
-// ещё нет (пока фермер не загрузит через FarmerProducts.tsx). Временная
-// заглушка "похожая на реальный товар картинка" по названию базового Product
-// из Seeder.cs, а не выдуманная — как только появится настоящее ProductImage,
-// оно подставляется вместо этой заглушки.
-const FALLBACK_PHOTO_ID_BY_PRODUCT_NAME: Record<string, number> = {
-  "Помидор": 101,
-  "Картофель": 103,
-  "Лук": 104,
-  "Морковь": 105,
-  "Яблоко": 201,
-  "Виноград": 203,
-  "Гранат": 204,
-  "Укроп": 301,
-  "Кинза": 303,
-  "Курага": 401,
-  "Изюм": 402,
-  "Грецкий орех": 501,
-  "Молоко": 601,
-  "Курут": 602,
-};
 
 const CATEGORY_ICON_BY_NAME: Record<string, LucideIcon> = {
   "Овощи": Carrot,
