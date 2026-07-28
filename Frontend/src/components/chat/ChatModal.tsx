@@ -8,12 +8,13 @@ import {
   type ConversationDto,
   getOrCreateConversation,
   markChatMessageRead,
+  notifyChatChanged,
   sendChatMessage,
   uploadChatImage,
   useChatMessages,
 } from "@/data/chat";
 import { resolveMediaUrl } from "@/lib/api";
-import { cn, formatDateTime } from "@/lib/utils";
+import { cn, formatChatDate, formatTime } from "@/lib/utils";
 
 const POLL_INTERVAL_MS = 4000;
 const MAX_IMAGE_SIZE_BYTES = 5 * 1024 * 1024;
@@ -53,7 +54,9 @@ export function ChatModal({
   const [uploading, setUploading] = useState(false);
   const scrollRef = useRef<HTMLDivElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const textareaRef = useRef<HTMLTextAreaElement>(null);
   const markedIdsRef = useRef(new Set<number>());
+  const lastMessageCountRef = useRef(0);
 
   const { messages } = useChatMessages(conversation?.id ?? null, refreshKey);
 
@@ -95,19 +98,40 @@ export function ChatModal({
     if (unread.length === 0) return;
     unread.forEach((m) => markedIdsRef.current.add(m.id));
     Promise.all(unread.map((m) => markChatMessageRead(m)))
-      .then(() => setRefreshKey((k) => k + 1))
+      .then(() => {
+        setRefreshKey((k) => k + 1);
+        notifyChatChanged();
+      })
       .catch(() => {});
   }, [messages, currentUserId]);
 
+  // Прокручиваем к последнему сообщению только когда реально пришло новое —
+  // поллинг каждые несколько секунд иначе дёргал бы скролл вниз при КАЖДОМ
+  // тике, даже если ничего не изменилось (и сбивал бы того, кто в этот момент
+  // читает историю выше).
   useEffect(() => {
-    scrollRef.current?.scrollTo({ top: scrollRef.current.scrollHeight, behavior: "smooth" });
+    if (!messages) return;
+    if (messages.length > lastMessageCountRef.current) {
+      scrollRef.current?.scrollTo({ top: scrollRef.current.scrollHeight, behavior: "smooth" });
+    }
+    lastMessageCountRef.current = messages.length;
   }, [messages]);
+
+  // Автофокус поля ввода при открытии — сразу при открытии модалки, не
+  // дожидаясь резолва Conversation (запрос к серверу занимает время, а поле
+  // теперь разрешено набирать текст ещё до его завершения, см. ниже) — иначе
+  // фокус выставлялся слишком поздно после сетевого ответа, и браузер уже не
+  // считал это действием пользователя.
+  useEffect(() => {
+    if (open) textareaRef.current?.focus();
+  }, [open]);
 
   const handleClose = () => {
     setDraft("");
     setConversation(null);
     setResolveError(null);
     markedIdsRef.current = new Set();
+    lastMessageCountRef.current = 0;
     onClose();
   };
 
@@ -119,6 +143,7 @@ export function ChatModal({
       await sendChatMessage(conversation.id, currentUserId, text);
       setDraft("");
       setRefreshKey((k) => k + 1);
+      notifyChatChanged();
     } catch (err) {
       toast.error(t("chat.sendError"), { description: err instanceof Error ? err.message : undefined });
     } finally {
@@ -145,6 +170,7 @@ export function ChatModal({
       await uploadChatImage(conversation.id, currentUserId, draft.trim(), file);
       setDraft("");
       setRefreshKey((k) => k + 1);
+      notifyChatChanged();
     } catch (err) {
       toast.error(t("chat.photoUploadError"), { description: err instanceof Error ? err.message : undefined });
     } finally {
@@ -154,9 +180,13 @@ export function ChatModal({
 
   const busy = sending || uploading;
 
+  // Разделитель дат над первым сообщением каждого нового календарного дня —
+  // вместо полной даты в каждом пузыре (было избыточно и загромождало чат).
+  let lastDateKey: string | null = null;
+
   return (
-    <Modal open={open} onClose={handleClose} className="flex h-[70vh] max-h-160 w-full flex-col p-0 sm:max-w-md">
-      <div className="flex items-center gap-3 border-b border-stone-100 px-5 py-4 dark:border-stone-800">
+    <Modal open={open} onClose={handleClose} className="flex h-[70vh] max-h-160 w-full flex-col overflow-hidden p-0 sm:max-w-md">
+      <div className="flex items-center gap-3 border-b border-stone-100 bg-white px-5 py-4 dark:border-stone-800 dark:bg-stone-900">
         <Avatar name={otherPartyName} size={40} />
         <div className="min-w-0 flex-1">
           <p className="truncate font-display text-base text-stone-900 dark:text-stone-50">{otherPartyName}</p>
@@ -166,7 +196,7 @@ export function ChatModal({
         </div>
       </div>
 
-      <div ref={scrollRef} className="flex-1 space-y-3 overflow-y-auto px-5 py-4">
+      <div ref={scrollRef} className="flex-1 space-y-1 overflow-y-auto bg-stone-25 px-5 py-4 dark:bg-stone-950/40">
         {resolving && !conversation && (
           <div className="flex h-full items-center justify-center text-sm text-stone-400 dark:text-stone-500">{t("chat.loading")}</div>
         )}
@@ -179,20 +209,34 @@ export function ChatModal({
         )}
         {messages?.map((m) => {
           const own = m.senderId === currentUserId;
+          const dateKey = m.createdAt.slice(0, 10);
+          const showDateSeparator = dateKey !== lastDateKey;
+          lastDateKey = dateKey;
           return (
-            <div key={m.id} className={cn("flex", own ? "justify-end" : "justify-start")}>
-              <div
-                className={cn(
-                  "max-w-[75%] overflow-hidden rounded-2xl text-sm",
-                  own ? "rounded-br-md bg-grove-700 text-white" : "rounded-bl-md bg-stone-100 text-stone-800 dark:bg-stone-800 dark:text-stone-100",
-                )}
-              >
-                {m.imageUrl && (
-                  <img src={resolveMediaUrl(m.imageUrl)} alt="" className="max-h-64 w-full object-cover" loading="lazy" />
-                )}
-                <div className={cn("px-4 py-2.5", !m.message && "pb-2 pt-1.5")}>
-                  {m.message && <p className="whitespace-pre-wrap wrap-break-word">{m.message}</p>}
-                  <p className={cn("mt-1 text-[10px]", own ? "text-grove-100" : "text-stone-400 dark:text-stone-500")}>{formatDateTime(m.createdAt)}</p>
+            <div key={m.id}>
+              {showDateSeparator && (
+                <div className="my-3 flex justify-center">
+                  <span className="rounded-full bg-stone-100 px-3 py-1 text-[11px] font-medium text-stone-500 dark:bg-stone-800 dark:text-stone-400">
+                    {formatChatDate(m.createdAt)}
+                  </span>
+                </div>
+              )}
+              <div className={cn("flex py-1", own ? "justify-end" : "justify-start")}>
+                <div
+                  className={cn(
+                    "max-w-[75%] overflow-hidden rounded-2xl text-sm shadow-sm",
+                    own ? "rounded-br-md bg-grove-700 text-white" : "rounded-bl-md bg-white text-stone-800 dark:bg-stone-800 dark:text-stone-100",
+                  )}
+                >
+                  {m.imageUrl && (
+                    <img src={resolveMediaUrl(m.imageUrl)} alt="" className="max-h-64 w-full object-cover" loading="lazy" />
+                  )}
+                  <div className={cn("px-4 py-2.5", !m.message && "pb-2 pt-1.5")}>
+                    {m.message && <p className="whitespace-pre-wrap wrap-break-word">{m.message}</p>}
+                    <p className={cn("mt-1 text-right text-[10px]", own ? "text-grove-100" : "text-stone-400 dark:text-stone-500")}>
+                      {formatTime(m.createdAt)}
+                    </p>
+                  </div>
                 </div>
               </div>
             </div>
@@ -200,7 +244,7 @@ export function ChatModal({
         })}
       </div>
 
-      <div className="flex items-end gap-2 border-t border-stone-100 p-4 dark:border-stone-800">
+      <div className="flex items-end gap-2 border-t border-stone-100 bg-white p-4 dark:border-stone-800 dark:bg-stone-900">
         <input ref={fileInputRef} type="file" accept="image/jpeg,image/png,image/webp" className="hidden" onChange={handleFileSelect} />
         <button
           onClick={() => fileInputRef.current?.click()}
@@ -211,6 +255,8 @@ export function ChatModal({
           {uploading ? <Loader2 size={16} className="animate-spin" /> : <Paperclip size={16} />}
         </button>
         <textarea
+          ref={textareaRef}
+          autoFocus
           value={draft}
           onChange={(e) => setDraft(e.target.value)}
           onKeyDown={(e) => {
@@ -221,7 +267,7 @@ export function ChatModal({
           }}
           placeholder={t("chat.placeholder")}
           rows={1}
-          disabled={!conversation || busy}
+          disabled={busy}
           className="max-h-28 min-h-10 flex-1 resize-none rounded-xl border border-stone-200 bg-stone-25 px-3.5 py-2.5 text-sm outline-none placeholder:text-stone-400 focus:border-grove-400 disabled:opacity-60 dark:border-stone-700 dark:bg-stone-950 dark:text-stone-100 dark:placeholder:text-stone-500"
         />
         <button

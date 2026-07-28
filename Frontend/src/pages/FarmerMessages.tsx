@@ -24,7 +24,7 @@ export function FarmerMessages() {
     <ConversationsList
       ns="farmer"
       currentUserId={user.userId}
-      resolveOtherPartyName={(c) => t("orders.customerLabel", { id: c.customerId })}
+      resolveOtherPartyName={(c) => c.customerFullName ?? t("orders.customerLabel", { id: c.customerId })}
       resolveOrderNumber={(orderId) => (orderId ? (orderNumberById.get(orderId) ?? null) : null)}
     />
   );

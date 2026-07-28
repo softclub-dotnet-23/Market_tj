@@ -9,6 +9,7 @@ import { Pagination } from "@/components/ui/Pagination";
 import { Modal } from "@/components/ui/Modal";
 import { ConfirmDialog } from "@/components/ui/ConfirmDialog";
 import { Button } from "@/components/ui/Button";
+import { ViewModeToggle, type OrdersViewMode } from "@/components/ui/ViewModeToggle";
 import { Input, Select, Textarea } from "@/components/ui/Field";
 import { ApiError, resolveMediaUrl } from "@/lib/api";
 import { dateInputToIso, formatDate, formatSomoni } from "@/lib/utils";
@@ -26,6 +27,7 @@ import {
   useOrderItems,
   useProductCatalog,
   useProductImages,
+  useProductPhotoMap,
   type CreateProductListingDto,
   type FarmerProfileDto,
   type ProductListingDto,
@@ -366,6 +368,7 @@ function ProductFormModal({
 export function FarmerProducts() {
   const { t } = useTranslation("farmer");
   const [page, setPage] = useState(1);
+  const [viewMode, setViewMode] = useState<OrdersViewMode>("table");
   const [modalOpen, setModalOpen] = useState(false);
   const [editing, setEditing] = useState<ProductListingDto | null>(null);
   const [deleting, setDeleting] = useState<ProductListingDto | null>(null);
@@ -374,6 +377,7 @@ export function FarmerProducts() {
   const { products, loading: productsLoading, error: productsError } = useFarmerProducts(profile?.id ?? null, refreshKey);
   const { orders } = useFarmerOrders(profile?.id ?? null);
   const { orderItems } = useOrderItems();
+  const photoByListingId = useProductPhotoMap(products);
 
   if (profileLoading || (profile && productsLoading)) return <PageLoader />;
 
@@ -427,6 +431,64 @@ export function FarmerProducts() {
     }
   };
 
+  const renderCard = (product: ProductListingDto) => {
+    const photo = photoByListingId.get(product.id);
+    const sold = soldByListingId.get(product.id) ?? 0;
+    return (
+      <div key={product.id} className="flex flex-col gap-2.5 rounded-2xl border border-stone-100 bg-white p-3 shadow-sm transition hover:shadow-md dark:border-stone-800 dark:bg-stone-900">
+        <div className="relative aspect-4/3 w-full overflow-hidden rounded-xl bg-grove-50 dark:bg-stone-800">
+          {photo ? (
+            <img src={photo} alt="" className="h-full w-full object-cover" loading="lazy" />
+          ) : (
+            <span className="flex h-full w-full items-center justify-center text-grove-300 dark:text-stone-600">
+              <Package size={24} />
+            </span>
+          )}
+          <span className="absolute top-1.5 right-1.5 shadow-sm">
+            <StatusBadge status={product.status} label={statusLabel(product.status)} />
+          </span>
+        </div>
+        <div>
+          <p className="truncate text-sm font-medium text-stone-800 dark:text-stone-100">{product.title}</p>
+          <p className="truncate text-xs text-stone-400 dark:text-stone-500">
+            {product.harvestDate ? formatDate(product.harvestDate) : "—"}
+          </p>
+        </div>
+        <div className="flex items-center justify-between text-sm">
+          <span className="font-semibold text-stone-800 dark:text-stone-100">
+            {formatSomoni(product.retailPricePerKg)} {t("products.perKg")}
+          </span>
+          <div className="flex flex-col items-end">
+            <span className="text-xs text-stone-500 dark:text-stone-400">
+              {product.availableQuantity} {t("products.kg")}
+            </span>
+            {sold > 0 && (
+              <span className="text-xs text-stone-400 dark:text-stone-500">
+                {t("products.originallyOf", { count: product.availableQuantity + sold })}
+              </span>
+            )}
+          </div>
+        </div>
+        <div className="flex justify-end gap-1 border-t border-stone-50 pt-2 dark:border-stone-800/60">
+          <button
+            onClick={() => openEdit(product)}
+            aria-label={t("products.editAction")}
+            className="flex h-7 w-7 items-center justify-center rounded-lg text-stone-400 transition hover:bg-stone-100 hover:text-grove-700 dark:text-stone-500 dark:hover:bg-stone-800 dark:hover:text-grove-400"
+          >
+            <Pencil size={14} />
+          </button>
+          <button
+            onClick={() => setDeleting(product)}
+            aria-label={t("products.deleteAction")}
+            className="flex h-7 w-7 items-center justify-center rounded-lg text-stone-400 transition hover:bg-rose-50 hover:text-rose-600 dark:text-stone-500 dark:hover:bg-rose-950 dark:hover:text-rose-400"
+          >
+            <Trash2 size={14} />
+          </button>
+        </div>
+      </div>
+    );
+  };
+
   return (
     <div className="flex flex-col gap-5">
       <div className="flex justify-end">
@@ -442,7 +504,14 @@ export function FarmerProducts() {
           description={t("products.emptyDescription")}
         />
       ) : (
-        <div className="rounded-3xl border border-stone-100 bg-white dark:border-stone-800 dark:bg-stone-900">
+        <div className="overflow-hidden rounded-3xl border border-stone-100 bg-linear-to-b from-white to-stone-50/60 shadow-(--shadow-soft) dark:border-stone-800 dark:from-stone-900 dark:to-stone-900">
+          <div className="flex items-center justify-end border-b border-stone-100 p-4 dark:border-stone-800">
+            <ViewModeToggle value={viewMode} onChange={setViewMode} ns="farmer" />
+          </div>
+
+          {viewMode === "cards" ? (
+            <div className="grid grid-cols-2 gap-3 p-5 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5">{pageItems.map(renderCard)}</div>
+          ) : (
           <div className="overflow-x-auto">
             <table className="w-full text-left text-sm">
               <thead>
@@ -456,58 +525,76 @@ export function FarmerProducts() {
                 </tr>
               </thead>
               <tbody>
-                {pageItems.map((product) => (
-                  <tr key={product.id} className="border-b border-stone-50 last:border-0 dark:border-stone-800/60">
-                    <td className="max-w-64 truncate px-6 py-4 font-medium text-stone-800 dark:text-stone-100">{product.title}</td>
-                    <td className="px-6 py-4 text-stone-600 dark:text-stone-300">
-                      {formatSomoni(product.retailPricePerKg)} {t("products.perKg")}
-                    </td>
-                    <td className="px-6 py-4 text-stone-600 dark:text-stone-300">
-                      {(() => {
-                        const sold = soldByListingId.get(product.id) ?? 0;
-                        return (
-                          <div className="flex flex-col">
-                            <span>
-                              {product.availableQuantity} {t("products.kg")}
+                {pageItems.map((product) => {
+                  const photo = photoByListingId.get(product.id);
+                  return (
+                    <tr
+                      key={product.id}
+                      className="border-b border-stone-50 transition-colors last:border-0 hover:bg-white dark:border-stone-800/60 dark:hover:bg-stone-800/40"
+                    >
+                      <td className="px-6 py-4">
+                        <div className="flex items-center gap-3">
+                          {photo ? (
+                            <img src={photo} alt="" className="h-14 w-14 shrink-0 rounded-2xl object-cover shadow-sm" loading="lazy" />
+                          ) : (
+                            <span className="flex h-14 w-14 shrink-0 items-center justify-center rounded-2xl bg-grove-50 text-grove-400 dark:bg-stone-800 dark:text-stone-500">
+                              <Package size={20} />
                             </span>
-                            {sold > 0 && (
-                              <span className="text-xs text-stone-400 dark:text-stone-500">
-                                {t("products.originallyOf", { count: product.availableQuantity + sold })}
+                          )}
+                          <span className="max-w-48 truncate font-medium text-stone-800 dark:text-stone-100">{product.title}</span>
+                        </div>
+                      </td>
+                      <td className="px-6 py-4 font-semibold text-stone-800 dark:text-stone-100">
+                        {formatSomoni(product.retailPricePerKg)} {t("products.perKg")}
+                      </td>
+                      <td className="px-6 py-4 text-stone-600 dark:text-stone-300">
+                        {(() => {
+                          const sold = soldByListingId.get(product.id) ?? 0;
+                          return (
+                            <div className="flex flex-col">
+                              <span>
+                                {product.availableQuantity} {t("products.kg")}
                               </span>
-                            )}
-                          </div>
-                        );
-                      })()}
-                    </td>
-                    <td className="px-6 py-4">
-                      <StatusBadge status={product.status} label={statusLabel(product.status)} />
-                    </td>
-                    <td className="px-6 py-4 text-stone-500 dark:text-stone-400">
-                      {product.harvestDate ? formatDate(product.harvestDate) : "—"}
-                    </td>
-                    <td className="px-6 py-4">
-                      <div className="flex items-center justify-end gap-1.5">
-                        <button
-                          onClick={() => openEdit(product)}
-                          aria-label={t("products.editAction")}
-                          className="flex h-8 w-8 items-center justify-center rounded-lg text-stone-400 transition hover:bg-stone-100 hover:text-grove-700 dark:text-stone-500 dark:hover:bg-stone-800 dark:hover:text-grove-400"
-                        >
-                          <Pencil size={15} />
-                        </button>
-                        <button
-                          onClick={() => setDeleting(product)}
-                          aria-label={t("products.deleteAction")}
-                          className="flex h-8 w-8 items-center justify-center rounded-lg text-stone-400 transition hover:bg-rose-50 hover:text-rose-600 dark:text-stone-500 dark:hover:bg-rose-950 dark:hover:text-rose-400"
-                        >
-                          <Trash2 size={15} />
-                        </button>
-                      </div>
-                    </td>
-                  </tr>
-                ))}
+                              {sold > 0 && (
+                                <span className="text-xs text-stone-400 dark:text-stone-500">
+                                  {t("products.originallyOf", { count: product.availableQuantity + sold })}
+                                </span>
+                              )}
+                            </div>
+                          );
+                        })()}
+                      </td>
+                      <td className="px-6 py-4">
+                        <StatusBadge status={product.status} label={statusLabel(product.status)} />
+                      </td>
+                      <td className="px-6 py-4 text-stone-500 dark:text-stone-400">
+                        {product.harvestDate ? formatDate(product.harvestDate) : "—"}
+                      </td>
+                      <td className="px-6 py-4">
+                        <div className="flex items-center justify-end gap-1.5">
+                          <button
+                            onClick={() => openEdit(product)}
+                            aria-label={t("products.editAction")}
+                            className="flex h-8 w-8 items-center justify-center rounded-lg text-stone-400 transition hover:bg-stone-100 hover:text-grove-700 dark:text-stone-500 dark:hover:bg-stone-800 dark:hover:text-grove-400"
+                          >
+                            <Pencil size={15} />
+                          </button>
+                          <button
+                            onClick={() => setDeleting(product)}
+                            aria-label={t("products.deleteAction")}
+                            className="flex h-8 w-8 items-center justify-center rounded-lg text-stone-400 transition hover:bg-rose-50 hover:text-rose-600 dark:text-stone-500 dark:hover:bg-rose-950 dark:hover:text-rose-400"
+                          >
+                            <Trash2 size={15} />
+                          </button>
+                        </div>
+                      </td>
+                    </tr>
+                  );
+                })}
               </tbody>
             </table>
           </div>
+          )}
 
           {totalPages > 1 && (
             <div className="border-t border-stone-100 p-4 dark:border-stone-800">

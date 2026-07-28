@@ -11,6 +11,10 @@ export interface ConversationDto {
   // CustomerProfile/FarmerProfile — см. useCustomerUserIdMap/useFarmerUserIdMap ниже.
   customerId: number;
   farmerId: number;
+  // Резолвится на бэкенде через прямой User.Id (Conversation.CustomerId — FK
+  // на User напрямую, без CustomerProfile-индирекции, см. комментарий выше) —
+  // null, если пользователь почему-то не найден (например, удалён).
+  customerFullName: string | null;
   isClosed: boolean;
   createdAt: string;
   updatedAt: string;
@@ -37,14 +41,20 @@ function useAsync<T>(fetcher: () => Promise<T>, deps: unknown[]): AsyncState<T> 
 
   useEffect(() => {
     let cancelled = false;
-    setState({ data: null, loading: true, error: null });
+    // Чат поллит каждые несколько секунд (см. ChatModal) — фоновое обновление
+    // не должно гасить уже показанные сообщения до null перед каждым тиком,
+    // иначе список на долю секунды пустеет и появляется заново, выглядит как
+    // "чат перезагружается". loading=true показываем только на самой первой
+    // загрузке (пока данных ещё вообще не было) — дальше старые данные тихо
+    // остаются на экране, пока не придут новые.
+    setState((prev) => ({ data: prev.data, loading: prev.data === null, error: null }));
 
     fetcher()
       .then((data) => {
         if (!cancelled) setState({ data, loading: false, error: null });
       })
       .catch((err: unknown) => {
-        if (!cancelled) setState({ data: null, loading: false, error: err instanceof Error ? err.message : String(err) });
+        if (!cancelled) setState((prev) => ({ data: prev.data, loading: false, error: err instanceof Error ? err.message : String(err) }));
       });
 
     return () => {
@@ -80,22 +90,48 @@ export function useCustomerUserIdMap() {
   return map;
 }
 
+// FarmerLayout/CustomerLayout (бейдж "Сообщения" в сайдбаре) и ChatModal —
+// разные компоненты, у каждого свой локальный refreshKey. Без этого моста
+// прочтение/отправка сообщений внутри открытого чата не отражались бы на
+// бейдже в сайдбаре, пока весь layout не перемонтируется — тот же приём, что
+// и у notifyFarmerOrdersChanged (data/farmer.ts).
+const chatListeners = new Set<() => void>();
+
+export function notifyChatChanged() {
+  chatListeners.forEach((listener) => listener());
+}
+
+function useChatExternalRefresh(): number {
+  const [externalRefresh, setExternalRefresh] = useState(0);
+  useEffect(() => {
+    const listener = () => setExternalRefresh((k) => k + 1);
+    chatListeners.add(listener);
+    return () => {
+      chatListeners.delete(listener);
+    };
+  }, []);
+  return externalRefresh;
+}
+
 // /api/conversations не фильтрует на бэкенде — грузим всё и сопоставляем на
 // фронте, как и везде в проекте.
 export function useConversations(refreshKey = 0) {
-  const { data, loading, error } = useAsync(() => apiGet<ConversationDto[]>("/conversations"), [refreshKey]);
+  const externalRefresh = useChatExternalRefresh();
+  const { data, loading, error } = useAsync(() => apiGet<ConversationDto[]>("/conversations"), [refreshKey, externalRefresh]);
   return { conversations: data, loading, error };
 }
 
 export function useChatMessagesAll(refreshKey = 0) {
-  const { data, loading, error } = useAsync(() => apiGet<ChatMessageDto[]>("/chat-messages"), [refreshKey]);
+  const externalRefresh = useChatExternalRefresh();
+  const { data, loading, error } = useAsync(() => apiGet<ChatMessageDto[]>("/chat-messages"), [refreshKey, externalRefresh]);
   return { messages: data, loading, error };
 }
 
 export function useChatMessages(conversationId: number | null, refreshKey = 0) {
+  const externalRefresh = useChatExternalRefresh();
   const { data, loading, error } = useAsync(
     () => (conversationId ? apiGet<ChatMessageDto[]>("/chat-messages") : Promise.resolve(null as never)),
-    [conversationId, refreshKey],
+    [conversationId, refreshKey, externalRefresh],
   );
   const messages =
     data
@@ -104,21 +140,21 @@ export function useChatMessages(conversationId: number | null, refreshKey = 0) {
   return { messages, loading, error };
 }
 
-// Order 1 — 0..1 Conversation (уникальность гарантирована на бэкенде, раздел
-// 8.15 ТЗ) — если чат по заказу уже есть, переиспользуем его, иначе создаём.
-// orderId=null — чат до заказа (вопрос фермеру про товар): уникальность в
-// этом случае держится на паре customerUserId/farmerUserId (см. бэкенд,
-// ConversationService.ValidatePreOrderPairFree). POST /api/conversations не
-// возвращает id созданной записи (та же схема, что и у Order/ProductListing)
-// — находим её через повторный GET.
+// Один Conversation на пару customerUserId/farmerUserId — независимо от
+// заказов (единая уникальность на бэкенде, ConversationService.ValidatePairFree)
+// — если у этой пары уже есть чат (по любому поводу — вопрос о товаре или
+// один из заказов), переиспользуем его, а не плодим новый под каждый заказ.
+// orderId передаётся только затем, чтобы ПЕРВОЕ сообщение новой (ещё не
+// существующей) переписки сохранило, с чего она началась. POST
+// /api/conversations не возвращает id созданной записи (та же схема, что и у
+// Order/ProductListing) — находим её через повторный GET.
 export async function getOrCreateConversation(
   orderId: number | null,
   customerUserId: number,
   farmerUserId: number,
 ): Promise<ConversationDto> {
   const existing = await apiGet<ConversationDto[]>("/conversations");
-  const matches = (c: ConversationDto) =>
-    orderId !== null ? c.orderId === orderId : c.orderId === null && c.customerId === customerUserId && c.farmerId === farmerUserId;
+  const matches = (c: ConversationDto) => c.customerId === customerUserId && c.farmerId === farmerUserId;
 
   const found = existing.find(matches);
   if (found) return found;
