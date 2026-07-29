@@ -6,6 +6,7 @@ public class GetConversationDto
     public int? OrderId { get; set; }
     public int CustomerId { get; set; }
     public int FarmerId { get; set; }
+    public string? CustomerFullName { get; set; }
     public bool IsClosed { get; set; }
     public DateTime CreatedAt { get; set; }
     public DateTime UpdatedAt { get; set; }

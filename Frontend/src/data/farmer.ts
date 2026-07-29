@@ -1,6 +1,8 @@
 import { useEffect, useState } from "react";
-import { apiDelete, apiGet, apiPost, apiPut, apiUpload } from "@/lib/api";
+import { apiDelete, apiGet, apiPost, apiPut, apiUpload, resolveMediaUrl } from "@/lib/api";
 import { useAuth } from "@/context/AuthContext";
+import { productPhotos } from "@/assets/photos";
+import { FALLBACK_PHOTO_ID_BY_PRODUCT_NAME } from "@/data/productPhotoFallback";
 
 export const ListingStatus = { Draft: 1, Active: 2, OutOfStock: 3, Archived: 4 } as const;
 export const FarmerVerificationStatus = { Pending: 1, Verified: 2, Rejected: 3 } as const;
@@ -360,6 +362,34 @@ export function useProductImages(productListingId: number | null, refreshKey = 0
   );
   const images = data?.filter((i) => i.productListingId === productListingId) ?? null;
   return { images, loading, error };
+}
+
+function fallbackPhotoByTitle(title: string): string | undefined {
+  const matchedName = Object.keys(FALLBACK_PHOTO_ID_BY_PRODUCT_NAME).find((name) => title.includes(name));
+  return matchedName ? productPhotos[FALLBACK_PHOTO_ID_BY_PRODUCT_NAME[matchedName]] : undefined;
+}
+
+// Для миниатюр в табличных/карточных списках (Admin/FarmerProducts) — по
+// одной главной фотографии на объявление, вне зависимости от статуса/фермера
+// (в отличие от публичного каталога, который отдаёт фото только для активных
+// объявлений проверенных фермеров, см. catalogStore.ts). "Грузим всё,
+// фильтруем на фронте" — тот же приём, что и у useProductImages, просто на
+// всех сразу. Если фермер ещё не загрузил настоящее фото объявления — та же
+// честная заглушка "похожая на товар картинка" по названию, что и в
+// публичном каталоге (см. data/productPhotoFallback.ts), а не пустая иконка:
+// у большинства демо-объявлений реальных фото ещё нет.
+export function useProductPhotoMap(products: { id: number; title: string }[] | null | undefined): Map<number, string> {
+  const { data } = useAsync(() => apiGet<ProductImageDto[]>("/product-images"), []);
+  const map = new Map<number, string>();
+  (data ?? []).forEach((img) => {
+    if (!map.has(img.productListingId) || img.isMain) map.set(img.productListingId, resolveMediaUrl(img.imageUrl));
+  });
+  (products ?? []).forEach((p) => {
+    if (map.has(p.id)) return;
+    const fallback = fallbackPhotoByTitle(p.title);
+    if (fallback) map.set(p.id, fallback);
+  });
+  return map;
 }
 
 export function uploadProductImage(productListingId: number, isMain: boolean, file: File) {

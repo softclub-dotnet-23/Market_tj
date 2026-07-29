@@ -3,7 +3,20 @@
     "login": "Ворид шудан",
     "register": "Сабти ном",
     "logout": "Баромадан",
-    "goToPanel": "Гузаштан ба панел"
+    "goToPanel": "Гузаштан ба панел",
+    "goToDashboard": "Гузаштан ба кабинети шахсӣ"
+  },
+  "account": {
+    "myOrders": "Фармоишҳои ман",
+    "myOrdersHint": "Таърих ва ҳолати фармоишҳо",
+    "messages": "Паёмҳо",
+    "messagesHint": "Мукотиба бо деҳқонон",
+    "notifications": "Огоҳиномаҳо",
+    "notificationsHint": "Рӯйдодҳои муҳим оид ба фармоишҳо",
+    "favorites": "Дӯстдоштаҳо",
+    "favoritesHint": "Маҳсулоти нигоҳдошташуда",
+    "profile": "Профил ва танзимот",
+    "profileHint": "Маълумоти шахсӣ ва суроғаи расонидан"
   },
   "avatar": {
     "addPhoto": "Илова кардани акс",

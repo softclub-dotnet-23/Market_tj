@@ -8,6 +8,7 @@ import { EmptyState } from "@/components/ui/EmptyState";
 import { Pagination } from "@/components/ui/Pagination";
 import { StatusBadge } from "@/components/ui/StatusBadge";
 import { Button } from "@/components/ui/Button";
+import { OrderItemsPhotoList } from "@/components/ui/OrderItemsPhotoList";
 import { ReviewModal } from "@/components/customer/ReviewModal";
 import { formatDateTime, formatSomoni } from "@/lib/utils";
 import { ORDER_STATUS_CLASSES, ORDER_STATUS_ICONS, ORDER_STATUS_KEYS, OrderStatus, resolveReceivedAt } from "@/lib/orderStatus";
@@ -18,10 +19,11 @@ import {
   useCustomerReviewedOrderIds,
   type CustomerOrderDto,
 } from "@/data/customer";
-// Delivery привязан к заказу через OrderId, не через customerId — тот же
-// generic-хук, что уже используется в FarmerOrders.tsx, просто ещё один
-// потребитель того же общего списка доставок.
-import { useDeliveriesByOrder } from "@/data/farmer";
+// Delivery и позиции заказа привязаны к заказу через OrderId, не через
+// customerId — те же generic-хуки, что уже используются в FarmerOrders.tsx,
+// просто ещё один потребитель тех же общих списков.
+import { useDeliveriesByOrder, useOrderItems } from "@/data/farmer";
+import { useProducts } from "@/data/products";
 
 const PAGE_SIZE = 10;
 
@@ -34,6 +36,9 @@ export function CustomerOrders() {
   const { orders, loading: ordersLoading, error: ordersError } = useCustomerOrders(profile?.id ?? null);
   const { reviewedOrderIds } = useCustomerReviewedOrderIds(profile?.id ?? null, reviewRefreshKey);
   const { deliveriesByOrderId, loading: deliveriesLoading } = useDeliveriesByOrder();
+  const { orderItems } = useOrderItems();
+  const products = useProducts();
+  const photoByListingId = new Map(products.map((p) => [p.id, p.photoUrl]));
 
   if (profileLoading || (profile && (ordersLoading || deliveriesLoading))) return <PageLoader />;
 
@@ -109,6 +114,41 @@ export function CustomerOrders() {
     );
   };
 
+  const renderCard = (order: CustomerOrderDto) => {
+    const receivedAt = resolveReceivedAt(order.status, order.completedAt, deliveriesByOrderId.get(order.id)?.deliveredAt);
+    const items = orderItems?.filter((i) => i.orderId === order.id) ?? [];
+    return (
+      <div key={order.id} className="flex flex-col gap-3 rounded-2xl border border-stone-100 p-5 dark:border-stone-800">
+        <div className="flex items-start justify-between gap-3">
+          <div>
+            <p className="font-medium text-stone-800 dark:text-stone-100">{order.orderNumber}</p>
+            <p className="text-xs text-stone-400 dark:text-stone-500">{formatDateTime(order.createdAt)}</p>
+          </div>
+          <p className="font-semibold text-stone-800 dark:text-stone-100">
+            {formatSomoni(order.totalAmount)} {t("common.somoni")}
+          </p>
+        </div>
+        <div className="border-t border-stone-50 pt-3 dark:border-stone-800/60">
+          <OrderItemsPhotoList items={items} photoByListingId={photoByListingId} />
+        </div>
+        <div className="grid grid-cols-[auto_1fr] gap-x-3 gap-y-1.5 border-t border-stone-50 pt-3 text-sm dark:border-stone-800/60">
+          <span className="text-stone-400 dark:text-stone-500">{t("orders.columns.address")}</span>
+          <span className="text-stone-700 dark:text-stone-200">
+            {order.region}, {order.district}
+          </span>
+          <span className="text-stone-400 dark:text-stone-500">{t("orders.columns.receivedAt")}</span>
+          <span className="text-stone-700 dark:text-stone-200">
+            {receivedAt ? formatDateTime(receivedAt) : t("orders.notReceivedYet")}
+          </span>
+        </div>
+        <div className="flex flex-wrap items-center justify-between gap-3 pt-1">
+          {statusBadge(order)}
+          {reviewAction(order)}
+        </div>
+      </div>
+    );
+  };
+
   return (
     <div className="rounded-3xl border border-stone-100 bg-white dark:border-stone-800 dark:bg-stone-900">
       {/* Десктоп/планшет — обычная таблица, компактно сжатая до 5 колонок,
@@ -156,39 +196,8 @@ export function CustomerOrders() {
         </table>
       </div>
 
-      {/* Мобильный/узкий экран — карточки вместо таблицы. */}
-      <div className="flex flex-col divide-y divide-stone-50 lg:hidden dark:divide-stone-800/60">
-        {pageItems.map((order) => {
-          const receivedAt = resolveReceivedAt(order.status, order.completedAt, deliveriesByOrderId.get(order.id)?.deliveredAt);
-          return (
-            <div key={order.id} className="flex flex-col gap-3 p-5">
-              <div className="flex items-start justify-between gap-3">
-                <div>
-                  <p className="font-medium text-stone-800 dark:text-stone-100">{order.orderNumber}</p>
-                  <p className="text-xs text-stone-400 dark:text-stone-500">{formatDateTime(order.createdAt)}</p>
-                </div>
-                <p className="font-semibold text-stone-800 dark:text-stone-100">
-                  {formatSomoni(order.totalAmount)} {t("common.somoni")}
-                </p>
-              </div>
-              <div className="grid grid-cols-[auto_1fr] gap-x-3 gap-y-1.5 text-sm">
-                <span className="text-stone-400 dark:text-stone-500">{t("orders.columns.address")}</span>
-                <span className="text-stone-700 dark:text-stone-200">
-                  {order.region}, {order.district}
-                </span>
-                <span className="text-stone-400 dark:text-stone-500">{t("orders.columns.receivedAt")}</span>
-                <span className="text-stone-700 dark:text-stone-200">
-                  {receivedAt ? formatDateTime(receivedAt) : t("orders.notReceivedYet")}
-                </span>
-              </div>
-              <div className="flex flex-wrap items-center justify-between gap-3 pt-1">
-                {statusBadge(order)}
-                {reviewAction(order)}
-              </div>
-            </div>
-          );
-        })}
-      </div>
+      {/* Мобильный/узкий экран — карточки вместо таблицы, с фото товаров. */}
+      <div className="grid grid-cols-1 gap-4 p-5 lg:hidden">{pageItems.map(renderCard)}</div>
 
       {totalPages > 1 && (
         <div className="border-t border-stone-100 p-4 dark:border-stone-800">

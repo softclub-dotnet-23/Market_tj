@@ -15,6 +15,7 @@ public class ConversationService(
     IOrderRepository orderRepository,
     ICustomerProfileRepository customerProfileRepository,
     IFarmerProfileRepository farmerProfileRepository,
+    IUserRepository userRepository,
     ICurrentUserService currentUser,
     ILogger<ConversationService> logger) : IConversationService
 {
@@ -29,7 +30,8 @@ public class ConversationService(
             if (!currentUser.IsAdmin())
                 conversations = conversations.Where(c => c.CustomerId == currentUser.UserId || c.FarmerId == currentUser.UserId).ToList();
 
-            return Result<IEnumerable<GetConversationDto>>.Ok(conversations.Select(ToGetDto));
+            var customerNames = await ResolveCustomerFullNamesAsync(conversations.Select(c => c.CustomerId));
+            return Result<IEnumerable<GetConversationDto>>.Ok(conversations.Select(c => ToGetDto(c, customerNames)));
         }
         catch (Exception ex)
         {
@@ -49,13 +51,25 @@ public class ConversationService(
             if (!currentUser.IsAdmin() && conversation.CustomerId != currentUser.UserId && conversation.FarmerId != currentUser.UserId)
                 return Result<GetConversationDto?>.Fail("Нет доступа к этому чату", ErrorType.Forbidden);
 
-            return Result<GetConversationDto?>.Ok(ToGetDto(conversation));
+            var customerNames = await ResolveCustomerFullNamesAsync([conversation.CustomerId]);
+            return Result<GetConversationDto?>.Ok(ToGetDto(conversation, customerNames));
         }
         catch (Exception ex)
         {
             logger.LogError(ex, "Ошибка при получении чата {Id}", id);
             return Result<GetConversationDto?>.Fail("Не удалось получить чат", ErrorType.InternalServerError);
         }
+    }
+
+    // Conversation.CustomerId — это User.Id напрямую (в отличие от
+    // Order.CustomerId, который указывает на CustomerProfile), поэтому здесь
+    // достаточно прямой пакетной выборки без промежуточного джойна через
+    // профиль — см. аналогичный, но двухшаговый OrderService.ResolveCustomerContactsAsync.
+    private async Task<Dictionary<int, string?>> ResolveCustomerFullNamesAsync(IEnumerable<int> customerUserIds)
+    {
+        var neededIds = customerUserIds.Distinct().ToHashSet();
+        var users = await userRepository.GetAllAsync();
+        return users.Where(u => neededIds.Contains(u.Id)).ToDictionary(u => u.Id, u => (string?)u.FullName);
     }
 
     public async Task<Result<string>> CreateAsync(CreateConversationDto dto)
@@ -73,9 +87,7 @@ public class ConversationService(
                 return participantsError;
 
             var all = await conversationRepository.GetAllAsync();
-            var duplicateError = dto.OrderId.HasValue
-                ? ValidateOrderNotTaken(all, dto.OrderId.Value, excludeId: null)
-                : ValidatePreOrderPairFree(all, dto.CustomerId, dto.FarmerId, excludeId: null);
+            var duplicateError = ValidatePairFree(all, dto.CustomerId, dto.FarmerId, excludeId: null);
             if (duplicateError is not null)
                 return duplicateError;
 
@@ -121,9 +133,7 @@ public class ConversationService(
                 return participantsError;
 
             var all = await conversationRepository.GetAllAsync();
-            var duplicateError = dto.OrderId.HasValue
-                ? ValidateOrderNotTaken(all, dto.OrderId.Value, excludeId: id)
-                : ValidatePreOrderPairFree(all, dto.CustomerId, dto.FarmerId, excludeId: id);
+            var duplicateError = ValidatePairFree(all, dto.CustomerId, dto.FarmerId, excludeId: id);
             if (duplicateError is not null)
                 return duplicateError;
 
@@ -179,18 +189,17 @@ public class ConversationService(
         return null;
     }
 
-    // Раздел 8.15 ТЗ: один чат на заказ.
-    private static Result<string>? ValidateOrderNotTaken(IEnumerable<Conversation> all, int orderId, int? excludeId)
-        => all.Any(c => c.Id != excludeId && c.OrderId == orderId)
-            ? Result<string>.Fail("Для этого заказа уже создан чат", ErrorType.Conflict)
-            : null;
-
-    // Чат до заказа не привязан к Order, поэтому уникальность держится на
-    // паре покупатель/фермер — иначе с одной карточки товара можно было бы
-    // наплодить дублирующих чатов с одним и тем же фермером.
-    private static Result<string>? ValidatePreOrderPairFree(IEnumerable<Conversation> all, int customerUserId, int farmerUserId, int? excludeId)
-        => all.Any(c => c.Id != excludeId && c.OrderId == null && c.CustomerId == customerUserId && c.FarmerId == farmerUserId)
-            ? Result<string>.Fail("Чат с этим фермером уже есть", ErrorType.Conflict)
+    // Один чат на пару покупатель-фермер, независимо от заказов (раньше было
+    // "один чат на заказ" + отдельный "до заказа" — так у одного и того же
+    // клиента с одним фермером легко копились дублирующие переписки: общий
+    // вопрос про товар отдельно от переписки по каждому новому заказу.
+    // Пользователь явно попросила объединить в единый непрерывный тред, как в
+    // обычном мессенджере — OrderId остаётся на Conversation только как
+    // информация о том, с чего начался разговор, но больше не участвует в
+    // проверке уникальности).
+    private static Result<string>? ValidatePairFree(IEnumerable<Conversation> all, int customerUserId, int farmerUserId, int? excludeId)
+        => all.Any(c => c.Id != excludeId && c.CustomerId == customerUserId && c.FarmerId == farmerUserId)
+            ? Result<string>.Fail("Чат с этим пользователем уже есть", ErrorType.Conflict)
             : null;
 
     public async Task<Result<string>> DeleteAsync(int id)
@@ -214,14 +223,19 @@ public class ConversationService(
         }
     }
 
-    private static GetConversationDto ToGetDto(Conversation conversation) => new()
+    private static GetConversationDto ToGetDto(Conversation conversation, IReadOnlyDictionary<int, string?> customerNames)
     {
-        Id = conversation.Id,
-        OrderId = conversation.OrderId,
-        CustomerId = conversation.CustomerId,
-        FarmerId = conversation.FarmerId,
-        IsClosed = conversation.IsClosed,
-        CreatedAt = conversation.CreatedAt,
-        UpdatedAt = conversation.UpdatedAt
-    };
+        customerNames.TryGetValue(conversation.CustomerId, out var customerFullName);
+        return new()
+        {
+            Id = conversation.Id,
+            OrderId = conversation.OrderId,
+            CustomerId = conversation.CustomerId,
+            FarmerId = conversation.FarmerId,
+            CustomerFullName = customerFullName,
+            IsClosed = conversation.IsClosed,
+            CreatedAt = conversation.CreatedAt,
+            UpdatedAt = conversation.UpdatedAt
+        };
+    }
 }

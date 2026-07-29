@@ -164,6 +164,8 @@
     "errorDescription": "Проверьте подключение к серверу и попробуйте снова.",
     "emptyTitle": "Пока нет заказов",
     "emptyDescription": "Здесь появятся заказы покупателей на ваши товары.",
+    "viewList": "Список",
+    "viewCards": "Карточки",
     "columns": {
       "orderNumber": "№ заказа",
       "customer": "Клиент",

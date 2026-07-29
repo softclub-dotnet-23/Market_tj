@@ -1,7 +1,9 @@
-import { Link, useParams } from "react-router-dom";
+import { useState } from "react";
+import { Link, useNavigate, useParams } from "react-router-dom";
 import { useTranslation } from "react-i18next";
 import { motion } from "framer-motion";
-import { BadgeCheck, CalendarDays, MapPin, Package, Sprout } from "lucide-react";
+import { toast } from "sonner";
+import { BadgeCheck, CalendarDays, MapPin, MessageCircle, Package, Sprout } from "lucide-react";
 import { Breadcrumbs } from "@/components/ui/Breadcrumbs";
 import { Avatar } from "@/components/ui/Avatar";
 import { Badge } from "@/components/ui/Badge";
@@ -10,9 +12,11 @@ import { EmptyState } from "@/components/ui/EmptyState";
 import { RatingStars } from "@/components/ui/RatingStars";
 import { PageLoader } from "@/components/layout/PageLoader";
 import { ReviewsSection } from "@/components/product/ReviewsSection";
+import { ChatModal } from "@/components/chat/ChatModal";
 import { useFarmers } from "@/data/farmers";
 import { useCatalogLoaded } from "@/data/products";
 import { getCatalogReviewsByFarmerId } from "@/data/catalogStore";
+import { useAuth } from "@/context/AuthContext";
 import { resolveMediaUrl } from "@/lib/api";
 import { formatDate } from "@/lib/utils";
 
@@ -28,9 +32,12 @@ function StatBlock({ label, value }: { label: string; value: string }) {
 export function FarmerPublicProfile() {
   const { t } = useTranslation(["pages", "product", "layout"]);
   const { id } = useParams();
+  const navigate = useNavigate();
+  const { user } = useAuth();
   const farmers = useFarmers();
   const catalogLoaded = useCatalogLoaded();
   const farmer = farmers.find((f) => f.id === Number(id));
+  const [askFarmerOpen, setAskFarmerOpen] = useState(false);
 
   if (!farmer && !catalogLoaded) return <PageLoader />;
 
@@ -52,6 +59,19 @@ export function FarmerPublicProfile() {
   }
 
   const reviews = getCatalogReviewsByFarmerId(farmer.id);
+
+  const handleAskFarmer = () => {
+    if (!user) {
+      toast.error(t("pages:productDetails.chatLoginRequired"));
+      navigate("/login");
+      return;
+    }
+    if (user.role !== "Customer") {
+      toast.error(t("pages:productDetails.chatCustomersOnly"));
+      return;
+    }
+    setAskFarmerOpen(true);
+  };
 
   return (
     <div className="container-page py-8 sm:py-12">
@@ -94,9 +114,16 @@ export function FarmerPublicProfile() {
             )}
           </div>
         </div>
-        <Link to={`/catalog?farmer=${farmer.id}`} className="shrink-0">
-          <Button leftIcon={<Package size={15} />}>{t("product:allProducts")}</Button>
-        </Link>
+        <div className="flex shrink-0 flex-col gap-2 sm:flex-row">
+          <Button variant="outline" leftIcon={<MessageCircle size={15} />} onClick={handleAskFarmer}>
+            {t("pages:productDetails.askFarmer")}
+          </Button>
+          <Link to={`/catalog?farmer=${farmer.id}`}>
+            <Button leftIcon={<Package size={15} />} className="w-full">
+              {t("product:allProducts")}
+            </Button>
+          </Link>
+        </div>
       </motion.div>
 
       <div className="mt-6 grid grid-cols-2 gap-4 sm:grid-cols-3">
@@ -119,6 +146,18 @@ export function FarmerPublicProfile() {
         <h2 className="mb-5 font-display text-xl text-stone-900 dark:text-stone-50">{t("pages:farmerProfile.reviewsTitle")}</h2>
         <ReviewsSection reviews={reviews} rating={farmer.rating} count={farmer.reviewCount} />
       </div>
+
+      <ChatModal
+        open={askFarmerOpen}
+        onClose={() => setAskFarmerOpen(false)}
+        orderId={null}
+        orderNumber={null}
+        customerUserId={user?.userId ?? null}
+        farmerUserId={farmer.userId}
+        currentUserId={user?.userId ?? 0}
+        otherPartyName={farmer.farmName}
+        ns="customer"
+      />
     </div>
   );
 }

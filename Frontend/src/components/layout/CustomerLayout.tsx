@@ -79,9 +79,15 @@ export function CustomerLayout() {
   const { conversations } = useConversations();
   const { messages: allChatMessages } = useChatMessagesAll();
   const myConversationIds = new Set((conversations ?? []).filter((c) => c.customerId === user?.userId).map((c) => c.id));
-  const unreadMessagesCount = (allChatMessages ?? []).filter(
-    (m) => myConversationIds.has(m.conversationId) && !m.isRead && m.senderId !== user?.userId,
-  ).length;
+  // Бейдж считает непрочитанные ЧАТЫ, а не сумму всех непрочитанных сообщений
+  // в них (иначе один собеседник с 5 сообщениями подряд весил бы как 5 разных
+  // людей) — так же, как непрочитанные диалоги считает большинство мессенджеров.
+  const unreadConversationIds = new Set(
+    (allChatMessages ?? [])
+      .filter((m) => myConversationIds.has(m.conversationId) && !m.isRead && m.senderId !== user?.userId)
+      .map((m) => m.conversationId),
+  );
+  const unreadMessagesCount = unreadConversationIds.size;
 
   // "Каталог" и "Избранное" оба указывают на /catalog (второй — с query
   // ?favorites=1) — обычный startsWith(item.path) не отличил бы их (query
