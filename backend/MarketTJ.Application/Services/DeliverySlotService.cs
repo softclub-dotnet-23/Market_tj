@@ -12,13 +12,49 @@ namespace MarketTJ.Application.Services;
 public class DeliverySlotService(
     IDeliverySlotRepository deliverySlotRepository,
     IOrderRepository orderRepository,
+    ICustomerProfileRepository customerProfileRepository,
+    IFarmerProfileRepository farmerProfileRepository,
+    ICurrentUserService currentUser,
     ILogger<DeliverySlotService> logger) : IDeliverySlotService
 {
+    // Audit 2026-07-28, находка 2.2 (IDOR): у DeliverySlot нет своего CustomerId/
+    // FarmerId — владение резолвится через родительский Order (как в OrderItem/Payment).
+    private async Task<bool> IsOwnerAsync(int orderId)
+    {
+        if (currentUser.IsAdmin())
+            return true;
+        if (currentUser.UserId is null)
+            return false;
+
+        var order = await orderRepository.GetByIdAsync(orderId);
+        if (order is null)
+            return false;
+
+        var customerProfile = await customerProfileRepository.GetByUserIdAsync(currentUser.UserId.Value);
+        if (customerProfile is not null && customerProfile.Id == order.CustomerId)
+            return true;
+
+        var farmerProfile = await farmerProfileRepository.GetByUserIdAsync(currentUser.UserId.Value);
+        return farmerProfile is not null && farmerProfile.Id == order.FarmerId;
+    }
+
     public async Task<Result<IEnumerable<GetDeliverySlotDto>>> GetAllAsync()
     {
         try
         {
             var slots = await deliverySlotRepository.GetAllAsync();
+
+            if (!currentUser.IsAdmin())
+            {
+                var filtered = new List<DeliverySlot>();
+                foreach (var slot in slots)
+                {
+                    if (await IsOwnerAsync(slot.OrderId))
+                        filtered.Add(slot);
+                }
+                slots = filtered;
+            }
+
             return Result<IEnumerable<GetDeliverySlotDto>>.Ok(slots.Select(ToGetDto));
         }
         catch (Exception ex)
@@ -35,6 +71,9 @@ public class DeliverySlotService(
             var slot = await deliverySlotRepository.GetByIdAsync(id);
             if (slot is null)
                 return Result<GetDeliverySlotDto?>.Fail("Слот доставки не найден", ErrorType.NotFound);
+
+            if (!await IsOwnerAsync(slot.OrderId))
+                return Result<GetDeliverySlotDto?>.Fail("Нет доступа к этому слоту доставки", ErrorType.Forbidden);
 
             return Result<GetDeliverySlotDto?>.Ok(ToGetDto(slot));
         }
@@ -56,6 +95,9 @@ public class DeliverySlotService(
             var order = await orderRepository.GetByIdAsync(dto.OrderId);
             if (order is null)
                 return Result<string>.Fail("Заказ не найден", ErrorType.NotFound);
+
+            if (!await IsOwnerAsync(dto.OrderId))
+                return Result<string>.Fail("Нет доступа к этому заказу", ErrorType.Forbidden);
 
             // Раздел 8.29 ТЗ: один слот на заказ.
             var all = await deliverySlotRepository.GetAllAsync();
@@ -93,6 +135,9 @@ public class DeliverySlotService(
             if (slot is null)
                 return Result<string>.Fail("Слот доставки не найден", ErrorType.NotFound);
 
+            if (!await IsOwnerAsync(slot.OrderId))
+                return Result<string>.Fail("Нет доступа к этому слоту доставки", ErrorType.Forbidden);
+
             var order = await orderRepository.GetByIdAsync(dto.OrderId);
             if (order is null)
                 return Result<string>.Fail("Заказ не найден", ErrorType.NotFound);
@@ -123,6 +168,9 @@ public class DeliverySlotService(
             var slot = await deliverySlotRepository.GetByIdAsync(id);
             if (slot is null)
                 return Result<string>.Fail("Слот доставки не найден", ErrorType.NotFound);
+
+            if (!await IsOwnerAsync(slot.OrderId))
+                return Result<string>.Fail("Нет доступа к этому слоту доставки", ErrorType.Forbidden);
 
             await deliverySlotRepository.DeleteAsync(slot);
             return Result<string>.Ok("Слот доставки удалён");

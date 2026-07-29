@@ -13,8 +13,12 @@ namespace MarketTJ.Application.Services;
 public class FarmerProfileService(
     IFarmerProfileRepository farmerProfileRepository,
     IUserRepository userRepository,
+    ICurrentUserService currentUser,
     ILogger<FarmerProfileService> logger) : IFarmerProfileService
 {
+    // GetAll/GetById сознательно ОСТАЮТСЯ публичными — это витрина фермера в
+    // каталоге, доступная всем (в отличие от CustomerProfile/CourierProfile).
+    // IDOR-guard нужен только на Create/Update/Delete (audit 2026-07-28, находка 2.2).
     public async Task<Result<IEnumerable<GetFarmerProfileDto>>> GetAllAsync()
     {
         try
@@ -62,6 +66,9 @@ public class FarmerProfileService(
             var validation = FarmerProfileValidator.ValidateCreate(dto);
             if (validation is not null)
                 return validation;
+
+            if (!currentUser.CanAccess(dto.UserId))
+                return Result<string>.Fail("Нельзя создать профиль для другого пользователя", ErrorType.Forbidden);
 
             var user = await userRepository.GetByIdAsync(dto.UserId);
             if (user is null)
@@ -117,6 +124,9 @@ public class FarmerProfileService(
             if (profile is null)
                 return Result<string>.Fail("Профиль фермера не найден", ErrorType.NotFound);
 
+            if (!currentUser.CanAccess(profile.UserId))
+                return Result<string>.Fail("Нет доступа к этому профилю", ErrorType.Forbidden);
+
             var user = await userRepository.GetByIdAsync(dto.UserId);
             if (user is null)
                 return Result<string>.Fail("Пользователь не найден", ErrorType.NotFound);
@@ -161,6 +171,9 @@ public class FarmerProfileService(
             var profile = await farmerProfileRepository.GetByIdAsync(id);
             if (profile is null)
                 return Result<string>.Fail("Профиль фермера не найден", ErrorType.NotFound);
+
+            if (!currentUser.CanAccess(profile.UserId))
+                return Result<string>.Fail("Нет доступа к этому профилю", ErrorType.Forbidden);
 
             await farmerProfileRepository.DeleteAsync(profile);
             return Result<string>.Ok("Профиль фермера удалён");

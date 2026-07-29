@@ -19,13 +19,19 @@ public class OrderServiceTests
     private readonly Mock<IFarmerProfileRepository> _farmerProfileRepository = new();
     private readonly Mock<IUserRepository> _userRepository = new();
     private readonly Mock<IAuditLogService> _auditLogService = new();
+    private readonly Mock<ICurrentUserService> _currentUser = new();
     private readonly Mock<ILogger<OrderService>> _logger = new();
     private readonly OrderService _service;
 
     public OrderServiceTests()
     {
-        _service = new OrderService(_orderRepository.Object, _orderItemRepository.Object, _productListingRepository.Object, _customerProfileRepository.Object, _farmerProfileRepository.Object, _userRepository.Object, _auditLogService.Object, _logger.Object);
+        _service = new OrderService(_orderRepository.Object, _orderItemRepository.Object, _productListingRepository.Object, _customerProfileRepository.Object, _farmerProfileRepository.Object, _userRepository.Object, _auditLogService.Object, _currentUser.Object, _logger.Object);
+        // По умолчанию — Customer с UserId=10, чей CustomerProfile.Id=1 (совпадает
+        // с CustomerId=1 во всех фабриках Order/DTO ниже) — владелец по умолчанию.
+        _currentUser.Setup(c => c.UserId).Returns(10);
+        _currentUser.Setup(c => c.Role).Returns(nameof(UserRole.Customer));
         _customerProfileRepository.Setup(r => r.GetByIdAsync(It.IsAny<int>())).ReturnsAsync((int id) => new CustomerProfile { Id = id, UserId = 10, CustomerType = CustomerType.Retail, Region = "Хатлон", District = "Бохтар" });
+        _customerProfileRepository.Setup(r => r.GetByUserIdAsync(10)).ReturnsAsync(new CustomerProfile { Id = 1, UserId = 10, CustomerType = CustomerType.Retail, Region = "Хатлон", District = "Бохтар" });
         _customerProfileRepository.Setup(r => r.GetAllAsync()).ReturnsAsync([new CustomerProfile { Id = 1, UserId = 10, CustomerType = CustomerType.Retail, Region = "Хатлон", District = "Бохтар" }]);
         _farmerProfileRepository.Setup(r => r.GetByIdAsync(It.IsAny<int>())).ReturnsAsync((int id) => new FarmerProfile { Id = id, UserId = 20, FarmName = "Farm", Region = "Хатлон", District = "Бохтар", Village = "V", Address = "A", VerificationStatus = FarmerVerificationStatus.Verified });
         _userRepository.Setup(r => r.GetByIdAsync(10)).ReturnsAsync(new User { Id = 10, IsActive = true, Role = UserRole.Customer, FullName = "C", Email = "c@e.com", PhoneNumber = "1", PasswordHash = "h" });
@@ -154,6 +160,37 @@ public class OrderServiceTests
         Assert.True(result.IsSuccess);
         Assert.Null(result.Data!.CustomerFullName);
         Assert.Null(result.Data!.CustomerPhone);
+    }
+
+    [Fact]
+    public async Task GetByIdAsync_NotOwner_ReturnsForbidden()
+    {
+        // audit 2026-07-28, находка 2.2 (IDOR): заказ принадлежит другому
+        // покупателю (CustomerProfile.Id=99), не текущему (Id=1) — ни как Customer,
+        // ни как Farmer текущий пользователь к этому заказу отношения не имеет.
+        var order = CreateOrder(5);
+        order.CustomerId = 99;
+        order.FarmerId = 88;
+        _orderRepository.Setup(r => r.GetByIdAsync(5)).ReturnsAsync(order);
+
+        var result = await _service.GetByIdAsync(5);
+
+        Assert.False(result.IsSuccess);
+        Assert.Equal(ErrorType.Forbidden, result.ErrorType);
+    }
+
+    [Fact]
+    public async Task GetByIdAsync_NotOwnerButAdmin_ReturnsOk()
+    {
+        _currentUser.Setup(c => c.Role).Returns(nameof(UserRole.Admin));
+        var order = CreateOrder(5);
+        order.CustomerId = 99;
+        order.FarmerId = 88;
+        _orderRepository.Setup(r => r.GetByIdAsync(5)).ReturnsAsync(order);
+
+        var result = await _service.GetByIdAsync(5);
+
+        Assert.True(result.IsSuccess);
     }
 
     [Fact]

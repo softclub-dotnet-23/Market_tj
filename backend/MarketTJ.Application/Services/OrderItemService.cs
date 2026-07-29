@@ -14,13 +14,49 @@ public class OrderItemService(
     IOrderItemRepository orderItemRepository,
     IOrderRepository orderRepository,
     IProductListingRepository productListingRepository,
+    ICustomerProfileRepository customerProfileRepository,
+    IFarmerProfileRepository farmerProfileRepository,
+    ICurrentUserService currentUser,
     ILogger<OrderItemService> logger) : IOrderItemService
 {
+    // Audit 2026-07-28, находка 2.2 (IDOR): у OrderItem нет своего CustomerId/
+    // FarmerId — владение резолвится через родительский Order (как в OrderService).
+    private async Task<bool> IsOwnerAsync(int orderId)
+    {
+        if (currentUser.IsAdmin())
+            return true;
+        if (currentUser.UserId is null)
+            return false;
+
+        var order = await orderRepository.GetByIdAsync(orderId);
+        if (order is null)
+            return false;
+
+        var customerProfile = await customerProfileRepository.GetByUserIdAsync(currentUser.UserId.Value);
+        if (customerProfile is not null && customerProfile.Id == order.CustomerId)
+            return true;
+
+        var farmerProfile = await farmerProfileRepository.GetByUserIdAsync(currentUser.UserId.Value);
+        return farmerProfile is not null && farmerProfile.Id == order.FarmerId;
+    }
+
     public async Task<Result<IEnumerable<GetOrderItemDto>>> GetAllAsync()
     {
         try
         {
             var items = await orderItemRepository.GetAllAsync();
+
+            if (!currentUser.IsAdmin())
+            {
+                var filtered = new List<OrderItem>();
+                foreach (var item in items)
+                {
+                    if (await IsOwnerAsync(item.OrderId))
+                        filtered.Add(item);
+                }
+                items = filtered;
+            }
+
             return Result<IEnumerable<GetOrderItemDto>>.Ok(items.Select(ToGetDto));
         }
         catch (Exception ex)
@@ -37,6 +73,9 @@ public class OrderItemService(
             var item = await orderItemRepository.GetByIdAsync(id);
             if (item is null)
                 return Result<GetOrderItemDto?>.Fail("Позиция заказа не найдена", ErrorType.NotFound);
+
+            if (!await IsOwnerAsync(item.OrderId))
+                return Result<GetOrderItemDto?>.Fail("Нет доступа к этой позиции заказа", ErrorType.Forbidden);
 
             return Result<GetOrderItemDto?>.Ok(ToGetDto(item));
         }
@@ -58,6 +97,9 @@ public class OrderItemService(
             var order = await orderRepository.GetByIdAsync(dto.OrderId);
             if (order is null)
                 return Result<string>.Fail("Заказ не найден", ErrorType.NotFound);
+
+            if (!await IsOwnerAsync(dto.OrderId))
+                return Result<string>.Fail("Нет доступа к этому заказу", ErrorType.Forbidden);
 
             if (order.Status == OrderStatus.Completed)
                 return Result<string>.Fail("Завершённый заказ нельзя редактировать", ErrorType.Validation);
@@ -114,6 +156,9 @@ public class OrderItemService(
             var order = await orderRepository.GetByIdAsync(dto.OrderId);
             if (order is null)
                 return Result<string>.Fail("Заказ не найден", ErrorType.NotFound);
+
+            if (!await IsOwnerAsync(dto.OrderId))
+                return Result<string>.Fail("Нет доступа к этому заказу", ErrorType.Forbidden);
 
             if (order.Status == OrderStatus.Completed)
                 return Result<string>.Fail("Завершённый заказ нельзя редактировать", ErrorType.Validation);
@@ -175,6 +220,9 @@ public class OrderItemService(
             var item = await orderItemRepository.GetByIdAsync(id);
             if (item is null)
                 return Result<string>.Fail("Позиция заказа не найдена", ErrorType.NotFound);
+
+            if (!await IsOwnerAsync(item.OrderId))
+                return Result<string>.Fail("Нет доступа к этой позиции заказа", ErrorType.Forbidden);
 
             var listing = await productListingRepository.GetByIdAsync(item.ProductListingId);
             if (listing is not null)

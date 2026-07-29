@@ -72,7 +72,10 @@ public class UserService(
                 FullName = dto.FullName,
                 Email = dto.Email,
                 PhoneNumber = dto.PhoneNumber,
-                PasswordHash = dto.PasswordHash,
+                // BCrypt — тот же метод хэширования, что и в AuthService.RegisterAsync
+                // (audit 2026-07-28, находка 2.1: раньше dto.PasswordHash писался
+                // в БД как есть, без хэширования).
+                PasswordHash = BCrypt.Net.BCrypt.HashPassword(dto.Password),
                 Role = dto.Role,
                 IsActive = dto.IsActive,
                 IsDeleted = false,
@@ -112,7 +115,11 @@ public class UserService(
             user.FullName = dto.FullName;
             user.Email = dto.Email;
             user.PhoneNumber = dto.PhoneNumber;
-            user.PasswordHash = dto.PasswordHash;
+            // Password необязателен при обновлении — null/пусто оставляет
+            // текущий хэш нетронутым, чтобы редактирование профиля не
+            // требовало пароль при каждом сохранении.
+            if (!string.IsNullOrWhiteSpace(dto.Password))
+                user.PasswordHash = BCrypt.Net.BCrypt.HashPassword(dto.Password);
             user.Role = dto.Role;
             user.IsActive = dto.IsActive;
             user.UpdatedAt = DateTime.UtcNow;

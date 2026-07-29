@@ -12,6 +12,7 @@ namespace MarketTJ.Application.Services;
 public class CustomerProfileService(
     ICustomerProfileRepository customerProfileRepository,
     IUserRepository userRepository,
+    ICurrentUserService currentUser,
     ILogger<CustomerProfileService> logger) : ICustomerProfileService
 {
     public async Task<Result<IEnumerable<GetCustomerProfileDto>>> GetAllAsync()
@@ -19,6 +20,12 @@ public class CustomerProfileService(
         try
         {
             var profiles = await customerProfileRepository.GetAllAsync();
+
+            // Audit 2026-07-28, находка 2.2 (IDOR): профиль покупателя (адрес,
+            // регион) — не публичная витрина (в отличие от FarmerProfile).
+            if (!currentUser.IsAdmin())
+                profiles = profiles.Where(p => p.UserId == currentUser.UserId).ToList();
+
             return Result<IEnumerable<GetCustomerProfileDto>>.Ok(profiles.Select(ToGetDto));
         }
         catch (Exception ex)
@@ -36,6 +43,9 @@ public class CustomerProfileService(
             if (profile is null)
                 return Result<GetCustomerProfileDto?>.Fail("Профиль покупателя не найден", ErrorType.NotFound);
 
+            if (!currentUser.CanAccess(profile.UserId))
+                return Result<GetCustomerProfileDto?>.Fail("Нет доступа к этому профилю", ErrorType.Forbidden);
+
             return Result<GetCustomerProfileDto?>.Ok(ToGetDto(profile));
         }
         catch (Exception ex)
@@ -52,6 +62,10 @@ public class CustomerProfileService(
             var validation = CustomerProfileValidator.ValidateCreate(dto);
             if (validation is not null)
                 return validation;
+
+            // IDOR-guard: создать профиль можно только для самого себя.
+            if (!currentUser.CanAccess(dto.UserId))
+                return Result<string>.Fail("Нельзя создать профиль для другого пользователя", ErrorType.Forbidden);
 
             var user = await userRepository.GetByIdAsync(dto.UserId);
             if (user is null)
@@ -95,6 +109,9 @@ public class CustomerProfileService(
             if (profile is null)
                 return Result<string>.Fail("Профиль покупателя не найден", ErrorType.NotFound);
 
+            if (!currentUser.CanAccess(profile.UserId))
+                return Result<string>.Fail("Нет доступа к этому профилю", ErrorType.Forbidden);
+
             var user = await userRepository.GetByIdAsync(dto.UserId);
             if (user is null)
                 return Result<string>.Fail("Пользователь не найден", ErrorType.NotFound);
@@ -127,6 +144,9 @@ public class CustomerProfileService(
             var profile = await customerProfileRepository.GetByIdAsync(id);
             if (profile is null)
                 return Result<string>.Fail("Профиль покупателя не найден", ErrorType.NotFound);
+
+            if (!currentUser.CanAccess(profile.UserId))
+                return Result<string>.Fail("Нет доступа к этому профилю", ErrorType.Forbidden);
 
             await customerProfileRepository.DeleteAsync(profile);
             return Result<string>.Ok("Профиль покупателя удалён");

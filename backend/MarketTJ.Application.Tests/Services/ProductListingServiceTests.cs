@@ -1,6 +1,7 @@
 using MarketTJ.Application.Common;
 using MarketTJ.Application.Dto.ProductListingDto;
 using MarketTJ.Application.Interfaces.Repositories;
+using MarketTJ.Application.Interfaces.Services;
 using MarketTJ.Application.Services;
 using MarketTJ.Domain.Entities;
 using MarketTJ.Domain.Enums;
@@ -14,15 +15,30 @@ public class ProductListingServiceTests
     private readonly Mock<IProductListingRepository> _productListingRepository = new();
     private readonly Mock<IFarmerProfileRepository> _farmerProfileRepository = new();
     private readonly Mock<IProductRepository> _productRepository = new();
+    private readonly Mock<ICurrentUserService> _currentUser = new();
     private readonly Mock<ILogger<ProductListingService>> _logger = new();
     private readonly ProductListingService _service;
 
     public ProductListingServiceTests()
     {
-        _service = new ProductListingService(_productListingRepository.Object, _farmerProfileRepository.Object, _productRepository.Object, _logger.Object);
+        _service = new ProductListingService(_productListingRepository.Object, _farmerProfileRepository.Object, _productRepository.Object, _currentUser.Object, _logger.Object);
+        // Дефолтный листинг — FarmerProfileId=1 (UserId=1); залогинены как этот фермер.
+        _currentUser.Setup(c => c.UserId).Returns(1);
+        _currentUser.Setup(c => c.Role).Returns(nameof(UserRole.Farmer));
         _farmerProfileRepository.Setup(r => r.GetByIdAsync(It.IsAny<int>())).ReturnsAsync((int id) => new FarmerProfile
         {
             Id = id,
+            UserId = 1,
+            FarmName = "Farm",
+            Region = "Хатлон",
+            District = "Бохтар",
+            Village = "V",
+            Address = "A",
+            VerificationStatus = FarmerVerificationStatus.Verified
+        });
+        _farmerProfileRepository.Setup(r => r.GetByUserIdAsync(1)).ReturnsAsync(new FarmerProfile
+        {
+            Id = 1,
             UserId = 1,
             FarmName = "Farm",
             Region = "Хатлон",

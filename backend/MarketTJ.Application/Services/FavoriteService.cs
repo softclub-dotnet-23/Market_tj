@@ -13,6 +13,7 @@ public class FavoriteService(
     IFavoriteRepository favoriteRepository,
     IUserRepository userRepository,
     IProductListingRepository productListingRepository,
+    ICurrentUserService currentUser,
     ILogger<FavoriteService> logger) : IFavoriteService
 {
     public async Task<Result<IEnumerable<GetFavoriteDto>>> GetAllAsync()
@@ -20,6 +21,12 @@ public class FavoriteService(
         try
         {
             var favorites = await favoriteRepository.GetAllAsync();
+
+            // Audit 2026-07-28, находка 2.2 (IDOR): Favorite.CustomerId — это
+            // User.Id напрямую (в отличие от CartItem/Order, где через профиль).
+            if (!currentUser.IsAdmin())
+                favorites = favorites.Where(f => f.CustomerId == currentUser.UserId).ToList();
+
             return Result<IEnumerable<GetFavoriteDto>>.Ok(favorites.Select(ToGetDto));
         }
         catch (Exception ex)
@@ -36,6 +43,9 @@ public class FavoriteService(
             var favorite = await favoriteRepository.GetByIdAsync(id);
             if (favorite is null)
                 return Result<GetFavoriteDto?>.Fail("Запись избранного не найдена", ErrorType.NotFound);
+
+            if (!currentUser.CanAccess(favorite.CustomerId))
+                return Result<GetFavoriteDto?>.Fail("Нет доступа к этой записи избранного", ErrorType.Forbidden);
 
             return Result<GetFavoriteDto?>.Ok(ToGetDto(favorite));
         }
@@ -54,7 +64,11 @@ public class FavoriteService(
             if (validation is not null)
                 return validation;
 
-            var customer = await userRepository.GetByIdAsync(dto.CustomerId);
+            // CustomerId из тела запроса не используется для владения — только
+            // для обратной совместимости валидатора. Реальный владелец — вызывающий.
+            var ownerId = currentUser.UserId ?? dto.CustomerId;
+
+            var customer = await userRepository.GetByIdAsync(ownerId);
             if (customer is null)
                 return Result<string>.Fail("Пользователь не найден", ErrorType.NotFound);
 
@@ -64,12 +78,12 @@ public class FavoriteService(
 
             // Раздел 8.25 ТЗ: уникальность пары CustomerId+ProductListingId.
             var all = await favoriteRepository.GetAllAsync();
-            if (all.Any(f => f.CustomerId == dto.CustomerId && f.ProductListingId == dto.ProductListingId))
+            if (all.Any(f => f.CustomerId == ownerId && f.ProductListingId == dto.ProductListingId))
                 return Result<string>.Fail("Объявление уже добавлено в избранное", ErrorType.Conflict);
 
             var favorite = new Favorite
             {
-                CustomerId = dto.CustomerId,
+                CustomerId = ownerId,
                 ProductListingId = dto.ProductListingId,
                 CreatedAt = DateTime.UtcNow
             };
@@ -96,19 +110,17 @@ public class FavoriteService(
             if (favorite is null)
                 return Result<string>.Fail("Запись избранного не найдена", ErrorType.NotFound);
 
-            var customer = await userRepository.GetByIdAsync(dto.CustomerId);
-            if (customer is null)
-                return Result<string>.Fail("Пользователь не найден", ErrorType.NotFound);
+            if (!currentUser.CanAccess(favorite.CustomerId))
+                return Result<string>.Fail("Нет доступа к этой записи избранного", ErrorType.Forbidden);
 
             var listing = await productListingRepository.GetByIdAsync(dto.ProductListingId);
             if (listing is null)
                 return Result<string>.Fail("Объявление не найдено", ErrorType.NotFound);
 
             var all = await favoriteRepository.GetAllAsync();
-            if (all.Any(f => f.Id != id && f.CustomerId == dto.CustomerId && f.ProductListingId == dto.ProductListingId))
+            if (all.Any(f => f.Id != id && f.CustomerId == favorite.CustomerId && f.ProductListingId == dto.ProductListingId))
                 return Result<string>.Fail("Объявление уже добавлено в избранное", ErrorType.Conflict);
 
-            favorite.CustomerId = dto.CustomerId;
             favorite.ProductListingId = dto.ProductListingId;
 
             await favoriteRepository.UpdateAsync(favorite);
@@ -128,6 +140,9 @@ public class FavoriteService(
             var favorite = await favoriteRepository.GetByIdAsync(id);
             if (favorite is null)
                 return Result<string>.Fail("Запись избранного не найдена", ErrorType.NotFound);
+
+            if (!currentUser.CanAccess(favorite.CustomerId))
+                return Result<string>.Fail("Нет доступа к этой записи избранного", ErrorType.Forbidden);
 
             await favoriteRepository.DeleteAsync(favorite);
             return Result<string>.Ok("Удалено из избранного");

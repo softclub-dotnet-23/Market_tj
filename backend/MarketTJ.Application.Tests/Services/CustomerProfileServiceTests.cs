@@ -1,6 +1,7 @@
 using MarketTJ.Application.Common;
 using MarketTJ.Application.Dto.CustomerProfileDto;
 using MarketTJ.Application.Interfaces.Repositories;
+using MarketTJ.Application.Interfaces.Services;
 using MarketTJ.Application.Services;
 using MarketTJ.Domain.Entities;
 using MarketTJ.Domain.Enums;
@@ -13,12 +14,16 @@ public class CustomerProfileServiceTests
 {
     private readonly Mock<ICustomerProfileRepository> _customerProfileRepository = new();
     private readonly Mock<IUserRepository> _userRepository = new();
+    private readonly Mock<ICurrentUserService> _currentUser = new();
     private readonly Mock<ILogger<CustomerProfileService>> _logger = new();
     private readonly CustomerProfileService _service;
 
     public CustomerProfileServiceTests()
     {
-        _service = new CustomerProfileService(_customerProfileRepository.Object, _userRepository.Object, _logger.Object);
+        _service = new CustomerProfileService(_customerProfileRepository.Object, _userRepository.Object, _currentUser.Object, _logger.Object);
+        // Дефолтный профиль — UserId=1 (User.Id напрямую).
+        _currentUser.Setup(c => c.UserId).Returns(1);
+        _currentUser.Setup(c => c.Role).Returns(nameof(UserRole.Customer));
         _userRepository.Setup(r => r.GetByIdAsync(It.IsAny<int>())).ReturnsAsync((int id) => new User { Id = id, Role = UserRole.Customer, FullName = "Customer", Email = "c@example.com", PhoneNumber = "+992900000000", PasswordHash = "hash" });
         _customerProfileRepository.Setup(r => r.GetAllAsync()).ReturnsAsync([]);
     }
@@ -54,14 +59,29 @@ public class CustomerProfileServiceTests
     // ---------- GetAllAsync ----------
 
     [Fact]
-    public async Task GetAllAsync_ProfilesExist_ReturnsMappedDtos()
+    public async Task GetAllAsync_AdminSeesAllProfiles_ReturnsMappedDtos()
     {
+        // audit 2026-07-28, находка 2.2 (IDOR): не-Admin видит только свой
+        // профиль — полный список доступен только Admin.
+        _currentUser.Setup(c => c.Role).Returns(nameof(UserRole.Admin));
         _customerProfileRepository.Setup(r => r.GetAllAsync()).ReturnsAsync([CreateProfile(1), CreateProfile(2, 2)]);
 
         var result = await _service.GetAllAsync();
 
         Assert.True(result.IsSuccess);
         Assert.Equal(2, result.Data!.Count());
+    }
+
+    [Fact]
+    public async Task GetAllAsync_NonAdmin_ReturnsOnlyOwnProfile()
+    {
+        _customerProfileRepository.Setup(r => r.GetAllAsync()).ReturnsAsync([CreateProfile(1, 1), CreateProfile(2, 2)]);
+
+        var result = await _service.GetAllAsync();
+
+        Assert.True(result.IsSuccess);
+        Assert.Single(result.Data!);
+        Assert.Equal(1, result.Data!.Single().Id);
     }
 
     [Fact]

@@ -16,16 +16,23 @@ public class ChatMessageServiceTests
     private readonly Mock<IConversationRepository> _conversationRepository = new();
     private readonly Mock<IUserRepository> _userRepository = new();
     private readonly Mock<IFileStorageService> _fileStorageService = new();
+    private readonly Mock<ICurrentUserService> _currentUser = new();
     private readonly Mock<ILogger<ChatMessageService>> _logger = new();
     private readonly ChatMessageService _service;
 
     public ChatMessageServiceTests()
     {
-        _service = new ChatMessageService(_chatMessageRepository.Object, _conversationRepository.Object, _userRepository.Object, _fileStorageService.Object, _logger.Object);
+        _service = new ChatMessageService(_chatMessageRepository.Object, _conversationRepository.Object, _userRepository.Object, _fileStorageService.Object, _currentUser.Object, _logger.Object);
+        // Дефолтный чат — CustomerId=10/FarmerId=20; залогинены как покупатель (10).
+        _currentUser.Setup(c => c.UserId).Returns(10);
+        _currentUser.Setup(c => c.Role).Returns(nameof(UserRole.Customer));
         _conversationRepository.Setup(r => r.GetByIdAsync(It.IsAny<int>())).ReturnsAsync((int id) => new Conversation
         {
             Id = id, OrderId = 1, CustomerId = 10, FarmerId = 20, IsClosed = false, CreatedAt = DateTime.UtcNow, UpdatedAt = DateTime.UtcNow
         });
+        _conversationRepository.Setup(r => r.GetAllAsync()).ReturnsAsync([
+            new Conversation { Id = 1, OrderId = 1, CustomerId = 10, FarmerId = 20, IsClosed = false, CreatedAt = DateTime.UtcNow, UpdatedAt = DateTime.UtcNow }
+        ]);
         _userRepository.Setup(r => r.GetByIdAsync(It.IsAny<int>())).ReturnsAsync((int id) => new User { Id = id, Role = UserRole.Customer, FullName = "U", Email = "u@e.com", PhoneNumber = "1", PasswordHash = "h" });
         _fileStorageService.Setup(f => f.SaveAsync(It.IsAny<Stream>(), It.IsAny<string>(), It.IsAny<string>())).ReturnsAsync("/uploads/chat/1/photo.jpg");
     }
@@ -179,12 +186,16 @@ public class ChatMessageServiceTests
     }
 
     [Fact]
-    public async Task CreateAsync_SenderNotParticipant_ReturnsUnauthorized()
+    public async Task CreateAsync_SenderNotParticipant_ReturnsForbidden()
     {
-        var result = await _service.CreateAsync(ValidCreateDto(senderId: 999));
+        // audit 2026-07-28, находка 3.8: SenderId из тела больше не участвует в
+        // проверке — важен реальный currentUser.UserId.
+        _currentUser.Setup(c => c.UserId).Returns(999);
+
+        var result = await _service.CreateAsync(ValidCreateDto());
 
         Assert.False(result.IsSuccess);
-        Assert.Equal(ErrorType.Unauthorized, result.ErrorType);
+        Assert.Equal(ErrorType.Forbidden, result.ErrorType);
         _chatMessageRepository.Verify(r => r.AddAsync(It.IsAny<ChatMessage>()), Times.Never);
     }
 
@@ -284,8 +295,10 @@ public class ChatMessageServiceTests
     }
 
     [Fact]
-    public async Task UpdateAsync_ConversationNotFound_ReturnsNotFound()
+    public async Task UpdateAsync_ConversationNotFound_ReturnsForbidden()
     {
+        // Ownership resolves through message.ConversationId -> Conversation; if
+        // that lookup fails (orphaned/FK edge case) the guard fails closed.
         var message = CreateMessage(1);
         _chatMessageRepository.Setup(r => r.GetByIdAsync(1)).ReturnsAsync(message);
         _conversationRepository.Setup(r => r.GetByIdAsync(It.IsAny<int>())).ReturnsAsync((Conversation?)null);
@@ -293,34 +306,21 @@ public class ChatMessageServiceTests
         var result = await _service.UpdateAsync(1, ValidUpdateDto(1));
 
         Assert.False(result.IsSuccess);
-        Assert.Equal(ErrorType.NotFound, result.ErrorType);
+        Assert.Equal(ErrorType.Forbidden, result.ErrorType);
         _chatMessageRepository.Verify(r => r.UpdateAsync(It.IsAny<ChatMessage>()), Times.Never);
     }
 
     [Fact]
-    public async Task UpdateAsync_SenderNotParticipant_ReturnsUnauthorized()
+    public async Task UpdateAsync_SenderNotParticipant_ReturnsForbidden()
     {
         var message = CreateMessage(1);
         _chatMessageRepository.Setup(r => r.GetByIdAsync(1)).ReturnsAsync(message);
-
-        var result = await _service.UpdateAsync(1, ValidUpdateDto(1, senderId: 999));
-
-        Assert.False(result.IsSuccess);
-        Assert.Equal(ErrorType.Unauthorized, result.ErrorType);
-        _chatMessageRepository.Verify(r => r.UpdateAsync(It.IsAny<ChatMessage>()), Times.Never);
-    }
-
-    [Fact]
-    public async Task UpdateAsync_SenderNotFound_ReturnsNotFound()
-    {
-        var message = CreateMessage(1);
-        _chatMessageRepository.Setup(r => r.GetByIdAsync(1)).ReturnsAsync(message);
-        _userRepository.Setup(r => r.GetByIdAsync(It.IsAny<int>())).ReturnsAsync((User?)null);
+        _currentUser.Setup(c => c.UserId).Returns(999);
 
         var result = await _service.UpdateAsync(1, ValidUpdateDto(1));
 
         Assert.False(result.IsSuccess);
-        Assert.Equal(ErrorType.NotFound, result.ErrorType);
+        Assert.Equal(ErrorType.Forbidden, result.ErrorType);
         _chatMessageRepository.Verify(r => r.UpdateAsync(It.IsAny<ChatMessage>()), Times.Never);
     }
 
@@ -419,12 +419,16 @@ public class ChatMessageServiceTests
     }
 
     [Fact]
-    public async Task UploadAsync_SenderNotParticipant_ReturnsUnauthorized()
+    public async Task UploadAsync_SenderNotParticipant_ReturnsForbidden()
     {
+        // audit 2026-07-28, находка 3.8: senderId-параметр больше не участвует
+        // в проверке владения — важен реальный currentUser.UserId.
+        _currentUser.Setup(c => c.UserId).Returns(999);
+
         var result = await _service.UploadAsync(1, 999, null, FakeImageStream(), "photo.jpg", 1024);
 
         Assert.False(result.IsSuccess);
-        Assert.Equal(ErrorType.Unauthorized, result.ErrorType);
+        Assert.Equal(ErrorType.Forbidden, result.ErrorType);
         _fileStorageService.Verify(f => f.SaveAsync(It.IsAny<Stream>(), It.IsAny<string>(), It.IsAny<string>()), Times.Never);
     }
 

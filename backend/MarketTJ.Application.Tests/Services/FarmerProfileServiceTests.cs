@@ -1,6 +1,7 @@
 using MarketTJ.Application.Common;
 using MarketTJ.Application.Dto.FarmerProfileDto;
 using MarketTJ.Application.Interfaces.Repositories;
+using MarketTJ.Application.Interfaces.Services;
 using MarketTJ.Application.Services;
 using MarketTJ.Domain.Entities;
 using MarketTJ.Domain.Enums;
@@ -13,12 +14,15 @@ public class FarmerProfileServiceTests
 {
     private readonly Mock<IFarmerProfileRepository> _farmerProfileRepository = new();
     private readonly Mock<IUserRepository> _userRepository = new();
+    private readonly Mock<ICurrentUserService> _currentUser = new();
     private readonly Mock<ILogger<FarmerProfileService>> _logger = new();
     private readonly FarmerProfileService _service;
 
     public FarmerProfileServiceTests()
     {
-        _service = new FarmerProfileService(_farmerProfileRepository.Object, _userRepository.Object, _logger.Object);
+        _service = new FarmerProfileService(_farmerProfileRepository.Object, _userRepository.Object, _currentUser.Object, _logger.Object);
+        _currentUser.Setup(c => c.UserId).Returns(1);
+        _currentUser.Setup(c => c.Role).Returns(nameof(UserRole.Farmer));
         _userRepository.Setup(r => r.GetByIdAsync(It.IsAny<int>())).ReturnsAsync((int id) => new User { Id = id, Role = UserRole.Farmer, FullName = "Farmer", Email = "f@example.com", PhoneNumber = "+992900000000", PasswordHash = "hash" });
         _userRepository.Setup(r => r.GetAllAsync()).ReturnsAsync([]);
         _farmerProfileRepository.Setup(r => r.GetAllAsync()).ReturnsAsync([]);

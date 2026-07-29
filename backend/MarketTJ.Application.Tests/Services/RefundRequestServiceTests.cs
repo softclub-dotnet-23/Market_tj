@@ -17,12 +17,16 @@ public class RefundRequestServiceTests
     private readonly Mock<ICustomerProfileRepository> _customerProfileRepository = new();
     private readonly Mock<IUserRepository> _userRepository = new();
     private readonly Mock<IAuditLogService> _auditLogService = new();
+    private readonly Mock<ICurrentUserService> _currentUser = new();
     private readonly Mock<ILogger<RefundRequestService>> _logger = new();
     private readonly RefundRequestService _service;
 
     public RefundRequestServiceTests()
     {
-        _service = new RefundRequestService(_refundRequestRepository.Object, _orderRepository.Object, _customerProfileRepository.Object, _userRepository.Object, _auditLogService.Object, _logger.Object);
+        _service = new RefundRequestService(_refundRequestRepository.Object, _orderRepository.Object, _customerProfileRepository.Object, _userRepository.Object, _auditLogService.Object, _currentUser.Object, _logger.Object);
+        // Дефолтный RefundRequest.CustomerId=10 — User.Id напрямую.
+        _currentUser.Setup(c => c.UserId).Returns(10);
+        _currentUser.Setup(c => c.Role).Returns(nameof(UserRole.Customer));
         _orderRepository.Setup(r => r.GetByIdAsync(It.IsAny<int>())).ReturnsAsync((int id) => new Order
         {
             Id = id, OrderNumber = "ORD-1", CustomerId = 1, FarmerId = 1, Status = OrderStatus.Completed,
@@ -213,6 +217,8 @@ public class RefundRequestServiceTests
     [Fact]
     public async Task CreateAsync_CustomerIdMismatch_ReturnsValidationError()
     {
+        // CustomerId=999 не совпадает вообще ни с чем (даже с UserId покупателя
+        // заказа) — это ловит уже существующая internal-consistency-проверка.
         var dto = ValidCreateDto();
         dto.CustomerId = 999;
 
@@ -220,6 +226,22 @@ public class RefundRequestServiceTests
 
         Assert.False(result.IsSuccess);
         Assert.Equal(ErrorType.Validation, result.ErrorType);
+        _refundRequestRepository.Verify(r => r.AddAsync(It.IsAny<RefundRequest>()), Times.Never);
+    }
+
+    [Fact]
+    public async Task CreateAsync_CorrectCustomerIdButNotCurrentUser_ReturnsForbidden()
+    {
+        // audit 2026-07-28, находка 2.2 (IDOR): dto.CustomerId=10 честно
+        // совпадает с реальным покупателем заказа (order.CustomerId=1 ->
+        // CustomerProfile.UserId=10) — но текущий залогиненный пользователь
+        // (UserId=77) — это кто-то другой, выдающий себя за покупателя.
+        _currentUser.Setup(c => c.UserId).Returns(77);
+
+        var result = await _service.CreateAsync(ValidCreateDto());
+
+        Assert.False(result.IsSuccess);
+        Assert.Equal(ErrorType.Forbidden, result.ErrorType);
         _refundRequestRepository.Verify(r => r.AddAsync(It.IsAny<RefundRequest>()), Times.Never);
     }
 

@@ -15,6 +15,7 @@ public class ConversationService(
     IOrderRepository orderRepository,
     ICustomerProfileRepository customerProfileRepository,
     IFarmerProfileRepository farmerProfileRepository,
+    ICurrentUserService currentUser,
     ILogger<ConversationService> logger) : IConversationService
 {
     public async Task<Result<IEnumerable<GetConversationDto>>> GetAllAsync()
@@ -22,6 +23,12 @@ public class ConversationService(
         try
         {
             var conversations = await conversationRepository.GetAllAsync();
+
+            // Audit 2026-07-28, находка 2.2 (IDOR): CustomerId/FarmerId — User.Id
+            // напрямую (см. комментарий у сущности) — фильтруем по участникам.
+            if (!currentUser.IsAdmin())
+                conversations = conversations.Where(c => c.CustomerId == currentUser.UserId || c.FarmerId == currentUser.UserId).ToList();
+
             return Result<IEnumerable<GetConversationDto>>.Ok(conversations.Select(ToGetDto));
         }
         catch (Exception ex)
@@ -38,6 +45,9 @@ public class ConversationService(
             var conversation = await conversationRepository.GetByIdAsync(id);
             if (conversation is null)
                 return Result<GetConversationDto?>.Fail("Чат не найден", ErrorType.NotFound);
+
+            if (!currentUser.IsAdmin() && conversation.CustomerId != currentUser.UserId && conversation.FarmerId != currentUser.UserId)
+                return Result<GetConversationDto?>.Fail("Нет доступа к этому чату", ErrorType.Forbidden);
 
             return Result<GetConversationDto?>.Ok(ToGetDto(conversation));
         }
@@ -100,6 +110,9 @@ public class ConversationService(
             var conversation = await conversationRepository.GetByIdAsync(id);
             if (conversation is null)
                 return Result<string>.Fail("Чат не найден", ErrorType.NotFound);
+
+            if (!currentUser.IsAdmin() && conversation.CustomerId != currentUser.UserId && conversation.FarmerId != currentUser.UserId)
+                return Result<string>.Fail("Нет доступа к этому чату", ErrorType.Forbidden);
 
             var participantsError = dto.OrderId.HasValue
                 ? await ValidateOrderParticipantsAsync(dto.OrderId.Value, dto.CustomerId, dto.FarmerId)
@@ -187,6 +200,9 @@ public class ConversationService(
             var conversation = await conversationRepository.GetByIdAsync(id);
             if (conversation is null)
                 return Result<string>.Fail("Чат не найден", ErrorType.NotFound);
+
+            if (!currentUser.IsAdmin() && conversation.CustomerId != currentUser.UserId && conversation.FarmerId != currentUser.UserId)
+                return Result<string>.Fail("Нет доступа к этому чату", ErrorType.Forbidden);
 
             await conversationRepository.DeleteAsync(conversation);
             return Result<string>.Ok("Чат удалён");

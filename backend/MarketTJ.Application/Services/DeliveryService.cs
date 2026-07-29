@@ -14,13 +14,56 @@ public class DeliveryService(
     IDeliveryRepository deliveryRepository,
     IOrderRepository orderRepository,
     ICourierProfileRepository courierProfileRepository,
+    ICustomerProfileRepository customerProfileRepository,
+    IFarmerProfileRepository farmerProfileRepository,
+    ICurrentUserService currentUser,
     ILogger<DeliveryService> logger) : IDeliveryService
 {
+    // Audit 2026-07-28, находка 2.2 (IDOR): владелец — Customer/Farmer заказа
+    // (через профили, как в Order) ИЛИ назначенный на доставку Courier (через CourierId).
+    private async Task<bool> IsOwnerAsync(Delivery delivery)
+    {
+        if (currentUser.IsAdmin())
+            return true;
+        if (currentUser.UserId is null)
+            return false;
+
+        // ICourierProfileRepository не даёт точечного GetByUserIdAsync (в
+        // отличие от Customer/FarmerProfile) — резолвим через полный список.
+        var courierProfiles = await courierProfileRepository.GetAllAsync();
+        var courierProfile = courierProfiles.FirstOrDefault(c => c.UserId == currentUser.UserId);
+        if (courierProfile is not null && delivery.CourierId == courierProfile.Id)
+            return true;
+
+        var order = await orderRepository.GetByIdAsync(delivery.OrderId);
+        if (order is null)
+            return false;
+
+        var customerProfile = await customerProfileRepository.GetByUserIdAsync(currentUser.UserId.Value);
+        if (customerProfile is not null && customerProfile.Id == order.CustomerId)
+            return true;
+
+        var farmerProfile = await farmerProfileRepository.GetByUserIdAsync(currentUser.UserId.Value);
+        return farmerProfile is not null && farmerProfile.Id == order.FarmerId;
+    }
+
     public async Task<Result<IEnumerable<GetDeliveryDto>>> GetAllAsync()
     {
         try
         {
             var deliveries = await deliveryRepository.GetAllAsync();
+
+            if (!currentUser.IsAdmin())
+            {
+                var filtered = new List<Delivery>();
+                foreach (var delivery in deliveries)
+                {
+                    if (await IsOwnerAsync(delivery))
+                        filtered.Add(delivery);
+                }
+                deliveries = filtered;
+            }
+
             return Result<IEnumerable<GetDeliveryDto>>.Ok(deliveries.Select(ToGetDto));
         }
         catch (Exception ex)
@@ -37,6 +80,9 @@ public class DeliveryService(
             var delivery = await deliveryRepository.GetByIdAsync(id);
             if (delivery is null)
                 return Result<GetDeliveryDto?>.Fail("Доставка не найдена", ErrorType.NotFound);
+
+            if (!await IsOwnerAsync(delivery))
+                return Result<GetDeliveryDto?>.Fail("Нет доступа к этой доставке", ErrorType.Forbidden);
 
             return Result<GetDeliveryDto?>.Ok(ToGetDto(delivery));
         }
@@ -115,6 +161,9 @@ public class DeliveryService(
             if (delivery is null)
                 return Result<string>.Fail("Доставка не найдена", ErrorType.NotFound);
 
+            if (!await IsOwnerAsync(delivery))
+                return Result<string>.Fail("Нет доступа к этой доставке", ErrorType.Forbidden);
+
             var order = await orderRepository.GetByIdAsync(dto.OrderId);
             if (order is null)
                 return Result<string>.Fail("Заказ не найден", ErrorType.NotFound);
@@ -163,6 +212,9 @@ public class DeliveryService(
             var delivery = await deliveryRepository.GetByIdAsync(id);
             if (delivery is null)
                 return Result<string>.Fail("Доставка не найдена", ErrorType.NotFound);
+
+            if (!await IsOwnerAsync(delivery))
+                return Result<string>.Fail("Нет доступа к этой доставке", ErrorType.Forbidden);
 
             await deliveryRepository.DeleteAsync(delivery);
             return Result<string>.Ok("Доставка удалена");

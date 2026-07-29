@@ -1,6 +1,7 @@
 using MarketTJ.Application.Common;
 using MarketTJ.Application.Dto.SupportMessageDto;
 using MarketTJ.Application.Interfaces.Repositories;
+using MarketTJ.Application.Interfaces.Services;
 using MarketTJ.Application.Services;
 using MarketTJ.Domain.Entities;
 using MarketTJ.Domain.Enums;
@@ -14,16 +15,24 @@ public class SupportMessageServiceTests
     private readonly Mock<ISupportMessageRepository> _supportMessageRepository = new();
     private readonly Mock<ISupportTicketRepository> _supportTicketRepository = new();
     private readonly Mock<IUserRepository> _userRepository = new();
+    private readonly Mock<ICurrentUserService> _currentUser = new();
     private readonly Mock<ILogger<SupportMessageService>> _logger = new();
     private readonly SupportMessageService _service;
 
     public SupportMessageServiceTests()
     {
-        _service = new SupportMessageService(_supportMessageRepository.Object, _supportTicketRepository.Object, _userRepository.Object, _logger.Object);
+        _service = new SupportMessageService(_supportMessageRepository.Object, _supportTicketRepository.Object, _userRepository.Object, _currentUser.Object, _logger.Object);
+        // Дефолтный тикет — UserId=1; залогинены как этот же пользователь.
+        _currentUser.Setup(c => c.UserId).Returns(1);
+        _currentUser.Setup(c => c.Role).Returns(nameof(UserRole.Customer));
         _supportTicketRepository.Setup(r => r.GetByIdAsync(It.IsAny<int>())).ReturnsAsync((int id) => new SupportTicket
         {
             Id = id, UserId = 1, Subject = "Проблема", Status = SupportTicketStatus.Open, Priority = SupportPriority.Normal, CreatedAt = DateTime.UtcNow
         });
+        _supportTicketRepository.Setup(r => r.GetAllAsync()).ReturnsAsync([new SupportTicket
+        {
+            Id = 1, UserId = 1, Subject = "Проблема", Status = SupportTicketStatus.Open, Priority = SupportPriority.Normal, CreatedAt = DateTime.UtcNow
+        }]);
         _userRepository.Setup(r => r.GetByIdAsync(It.IsAny<int>())).ReturnsAsync((int id) => new User { Id = id, Role = UserRole.Customer, FullName = "U", Email = "u@e.com", PhoneNumber = "1", PasswordHash = "h" });
     }
 
@@ -235,8 +244,10 @@ public class SupportMessageServiceTests
     }
 
     [Fact]
-    public async Task UpdateAsync_TicketNotFound_ReturnsNotFound()
+    public async Task UpdateAsync_TicketNotFound_ReturnsForbidden()
     {
+        // Ownership resolves through message.SupportTicketId -> SupportTicket;
+        // if that lookup fails, the guard fails closed (same pattern as ChatMessage).
         var message = CreateMessage(1);
         _supportMessageRepository.Setup(r => r.GetByIdAsync(1)).ReturnsAsync(message);
         _supportTicketRepository.Setup(r => r.GetByIdAsync(It.IsAny<int>())).ReturnsAsync((SupportTicket?)null);
@@ -244,7 +255,7 @@ public class SupportMessageServiceTests
         var result = await _service.UpdateAsync(1, ValidUpdateDto(1));
 
         Assert.False(result.IsSuccess);
-        Assert.Equal(ErrorType.NotFound, result.ErrorType);
+        Assert.Equal(ErrorType.Forbidden, result.ErrorType);
         _supportMessageRepository.Verify(r => r.UpdateAsync(It.IsAny<SupportMessage>()), Times.Never);
     }
 

@@ -14,13 +14,22 @@ public class ProductImageServiceTests
 {
     private readonly Mock<IProductImageRepository> _productImageRepository = new();
     private readonly Mock<IProductListingRepository> _productListingRepository = new();
+    private readonly Mock<IFarmerProfileRepository> _farmerProfileRepository = new();
     private readonly Mock<IFileStorageService> _fileStorageService = new();
+    private readonly Mock<ICurrentUserService> _currentUser = new();
     private readonly Mock<ILogger<ProductImageService>> _logger = new();
     private readonly ProductImageService _service;
 
     public ProductImageServiceTests()
     {
-        _service = new ProductImageService(_productImageRepository.Object, _productListingRepository.Object, _fileStorageService.Object, _logger.Object);
+        _service = new ProductImageService(_productImageRepository.Object, _productListingRepository.Object, _farmerProfileRepository.Object, _fileStorageService.Object, _currentUser.Object, _logger.Object);
+        // Дефолтный листинг — FarmerProfileId=1; залогинены как владелец этой фермы.
+        _currentUser.Setup(c => c.UserId).Returns(1);
+        _currentUser.Setup(c => c.Role).Returns(nameof(UserRole.Farmer));
+        _farmerProfileRepository.Setup(r => r.GetByUserIdAsync(1)).ReturnsAsync(new FarmerProfile
+        {
+            Id = 1, UserId = 1, FarmName = "Farm", Region = "Хатлон", District = "Бохтар", Village = "V", Address = "A", VerificationStatus = FarmerVerificationStatus.Verified
+        });
         _productListingRepository.Setup(r => r.GetByIdAsync(It.IsAny<int>())).ReturnsAsync((int id) => new ProductListing
         {
             Id = id, FarmerProfileId = 1, ProductId = 1, Title = "Listing", RetailPricePerKg = 10,
@@ -253,8 +262,10 @@ public class ProductImageServiceTests
     }
 
     [Fact]
-    public async Task UpdateAsync_ListingNotFound_ReturnsNotFound()
+    public async Task UpdateAsync_ListingNotFound_ReturnsForbidden()
     {
+        // Ownership resolves through image.ProductListingId -> ProductListing;
+        // if that lookup fails, the guard fails closed (same pattern as elsewhere).
         var image = CreateImage(1);
         _productImageRepository.Setup(r => r.GetByIdAsync(1)).ReturnsAsync(image);
         _productListingRepository.Setup(r => r.GetByIdAsync(It.IsAny<int>())).ReturnsAsync((ProductListing?)null);
@@ -262,7 +273,7 @@ public class ProductImageServiceTests
         var result = await _service.UpdateAsync(1, ValidUpdateDto(1));
 
         Assert.False(result.IsSuccess);
-        Assert.Equal(ErrorType.NotFound, result.ErrorType);
+        Assert.Equal(ErrorType.Forbidden, result.ErrorType);
         _productImageRepository.Verify(r => r.UpdateAsync(It.IsAny<ProductImage>()), Times.Never);
     }
 

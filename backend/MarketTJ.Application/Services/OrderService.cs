@@ -19,13 +19,47 @@ public class OrderService(
     IFarmerProfileRepository farmerProfileRepository,
     IUserRepository userRepository,
     IAuditLogService auditLogService,
+    ICurrentUserService currentUser,
     ILogger<OrderService> logger) : IOrderService
 {
+    // Audit 2026-07-28, находка 2.2 (IDOR): Order.CustomerId/FarmerId — это Id
+    // профилей (не User.Id), поэтому владение резолвится через них. Admin — всё;
+    // Customer — свои заказы (CustomerId == его CustomerProfile.Id); Farmer —
+    // заказы, сделанные у него (FarmerId == его FarmerProfile.Id).
+    private async Task<bool> IsOwnerAsync(Order order)
+    {
+        if (currentUser.IsAdmin())
+            return true;
+        if (currentUser.UserId is null)
+            return false;
+
+        var customerProfile = await customerProfileRepository.GetByUserIdAsync(currentUser.UserId.Value);
+        if (customerProfile is not null && customerProfile.Id == order.CustomerId)
+            return true;
+
+        var farmerProfile = await farmerProfileRepository.GetByUserIdAsync(currentUser.UserId.Value);
+        return farmerProfile is not null && farmerProfile.Id == order.FarmerId;
+    }
+
     public async Task<Result<IEnumerable<GetOrderDto>>> GetAllAsync()
     {
         try
         {
             var orders = await orderRepository.GetAllAsync();
+
+            if (!currentUser.IsAdmin() && currentUser.UserId is not null)
+            {
+                var myCustomerProfile = await customerProfileRepository.GetByUserIdAsync(currentUser.UserId.Value);
+                var myFarmerProfile = await farmerProfileRepository.GetByUserIdAsync(currentUser.UserId.Value);
+                orders = orders.Where(o =>
+                    (myCustomerProfile is not null && o.CustomerId == myCustomerProfile.Id) ||
+                    (myFarmerProfile is not null && o.FarmerId == myFarmerProfile.Id)).ToList();
+            }
+            else if (!currentUser.IsAdmin())
+            {
+                orders = [];
+            }
+
             var customers = await ResolveCustomerContactsAsync(orders.Select(o => o.CustomerId));
             return Result<IEnumerable<GetOrderDto>>.Ok(orders.Select(o => ToGetDto(o, customers)));
         }
@@ -43,6 +77,9 @@ public class OrderService(
             var order = await orderRepository.GetByIdAsync(id);
             if (order is null)
                 return Result<GetOrderDto?>.Fail("Заказ не найден", ErrorType.NotFound);
+
+            if (!await IsOwnerAsync(order))
+                return Result<GetOrderDto?>.Fail("Нет доступа к этому заказу", ErrorType.Forbidden);
 
             var customers = await ResolveCustomerContactsAsync([order.CustomerId]);
             return Result<GetOrderDto?>.Ok(ToGetDto(order, customers));
@@ -62,7 +99,20 @@ public class OrderService(
             if (validation is not null)
                 return validation;
 
-            var customerProfile = await customerProfileRepository.GetByIdAsync(dto.CustomerId);
+            // IDOR-guard (audit 2026-07-28, находка 2.2): CustomerId из тела
+            // запроса не доверяется — Customer не может оформить заказ от имени
+            // другого покупателя. Admin (например, создание заказа вручную через
+            // Admin-панель) — исключение, для него dto.CustomerId используется как есть.
+            var customerProfileId = dto.CustomerId;
+            if (!currentUser.IsAdmin() && currentUser.UserId is not null)
+            {
+                var ownCustomerProfile = await customerProfileRepository.GetByUserIdAsync(currentUser.UserId.Value);
+                if (ownCustomerProfile is null)
+                    return Result<string>.Fail("Профиль покупателя не найден", ErrorType.NotFound);
+                customerProfileId = ownCustomerProfile.Id;
+            }
+
+            var customerProfile = await customerProfileRepository.GetByIdAsync(customerProfileId);
             if (customerProfile is null)
                 return Result<string>.Fail("Профиль покупателя не найден", ErrorType.NotFound);
 
@@ -92,7 +142,7 @@ public class OrderService(
             var order = new Order
             {
                 OrderNumber = dto.OrderNumber,
-                CustomerId = dto.CustomerId,
+                CustomerId = customerProfileId,
                 FarmerId = dto.FarmerId,
                 Status = OrderStatus.Pending,
                 DeliveryAddress = dto.DeliveryAddress,
@@ -128,6 +178,9 @@ public class OrderService(
             if (order is null)
                 return Result<string>.Fail("Заказ не найден", ErrorType.NotFound);
 
+            if (!await IsOwnerAsync(order))
+                return Result<string>.Fail("Нет доступа к этому заказу", ErrorType.Forbidden);
+
             // Раздел 10.4 ТЗ: завершённый заказ нельзя редактировать.
             if (order.Status == OrderStatus.Completed)
                 return Result<string>.Fail("Завершённый заказ нельзя редактировать", ErrorType.Validation);
@@ -153,9 +206,11 @@ public class OrderService(
                 previousStatus != OrderStatus.Rejected && previousStatus != OrderStatus.Cancelled &&
                 (dto.Status == OrderStatus.Rejected || dto.Status == OrderStatus.Cancelled);
 
+            // CustomerId/FarmerId сознательно не перезаписываются из dto —
+            // владелец заказа не должен меняться через Update (audit 2026-07-28,
+            // находка 2.2); проверки существования профилей выше остаются как
+            // валидация формы запроса.
             order.OrderNumber = dto.OrderNumber;
-            order.CustomerId = dto.CustomerId;
-            order.FarmerId = dto.FarmerId;
             order.Status = dto.Status;
             order.DeliveryAddress = dto.DeliveryAddress;
             order.Region = dto.Region;
@@ -189,6 +244,9 @@ public class OrderService(
             var order = await orderRepository.GetByIdAsync(id);
             if (order is null)
                 return Result<string>.Fail("Заказ не найден", ErrorType.NotFound);
+
+            if (!await IsOwnerAsync(order))
+                return Result<string>.Fail("Нет доступа к этому заказу", ErrorType.Forbidden);
 
             // Раздел 18 ТЗ: soft delete (у Order есть IsDeleted/DeletedAt).
             order.IsDeleted = true;

@@ -1,6 +1,7 @@
 using MarketTJ.Application.Common;
 using MarketTJ.Application.Dto.FavoriteDto;
 using MarketTJ.Application.Interfaces.Repositories;
+using MarketTJ.Application.Interfaces.Services;
 using MarketTJ.Application.Services;
 using MarketTJ.Domain.Entities;
 using MarketTJ.Domain.Enums;
@@ -14,12 +15,15 @@ public class FavoriteServiceTests
     private readonly Mock<IFavoriteRepository> _favoriteRepository = new();
     private readonly Mock<IUserRepository> _userRepository = new();
     private readonly Mock<IProductListingRepository> _productListingRepository = new();
+    private readonly Mock<ICurrentUserService> _currentUser = new();
     private readonly Mock<ILogger<FavoriteService>> _logger = new();
     private readonly FavoriteService _service;
 
     public FavoriteServiceTests()
     {
-        _service = new FavoriteService(_favoriteRepository.Object, _userRepository.Object, _productListingRepository.Object, _logger.Object);
+        _service = new FavoriteService(_favoriteRepository.Object, _userRepository.Object, _productListingRepository.Object, _currentUser.Object, _logger.Object);
+        _currentUser.Setup(c => c.UserId).Returns(1);
+        _currentUser.Setup(c => c.Role).Returns(nameof(UserRole.Customer));
         _userRepository.Setup(r => r.GetByIdAsync(It.IsAny<int>())).ReturnsAsync((int id) => new User { Id = id, Role = UserRole.Customer, FullName = "U", Email = "u@e.com", PhoneNumber = "1", PasswordHash = "h" });
         _productListingRepository.Setup(r => r.GetByIdAsync(It.IsAny<int>())).ReturnsAsync((int id) => new ProductListing
         {
@@ -109,6 +113,18 @@ public class FavoriteServiceTests
 
         Assert.False(result.IsSuccess);
         Assert.Equal(ErrorType.NotFound, result.ErrorType);
+    }
+
+    [Fact]
+    public async Task GetByIdAsync_NotOwner_ReturnsForbidden()
+    {
+        var favorite = CreateFavorite(5, customerId: 99);
+        _favoriteRepository.Setup(r => r.GetByIdAsync(5)).ReturnsAsync(favorite);
+
+        var result = await _service.GetByIdAsync(5);
+
+        Assert.False(result.IsSuccess);
+        Assert.Equal(ErrorType.Forbidden, result.ErrorType);
     }
 
     [Fact]
@@ -233,16 +249,16 @@ public class FavoriteServiceTests
     }
 
     [Fact]
-    public async Task UpdateAsync_CustomerNotFound_ReturnsNotFound()
+    public async Task UpdateAsync_NotOwner_ReturnsForbidden()
     {
-        var favorite = CreateFavorite(1);
+        // audit 2026-07-28, находка 2.2 (IDOR): запись принадлежит другому User (99).
+        var favorite = CreateFavorite(1, customerId: 99);
         _favoriteRepository.Setup(r => r.GetByIdAsync(1)).ReturnsAsync(favorite);
-        _userRepository.Setup(r => r.GetByIdAsync(It.IsAny<int>())).ReturnsAsync((User?)null);
 
         var result = await _service.UpdateAsync(1, ValidUpdateDto(1));
 
         Assert.False(result.IsSuccess);
-        Assert.Equal(ErrorType.NotFound, result.ErrorType);
+        Assert.Equal(ErrorType.Forbidden, result.ErrorType);
         _favoriteRepository.Verify(r => r.UpdateAsync(It.IsAny<Favorite>()), Times.Never);
     }
 

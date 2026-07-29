@@ -148,6 +148,11 @@ using (var scope = app.Services.CreateScope())
     }
 }
 
+// Audit 2026-07-28, находка 2.1 — защитная миграция на случай, если через
+// уязвимый POST/PUT /api/users уже успели создать/обновить пользователя с
+// нехэшированным паролем до применения фикса (см. PlaintextPasswordFixup).
+await PlaintextPasswordFixup.RunAsync(app.Services);
+
 await Seeder.SeedAsync(app.Services);
 
 // ExceptionHandling — самым первым в pipeline, чтобы ловить исключения из

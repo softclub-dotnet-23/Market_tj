@@ -14,13 +14,32 @@ public class ChatMessageService(
     IConversationRepository conversationRepository,
     IUserRepository userRepository,
     IFileStorageService fileStorageService,
+    ICurrentUserService currentUser,
     ILogger<ChatMessageService> logger) : IChatMessageService
 {
+    // Audit 2026-07-28, находка 2.2/3.8 (IDOR): участник чата — не тот, кто это
+    // заявил телом запроса, а тот, кто реально залогинен (JWT).
+    private bool IsParticipant(Conversation conversation)
+        => currentUser.IsAdmin() || conversation.CustomerId == currentUser.UserId || conversation.FarmerId == currentUser.UserId;
+
     public async Task<Result<IEnumerable<GetChatMessageDto>>> GetAllAsync()
     {
         try
         {
             var messages = await chatMessageRepository.GetAllAsync();
+
+            // "Моё" здесь — не "я отправитель", а "я участник переписки":
+            // иначе Customer не увидел бы входящие сообщения от Farmer.
+            if (!currentUser.IsAdmin())
+            {
+                var conversations = await conversationRepository.GetAllAsync();
+                var myConversationIds = conversations
+                    .Where(c => c.CustomerId == currentUser.UserId || c.FarmerId == currentUser.UserId)
+                    .Select(c => c.Id)
+                    .ToHashSet();
+                messages = messages.Where(m => myConversationIds.Contains(m.ConversationId)).ToList();
+            }
+
             return Result<IEnumerable<GetChatMessageDto>>.Ok(messages.Select(ToGetDto));
         }
         catch (Exception ex)
@@ -37,6 +56,10 @@ public class ChatMessageService(
             var message = await chatMessageRepository.GetByIdAsync(id);
             if (message is null)
                 return Result<GetChatMessageDto?>.Fail("Сообщение не найдено", ErrorType.NotFound);
+
+            var conversation = await conversationRepository.GetByIdAsync(message.ConversationId);
+            if (conversation is null || !IsParticipant(conversation))
+                return Result<GetChatMessageDto?>.Fail("Нет доступа к этому сообщению", ErrorType.Forbidden);
 
             return Result<GetChatMessageDto?>.Ok(ToGetDto(message));
         }
@@ -59,21 +82,24 @@ public class ChatMessageService(
             if (conversation is null)
                 return Result<string>.Fail("Чат не найден", ErrorType.NotFound);
 
-            // Раздел 13.11 ТЗ: доступ к чату только у CustomerId/FarmerId заказа.
-            if (dto.SenderId != conversation.CustomerId && dto.SenderId != conversation.FarmerId)
-                return Result<string>.Fail("Отправитель не является участником этого чата", ErrorType.Unauthorized);
+            // SenderId из тела запроса не используется — отправитель всегда
+            // текущий пользователь (audit 2026-07-28, находка 3.8: раньше
+            // dto.SenderId позволял слать сообщения от имени другого участника).
+            var senderId = currentUser.UserId ?? dto.SenderId;
+            if (!IsParticipant(conversation))
+                return Result<string>.Fail("Отправитель не является участником этого чата", ErrorType.Forbidden);
 
             if (conversation.IsClosed)
                 return Result<string>.Fail("Чат закрыт — отправка сообщений недоступна", ErrorType.Validation);
 
-            var sender = await userRepository.GetByIdAsync(dto.SenderId);
+            var sender = await userRepository.GetByIdAsync(senderId);
             if (sender is null)
                 return Result<string>.Fail("Отправитель не найден", ErrorType.NotFound);
 
             var message = new ChatMessage
             {
                 ConversationId = dto.ConversationId,
-                SenderId = dto.SenderId,
+                SenderId = senderId,
                 Message = dto.Message,
                 ImageUrl = dto.ImageUrl,
                 IsRead = dto.IsRead,
@@ -106,19 +132,12 @@ public class ChatMessageService(
             if (message is null)
                 return Result<string>.Fail("Сообщение не найдено", ErrorType.NotFound);
 
-            var conversation = await conversationRepository.GetByIdAsync(dto.ConversationId);
-            if (conversation is null)
-                return Result<string>.Fail("Чат не найден", ErrorType.NotFound);
+            // IDOR-guard: редактировать/помечать прочитанным можно только своё
+            // сообщение (или будучи участником чата — IsRead ставит получатель).
+            var conversation = await conversationRepository.GetByIdAsync(message.ConversationId);
+            if (conversation is null || !IsParticipant(conversation))
+                return Result<string>.Fail("Нет доступа к этому сообщению", ErrorType.Forbidden);
 
-            if (dto.SenderId != conversation.CustomerId && dto.SenderId != conversation.FarmerId)
-                return Result<string>.Fail("Отправитель не является участником этого чата", ErrorType.Unauthorized);
-
-            var sender = await userRepository.GetByIdAsync(dto.SenderId);
-            if (sender is null)
-                return Result<string>.Fail("Отправитель не найден", ErrorType.NotFound);
-
-            message.ConversationId = dto.ConversationId;
-            message.SenderId = dto.SenderId;
             message.Message = dto.Message;
             message.ImageUrl = dto.ImageUrl;
             message.IsRead = dto.IsRead;
@@ -141,6 +160,10 @@ public class ChatMessageService(
             if (message is null)
                 return Result<string>.Fail("Сообщение не найдено", ErrorType.NotFound);
 
+            var conversation = await conversationRepository.GetByIdAsync(message.ConversationId);
+            if (conversation is null || !IsParticipant(conversation))
+                return Result<string>.Fail("Нет доступа к этому сообщению", ErrorType.Forbidden);
+
             await chatMessageRepository.DeleteAsync(message);
             return Result<string>.Ok("Сообщение удалено");
         }
@@ -159,6 +182,11 @@ public class ChatMessageService(
     {
         try
         {
+            // audit 2026-07-28, находка 3.8: senderId-параметр (пришедший из формы
+            // запроса через контроллер) не используется для владения — только
+            // текущий пользователь может быть отправителем.
+            senderId = currentUser.UserId ?? senderId;
+
             var fileValidation = FileUploadValidator.ValidateImage(fileName, fileSizeBytes);
             if (fileValidation is not null)
                 return Result<GetChatMessageDto>.Fail(fileValidation.Error!, fileValidation.ErrorType!.Value);
@@ -167,8 +195,8 @@ public class ChatMessageService(
             if (conversation is null)
                 return Result<GetChatMessageDto>.Fail("Чат не найден", ErrorType.NotFound);
 
-            if (senderId != conversation.CustomerId && senderId != conversation.FarmerId)
-                return Result<GetChatMessageDto>.Fail("Отправитель не является участником этого чата", ErrorType.Unauthorized);
+            if (!IsParticipant(conversation))
+                return Result<GetChatMessageDto>.Fail("Отправитель не является участником этого чата", ErrorType.Forbidden);
 
             if (conversation.IsClosed)
                 return Result<GetChatMessageDto>.Fail("Чат закрыт — отправка сообщений недоступна", ErrorType.Validation);
