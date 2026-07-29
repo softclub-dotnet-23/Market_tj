@@ -1,6 +1,7 @@
 using MarketTJ.Application.Common;
 using MarketTJ.Application.Dto.ConversationDto;
 using MarketTJ.Application.Interfaces.Repositories;
+using MarketTJ.Application.Interfaces.Services;
 using MarketTJ.Application.Services;
 using MarketTJ.Domain.Entities;
 using MarketTJ.Domain.Enums;
@@ -16,12 +17,17 @@ public class ConversationServiceTests
     private readonly Mock<ICustomerProfileRepository> _customerProfileRepository = new();
     private readonly Mock<IFarmerProfileRepository> _farmerProfileRepository = new();
     private readonly Mock<IUserRepository> _userRepository = new();
+    private readonly Mock<ICurrentUserService> _currentUser = new();
     private readonly Mock<ILogger<ConversationService>> _logger = new();
     private readonly ConversationService _service;
 
     public ConversationServiceTests()
     {
-        _service = new ConversationService(_conversationRepository.Object, _orderRepository.Object, _customerProfileRepository.Object, _farmerProfileRepository.Object, _userRepository.Object, _logger.Object);
+        _service = new ConversationService(_conversationRepository.Object, _orderRepository.Object, _customerProfileRepository.Object, _farmerProfileRepository.Object, _userRepository.Object, _currentUser.Object, _logger.Object);
+        // Conversation.CustomerId/FarmerId — User.Id напрямую; дефолтный чат
+        // (CreateConversation) имеет CustomerId=10 — залогинены как этот покупатель.
+        _currentUser.Setup(c => c.UserId).Returns(10);
+        _currentUser.Setup(c => c.Role).Returns(nameof(UserRole.Customer));
         _orderRepository.Setup(r => r.GetByIdAsync(It.IsAny<int>())).ReturnsAsync((int id) => new Order
         {
             Id = id, OrderNumber = "ORD-1", CustomerId = 1, FarmerId = 1, Status = OrderStatus.Pending,

@@ -1,6 +1,7 @@
 using MarketTJ.Application.Common;
 using MarketTJ.Application.Dto.SupportTicketDto;
 using MarketTJ.Application.Interfaces.Repositories;
+using MarketTJ.Application.Interfaces.Services;
 using MarketTJ.Application.Services;
 using MarketTJ.Domain.Entities;
 using MarketTJ.Domain.Enums;
@@ -13,12 +14,16 @@ public class SupportTicketServiceTests
 {
     private readonly Mock<ISupportTicketRepository> _supportTicketRepository = new();
     private readonly Mock<IUserRepository> _userRepository = new();
+    private readonly Mock<ICurrentUserService> _currentUser = new();
     private readonly Mock<ILogger<SupportTicketService>> _logger = new();
     private readonly SupportTicketService _service;
 
     public SupportTicketServiceTests()
     {
-        _service = new SupportTicketService(_supportTicketRepository.Object, _userRepository.Object, _logger.Object);
+        _service = new SupportTicketService(_supportTicketRepository.Object, _userRepository.Object, _currentUser.Object, _logger.Object);
+        // Дефолтный тикет — UserId=1 (User.Id напрямую).
+        _currentUser.Setup(c => c.UserId).Returns(1);
+        _currentUser.Setup(c => c.Role).Returns(nameof(UserRole.Customer));
         _userRepository.Setup(r => r.GetByIdAsync(It.IsAny<int>())).ReturnsAsync((int id) => new User { Id = id, Role = UserRole.Admin, FullName = "Admin", Email = "a@e.com", PhoneNumber = "1", PasswordHash = "h" });
     }
 

@@ -1,6 +1,7 @@
 using MarketTJ.Application.Common;
 using MarketTJ.Application.Dto.DeliveryDto;
 using MarketTJ.Application.Interfaces.Repositories;
+using MarketTJ.Application.Interfaces.Services;
 using MarketTJ.Application.Services;
 using MarketTJ.Domain.Entities;
 using MarketTJ.Domain.Enums;
@@ -14,12 +15,19 @@ public class DeliveryServiceTests
     private readonly Mock<IDeliveryRepository> _deliveryRepository = new();
     private readonly Mock<IOrderRepository> _orderRepository = new();
     private readonly Mock<ICourierProfileRepository> _courierProfileRepository = new();
+    private readonly Mock<ICustomerProfileRepository> _customerProfileRepository = new();
+    private readonly Mock<IFarmerProfileRepository> _farmerProfileRepository = new();
+    private readonly Mock<ICurrentUserService> _currentUser = new();
     private readonly Mock<ILogger<DeliveryService>> _logger = new();
     private readonly DeliveryService _service;
 
     public DeliveryServiceTests()
     {
-        _service = new DeliveryService(_deliveryRepository.Object, _orderRepository.Object, _courierProfileRepository.Object, _logger.Object);
+        _service = new DeliveryService(_deliveryRepository.Object, _orderRepository.Object, _courierProfileRepository.Object, _customerProfileRepository.Object, _farmerProfileRepository.Object, _currentUser.Object, _logger.Object);
+        // Admin по умолчанию — существующие тесты этого файла проверяют
+        // бизнес-правила (конфликт курьера, дубли), а не конкретно IDOR-guard
+        // (отдельные Forbidden-тесты добавлены ниже с явной сменой роли).
+        _currentUser.Setup(c => c.Role).Returns(nameof(UserRole.Admin));
         _orderRepository.Setup(r => r.GetByIdAsync(It.IsAny<int>())).ReturnsAsync((int id) => new Order
         {
             Id = id, OrderNumber = "ORD-1", CustomerId = 1, FarmerId = 1, Status = OrderStatus.Pending,
@@ -29,6 +37,7 @@ public class DeliveryServiceTests
         {
             Id = id, UserId = 1, TransportType = "Car", VehicleNumber = "1234", Region = "Хатлон", District = "Бохтар", IsAvailable = true, IsActive = true
         });
+        _courierProfileRepository.Setup(r => r.GetAllAsync()).ReturnsAsync([]);
         _deliveryRepository.Setup(r => r.GetAllAsync()).ReturnsAsync([]);
     }
 
@@ -114,6 +123,22 @@ public class DeliveryServiceTests
         Assert.True(result.IsSuccess);
         Assert.Equal(delivery.Id, result.Data!.Id);
         Assert.Equal(delivery.DeliveryAddress, result.Data!.DeliveryAddress);
+    }
+
+    [Fact]
+    public async Task GetByIdAsync_NotOwnerNotCourierNotAdmin_ReturnsForbidden()
+    {
+        // audit 2026-07-28, находка 2.2 (IDOR): не Admin, не участник заказа
+        // (Order.CustomerId/FarmerId=1), не назначенный курьер.
+        _currentUser.Setup(c => c.Role).Returns(nameof(UserRole.Customer));
+        _currentUser.Setup(c => c.UserId).Returns(999);
+        var delivery = CreateDelivery(5);
+        _deliveryRepository.Setup(r => r.GetByIdAsync(5)).ReturnsAsync(delivery);
+
+        var result = await _service.GetByIdAsync(5);
+
+        Assert.False(result.IsSuccess);
+        Assert.Equal(ErrorType.Forbidden, result.ErrorType);
     }
 
     [Fact]

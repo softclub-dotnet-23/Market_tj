@@ -13,6 +13,7 @@ namespace MarketTJ.Application.Services;
 public class SupportTicketService(
     ISupportTicketRepository supportTicketRepository,
     IUserRepository userRepository,
+    ICurrentUserService currentUser,
     ILogger<SupportTicketService> logger) : ISupportTicketService
 {
     public async Task<Result<IEnumerable<GetSupportTicketDto>>> GetAllAsync()
@@ -20,6 +21,12 @@ public class SupportTicketService(
         try
         {
             var tickets = await supportTicketRepository.GetAllAsync();
+
+            // Audit 2026-07-28, находка 2.2 (IDOR): SupportTicket.UserId — User.Id
+            // напрямую (автор обращения).
+            if (!currentUser.IsAdmin())
+                tickets = tickets.Where(t => t.UserId == currentUser.UserId).ToList();
+
             return Result<IEnumerable<GetSupportTicketDto>>.Ok(tickets.Select(ToGetDto));
         }
         catch (Exception ex)
@@ -36,6 +43,9 @@ public class SupportTicketService(
             var ticket = await supportTicketRepository.GetByIdAsync(id);
             if (ticket is null)
                 return Result<GetSupportTicketDto?>.Fail("Тикет не найден", ErrorType.NotFound);
+
+            if (!currentUser.CanAccess(ticket.UserId))
+                return Result<GetSupportTicketDto?>.Fail("Нет доступа к этому тикету", ErrorType.Forbidden);
 
             return Result<GetSupportTicketDto?>.Ok(ToGetDto(ticket));
         }
@@ -54,7 +64,12 @@ public class SupportTicketService(
             if (validation is not null)
                 return validation;
 
-            var user = await userRepository.GetByIdAsync(dto.UserId);
+            // IDOR-guard (audit 2026-07-28, находка 2.2): UserId из тела не
+            // доверяется — тикет открывается от имени реального текущего
+            // пользователя, а не того, кого укажет клиент.
+            var userId = currentUser.IsAdmin() ? dto.UserId : (currentUser.UserId ?? dto.UserId);
+
+            var user = await userRepository.GetByIdAsync(userId);
             if (user is null)
                 return Result<string>.Fail("Пользователь не найден", ErrorType.NotFound);
 
@@ -70,7 +85,7 @@ public class SupportTicketService(
 
             var ticket = new SupportTicket
             {
-                UserId = dto.UserId,
+                UserId = userId,
                 Subject = dto.Subject,
                 Status = dto.Status,
                 Priority = dto.Priority,
@@ -100,6 +115,9 @@ public class SupportTicketService(
             var ticket = await supportTicketRepository.GetByIdAsync(id);
             if (ticket is null)
                 return Result<string>.Fail("Тикет не найден", ErrorType.NotFound);
+
+            if (!currentUser.CanAccess(ticket.UserId))
+                return Result<string>.Fail("Нет доступа к этому тикету", ErrorType.Forbidden);
 
             var user = await userRepository.GetByIdAsync(dto.UserId);
             if (user is null)
@@ -139,6 +157,9 @@ public class SupportTicketService(
             var ticket = await supportTicketRepository.GetByIdAsync(id);
             if (ticket is null)
                 return Result<string>.Fail("Тикет не найден", ErrorType.NotFound);
+
+            if (!currentUser.CanAccess(ticket.UserId))
+                return Result<string>.Fail("Нет доступа к этому тикету", ErrorType.Forbidden);
 
             await supportTicketRepository.DeleteAsync(ticket);
             return Result<string>.Ok("Тикет удалён");

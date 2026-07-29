@@ -1,6 +1,7 @@
 using MarketTJ.Application.Common;
 using MarketTJ.Application.Dto.DeliverySlotDto;
 using MarketTJ.Application.Interfaces.Repositories;
+using MarketTJ.Application.Interfaces.Services;
 using MarketTJ.Application.Services;
 using MarketTJ.Domain.Entities;
 using MarketTJ.Domain.Enums;
@@ -13,12 +14,16 @@ public class DeliverySlotServiceTests
 {
     private readonly Mock<IDeliverySlotRepository> _deliverySlotRepository = new();
     private readonly Mock<IOrderRepository> _orderRepository = new();
+    private readonly Mock<ICustomerProfileRepository> _customerProfileRepository = new();
+    private readonly Mock<IFarmerProfileRepository> _farmerProfileRepository = new();
+    private readonly Mock<ICurrentUserService> _currentUser = new();
     private readonly Mock<ILogger<DeliverySlotService>> _logger = new();
     private readonly DeliverySlotService _service;
 
     public DeliverySlotServiceTests()
     {
-        _service = new DeliverySlotService(_deliverySlotRepository.Object, _orderRepository.Object, _logger.Object);
+        _service = new DeliverySlotService(_deliverySlotRepository.Object, _orderRepository.Object, _customerProfileRepository.Object, _farmerProfileRepository.Object, _currentUser.Object, _logger.Object);
+        _currentUser.Setup(c => c.Role).Returns(nameof(UserRole.Admin));
         _orderRepository.Setup(r => r.GetByIdAsync(It.IsAny<int>())).ReturnsAsync((int id) => new Order
         {
             Id = id, OrderNumber = "ORD-1", CustomerId = 1, FarmerId = 1, Status = OrderStatus.Pending,

@@ -41,7 +41,7 @@ public class UserServiceTests
         FullName = "Test User",
         Email = "user@example.com",
         PhoneNumber = "+992900000000",
-        PasswordHash = "hashedpassword",
+        Password = "plainpassword",
         Role = UserRole.Customer,
         IsActive = true
     };
@@ -52,7 +52,7 @@ public class UserServiceTests
         FullName = "Test User",
         Email = "user@example.com",
         PhoneNumber = "+992900000000",
-        PasswordHash = "hashedpassword",
+        Password = "plainpassword",
         Role = UserRole.Customer,
         IsActive = true
     };
@@ -225,7 +225,7 @@ public class UserServiceTests
     public async Task CreateAsync_EmptyPasswordHash_ReturnsValidationError()
     {
         var dto = ValidCreateDto();
-        dto.PasswordHash = "";
+        dto.Password = "";
 
         var result = await _service.CreateAsync(dto);
 
@@ -238,7 +238,7 @@ public class UserServiceTests
     public async Task CreateAsync_PasswordTooShort_ReturnsValidationError()
     {
         var dto = ValidCreateDto();
-        dto.PasswordHash = "12345";
+        dto.Password = "12345";
 
         var result = await _service.CreateAsync(dto);
 
@@ -365,7 +365,7 @@ public class UserServiceTests
     public async Task UpdateAsync_PasswordTooShort_ReturnsValidationError()
     {
         var dto = ValidUpdateDto(1);
-        dto.PasswordHash = "123";
+        dto.Password = "123";
 
         var result = await _service.UpdateAsync(1, dto);
 

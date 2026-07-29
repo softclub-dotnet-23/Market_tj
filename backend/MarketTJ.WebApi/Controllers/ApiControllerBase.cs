@@ -23,6 +23,7 @@ public abstract class ApiControllerBase : ControllerBase
             ErrorType.NotFound => StatusCodes.Status404NotFound,
             ErrorType.Validation or ErrorType.BadRequest => StatusCodes.Status400BadRequest,
             ErrorType.Unauthorized => StatusCodes.Status401Unauthorized,
+            ErrorType.Forbidden => StatusCodes.Status403Forbidden,
             ErrorType.Conflict => StatusCodes.Status409Conflict,
             _ => StatusCodes.Status500InternalServerError
         };

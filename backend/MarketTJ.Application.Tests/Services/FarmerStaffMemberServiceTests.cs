@@ -1,6 +1,7 @@
 using MarketTJ.Application.Common;
 using MarketTJ.Application.Dto.FarmerStaffMemberDto;
 using MarketTJ.Application.Interfaces.Repositories;
+using MarketTJ.Application.Interfaces.Services;
 using MarketTJ.Application.Services;
 using MarketTJ.Domain.Entities;
 using MarketTJ.Domain.Enums;
@@ -14,13 +15,19 @@ public class FarmerStaffMemberServiceTests
     private readonly Mock<IFarmerStaffMemberRepository> _farmerStaffMemberRepository = new();
     private readonly Mock<IFarmerProfileRepository> _farmerProfileRepository = new();
     private readonly Mock<IUserRepository> _userRepository = new();
+    private readonly Mock<ICurrentUserService> _currentUser = new();
     private readonly Mock<ILogger<FarmerStaffMemberService>> _logger = new();
     private readonly FarmerStaffMemberService _service;
 
     public FarmerStaffMemberServiceTests()
     {
-        _service = new FarmerStaffMemberService(_farmerStaffMemberRepository.Object, _farmerProfileRepository.Object, _userRepository.Object, _logger.Object);
+        _service = new FarmerStaffMemberService(_farmerStaffMemberRepository.Object, _farmerProfileRepository.Object, _userRepository.Object, _currentUser.Object, _logger.Object);
+        // Дефолтный сотрудник — FarmerProfileId=1/UserId=1; залогинены как
+        // владелец этой фермы (FarmerProfile.Id=1, UserId=1).
+        _currentUser.Setup(c => c.UserId).Returns(1);
+        _currentUser.Setup(c => c.Role).Returns(nameof(UserRole.Farmer));
         _farmerProfileRepository.Setup(r => r.GetByIdAsync(It.IsAny<int>())).ReturnsAsync((int id) => new FarmerProfile { Id = id, UserId = 1, FarmName = "F", Region = "Хатлон", District = "Бохтар", Village = "V", Address = "A", VerificationStatus = FarmerVerificationStatus.Verified });
+        _farmerProfileRepository.Setup(r => r.GetByUserIdAsync(1)).ReturnsAsync(new FarmerProfile { Id = 1, UserId = 1, FarmName = "F", Region = "Хатлон", District = "Бохтар", Village = "V", Address = "A", VerificationStatus = FarmerVerificationStatus.Verified });
         _userRepository.Setup(r => r.GetByIdAsync(It.IsAny<int>())).ReturnsAsync((int id) => new User { Id = id, Role = UserRole.Customer, FullName = "U", Email = "u@e.com", PhoneNumber = "1", PasswordHash = "h" });
         _farmerStaffMemberRepository.Setup(r => r.GetAllAsync()).ReturnsAsync([]);
     }

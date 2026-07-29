@@ -12,11 +12,31 @@ namespace MarketTJ.Application.Services;
 public class ProductImageService(
     IProductImageRepository productImageRepository,
     IProductListingRepository productListingRepository,
+    IFarmerProfileRepository farmerProfileRepository,
     IFileStorageService fileStorageService,
+    ICurrentUserService currentUser,
     ILogger<ProductImageService> logger) : IProductImageService
 {
     // Раздел 8.8 ТЗ: максимум 5 изображений на объявление.
     private const int MaxImagesPerListing = 5;
+
+    // Audit 2026-07-28, находка 2.2 (частично): контроллер уже ограничивал
+    // роль (Farmer/Admin), но не проверял, что объявление принадлежит ИМЕННО
+    // этому фермеру — один Farmer мог управлять фотографиями чужих объявлений.
+    private async Task<bool> OwnsListingAsync(int productListingId)
+    {
+        if (currentUser.IsAdmin())
+            return true;
+        if (currentUser.UserId is null)
+            return false;
+
+        var listing = await productListingRepository.GetByIdAsync(productListingId);
+        if (listing is null)
+            return false;
+
+        var myFarmerProfile = await farmerProfileRepository.GetByUserIdAsync(currentUser.UserId.Value);
+        return myFarmerProfile is not null && myFarmerProfile.Id == listing.FarmerProfileId;
+    }
 
     public async Task<Result<IEnumerable<GetProductImageDto>>> GetAllAsync()
     {
@@ -61,6 +81,9 @@ public class ProductImageService(
             if (listing is null)
                 return Result<string>.Fail("Объявление не найдено", ErrorType.NotFound);
 
+            if (!await OwnsListingAsync(dto.ProductListingId))
+                return Result<string>.Fail("Нельзя управлять изображениями чужого объявления", ErrorType.Forbidden);
+
             var limitError = await ValidateImageLimitAsync(dto.ProductListingId);
             if (limitError is not null)
                 return limitError;
@@ -95,9 +118,15 @@ public class ProductImageService(
             if (image is null)
                 return Result<string>.Fail("Изображение не найдено", ErrorType.NotFound);
 
+            if (!await OwnsListingAsync(image.ProductListingId))
+                return Result<string>.Fail("Нельзя управлять изображениями чужого объявления", ErrorType.Forbidden);
+
             var listing = await productListingRepository.GetByIdAsync(dto.ProductListingId);
             if (listing is null)
                 return Result<string>.Fail("Объявление не найдено", ErrorType.NotFound);
+
+            if (!await OwnsListingAsync(dto.ProductListingId))
+                return Result<string>.Fail("Нельзя перенести изображение на чужое объявление", ErrorType.Forbidden);
 
             image.ProductListingId = dto.ProductListingId;
             image.ImageUrl = dto.ImageUrl;
@@ -120,6 +149,9 @@ public class ProductImageService(
             var image = await productImageRepository.GetByIdAsync(id);
             if (image is null)
                 return Result<string>.Fail("Изображение не найдено", ErrorType.NotFound);
+
+            if (!await OwnsListingAsync(image.ProductListingId))
+                return Result<string>.Fail("Нельзя управлять изображениями чужого объявления", ErrorType.Forbidden);
 
             await productImageRepository.DeleteAsync(image);
 
@@ -148,6 +180,9 @@ public class ProductImageService(
             var listing = await productListingRepository.GetByIdAsync(productListingId);
             if (listing is null)
                 return Result<GetProductImageDto>.Fail("Объявление не найдено", ErrorType.NotFound);
+
+            if (!await OwnsListingAsync(productListingId))
+                return Result<GetProductImageDto>.Fail("Нельзя управлять изображениями чужого объявления", ErrorType.Forbidden);
 
             var limitError = await ValidateImageLimitAsync(productListingId);
             if (limitError is not null)

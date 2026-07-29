@@ -1,6 +1,7 @@
 using MarketTJ.Application.Common;
 using MarketTJ.Application.Dto.OrderItemDto;
 using MarketTJ.Application.Interfaces.Repositories;
+using MarketTJ.Application.Interfaces.Services;
 using MarketTJ.Application.Services;
 using MarketTJ.Domain.Entities;
 using MarketTJ.Domain.Enums;
@@ -14,12 +15,20 @@ public class OrderItemServiceTests
     private readonly Mock<IOrderItemRepository> _orderItemRepository = new();
     private readonly Mock<IOrderRepository> _orderRepository = new();
     private readonly Mock<IProductListingRepository> _productListingRepository = new();
+    private readonly Mock<ICustomerProfileRepository> _customerProfileRepository = new();
+    private readonly Mock<IFarmerProfileRepository> _farmerProfileRepository = new();
+    private readonly Mock<ICurrentUserService> _currentUser = new();
     private readonly Mock<ILogger<OrderItemService>> _logger = new();
     private readonly OrderItemService _service;
 
     public OrderItemServiceTests()
     {
-        _service = new OrderItemService(_orderItemRepository.Object, _orderRepository.Object, _productListingRepository.Object, _logger.Object);
+        _service = new OrderItemService(_orderItemRepository.Object, _orderRepository.Object, _productListingRepository.Object, _customerProfileRepository.Object, _farmerProfileRepository.Object, _currentUser.Object, _logger.Object);
+        // Дефолтный Order — CustomerId=1/FarmerId=1; залогинены как покупатель,
+        // чей CustomerProfile.Id=1 (тот же паттерн, что в OrderServiceTests).
+        _currentUser.Setup(c => c.UserId).Returns(10);
+        _currentUser.Setup(c => c.Role).Returns(nameof(UserRole.Customer));
+        _customerProfileRepository.Setup(r => r.GetByUserIdAsync(10)).ReturnsAsync(new CustomerProfile { Id = 1, UserId = 10, CustomerType = CustomerType.Retail, Region = "Хатлон", District = "Бохтар" });
         _orderRepository.Setup(r => r.GetByIdAsync(It.IsAny<int>())).ReturnsAsync((int id) => new Order
         {
             Id = id, OrderNumber = "ORD-1", CustomerId = 1, FarmerId = 1, Status = OrderStatus.Pending,

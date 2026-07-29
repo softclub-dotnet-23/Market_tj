@@ -1,6 +1,7 @@
 using MarketTJ.Application.Common;
 using MarketTJ.Application.Dto.CourierProfileDto;
 using MarketTJ.Application.Interfaces.Repositories;
+using MarketTJ.Application.Interfaces.Services;
 using MarketTJ.Application.Services;
 using MarketTJ.Domain.Entities;
 using MarketTJ.Domain.Enums;
@@ -13,12 +14,15 @@ public class CourierProfileServiceTests
 {
     private readonly Mock<ICourierProfileRepository> _courierProfileRepository = new();
     private readonly Mock<IUserRepository> _userRepository = new();
+    private readonly Mock<ICurrentUserService> _currentUser = new();
     private readonly Mock<ILogger<CourierProfileService>> _logger = new();
     private readonly CourierProfileService _service;
 
     public CourierProfileServiceTests()
     {
-        _service = new CourierProfileService(_courierProfileRepository.Object, _userRepository.Object, _logger.Object);
+        _service = new CourierProfileService(_courierProfileRepository.Object, _userRepository.Object, _currentUser.Object, _logger.Object);
+        _currentUser.Setup(c => c.UserId).Returns(1);
+        _currentUser.Setup(c => c.Role).Returns(nameof(UserRole.Courier));
         _userRepository.Setup(r => r.GetByIdAsync(It.IsAny<int>())).ReturnsAsync((int id) => new User { Id = id, Role = UserRole.Courier, FullName = "Courier", Email = "cr@example.com", PhoneNumber = "+992900000000", PasswordHash = "hash" });
         _courierProfileRepository.Setup(r => r.GetAllAsync()).ReturnsAsync([]);
     }
@@ -63,8 +67,9 @@ public class CourierProfileServiceTests
     // ---------- GetAllAsync ----------
 
     [Fact]
-    public async Task GetAllAsync_ProfilesExist_ReturnsMappedDtos()
+    public async Task GetAllAsync_AdminSeesAllProfiles_ReturnsMappedDtos()
     {
+        _currentUser.Setup(c => c.Role).Returns(nameof(UserRole.Admin));
         _courierProfileRepository.Setup(r => r.GetAllAsync()).ReturnsAsync([CreateProfile(1), CreateProfile(2, 2)]);
 
         var result = await _service.GetAllAsync();

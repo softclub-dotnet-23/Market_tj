@@ -14,13 +14,35 @@ public class FarmerDocumentService(
     IFarmerDocumentRepository farmerDocumentRepository,
     IFarmerProfileRepository farmerProfileRepository,
     IUserRepository userRepository,
+    ICurrentUserService currentUser,
     ILogger<FarmerDocumentService> logger) : IFarmerDocumentService
 {
+    // Audit 2026-07-28, находка 2.2 (IDOR): FarmerDocument.FarmerProfileId —
+    // Id профиля фермера, владение резолвится через него (документы верификации —
+    // чувствительные данные, не должны быть видны другим фермерам).
+    private async Task<bool> IsOwnerAsync(int farmerProfileId)
+    {
+        if (currentUser.IsAdmin())
+            return true;
+        if (currentUser.UserId is null)
+            return false;
+
+        var myProfile = await farmerProfileRepository.GetByUserIdAsync(currentUser.UserId.Value);
+        return myProfile is not null && myProfile.Id == farmerProfileId;
+    }
+
     public async Task<Result<IEnumerable<GetFarmerDocumentDto>>> GetAllAsync()
     {
         try
         {
             var documents = await farmerDocumentRepository.GetAllAsync();
+
+            if (!currentUser.IsAdmin())
+            {
+                var myProfile = currentUser.UserId is null ? null : await farmerProfileRepository.GetByUserIdAsync(currentUser.UserId.Value);
+                documents = myProfile is null ? [] : documents.Where(d => d.FarmerProfileId == myProfile.Id).ToList();
+            }
+
             return Result<IEnumerable<GetFarmerDocumentDto>>.Ok(documents.Select(ToGetDto));
         }
         catch (Exception ex)
@@ -37,6 +59,9 @@ public class FarmerDocumentService(
             var document = await farmerDocumentRepository.GetByIdAsync(id);
             if (document is null)
                 return Result<GetFarmerDocumentDto?>.Fail("Документ не найден", ErrorType.NotFound);
+
+            if (!await IsOwnerAsync(document.FarmerProfileId))
+                return Result<GetFarmerDocumentDto?>.Fail("Нет доступа к этому документу", ErrorType.Forbidden);
 
             return Result<GetFarmerDocumentDto?>.Ok(ToGetDto(document));
         }
@@ -58,6 +83,9 @@ public class FarmerDocumentService(
             var farmerProfile = await farmerProfileRepository.GetByIdAsync(dto.FarmerProfileId);
             if (farmerProfile is null)
                 return Result<string>.Fail("Профиль фермера не найден", ErrorType.NotFound);
+
+            if (!await IsOwnerAsync(dto.FarmerProfileId))
+                return Result<string>.Fail("Нельзя загрузить документ для чужого профиля фермера", ErrorType.Forbidden);
 
             if (dto.ReviewedByAdminId is not null)
             {
@@ -103,6 +131,9 @@ public class FarmerDocumentService(
             if (document is null)
                 return Result<string>.Fail("Документ не найден", ErrorType.NotFound);
 
+            if (!await IsOwnerAsync(document.FarmerProfileId))
+                return Result<string>.Fail("Нет доступа к этому документу", ErrorType.Forbidden);
+
             var farmerProfile = await farmerProfileRepository.GetByIdAsync(dto.FarmerProfileId);
             if (farmerProfile is null)
                 return Result<string>.Fail("Профиль фермера не найден", ErrorType.NotFound);
@@ -143,6 +174,9 @@ public class FarmerDocumentService(
             var document = await farmerDocumentRepository.GetByIdAsync(id);
             if (document is null)
                 return Result<string>.Fail("Документ не найден", ErrorType.NotFound);
+
+            if (!await IsOwnerAsync(document.FarmerProfileId))
+                return Result<string>.Fail("Нет доступа к этому документу", ErrorType.Forbidden);
 
             await farmerDocumentRepository.DeleteAsync(document);
             return Result<string>.Ok("Документ удалён");

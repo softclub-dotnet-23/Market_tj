@@ -12,6 +12,7 @@ namespace MarketTJ.Application.Services;
 public class NotificationService(
     INotificationRepository notificationRepository,
     IUserRepository userRepository,
+    ICurrentUserService currentUser,
     ILogger<NotificationService> logger) : INotificationService
 {
     public async Task<Result<IEnumerable<GetNotificationDto>>> GetAllAsync()
@@ -19,6 +20,12 @@ public class NotificationService(
         try
         {
             var notifications = await notificationRepository.GetAllAsync();
+
+            // Audit 2026-07-28, находка 2.2 (IDOR): Notification.UserId == User.Id
+            // напрямую — без фильтра любой авторизованный видел уведомления всех.
+            if (!currentUser.IsAdmin())
+                notifications = notifications.Where(n => n.UserId == currentUser.UserId).ToList();
+
             return Result<IEnumerable<GetNotificationDto>>.Ok(notifications.Select(ToGetDto));
         }
         catch (Exception ex)
@@ -35,6 +42,9 @@ public class NotificationService(
             var notification = await notificationRepository.GetByIdAsync(id);
             if (notification is null)
                 return Result<GetNotificationDto?>.Fail("Уведомление не найдено", ErrorType.NotFound);
+
+            if (!currentUser.CanAccess(notification.UserId))
+                return Result<GetNotificationDto?>.Fail("Нет доступа к этому уведомлению", ErrorType.Forbidden);
 
             return Result<GetNotificationDto?>.Ok(ToGetDto(notification));
         }
@@ -88,11 +98,11 @@ public class NotificationService(
             if (notification is null)
                 return Result<string>.Fail("Уведомление не найдено", ErrorType.NotFound);
 
-            var user = await userRepository.GetByIdAsync(dto.UserId);
-            if (user is null)
-                return Result<string>.Fail("Пользователь не найден", ErrorType.NotFound);
+            // IDOR-guard: менять можно только своё уведомление (например,
+            // отметить прочитанным) — UserId из dto игнорируется, владелец не меняется.
+            if (!currentUser.CanAccess(notification.UserId))
+                return Result<string>.Fail("Нет доступа к этому уведомлению", ErrorType.Forbidden);
 
-            notification.UserId = dto.UserId;
             notification.Title = dto.Title;
             notification.Message = dto.Message;
             notification.IsRead = dto.IsRead;
@@ -114,6 +124,9 @@ public class NotificationService(
             var notification = await notificationRepository.GetByIdAsync(id);
             if (notification is null)
                 return Result<string>.Fail("Уведомление не найдено", ErrorType.NotFound);
+
+            if (!currentUser.CanAccess(notification.UserId))
+                return Result<string>.Fail("Нет доступа к этому уведомлению", ErrorType.Forbidden);
 
             await notificationRepository.DeleteAsync(notification);
             return Result<string>.Ok("Уведомление удалено");

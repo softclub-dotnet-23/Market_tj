@@ -1,6 +1,8 @@
-# Локальные настройки backend (строки подключения, пароли, API-ключи) —
-# не коммитятся, у каждого разработчика свои значения локально.
-backend/MarketTJ.WebApi/appsettings.json
+# Локальные dev-настройки backend (appsettings.Development.json — там Jwt:Secret
+# для локальной разработки) — не коммитятся, у каждого разработчика свой секрет.
+# Базовый appsettings.json (Jwt:ExpiryMinutes, Cors, Logging) секретов не содержит
+# и ДОЛЖЕН коммититься — без него в Production падает всё, что читает конфиг
+# без переменных окружения (например TokenService.AccessTokenExpiryMinutes).
 backend/MarketTJ.WebApi/appsettings.*.json
 
 # .NET build artifacts — не коммитятся (были причиной постоянных merge-конфликтов

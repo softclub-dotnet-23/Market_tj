@@ -13,8 +13,27 @@ namespace MarketTJ.Application.Services;
 public class ReviewService(
     IReviewRepository reviewRepository,
     IOrderRepository orderRepository,
+    ICustomerProfileRepository customerProfileRepository,
+    ICurrentUserService currentUser,
     ILogger<ReviewService> logger) : IReviewService
 {
+    // Audit 2026-07-28, находка 2.2 (IDOR): только автор отзыва (Customer) или
+    // Admin может его редактировать/удалять — Farmer (объект отзыва) не должен
+    // иметь возможность менять/скрывать неудобный отзыв о себе.
+    private async Task<bool> IsAuthorAsync(Review review)
+    {
+        if (currentUser.IsAdmin())
+            return true;
+        if (currentUser.UserId is null)
+            return false;
+
+        var customerProfile = await customerProfileRepository.GetByUserIdAsync(currentUser.UserId.Value);
+        return customerProfile is not null && customerProfile.Id == review.CustomerId;
+    }
+
+    // GetAll/GetById сознательно ОСТАЮТСЯ публичными — отзывы показываются
+    // на карточке фермера всем посетителям (см. фронтенд), это не "личный"
+    // ресурс. IDOR-guard нужен только на Create/Update/Delete (см. ниже).
     public async Task<Result<IEnumerable<GetReviewDto>>> GetAllAsync()
     {
         try
@@ -62,7 +81,19 @@ public class ReviewService(
             if (order.Status != OrderStatus.Completed)
                 return Result<string>.Fail("Отзыв можно оставить только после завершения заказа", ErrorType.Validation);
 
-            // Раздел 10.6 ТЗ: клиент может оставить отзыв только на свой заказ.
+            // Раздел 10.6 ТЗ: клиент может оставить отзыв только на свой заказ —
+            // сверяем с РЕАЛЬНЫМ текущим пользователем (JWT), а не только с тем,
+            // что dto.CustomerId внутренне совпадает с order.CustomerId (audit
+            // 2026-07-28, находка 2.2 — это не одно и то же: без этой проверки
+            // любой авторизованный Customer мог написать отзыв от имени
+            // настоящего покупателя этого заказа, просто зная его CustomerId).
+            if (!currentUser.IsAdmin())
+            {
+                var myCustomerProfile = currentUser.UserId is null ? null : await customerProfileRepository.GetByUserIdAsync(currentUser.UserId.Value);
+                if (myCustomerProfile is null || myCustomerProfile.Id != order.CustomerId)
+                    return Result<string>.Fail("Отзыв нельзя создать для чужого заказа", ErrorType.Forbidden);
+            }
+
             if (order.CustomerId != dto.CustomerId)
                 return Result<string>.Fail("Отзыв нельзя создать для чужого заказа", ErrorType.Unauthorized);
 
@@ -106,6 +137,9 @@ public class ReviewService(
             if (review is null)
                 return Result<string>.Fail("Отзыв не найден", ErrorType.NotFound);
 
+            if (!await IsAuthorAsync(review))
+                return Result<string>.Fail("Нет доступа к этому отзыву", ErrorType.Forbidden);
+
             var order = await orderRepository.GetByIdAsync(dto.OrderId);
             if (order is null)
                 return Result<string>.Fail("Заказ не найден", ErrorType.NotFound);
@@ -143,6 +177,9 @@ public class ReviewService(
             var review = await reviewRepository.GetByIdAsync(id);
             if (review is null)
                 return Result<string>.Fail("Отзыв не найден", ErrorType.NotFound);
+
+            if (!await IsAuthorAsync(review))
+                return Result<string>.Fail("Нет доступа к этому отзыву", ErrorType.Forbidden);
 
             await reviewRepository.DeleteAsync(review);
             return Result<string>.Ok("Отзыв удалён");
