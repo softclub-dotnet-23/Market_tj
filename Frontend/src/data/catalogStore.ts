@@ -19,24 +19,18 @@ import { FALLBACK_PHOTO_ID_BY_PRODUCT_NAME } from "@/data/productPhotoFallback";
 interface RawCategory {
   id: number;
   name: string;
+  nameTj: string | null;
+  nameEn: string | null;
   description: string | null;
   imageUrl: string | null;
-  isActive: boolean;
-}
-
-interface RawBaseProduct {
-  id: number;
-  categoryId: number;
-  name: string;
-  description: string | null;
-  unit: string;
   isActive: boolean;
 }
 
 interface RawListing {
   id: number;
   farmerProfileId: number;
-  productId: number;
+  categoryId: number;
+  unit: string;
   title: string;
   description: string | null;
   retailPricePerKg: number;
@@ -136,9 +130,8 @@ async function fetchOrderCounts(): Promise<Map<number, number>> {
 }
 
 async function loadCatalog(): Promise<CatalogData> {
-  const [rawCategories, rawBaseProducts, listingsPage, rawImages, rawFarmerProfiles, rawReviews, orderCounts] = await Promise.all([
+  const [rawCategories, listingsPage, rawImages, rawFarmerProfiles, rawReviews, orderCounts] = await Promise.all([
     apiGet<RawCategory[]>("/categories"),
-    apiGet<RawBaseProduct[]>("/products"),
     apiGet<RawPagedResult<RawListing>>("/product-listings?pageNumber=1&pageSize=200"),
     apiGet<RawImage[]>("/product-images"),
     apiGet<RawFarmerProfile[]>("/farmer-profiles"),
@@ -147,7 +140,6 @@ async function loadCatalog(): Promise<CatalogData> {
   ]);
 
   const activeCategories = rawCategories.filter((c) => c.isActive);
-  const baseProductById = new Map(rawBaseProducts.map((p) => [p.id, p]));
 
   const imagesByListingId = new Map<number, RawImage[]>();
   for (const img of rawImages) {
@@ -207,8 +199,7 @@ async function loadCatalog(): Promise<CatalogData> {
   const categoryNamesByFarmerId = new Map<number, Set<string>>();
   for (const listing of activeListings) {
     listingCountByFarmerId.set(listing.farmerProfileId, (listingCountByFarmerId.get(listing.farmerProfileId) ?? 0) + 1);
-    const baseProduct = baseProductById.get(listing.productId);
-    const category = baseProduct && activeCategories.find((c) => c.id === baseProduct.categoryId);
+    const category = activeCategories.find((c) => c.id === listing.categoryId);
     if (category) {
       const set = categoryNamesByFarmerId.get(listing.farmerProfileId) ?? new Set<string>();
       set.add(category.name);
@@ -220,10 +211,12 @@ async function loadCatalog(): Promise<CatalogData> {
     id: c.id,
     slug: String(c.id),
     name: c.name,
+    nameTj: c.nameTj ?? undefined,
+    nameEn: c.nameEn ?? undefined,
     description: c.description ?? "",
     icon: CATEGORY_ICON_BY_NAME[c.name] ?? Leaf,
     photoKey: CATEGORY_PHOTO_KEY_BY_NAME[c.name] ?? "vegetables",
-    productCount: activeListings.filter((l) => baseProductById.get(l.productId)?.categoryId === c.id).length,
+    productCount: activeListings.filter((l) => l.categoryId === c.id).length,
   }));
 
   const farmers: Farmer[] = verifiedFarmers.map((f) => {
@@ -258,10 +251,14 @@ async function loadCatalog(): Promise<CatalogData> {
   const bestsellerThreshold = orderCountValues[bestsellerRank] ?? 0;
 
   const products: Product[] = activeListings.map((listing) => {
-    const baseProduct = baseProductById.get(listing.productId);
     const farmer = farmerById.get(listing.farmerProfileId);
     const images = [...(imagesByListingId.get(listing.id) ?? [])].sort((a, b) => Number(b.isMain) - Number(a.isMain));
-    const fallbackPhotoId = baseProduct ? FALLBACK_PHOTO_ID_BY_PRODUCT_NAME[baseProduct.name] : undefined;
+    // Название теперь свободно вводит фермер (см. миграцию
+    // AddCategoryAndUnitToProductListing) — сопоставляем с известными базовыми
+    // названиями по вхождению подстроки в Title, как уже делает
+    // fallbackPhotoByTitle в data/farmer.ts для того же случая.
+    const matchedFallbackName = Object.keys(FALLBACK_PHOTO_ID_BY_PRODUCT_NAME).find((name) => listing.title.includes(name));
+    const fallbackPhotoId = matchedFallbackName ? FALLBACK_PHOTO_ID_BY_PRODUCT_NAME[matchedFallbackName] : undefined;
     const photoUrl = images[0] ? resolveMediaUrl(images[0].imageUrl) : fallbackPhotoId ? productPhotos[fallbackPhotoId] : undefined;
 
     const orderCount = orderCounts.get(listing.id) ?? 0;
@@ -272,15 +269,15 @@ async function loadCatalog(): Promise<CatalogData> {
     if (listing.qualityGrade === "Премиум") badges.push("premium");
     if (orderCount > 0 && orderCount >= bestsellerThreshold) badges.push("bestseller");
 
-    const unit = baseProduct?.unit ?? "кг";
+    const unit = listing.unit;
     const harvestDate = listing.harvestDate ?? listing.expectedHarvestDate ?? listing.createdAt;
-    const description = listing.description ?? baseProduct?.description ?? "";
+    const description = listing.description ?? "";
 
     return {
       id: listing.id,
       title: listing.title,
       slug: `${slugify(listing.title)}-${listing.id}`,
-      categoryId: baseProduct?.categoryId ?? 0,
+      categoryId: listing.categoryId,
       farmerId: listing.farmerProfileId,
       description,
       shortDescription: description.length > 140 ? `${description.slice(0, 140)}…` : description,

@@ -13,6 +13,7 @@ namespace MarketTJ.Application.Tests.Services;
 public class SupportTicketServiceTests
 {
     private readonly Mock<ISupportTicketRepository> _supportTicketRepository = new();
+    private readonly Mock<ISupportMessageRepository> _supportMessageRepository = new();
     private readonly Mock<IUserRepository> _userRepository = new();
     private readonly Mock<ICurrentUserService> _currentUser = new();
     private readonly Mock<ILogger<SupportTicketService>> _logger = new();
@@ -20,7 +21,7 @@ public class SupportTicketServiceTests
 
     public SupportTicketServiceTests()
     {
-        _service = new SupportTicketService(_supportTicketRepository.Object, _userRepository.Object, _currentUser.Object, _logger.Object);
+        _service = new SupportTicketService(_supportTicketRepository.Object, _supportMessageRepository.Object, _userRepository.Object, _currentUser.Object, _logger.Object);
         // Дефолтный тикет — UserId=1 (User.Id напрямую).
         _currentUser.Setup(c => c.UserId).Returns(1);
         _currentUser.Setup(c => c.Role).Returns(nameof(UserRole.Customer));
@@ -223,6 +224,78 @@ public class SupportTicketServiceTests
         _userRepository.Setup(r => r.GetByIdAsync(It.IsAny<int>())).ThrowsAsync(new Exception("db error"));
 
         var result = await _service.CreateAsync(ValidCreateDto());
+
+        Assert.False(result.IsSuccess);
+        Assert.Equal(ErrorType.InternalServerError, result.ErrorType);
+    }
+
+    // ---------- CreateGuestAsync ----------
+
+    private static CreateGuestSupportTicketDto ValidGuestDto() => new()
+    {
+        GuestName = "Гость",
+        GuestEmail = "guest@example.com",
+        Subject = "Вопрос про доставку",
+        Message = "Когда приедет мой заказ?"
+    };
+
+    [Fact]
+    public async Task CreateGuestAsync_ValidData_AddsTicketAndFirstMessage()
+    {
+        var result = await _service.CreateGuestAsync(ValidGuestDto());
+
+        Assert.True(result.IsSuccess);
+        _supportTicketRepository.Verify(
+            r => r.AddAsync(It.Is<SupportTicket>(t => t.UserId == null && t.GuestEmail == "guest@example.com")),
+            Times.Once);
+        _supportMessageRepository.Verify(r => r.AddAsync(It.Is<SupportMessage>(m => m.SenderId == null)), Times.Once);
+    }
+
+    [Fact]
+    public async Task CreateGuestAsync_EmptyName_ReturnsValidationError()
+    {
+        var dto = ValidGuestDto();
+        dto.GuestName = "";
+
+        var result = await _service.CreateGuestAsync(dto);
+
+        Assert.False(result.IsSuccess);
+        Assert.Equal(ErrorType.Validation, result.ErrorType);
+        _supportTicketRepository.Verify(r => r.AddAsync(It.IsAny<SupportTicket>()), Times.Never);
+    }
+
+    [Fact]
+    public async Task CreateGuestAsync_InvalidEmail_ReturnsValidationError()
+    {
+        var dto = ValidGuestDto();
+        dto.GuestEmail = "not-an-email";
+
+        var result = await _service.CreateGuestAsync(dto);
+
+        Assert.False(result.IsSuccess);
+        Assert.Equal(ErrorType.Validation, result.ErrorType);
+        _supportTicketRepository.Verify(r => r.AddAsync(It.IsAny<SupportTicket>()), Times.Never);
+    }
+
+    [Fact]
+    public async Task CreateGuestAsync_EmptyMessage_ReturnsValidationError()
+    {
+        var dto = ValidGuestDto();
+        dto.Message = "";
+
+        var result = await _service.CreateGuestAsync(dto);
+
+        Assert.False(result.IsSuccess);
+        Assert.Equal(ErrorType.Validation, result.ErrorType);
+        _supportMessageRepository.Verify(r => r.AddAsync(It.IsAny<SupportMessage>()), Times.Never);
+    }
+
+    [Fact]
+    public async Task CreateGuestAsync_RepositoryThrows_ReturnsInternalServerError()
+    {
+        _supportTicketRepository.Setup(r => r.AddAsync(It.IsAny<SupportTicket>())).ThrowsAsync(new Exception("db error"));
+
+        var result = await _service.CreateGuestAsync(ValidGuestDto());
 
         Assert.False(result.IsSuccess);
         Assert.Equal(ErrorType.InternalServerError, result.ErrorType);

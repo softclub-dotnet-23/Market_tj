@@ -6,7 +6,8 @@ public class GetProductListingDto
 {
     public int Id { get; set; }
     public int FarmerProfileId { get; set; }
-    public int ProductId { get; set; }
+    public int CategoryId { get; set; }
+    public string Unit { get; set; } = null!;
     public string Title { get; set; } = null!;
     public string? Description { get; set; }
     public decimal RetailPricePerKg { get; set; }

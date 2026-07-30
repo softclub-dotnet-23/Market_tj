@@ -10,6 +10,7 @@ public interface ISupportTicketService
     Task<Result<IEnumerable<GetSupportTicketDto>>> GetAllAsync();
     Task<Result<GetSupportTicketDto?>> GetByIdAsync(int id);
     Task<Result<string>> CreateAsync(CreateSupportTicketDto dto);
+    Task<Result<string>> CreateGuestAsync(CreateGuestSupportTicketDto dto);
     Task<Result<string>> UpdateAsync(int id, UpdateSupportTicketDto dto);
     Task<Result<string>> DeleteAsync(int id);
 

@@ -27,7 +27,14 @@ public class SmtpEmailSender(IConfiguration configuration) : IEmailSender
         using var client = new SmtpClient(host, port)
         {
             EnableSsl = true,
-            Credentials = new NetworkCredential(user, password)
+            Credentials = new NetworkCredential(user, password),
+            // Дефолтный Timeout у SmtpClient — 100 000 мс (раздел "почему так
+            // долго грузится" — ответ админа в поддержке ждал письмо до 100
+            // секунд, прежде чем сам код успевал поймать исключение и всё
+            // равно сохранить ответ). 10 секунд достаточно для обычной
+            // отправки через Gmail; если SMTP реально недоступен — лучше
+            // быстро отдать ошибку в лог и не блокировать сам ответ.
+            Timeout = 10_000
         };
 
         using var message = new MailMessage

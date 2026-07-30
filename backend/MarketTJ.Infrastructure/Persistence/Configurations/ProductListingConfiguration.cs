@@ -11,6 +11,7 @@ public class ProductListingConfiguration : IEntityTypeConfiguration<ProductListi
         builder.HasKey(x => x.Id);
 
         builder.Property(x => x.Title).IsRequired();
+        builder.Property(x => x.Unit).IsRequired();
         builder.Property(x => x.QualityGrade).IsRequired();
         builder.Property(x => x.Region).IsRequired();
         builder.Property(x => x.District).IsRequired();
@@ -22,11 +23,20 @@ public class ProductListingConfiguration : IEntityTypeConfiguration<ProductListi
         builder.Property(x => x.AvailableQuantity).HasPrecision(18, 3);
         builder.Property(x => x.MinimumOrderQuantity).HasPrecision(18, 3);
 
-        // Product 1 — many ProductListing; Product — справочник (общий тип
-        // продукта): Restrict, не Cascade.
+        // Product 1 — many ProductListing; необязательная (см. ProductId в
+        // ProductListing.cs) — оставлена только ради уже существующих
+        // объявлений, новые её не заполняют.
         builder.HasOne(x => x.Product)
             .WithMany(x => x.ProductListings)
             .HasForeignKey(x => x.ProductId)
+            .OnDelete(DeleteBehavior.Restrict)
+            .IsRequired(false);
+
+        // Category 1 — many ProductListing — категорию по-прежнему назначает
+        // Admin (через справочник Category), а не сам Product.
+        builder.HasOne(x => x.Category)
+            .WithMany(c => c.ProductListings)
+            .HasForeignKey(x => x.CategoryId)
             .OnDelete(DeleteBehavior.Restrict);
 
         // FarmerProfile 1 — many ProductListing; FarmerProfile — владелец

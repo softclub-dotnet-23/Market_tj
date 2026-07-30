@@ -1,7 +1,7 @@
 import type { ReactNode } from "react";
 import { useNavigate } from "react-router-dom";
 import { useTranslation } from "react-i18next";
-import { ArrowDownRight, ArrowUpRight, Minus, ShoppingBag, Star } from "lucide-react";
+import { ArrowDownRight, ArrowUpRight, Bike, Minus, Package, ShoppingBag, Sprout, Star, Users, Wallet } from "lucide-react";
 import {
   Area,
   AreaChart,
@@ -9,6 +9,7 @@ import {
   BarChart,
   CartesianGrid,
   Cell,
+  LabelList,
   Pie,
   PieChart,
   ResponsiveContainer,
@@ -21,10 +22,11 @@ import { useCountUp } from "@/lib/useCountUp";
 import { Avatar } from "@/components/ui/Avatar";
 import { PageLoader } from "@/components/layout/PageLoader";
 import { EmptyState } from "@/components/ui/EmptyState";
+import { StatCard as SimpleStatCard } from "@/components/ui/StatCard";
 import { resolveMediaUrl } from "@/lib/api";
 import { cn, formatNumber, formatSomoni, timeAgo } from "@/lib/utils";
 import { ORDER_STATUS_CLASSES, ORDER_STATUS_ICONS, ORDER_STATUS_KEYS } from "@/lib/orderStatus";
-import { useAdminAnalytics, useAdminCustomers, useAdminOrders, type AdminAnalyticsDto } from "@/data/adminEntities";
+import { OrderStatus, useAdminAnalytics, useAdminCustomers, useAdminOrders, type AdminAnalyticsDto } from "@/data/adminEntities";
 import { useFarmers } from "@/data/farmers";
 import { useCategories } from "@/data/categories";
 import { useCatalogLoaded } from "@/data/products";
@@ -43,6 +45,24 @@ import {
   type SiteVisitPoint,
   type TopFarmerRow,
 } from "@/data/admin";
+
+// Разделы "Аналитика" (/admin/statistics) больше нет — по просьбе
+// пользователя всё, чего не хватало на Обзоре, перенесено сюда одним
+// разделом вместо двух почти одинаковых страниц (см. также ТЗ 13.19/14.3,
+// где они изначально разведены — пользователь явно попросил объединить).
+const STATUS_KEYS: Record<number, string> = {
+  [OrderStatus.Pending]: "pending",
+  [OrderStatus.Accepted]: "accepted",
+  [OrderStatus.Rejected]: "rejected",
+  [OrderStatus.Preparing]: "preparing",
+  [OrderStatus.ReadyForPickup]: "readyForPickup",
+  [OrderStatus.CourierAssigned]: "courierAssigned",
+  [OrderStatus.PickedUp]: "pickedUp",
+  [OrderStatus.InDelivery]: "inDelivery",
+  [OrderStatus.Delivered]: "delivered",
+  [OrderStatus.Completed]: "completed",
+  [OrderStatus.Cancelled]: "cancelled",
+};
 
 const EMPTY_ANALYTICS: AdminAnalyticsDto = {
   totalUsers: 0,
@@ -406,6 +426,116 @@ function PopularCategoriesCard({ categories }: { categories: PopularCategoryRow[
   );
 }
 
+function RevenueByMonthCard({ analytics }: { analytics: AdminAnalyticsDto }) {
+  const { t } = useTranslation("admin");
+  const { theme } = useTheme();
+  const isDark = theme === "dark";
+  const grid = isDark ? "#2c2c2a" : "#e1e0d9";
+  const muted = "#898781";
+  const surface = isDark ? "#1a1a19" : "#fcfcfb";
+  const ink = isDark ? "#ffffff" : "#0b0b0b";
+  const months = t("statistics.months", { returnObjects: true }) as string[];
+  const chartData = analytics.revenueByMonth.map((m) => ({ label: months[m.month - 1] ?? m.month, revenue: m.revenue }));
+
+  return (
+    <Card>
+      <h2 className="font-display text-lg text-stone-900 dark:text-stone-50">{t("statistics.revenueByMonth")}</h2>
+      {chartData.length === 0 ? (
+        <p className="mt-4 text-sm text-stone-400 dark:text-stone-500">{t("statistics.noRevenueYet")}</p>
+      ) : (
+        <div className="mt-4 h-64">
+          <ResponsiveContainer width="100%" height="100%">
+            <BarChart data={chartData} margin={{ top: 24, right: 0, bottom: 0, left: -12 }}>
+              <defs>
+                <linearGradient id="admin-dashboard-revenue" x1="0" y1="0" x2="0" y2="1">
+                  <stop offset="0%" stopColor="#3ba85a" />
+                  <stop offset="100%" stopColor="#226e3a" />
+                </linearGradient>
+              </defs>
+              <CartesianGrid stroke={grid} vertical={false} />
+              <XAxis dataKey="label" tickLine={false} axisLine={false} tick={{ fill: muted, fontSize: 12 }} />
+              <YAxis tickLine={false} axisLine={false} tick={{ fill: muted, fontSize: 12 }} />
+              <Tooltip
+                formatter={(value) => `${formatSomoni(Number(value))} ${t("common.somoni")}`}
+                cursor={{ fill: isDark ? "rgba(255,255,255,0.04)" : "rgba(11,11,11,0.03)" }}
+                contentStyle={{ background: surface, border: "1px solid rgba(11,11,11,0.10)", borderRadius: 12, fontSize: 12, color: ink }}
+              />
+              <Bar dataKey="revenue" fill="url(#admin-dashboard-revenue)" radius={[6, 6, 0, 0]} maxBarSize={36}>
+                <LabelList dataKey="revenue" position="top" formatter={(v) => formatNumber(Number(v ?? 0))} style={{ fill: muted, fontSize: 11 }} />
+              </Bar>
+            </BarChart>
+          </ResponsiveContainer>
+        </div>
+      )}
+    </Card>
+  );
+}
+
+function TopSellingProductsCard({ analytics }: { analytics: AdminAnalyticsDto }) {
+  const { t } = useTranslation("admin");
+  return (
+    <Card>
+      <h2 className="font-display text-lg text-stone-900 dark:text-stone-50">{t("statistics.topSellingProducts")}</h2>
+      {analytics.topSellingProducts.length === 0 ? (
+        <div className="mt-4 flex flex-col items-center gap-3 py-6 text-center">
+          <span className="flex h-16 w-16 items-center justify-center rounded-full bg-grove-50 text-grove-300 dark:bg-grove-950 dark:text-grove-700">
+            <Sprout size={28} />
+          </span>
+          <div>
+            <p className="text-sm font-medium text-stone-700 dark:text-stone-200">{t("statistics.noSalesYet")}</p>
+            <p className="mt-1 text-xs text-stone-400 dark:text-stone-500">{t("statistics.noSalesYetDescription")}</p>
+          </div>
+        </div>
+      ) : (
+        <ul className="mt-4 flex flex-col gap-4">
+          {analytics.topSellingProducts.map((p) => (
+            <li key={p.productName} className="flex items-center justify-between gap-3">
+              <div className="min-w-0">
+                <p className="truncate text-sm font-medium text-stone-800 dark:text-stone-100">{p.productName}</p>
+                <p className="text-xs text-stone-400 dark:text-stone-500">
+                  {formatNumber(p.quantitySold)} {t("statistics.kg")}
+                </p>
+              </div>
+              <p className="shrink-0 text-sm font-semibold text-stone-800 dark:text-stone-100">
+                {formatSomoni(p.revenue)} {t("common.somoni")}
+              </p>
+            </li>
+          ))}
+        </ul>
+      )}
+    </Card>
+  );
+}
+
+function OrdersByStatusCard({ analytics }: { analytics: AdminAnalyticsDto }) {
+  const { t } = useTranslation("admin");
+  const maxStatusCount = Math.max(1, ...analytics.ordersByStatus.map((s) => s.count));
+  return (
+    <Card>
+      <h2 className="font-display text-lg text-stone-900 dark:text-stone-50">{t("statistics.ordersByStatus")}</h2>
+      {analytics.ordersByStatus.length === 0 ? (
+        <p className="mt-4 text-sm text-stone-400 dark:text-stone-500">{t("statistics.noOrdersYet")}</p>
+      ) : (
+        <ul className="mt-5 flex flex-col gap-4">
+          {analytics.ordersByStatus.map((s) => (
+            <li key={s.status} className="flex items-center gap-3">
+              <div className="min-w-0 flex-1">
+                <p className="truncate text-sm text-stone-700 dark:text-stone-200">
+                  {t(`orders.status.${STATUS_KEYS[s.status] ?? "pending"}`)}
+                </p>
+                <div className="mt-1.5 h-1.5 w-full overflow-hidden rounded-full bg-stone-100 dark:bg-stone-800">
+                  <div className="h-full rounded-full bg-grove-600" style={{ width: `${(s.count / maxStatusCount) * 100}%` }} />
+                </div>
+              </div>
+              <span className="shrink-0 text-sm font-semibold tabular-nums text-stone-800 dark:text-stone-100">{formatNumber(s.count)}</span>
+            </li>
+          ))}
+        </ul>
+      )}
+    </Card>
+  );
+}
+
 export function AdminDashboard() {
   const { t } = useTranslation("admin");
   const { analytics, loading: analyticsLoading, error: analyticsError } = useAdminAnalytics();
@@ -420,6 +550,14 @@ export function AdminDashboard() {
   // безопасными пустыми значениями, пока реальные данные ещё не пришли.
   const stats = useAdminStats(analytics ?? EMPTY_ANALYTICS, orders ?? [], customers ?? [], farmers);
   const visits = useOrdersByMonth(orders ?? []);
+
+  // Второй ряд карточек (перенесённых со старой "Аналитики") тоже должен
+  // считаться вверх, как и первый — по прямому запросу пользователя.
+  const safeAnalytics = analytics ?? EMPTY_ANALYTICS;
+  const animatedTotalUsers = Math.round(useCountUp(safeAnalytics.totalUsers));
+  const animatedTotalCouriers = Math.round(useCountUp(safeAnalytics.totalCouriers));
+  const animatedActiveListings = Math.round(useCountUp(safeAnalytics.activeProductListings));
+  const animatedTotalRevenue = Math.round(useCountUp(safeAnalytics.totalRevenue));
 
   if (analyticsLoading || ordersLoading || customersLoading || !catalogLoaded) return <PageLoader />;
 
@@ -441,9 +579,30 @@ export function AdminDashboard() {
         ))}
       </div>
 
+      {/* Раньше жили на отдельной странице "Аналитика" (/admin/statistics) —
+          по просьбе пользователя объединили в один "Обзор", убрав дубли
+          (totalFarmers/ordersThisMonth/revenueThisMonth уже покрыты 4
+          карточками с трендом выше). */}
+      <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-4">
+        <SimpleStatCard icon={Users} accent="blue" label={t("statistics.stats.totalUsers")} value={formatNumber(animatedTotalUsers)} />
+        <SimpleStatCard icon={Bike} accent="rose" label={t("statistics.stats.totalCouriers")} value={formatNumber(animatedTotalCouriers)} />
+        <SimpleStatCard icon={Package} accent="orange" label={t("statistics.stats.activeProductListings")} value={formatNumber(animatedActiveListings)} />
+        <SimpleStatCard
+          icon={Wallet}
+          accent="grove"
+          label={t("statistics.stats.totalRevenue")}
+          value={`${formatSomoni(animatedTotalRevenue)} ${t("common.somoni")}`}
+        />
+      </div>
+
       <div className="grid grid-cols-1 gap-6 xl:grid-cols-[1fr_1.3fr]">
         <RegionDonutCard regions={regions} />
         <OrdersByMonthCard visits={visits} />
+      </div>
+
+      <div className="grid grid-cols-1 gap-6 xl:grid-cols-[1.4fr_1fr]">
+        <RevenueByMonthCard analytics={analytics} />
+        <TopSellingProductsCard analytics={analytics} />
       </div>
 
       <div className="grid grid-cols-1 gap-6 lg:grid-cols-3">
@@ -451,6 +610,8 @@ export function AdminDashboard() {
         <TopFarmersCard farmers={topFarmers} />
         <PopularCategoriesCard categories={popularCategories} />
       </div>
+
+      <OrdersByStatusCard analytics={analytics} />
     </div>
   );
 }

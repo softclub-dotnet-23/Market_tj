@@ -13,6 +13,23 @@ public static class SupportTicketValidator
     public static Result<string>? ValidateUpdate(UpdateSupportTicketDto dto)
         => Validate(dto.UserId, dto.Subject, dto.Status, dto.Priority);
 
+    public static Result<string>? ValidateCreateGuest(CreateGuestSupportTicketDto dto)
+    {
+        if (string.IsNullOrWhiteSpace(dto.GuestName))
+            return Result<string>.Fail("Имя обязательно", ErrorType.Validation);
+
+        if (string.IsNullOrWhiteSpace(dto.GuestEmail) || !dto.GuestEmail.Contains('@'))
+            return Result<string>.Fail("Укажите корректный email", ErrorType.Validation);
+
+        if (string.IsNullOrWhiteSpace(dto.Subject))
+            return Result<string>.Fail("Subject обязателен", ErrorType.Validation);
+
+        if (string.IsNullOrWhiteSpace(dto.Message))
+            return Result<string>.Fail("Message обязателен", ErrorType.Validation);
+
+        return null;
+    }
+
     private static Result<string>? Validate(int userId, string subject, SupportTicketStatus status, SupportPriority priority)
     {
         if (userId <= 0)

@@ -12,6 +12,7 @@ namespace MarketTJ.Application.Services;
 
 public class SupportTicketService(
     ISupportTicketRepository supportTicketRepository,
+    ISupportMessageRepository supportMessageRepository,
     IUserRepository userRepository,
     ICurrentUserService currentUser,
     ILogger<SupportTicketService> logger) : ISupportTicketService
@@ -101,6 +102,49 @@ public class SupportTicketService(
         {
             logger.LogError(ex, "Ошибка при создании тикета");
             return Result<string>.Fail("Не удалось создать тикет", ErrorType.InternalServerError);
+        }
+    }
+
+    // Обращение без регистрации — по прямому запросу пользователя. Создаёт
+    // тикет (UserId = null, GuestName/GuestEmail) и сразу первое сообщение
+    // одним вызовом, т.к. анонимному клиенту не давать отдельный доступ к
+    // api/support-messages (там [Authorize] и вся логика "своих" сообщений
+    // завязана на реального пользователя).
+    public async Task<Result<string>> CreateGuestAsync(CreateGuestSupportTicketDto dto)
+    {
+        try
+        {
+            var validation = SupportTicketValidator.ValidateCreateGuest(dto);
+            if (validation is not null)
+                return validation;
+
+            var ticket = new SupportTicket
+            {
+                UserId = null,
+                GuestName = dto.GuestName.Trim(),
+                GuestEmail = dto.GuestEmail.Trim(),
+                Subject = dto.Subject,
+                Status = SupportTicketStatus.Open,
+                Priority = SupportPriority.Normal,
+                CreatedAt = DateTime.UtcNow
+            };
+            await supportTicketRepository.AddAsync(ticket);
+
+            var message = new SupportMessage
+            {
+                SupportTicketId = ticket.Id,
+                SenderId = null,
+                Message = dto.Message,
+                CreatedAt = DateTime.UtcNow
+            };
+            await supportMessageRepository.AddAsync(message);
+
+            return Result<string>.Ok("Обращение отправлено");
+        }
+        catch (Exception ex)
+        {
+            logger.LogError(ex, "Ошибка при создании гостевого обращения");
+            return Result<string>.Fail("Не удалось отправить обращение", ErrorType.InternalServerError);
         }
     }
 
@@ -206,6 +250,8 @@ public class SupportTicketService(
     {
         Id = ticket.Id,
         UserId = ticket.UserId,
+        GuestName = ticket.GuestName,
+        GuestEmail = ticket.GuestEmail,
         Subject = ticket.Subject,
         Status = ticket.Status,
         Priority = ticket.Priority,

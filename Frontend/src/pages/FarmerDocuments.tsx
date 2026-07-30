@@ -96,7 +96,7 @@ export function FarmerDocuments() {
     <div className="flex flex-col gap-5">
       <div className="flex flex-col items-stretch gap-3 rounded-3xl border border-stone-100 bg-white p-4 sm:flex-row sm:items-end sm:justify-between dark:border-stone-800 dark:bg-stone-900">
         <div className="w-full sm:max-w-xs">
-          <Select label={t("documents.form.documentType")} value={documentType} onChange={(e) => setDocumentType(e.target.value)}>
+          <Select label={t("documents.form.documentType")} value={documentType} onChange={setDocumentType}>
             <option value={FarmerDocumentType.Passport}>{typeLabel(FarmerDocumentType.Passport)}</option>
             <option value={FarmerDocumentType.LandDeed}>{typeLabel(FarmerDocumentType.LandDeed)}</option>
             <option value={FarmerDocumentType.Other}>{typeLabel(FarmerDocumentType.Other)}</option>

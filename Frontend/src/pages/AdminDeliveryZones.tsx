@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { useForm } from "react-hook-form";
+import { Controller, useForm } from "react-hook-form";
 import { useTranslation } from "react-i18next";
 import { toast } from "sonner";
 import { MapPinned, Pencil, Plus, Trash2 } from "lucide-react";
@@ -54,6 +54,7 @@ function ZoneFormModal({
   const { t } = useTranslation("admin");
   const {
     register,
+    control,
     handleSubmit,
     reset,
     formState: { errors, isSubmitting },
@@ -115,10 +116,16 @@ function ZoneFormModal({
             {...register("pricePerKm", { min: { value: 0, message: t("deliveryZones.form.nonNegative") } })}
           />
         </div>
-        <Select label={t("deliveryZones.form.status")} {...register("isActive")}>
-          <option value="true">{t("deliveryZones.status.active")}</option>
-          <option value="false">{t("deliveryZones.status.inactive")}</option>
-        </Select>
+        <Controller
+          name="isActive"
+          control={control}
+          render={({ field }) => (
+            <Select label={t("deliveryZones.form.status")} {...field}>
+              <option value="true">{t("deliveryZones.status.active")}</option>
+              <option value="false">{t("deliveryZones.status.inactive")}</option>
+            </Select>
+          )}
+        />
 
         <div className="mt-2 flex justify-end gap-3">
           <Button type="button" variant="outline" onClick={onClose}>

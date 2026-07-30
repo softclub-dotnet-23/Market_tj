@@ -10,18 +10,18 @@ public static class ProductListingValidator
     // Create: AvailableQuantity строго больше 0 (раздел 21 ТЗ — на момент
     // публикации объявление должно быть в наличии).
     public static Result<string>? ValidateCreate(CreateProductListingDto dto)
-        => Validate(dto.FarmerProfileId, dto.ProductId, dto.Title, dto.Description, dto.RetailPricePerKg,
+        => Validate(dto.FarmerProfileId, dto.CategoryId, dto.Unit, dto.Title, dto.Description, dto.RetailPricePerKg,
             dto.WholesalePricePerKg, dto.WholesaleMinimumQuantity, dto.AvailableQuantity, dto.MinimumOrderQuantity,
             dto.QualityGrade, dto.Region, dto.District, dto.Address, dto.Status, requireQuantityPositive: true);
 
     // Update: AvailableQuantity может опуститься до 0 (раздел 8.7/10.2 —
     // тогда статус переходит в OutOfStock), поэтому здесь >= 0.
     public static Result<string>? ValidateUpdate(UpdateProductListingDto dto)
-        => Validate(dto.FarmerProfileId, dto.ProductId, dto.Title, dto.Description, dto.RetailPricePerKg,
+        => Validate(dto.FarmerProfileId, dto.CategoryId, dto.Unit, dto.Title, dto.Description, dto.RetailPricePerKg,
             dto.WholesalePricePerKg, dto.WholesaleMinimumQuantity, dto.AvailableQuantity, dto.MinimumOrderQuantity,
             dto.QualityGrade, dto.Region, dto.District, dto.Address, dto.Status, requireQuantityPositive: false);
 
-    private static Result<string>? Validate(int farmerProfileId, int productId, string title, string? description,
+    private static Result<string>? Validate(int farmerProfileId, int categoryId, string unit, string title, string? description,
         decimal retailPrice, decimal? wholesalePrice, decimal? wholesaleMinQuantity, decimal availableQuantity,
         decimal minimumOrderQuantity, string qualityGrade, string region, string district, string address,
         ListingStatus status, bool requireQuantityPositive)
@@ -29,8 +29,11 @@ public static class ProductListingValidator
         if (farmerProfileId <= 0)
             return Result<string>.Fail("FarmerProfileId обязателен", ErrorType.Validation);
 
-        if (productId <= 0)
-            return Result<string>.Fail("ProductId обязателен", ErrorType.Validation);
+        if (categoryId <= 0)
+            return Result<string>.Fail("CategoryId обязателен", ErrorType.Validation);
+
+        if (string.IsNullOrWhiteSpace(unit))
+            return Result<string>.Fail("Unit обязателен", ErrorType.Validation);
 
         // Раздел 21 ТЗ.
         if (string.IsNullOrWhiteSpace(title))
