@@ -1,6 +1,7 @@
 using MarketTJ.Application.Common;
 using MarketTJ.Application.Dto.ReviewDto;
 using MarketTJ.Application.Interfaces.Repositories;
+using MarketTJ.Application.Interfaces.Services;
 using MarketTJ.Application.Services;
 using MarketTJ.Domain.Entities;
 using MarketTJ.Domain.Enums;
@@ -13,12 +14,19 @@ public class ReviewServiceTests
 {
     private readonly Mock<IReviewRepository> _reviewRepository = new();
     private readonly Mock<IOrderRepository> _orderRepository = new();
+    private readonly Mock<ICustomerProfileRepository> _customerProfileRepository = new();
+    private readonly Mock<ICurrentUserService> _currentUser = new();
     private readonly Mock<ILogger<ReviewService>> _logger = new();
     private readonly ReviewService _service;
 
     public ReviewServiceTests()
     {
-        _service = new ReviewService(_reviewRepository.Object, _orderRepository.Object, _logger.Object);
+        _service = new ReviewService(_reviewRepository.Object, _orderRepository.Object, _customerProfileRepository.Object, _currentUser.Object, _logger.Object);
+        // Дефолтный Order/Review — CustomerId=1/FarmerId=1; залогинены как
+        // покупатель, чей CustomerProfile.Id=1.
+        _currentUser.Setup(c => c.UserId).Returns(10);
+        _currentUser.Setup(c => c.Role).Returns(nameof(UserRole.Customer));
+        _customerProfileRepository.Setup(r => r.GetByUserIdAsync(10)).ReturnsAsync(new CustomerProfile { Id = 1, UserId = 10, CustomerType = CustomerType.Retail, Region = "Хатлон", District = "Бохтар" });
         _orderRepository.Setup(r => r.GetByIdAsync(It.IsAny<int>())).ReturnsAsync((int id) => new Order
         {
             Id = id, OrderNumber = "ORD-1", CustomerId = 1, FarmerId = 1, Status = OrderStatus.Completed,
@@ -231,8 +239,11 @@ public class ReviewServiceTests
     }
 
     [Fact]
-    public async Task CreateAsync_ForeignOrder_ReturnsUnauthorized()
+    public async Task CreateAsync_ForeignOrder_ReturnsForbidden()
     {
+        // audit 2026-07-28, находка 2.2 (IDOR): заказ реально принадлежит
+        // другому CustomerProfile (999), не текущему пользователю (1) — новая
+        // проверка срабатывает раньше старой internal-consistency-проверки.
         _orderRepository.Setup(r => r.GetByIdAsync(It.IsAny<int>())).ReturnsAsync(new Order
         {
             Id = 1, OrderNumber = "ORD-1", CustomerId = 999, FarmerId = 1, Status = OrderStatus.Completed,
@@ -242,7 +253,7 @@ public class ReviewServiceTests
         var result = await _service.CreateAsync(ValidCreateDto());
 
         Assert.False(result.IsSuccess);
-        Assert.Equal(ErrorType.Unauthorized, result.ErrorType);
+        Assert.Equal(ErrorType.Forbidden, result.ErrorType);
         _reviewRepository.Verify(r => r.AddAsync(It.IsAny<Review>()), Times.Never);
     }
 

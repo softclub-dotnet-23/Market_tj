@@ -1,6 +1,7 @@
 using MarketTJ.Application.Common;
 using MarketTJ.Application.Dto.PaymentDto;
 using MarketTJ.Application.Interfaces.Repositories;
+using MarketTJ.Application.Interfaces.Services;
 using MarketTJ.Application.Services;
 using MarketTJ.Domain.Entities;
 using MarketTJ.Domain.Enums;
@@ -13,12 +14,20 @@ public class PaymentServiceTests
 {
     private readonly Mock<IPaymentRepository> _paymentRepository = new();
     private readonly Mock<IOrderRepository> _orderRepository = new();
+    private readonly Mock<ICustomerProfileRepository> _customerProfileRepository = new();
+    private readonly Mock<IFarmerProfileRepository> _farmerProfileRepository = new();
+    private readonly Mock<ICurrentUserService> _currentUser = new();
     private readonly Mock<ILogger<PaymentService>> _logger = new();
     private readonly PaymentService _service;
 
     public PaymentServiceTests()
     {
-        _service = new PaymentService(_paymentRepository.Object, _orderRepository.Object, _logger.Object);
+        _service = new PaymentService(_paymentRepository.Object, _orderRepository.Object, _customerProfileRepository.Object, _farmerProfileRepository.Object, _currentUser.Object, _logger.Object);
+        // Дефолтный Order — CustomerId=1/FarmerId=1; залогинены как покупатель,
+        // чей CustomerProfile.Id=1.
+        _currentUser.Setup(c => c.UserId).Returns(10);
+        _currentUser.Setup(c => c.Role).Returns(nameof(UserRole.Customer));
+        _customerProfileRepository.Setup(r => r.GetByUserIdAsync(10)).ReturnsAsync(new CustomerProfile { Id = 1, UserId = 10, CustomerType = CustomerType.Retail, Region = "Хатлон", District = "Бохтар" });
         _orderRepository.Setup(r => r.GetByIdAsync(It.IsAny<int>())).ReturnsAsync((int id) => new Order
         {
             Id = id, OrderNumber = "ORD-1", CustomerId = 1, FarmerId = 1, Status = OrderStatus.Delivered,
@@ -251,8 +260,10 @@ public class PaymentServiceTests
     }
 
     [Fact]
-    public async Task UpdateAsync_OrderNotFound_ReturnsNotFound()
+    public async Task UpdateAsync_OrderNotFound_ReturnsForbidden()
     {
+        // Ownership resolves through payment.OrderId -> Order; if that lookup
+        // fails, the guard fails closed (same pattern as OrderItem/ChatMessage).
         var payment = CreatePayment(1);
         _paymentRepository.Setup(r => r.GetByIdAsync(1)).ReturnsAsync(payment);
         _orderRepository.Setup(r => r.GetByIdAsync(It.IsAny<int>())).ReturnsAsync((Order?)null);
@@ -260,7 +271,7 @@ public class PaymentServiceTests
         var result = await _service.UpdateAsync(1, ValidUpdateDto(1));
 
         Assert.False(result.IsSuccess);
-        Assert.Equal(ErrorType.NotFound, result.ErrorType);
+        Assert.Equal(ErrorType.Forbidden, result.ErrorType);
         _paymentRepository.Verify(r => r.UpdateAsync(It.IsAny<Payment>()), Times.Never);
     }
 

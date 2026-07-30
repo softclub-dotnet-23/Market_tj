@@ -13,14 +13,42 @@ public class FarmerStaffMemberService(
     IFarmerStaffMemberRepository farmerStaffMemberRepository,
     IFarmerProfileRepository farmerProfileRepository,
     IUserRepository userRepository,
+    ICurrentUserService currentUser,
     IEmailSender emailSender,
     ILogger<FarmerStaffMemberService> logger) : IFarmerStaffMemberService
 {
+    // Audit 2026-07-28, находка 2.2 (IDOR): владелец фермы (FarmerProfile) видит/
+    // управляет своими сотрудниками; сотрудник видит собственную запись.
+    private async Task<bool> CanAccessAsync(FarmerStaffMember member)
+    {
+        if (currentUser.IsAdmin())
+            return true;
+        if (currentUser.UserId is null)
+            return false;
+        if (member.UserId == currentUser.UserId)
+            return true;
+
+        var myFarmerProfile = await farmerProfileRepository.GetByUserIdAsync(currentUser.UserId.Value);
+        return myFarmerProfile is not null && myFarmerProfile.Id == member.FarmerProfileId;
+    }
+
     public async Task<Result<IEnumerable<GetFarmerStaffMemberDto>>> GetAllAsync()
     {
         try
         {
             var members = await farmerStaffMemberRepository.GetAllAsync();
+
+            if (!currentUser.IsAdmin())
+            {
+                var filtered = new List<FarmerStaffMember>();
+                foreach (var member in members)
+                {
+                    if (await CanAccessAsync(member))
+                        filtered.Add(member);
+                }
+                members = filtered;
+            }
+
             return Result<IEnumerable<GetFarmerStaffMemberDto>>.Ok(members.Select(ToGetDto));
         }
         catch (Exception ex)
@@ -37,6 +65,9 @@ public class FarmerStaffMemberService(
             var member = await farmerStaffMemberRepository.GetByIdAsync(id);
             if (member is null)
                 return Result<GetFarmerStaffMemberDto?>.Fail("Сотрудник не найден", ErrorType.NotFound);
+
+            if (!await CanAccessAsync(member))
+                return Result<GetFarmerStaffMemberDto?>.Fail("Нет доступа к этой записи", ErrorType.Forbidden);
 
             return Result<GetFarmerStaffMemberDto?>.Ok(ToGetDto(member));
         }
@@ -58,6 +89,16 @@ public class FarmerStaffMemberService(
             var farmerProfile = await farmerProfileRepository.GetByIdAsync(dto.FarmerProfileId);
             if (farmerProfile is null)
                 return Result<string>.Fail("Профиль фермера не найден", ErrorType.NotFound);
+
+            // IDOR-guard (audit 2026-07-28, находка 2.2): добавлять сотрудников
+            // может только сам владелец фермы — не проверка на member.UserId,
+            // т.к. на момент создания записи ещё нет.
+            if (!currentUser.IsAdmin())
+            {
+                var myFarmerProfile = currentUser.UserId is null ? null : await farmerProfileRepository.GetByUserIdAsync(currentUser.UserId.Value);
+                if (myFarmerProfile is null || myFarmerProfile.Id != dto.FarmerProfileId)
+                    return Result<string>.Fail("Нельзя добавить сотрудника в чужую ферму", ErrorType.Forbidden);
+            }
 
             var user = await userRepository.GetByIdAsync(dto.UserId);
             if (user is null)
@@ -100,6 +141,15 @@ public class FarmerStaffMemberService(
             if (member is null)
                 return Result<string>.Fail("Сотрудник не найден", ErrorType.NotFound);
 
+            // IDOR-guard: изменять права/статус сотрудника может только владелец
+            // фермы (не сам сотрудник — иначе он мог бы выдать себе больше прав).
+            if (!currentUser.IsAdmin())
+            {
+                var myFarmerProfile = currentUser.UserId is null ? null : await farmerProfileRepository.GetByUserIdAsync(currentUser.UserId.Value);
+                if (myFarmerProfile is null || myFarmerProfile.Id != member.FarmerProfileId)
+                    return Result<string>.Fail("Нет доступа к этой записи", ErrorType.Forbidden);
+            }
+
             var farmerProfile = await farmerProfileRepository.GetByIdAsync(dto.FarmerProfileId);
             if (farmerProfile is null)
                 return Result<string>.Fail("Профиль фермера не найден", ErrorType.NotFound);
@@ -138,6 +188,15 @@ public class FarmerStaffMemberService(
             var farmerProfile = await farmerProfileRepository.GetByIdAsync(dto.FarmerProfileId);
             if (farmerProfile is null)
                 return Result<string>.Fail("Профиль фермера не найден", ErrorType.NotFound);
+
+            // IDOR-guard (audit 2026-07-28, находка 2.2), тот же принцип, что и
+            // в CreateAsync — добавлять сотрудников может только сам владелец фермы.
+            if (!currentUser.IsAdmin())
+            {
+                var myFarmerProfile = currentUser.UserId is null ? null : await farmerProfileRepository.GetByUserIdAsync(currentUser.UserId.Value);
+                if (myFarmerProfile is null || myFarmerProfile.Id != dto.FarmerProfileId)
+                    return Result<string>.Fail("Нельзя добавить сотрудника в чужую ферму", ErrorType.Forbidden);
+            }
 
             var user = await userRepository.GetByEmailAsync(dto.Email.Trim().ToLowerInvariant());
 
@@ -189,6 +248,13 @@ public class FarmerStaffMemberService(
             var member = await farmerStaffMemberRepository.GetByIdAsync(id);
             if (member is null)
                 return Result<string>.Fail("Сотрудник не найден", ErrorType.NotFound);
+
+            if (!currentUser.IsAdmin())
+            {
+                var myFarmerProfile = currentUser.UserId is null ? null : await farmerProfileRepository.GetByUserIdAsync(currentUser.UserId.Value);
+                if (myFarmerProfile is null || myFarmerProfile.Id != member.FarmerProfileId)
+                    return Result<string>.Fail("Нет доступа к этой записи", ErrorType.Forbidden);
+            }
 
             await farmerStaffMemberRepository.DeleteAsync(member);
             return Result<string>.Ok("Сотрудник удалён");

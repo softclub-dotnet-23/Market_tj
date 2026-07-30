@@ -14,8 +14,23 @@ public class ProductListingService(
     IProductListingRepository productListingRepository,
     IFarmerProfileRepository farmerProfileRepository,
     IProductRepository productRepository,
+    ICurrentUserService currentUser,
     ILogger<ProductListingService> logger) : IProductListingService
 {
+    // GetAll/GetById сознательно ОСТАЮТСЯ публичными — это каталог. IDOR-guard
+    // нужен только на Create/Update/Delete (audit 2026-07-28, находка 2.2):
+    // Farmer мог редактировать/удалять чужие объявления, зная только их Id.
+    private async Task<bool> OwnsAsync(int farmerProfileId)
+    {
+        if (currentUser.IsAdmin())
+            return true;
+        if (currentUser.UserId is null)
+            return false;
+
+        var myProfile = await farmerProfileRepository.GetByUserIdAsync(currentUser.UserId.Value);
+        return myProfile is not null && myProfile.Id == farmerProfileId;
+    }
+
     public async Task<Result<PagedResult<GetProductListingDto>>> GetAllAsync(int pageNumber, int pageSize)
     {
         try
@@ -76,6 +91,9 @@ public class ProductListingService(
             if (farmerProfile is null)
                 return Result<string>.Fail("Профиль фермера не найден", ErrorType.NotFound);
 
+            if (!await OwnsAsync(dto.FarmerProfileId))
+                return Result<string>.Fail("Нельзя создать объявление для чужой фермы", ErrorType.Forbidden);
+
             var product = await productRepository.GetByIdAsync(dto.ProductId);
             if (product is null)
                 return Result<string>.Fail("Продукт не найден", ErrorType.NotFound);
@@ -129,6 +147,9 @@ public class ProductListingService(
             if (listing is null)
                 return Result<string>.Fail("Объявление не найдено", ErrorType.NotFound);
 
+            if (!await OwnsAsync(listing.FarmerProfileId))
+                return Result<string>.Fail("Нет доступа к этому объявлению", ErrorType.Forbidden);
+
             var farmerProfile = await farmerProfileRepository.GetByIdAsync(dto.FarmerProfileId);
             if (farmerProfile is null)
                 return Result<string>.Fail("Профиль фермера не найден", ErrorType.NotFound);
@@ -178,6 +199,9 @@ public class ProductListingService(
             var listing = await productListingRepository.GetByIdAsync(id);
             if (listing is null)
                 return Result<string>.Fail("Объявление не найдено", ErrorType.NotFound);
+
+            if (!await OwnsAsync(listing.FarmerProfileId))
+                return Result<string>.Fail("Нет доступа к этому объявлению", ErrorType.Forbidden);
 
             // Раздел 18 ТЗ: soft delete (у ProductListing есть IsDeleted/DeletedAt).
             listing.IsDeleted = true;

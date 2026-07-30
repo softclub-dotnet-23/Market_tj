@@ -15,14 +15,20 @@ public class FarmerStaffMemberServiceTests
     private readonly Mock<IFarmerStaffMemberRepository> _farmerStaffMemberRepository = new();
     private readonly Mock<IFarmerProfileRepository> _farmerProfileRepository = new();
     private readonly Mock<IUserRepository> _userRepository = new();
+    private readonly Mock<ICurrentUserService> _currentUser = new();
     private readonly Mock<IEmailSender> _emailSender = new();
     private readonly Mock<ILogger<FarmerStaffMemberService>> _logger = new();
     private readonly FarmerStaffMemberService _service;
 
     public FarmerStaffMemberServiceTests()
     {
-        _service = new FarmerStaffMemberService(_farmerStaffMemberRepository.Object, _farmerProfileRepository.Object, _userRepository.Object, _emailSender.Object, _logger.Object);
+        _service = new FarmerStaffMemberService(_farmerStaffMemberRepository.Object, _farmerProfileRepository.Object, _userRepository.Object, _currentUser.Object, _emailSender.Object, _logger.Object);
+        // Дефолтный сотрудник — FarmerProfileId=1/UserId=1; залогинены как
+        // владелец этой фермы (FarmerProfile.Id=1, UserId=1).
+        _currentUser.Setup(c => c.UserId).Returns(1);
+        _currentUser.Setup(c => c.Role).Returns(nameof(UserRole.Farmer));
         _farmerProfileRepository.Setup(r => r.GetByIdAsync(It.IsAny<int>())).ReturnsAsync((int id) => new FarmerProfile { Id = id, UserId = 1, FarmName = "F", Region = "Хатлон", District = "Бохтар", Village = "V", Address = "A", VerificationStatus = FarmerVerificationStatus.Verified });
+        _farmerProfileRepository.Setup(r => r.GetByUserIdAsync(1)).ReturnsAsync(new FarmerProfile { Id = 1, UserId = 1, FarmName = "F", Region = "Хатлон", District = "Бохтар", Village = "V", Address = "A", VerificationStatus = FarmerVerificationStatus.Verified });
         _userRepository.Setup(r => r.GetByIdAsync(It.IsAny<int>())).ReturnsAsync((int id) => new User { Id = id, Role = UserRole.Customer, FullName = "U", Email = "u@e.com", PhoneNumber = "1", PasswordHash = "h" });
         _farmerStaffMemberRepository.Setup(r => r.GetAllAsync()).ReturnsAsync([]);
     }
@@ -386,6 +392,20 @@ public class FarmerStaffMemberServiceTests
 
         Assert.False(result.IsSuccess);
         Assert.Equal(ErrorType.NotFound, result.ErrorType);
+    }
+
+    [Fact]
+    public async Task CreateByEmailAsync_NotOwner_ReturnsForbidden()
+    {
+        _currentUser.Setup(c => c.UserId).Returns(2);
+        _farmerProfileRepository.Setup(r => r.GetByUserIdAsync(2)).ReturnsAsync((FarmerProfile?)null);
+
+        var result = await _service.CreateByEmailAsync(ValidCreateByEmailDto(farmerProfileId: 1));
+
+        Assert.False(result.IsSuccess);
+        Assert.Equal(ErrorType.Forbidden, result.ErrorType);
+        _farmerStaffMemberRepository.Verify(r => r.AddAsync(It.IsAny<FarmerStaffMember>()), Times.Never);
+        _emailSender.Verify(e => e.SendAsync(It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>()), Times.Never);
     }
 
     [Fact]

@@ -1,10 +1,12 @@
 **/bin/
 **/obj/
 
-# Локальные секреты — никогда не должны попасть в образ. В контейнере
-# конфигурация приходит через переменные окружения (docker-compose.yml).
-**/appsettings.json
-**/appsettings.*.json
+# Локальные dev-секреты (Jwt:Secret) — никогда не должны попасть в образ.
+# Базовый appsettings.json (Jwt:ExpiryMinutes, Cors, Logging и т.д.) не
+# содержит секретов и ДОЛЖЕН попадать в образ — без него падает всё,
+# что читает конфиг без переменных окружения (например TokenService).
+**/appsettings.Development.json
+**/appsettings.*.Development.json
 
 **/.vs/
 **/.idea/

@@ -1,6 +1,7 @@
 using MarketTJ.Application.Common;
 using MarketTJ.Application.Dto.CartItemDto;
 using MarketTJ.Application.Interfaces.Repositories;
+using MarketTJ.Application.Interfaces.Services;
 using MarketTJ.Application.Services;
 using MarketTJ.Domain.Entities;
 using MarketTJ.Domain.Enums;
@@ -14,13 +15,20 @@ public class CartItemServiceTests
     private readonly Mock<ICartItemRepository> _cartItemRepository = new();
     private readonly Mock<ICustomerProfileRepository> _customerProfileRepository = new();
     private readonly Mock<IProductListingRepository> _productListingRepository = new();
+    private readonly Mock<ICurrentUserService> _currentUser = new();
     private readonly Mock<ILogger<CartItemService>> _logger = new();
     private readonly CartItemService _service;
 
     public CartItemServiceTests()
     {
-        _service = new CartItemService(_cartItemRepository.Object, _customerProfileRepository.Object, _productListingRepository.Object, _logger.Object);
+        _service = new CartItemService(_cartItemRepository.Object, _customerProfileRepository.Object, _productListingRepository.Object, _currentUser.Object, _logger.Object);
+        // По умолчанию — залогиненный Customer с UserId=1, чей CustomerProfile.Id=1
+        // (совпадает с customerId=1, используемым по умолчанию во всех фабриках
+        // ниже) — так существующие тесты не завязаны на конкретику IDOR-guard'а.
+        _currentUser.Setup(c => c.UserId).Returns(1);
+        _currentUser.Setup(c => c.Role).Returns(nameof(UserRole.Customer));
         _customerProfileRepository.Setup(r => r.GetByIdAsync(It.IsAny<int>())).ReturnsAsync((int id) => new CustomerProfile { Id = id, UserId = 1, CustomerType = CustomerType.Retail, Region = "Хатлон", District = "Бохтар" });
+        _customerProfileRepository.Setup(r => r.GetByUserIdAsync(1)).ReturnsAsync(new CustomerProfile { Id = 1, UserId = 1, CustomerType = CustomerType.Retail, Region = "Хатлон", District = "Бохтар" });
         _productListingRepository.Setup(r => r.GetByIdAsync(It.IsAny<int>())).ReturnsAsync((int id) => new ProductListing
         {
             Id = id, FarmerProfileId = 1, ProductId = 1, Title = "Listing", RetailPricePerKg = 10,
@@ -117,6 +125,32 @@ public class CartItemServiceTests
     }
 
     [Fact]
+    public async Task GetByIdAsync_NotOwner_ReturnsForbidden()
+    {
+        // audit 2026-07-28, находка 2.2 (IDOR): позиция принадлежит другому
+        // покупателю (CustomerId=99), а не текущему (CustomerProfile.Id=1).
+        var item = CreateItem(5, customerId: 99);
+        _cartItemRepository.Setup(r => r.GetByIdAsync(5)).ReturnsAsync(item);
+
+        var result = await _service.GetByIdAsync(5);
+
+        Assert.False(result.IsSuccess);
+        Assert.Equal(ErrorType.Forbidden, result.ErrorType);
+    }
+
+    [Fact]
+    public async Task GetByIdAsync_NotOwnerButAdmin_ReturnsOk()
+    {
+        _currentUser.Setup(c => c.Role).Returns(nameof(UserRole.Admin));
+        var item = CreateItem(5, customerId: 99);
+        _cartItemRepository.Setup(r => r.GetByIdAsync(5)).ReturnsAsync(item);
+
+        var result = await _service.GetByIdAsync(5);
+
+        Assert.True(result.IsSuccess);
+    }
+
+    [Fact]
     public async Task GetByIdAsync_RepositoryThrows_ReturnsInternalServerError()
     {
         _cartItemRepository.Setup(r => r.GetByIdAsync(It.IsAny<int>())).ThrowsAsync(new Exception("db error"));
@@ -179,7 +213,7 @@ public class CartItemServiceTests
     [Fact]
     public async Task CreateAsync_CustomerNotFound_ReturnsNotFound()
     {
-        _customerProfileRepository.Setup(r => r.GetByIdAsync(It.IsAny<int>())).ReturnsAsync((CustomerProfile?)null);
+        _customerProfileRepository.Setup(r => r.GetByUserIdAsync(It.IsAny<int>())).ReturnsAsync((CustomerProfile?)null);
 
         var result = await _service.CreateAsync(ValidCreateDto());
 
@@ -249,7 +283,7 @@ public class CartItemServiceTests
     [Fact]
     public async Task CreateAsync_RepositoryThrows_ReturnsInternalServerError()
     {
-        _customerProfileRepository.Setup(r => r.GetByIdAsync(It.IsAny<int>())).ThrowsAsync(new Exception("db error"));
+        _customerProfileRepository.Setup(r => r.GetByUserIdAsync(It.IsAny<int>())).ThrowsAsync(new Exception("db error"));
 
         var result = await _service.CreateAsync(ValidCreateDto());
 
@@ -319,7 +353,7 @@ public class CartItemServiceTests
     {
         var item = CreateItem(1);
         _cartItemRepository.Setup(r => r.GetByIdAsync(1)).ReturnsAsync(item);
-        _customerProfileRepository.Setup(r => r.GetByIdAsync(It.IsAny<int>())).ReturnsAsync((CustomerProfile?)null);
+        _customerProfileRepository.Setup(r => r.GetByUserIdAsync(It.IsAny<int>())).ReturnsAsync((CustomerProfile?)null);
 
         var result = await _service.UpdateAsync(1, ValidUpdateDto(1));
 
@@ -354,6 +388,19 @@ public class CartItemServiceTests
 
         Assert.False(result.IsSuccess);
         Assert.Equal(ErrorType.Conflict, result.ErrorType);
+        _cartItemRepository.Verify(r => r.UpdateAsync(It.IsAny<CartItem>()), Times.Never);
+    }
+
+    [Fact]
+    public async Task UpdateAsync_NotOwner_ReturnsForbidden()
+    {
+        var item = CreateItem(1, customerId: 99);
+        _cartItemRepository.Setup(r => r.GetByIdAsync(1)).ReturnsAsync(item);
+
+        var result = await _service.UpdateAsync(1, ValidUpdateDto(1));
+
+        Assert.False(result.IsSuccess);
+        Assert.Equal(ErrorType.Forbidden, result.ErrorType);
         _cartItemRepository.Verify(r => r.UpdateAsync(It.IsAny<CartItem>()), Times.Never);
     }
 

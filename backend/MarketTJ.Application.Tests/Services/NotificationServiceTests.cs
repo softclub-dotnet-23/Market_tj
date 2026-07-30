@@ -1,6 +1,7 @@
 using MarketTJ.Application.Common;
 using MarketTJ.Application.Dto.NotificationDto;
 using MarketTJ.Application.Interfaces.Repositories;
+using MarketTJ.Application.Interfaces.Services;
 using MarketTJ.Application.Services;
 using MarketTJ.Domain.Entities;
 using MarketTJ.Domain.Enums;
@@ -13,12 +14,15 @@ public class NotificationServiceTests
 {
     private readonly Mock<INotificationRepository> _notificationRepository = new();
     private readonly Mock<IUserRepository> _userRepository = new();
+    private readonly Mock<ICurrentUserService> _currentUser = new();
     private readonly Mock<ILogger<NotificationService>> _logger = new();
     private readonly NotificationService _service;
 
     public NotificationServiceTests()
     {
-        _service = new NotificationService(_notificationRepository.Object, _userRepository.Object, _logger.Object);
+        _service = new NotificationService(_notificationRepository.Object, _userRepository.Object, _currentUser.Object, _logger.Object);
+        _currentUser.Setup(c => c.UserId).Returns(1);
+        _currentUser.Setup(c => c.Role).Returns(nameof(UserRole.Customer));
         _userRepository.Setup(r => r.GetByIdAsync(It.IsAny<int>())).ReturnsAsync((int id) => new User { Id = id, Role = UserRole.Customer, FullName = "U", Email = "u@e.com", PhoneNumber = "1", PasswordHash = "h" });
     }
 
@@ -234,16 +238,16 @@ public class NotificationServiceTests
     }
 
     [Fact]
-    public async Task UpdateAsync_UserNotFound_ReturnsNotFound()
+    public async Task UpdateAsync_NotOwner_ReturnsForbidden()
     {
-        var notification = CreateNotification(1);
+        // audit 2026-07-28, находка 2.2 (IDOR): уведомление принадлежит другому User (99).
+        var notification = CreateNotification(1, userId: 99);
         _notificationRepository.Setup(r => r.GetByIdAsync(1)).ReturnsAsync(notification);
-        _userRepository.Setup(r => r.GetByIdAsync(It.IsAny<int>())).ReturnsAsync((User?)null);
 
         var result = await _service.UpdateAsync(1, ValidUpdateDto(1));
 
         Assert.False(result.IsSuccess);
-        Assert.Equal(ErrorType.NotFound, result.ErrorType);
+        Assert.Equal(ErrorType.Forbidden, result.ErrorType);
         _notificationRepository.Verify(r => r.UpdateAsync(It.IsAny<Notification>()), Times.Never);
     }
 

@@ -16,6 +16,7 @@ public class ReportedListingService(
     IProductListingRepository productListingRepository,
     IUserRepository userRepository,
     IAuditLogService auditLogService,
+    ICurrentUserService currentUser,
     ILogger<ReportedListingService> logger) : IReportedListingService
 {
     public async Task<Result<IEnumerable<GetReportedListingDto>>> GetAllAsync()
@@ -23,6 +24,13 @@ public class ReportedListingService(
         try
         {
             var reports = await reportedListingRepository.GetAllAsync();
+
+            // Audit 2026-07-28, находка 2.2 (IDOR): ReportedByUserId — User.Id
+            // напрямую; жалобщик должен видеть только свои жалобы, не чужие
+            // (модерация целиком — через Admin/* контроллер).
+            if (!currentUser.IsAdmin())
+                reports = reports.Where(r => r.ReportedByUserId == currentUser.UserId).ToList();
+
             return Result<IEnumerable<GetReportedListingDto>>.Ok(reports.Select(ToGetDto));
         }
         catch (Exception ex)
@@ -39,6 +47,9 @@ public class ReportedListingService(
             var report = await reportedListingRepository.GetByIdAsync(id);
             if (report is null)
                 return Result<GetReportedListingDto?>.Fail("Жалоба не найдена", ErrorType.NotFound);
+
+            if (!currentUser.CanAccess(report.ReportedByUserId))
+                return Result<GetReportedListingDto?>.Fail("Нет доступа к этой жалобе", ErrorType.Forbidden);
 
             return Result<GetReportedListingDto?>.Ok(ToGetDto(report));
         }
@@ -61,7 +72,11 @@ public class ReportedListingService(
             if (listing is null)
                 return Result<string>.Fail("Объявление не найдено", ErrorType.NotFound);
 
-            var reportedByUser = await userRepository.GetByIdAsync(dto.ReportedByUserId);
+            // IDOR-guard: жаловаться можно только от своего имени — ReportedByUserId
+            // из тела игнорируется для не-Admin (audit 2026-07-28, находка 2.2).
+            var reportedByUserId = currentUser.IsAdmin() ? dto.ReportedByUserId : (currentUser.UserId ?? dto.ReportedByUserId);
+
+            var reportedByUser = await userRepository.GetByIdAsync(reportedByUserId);
             if (reportedByUser is null)
                 return Result<string>.Fail("Пользователь не найден", ErrorType.NotFound);
 
@@ -78,7 +93,7 @@ public class ReportedListingService(
             var report = new ReportedListing
             {
                 ProductListingId = dto.ProductListingId,
-                ReportedByUserId = dto.ReportedByUserId,
+                ReportedByUserId = reportedByUserId,
                 Reason = dto.Reason,
                 Comment = dto.Comment,
                 Status = dto.Status,
@@ -108,6 +123,9 @@ public class ReportedListingService(
             var report = await reportedListingRepository.GetByIdAsync(id);
             if (report is null)
                 return Result<string>.Fail("Жалоба не найдена", ErrorType.NotFound);
+
+            if (!currentUser.CanAccess(report.ReportedByUserId))
+                return Result<string>.Fail("Нет доступа к этой жалобе", ErrorType.Forbidden);
 
             var listing = await productListingRepository.GetByIdAsync(dto.ProductListingId);
             if (listing is null)
@@ -152,6 +170,9 @@ public class ReportedListingService(
             var report = await reportedListingRepository.GetByIdAsync(id);
             if (report is null)
                 return Result<string>.Fail("Жалоба не найдена", ErrorType.NotFound);
+
+            if (!currentUser.CanAccess(report.ReportedByUserId))
+                return Result<string>.Fail("Нет доступа к этой жалобе", ErrorType.Forbidden);
 
             await reportedListingRepository.DeleteAsync(report);
             return Result<string>.Ok("Жалоба удалена");

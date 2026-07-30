@@ -12,6 +12,7 @@ namespace MarketTJ.Application.Services;
 public class CourierProfileService(
     ICourierProfileRepository courierProfileRepository,
     IUserRepository userRepository,
+    ICurrentUserService currentUser,
     ILogger<CourierProfileService> logger) : ICourierProfileService
 {
     public async Task<Result<IEnumerable<GetCourierProfileDto>>> GetAllAsync()
@@ -19,6 +20,12 @@ public class CourierProfileService(
         try
         {
             var profiles = await courierProfileRepository.GetAllAsync();
+
+            // Audit 2026-07-28, находка 2.2 (IDOR): не публичная витрина —
+            // Admin (диспетчеризация доставок) видит всех, остальные — только себя.
+            if (!currentUser.IsAdmin())
+                profiles = profiles.Where(p => p.UserId == currentUser.UserId).ToList();
+
             return Result<IEnumerable<GetCourierProfileDto>>.Ok(profiles.Select(ToGetDto));
         }
         catch (Exception ex)
@@ -36,6 +43,9 @@ public class CourierProfileService(
             if (profile is null)
                 return Result<GetCourierProfileDto?>.Fail("Профиль курьера не найден", ErrorType.NotFound);
 
+            if (!currentUser.CanAccess(profile.UserId))
+                return Result<GetCourierProfileDto?>.Fail("Нет доступа к этому профилю", ErrorType.Forbidden);
+
             return Result<GetCourierProfileDto?>.Ok(ToGetDto(profile));
         }
         catch (Exception ex)
@@ -52,6 +62,9 @@ public class CourierProfileService(
             var validation = CourierProfileValidator.ValidateCreate(dto);
             if (validation is not null)
                 return validation;
+
+            if (!currentUser.CanAccess(dto.UserId))
+                return Result<string>.Fail("Нельзя создать профиль для другого пользователя", ErrorType.Forbidden);
 
             var user = await userRepository.GetByIdAsync(dto.UserId);
             if (user is null)
@@ -97,6 +110,9 @@ public class CourierProfileService(
             if (profile is null)
                 return Result<string>.Fail("Профиль курьера не найден", ErrorType.NotFound);
 
+            if (!currentUser.CanAccess(profile.UserId))
+                return Result<string>.Fail("Нет доступа к этому профилю", ErrorType.Forbidden);
+
             var user = await userRepository.GetByIdAsync(dto.UserId);
             if (user is null)
                 return Result<string>.Fail("Пользователь не найден", ErrorType.NotFound);
@@ -131,6 +147,9 @@ public class CourierProfileService(
             var profile = await courierProfileRepository.GetByIdAsync(id);
             if (profile is null)
                 return Result<string>.Fail("Профиль курьера не найден", ErrorType.NotFound);
+
+            if (!currentUser.CanAccess(profile.UserId))
+                return Result<string>.Fail("Нет доступа к этому профилю", ErrorType.Forbidden);
 
             await courierProfileRepository.DeleteAsync(profile);
             return Result<string>.Ok("Профиль курьера удалён");

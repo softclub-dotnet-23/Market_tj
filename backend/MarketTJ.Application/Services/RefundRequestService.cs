@@ -17,6 +17,7 @@ public class RefundRequestService(
     ICustomerProfileRepository customerProfileRepository,
     IUserRepository userRepository,
     IAuditLogService auditLogService,
+    ICurrentUserService currentUser,
     ILogger<RefundRequestService> logger) : IRefundRequestService
 {
     public async Task<Result<IEnumerable<GetRefundRequestDto>>> GetAllAsync()
@@ -24,6 +25,12 @@ public class RefundRequestService(
         try
         {
             var requests = await refundRequestRepository.GetAllAsync();
+
+            // Audit 2026-07-28, находка 2.2 (IDOR): RefundRequest.CustomerId —
+            // User.Id напрямую (см. комментарий у сущности).
+            if (!currentUser.IsAdmin())
+                requests = requests.Where(r => r.CustomerId == currentUser.UserId).ToList();
+
             return Result<IEnumerable<GetRefundRequestDto>>.Ok(requests.Select(ToGetDto));
         }
         catch (Exception ex)
@@ -40,6 +47,9 @@ public class RefundRequestService(
             var request = await refundRequestRepository.GetByIdAsync(id);
             if (request is null)
                 return Result<GetRefundRequestDto?>.Fail("Запрос на возврат не найден", ErrorType.NotFound);
+
+            if (!currentUser.CanAccess(request.CustomerId))
+                return Result<GetRefundRequestDto?>.Fail("Нет доступа к этому запросу на возврат", ErrorType.Forbidden);
 
             return Result<GetRefundRequestDto?>.Ok(ToGetDto(request));
         }
@@ -67,6 +77,13 @@ public class RefundRequestService(
             var customerProfile = await customerProfileRepository.GetByIdAsync(order.CustomerId);
             if (customerProfile is null || customerProfile.UserId != dto.CustomerId)
                 return Result<string>.Fail("CustomerId не соответствует покупателю заказа", ErrorType.Validation);
+
+            // IDOR-guard (audit 2026-07-28, находка 2.2): помимо внутренней
+            // согласованности dto.CustomerId с заказом, сверяем ещё и с реальным
+            // текущим пользователем — иначе любой Customer мог оформить возврат
+            // от имени настоящего покупателя этого заказа, просто угадав его Id.
+            if (!currentUser.CanAccess(dto.CustomerId))
+                return Result<string>.Fail("Нельзя оформить возврат для чужого заказа", ErrorType.Forbidden);
 
             if (dto.Amount > order.TotalAmount)
                 return Result<string>.Fail("Amount не может превышать сумму заказа", ErrorType.Validation);
@@ -124,6 +141,9 @@ public class RefundRequestService(
             if (request is null)
                 return Result<string>.Fail("Запрос на возврат не найден", ErrorType.NotFound);
 
+            if (!currentUser.CanAccess(request.CustomerId))
+                return Result<string>.Fail("Нет доступа к этому запросу на возврат", ErrorType.Forbidden);
+
             var order = await orderRepository.GetByIdAsync(dto.OrderId);
             if (order is null)
                 return Result<string>.Fail("Заказ не найден", ErrorType.NotFound);
@@ -177,6 +197,9 @@ public class RefundRequestService(
             var request = await refundRequestRepository.GetByIdAsync(id);
             if (request is null)
                 return Result<string>.Fail("Запрос на возврат не найден", ErrorType.NotFound);
+
+            if (!currentUser.CanAccess(request.CustomerId))
+                return Result<string>.Fail("Нет доступа к этому запросу на возврат", ErrorType.Forbidden);
 
             await refundRequestRepository.DeleteAsync(request);
             return Result<string>.Ok("Запрос на возврат удалён");

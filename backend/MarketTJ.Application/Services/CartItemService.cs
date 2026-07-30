@@ -13,13 +13,33 @@ public class CartItemService(
     ICartItemRepository cartItemRepository,
     ICustomerProfileRepository customerProfileRepository,
     IProductListingRepository productListingRepository,
+    ICurrentUserService currentUser,
     ILogger<CartItemService> logger) : ICartItemService
 {
+    // Audit 2026-07-28, находка 2.2 (IDOR): CustomerId в DTO больше не
+    // доверяется — сервер резолвит профиль вызывающего сам через JWT-claims.
+    // DTO-поле CustomerId оставлено для обратной совместимости валидатора,
+    // но игнорируется при записи (см. CreateAsync/UpdateAsync ниже).
+    private async Task<Result<CustomerProfile>> ResolveOwnCustomerProfileAsync()
+    {
+        var profile = currentUser.UserId is null ? null : await customerProfileRepository.GetByUserIdAsync(currentUser.UserId.Value);
+        return profile is null
+            ? Result<CustomerProfile>.Fail("Профиль покупателя не найден", ErrorType.NotFound)
+            : Result<CustomerProfile>.Ok(profile);
+    }
+
     public async Task<Result<IEnumerable<GetCartItemDto>>> GetAllAsync()
     {
         try
         {
             var items = await cartItemRepository.GetAllAsync();
+
+            if (!currentUser.IsAdmin())
+            {
+                var own = await ResolveOwnCustomerProfileAsync();
+                items = own.IsSuccess ? items.Where(i => i.CustomerId == own.Data!.Id).ToList() : [];
+            }
+
             return Result<IEnumerable<GetCartItemDto>>.Ok(items.Select(ToGetDto));
         }
         catch (Exception ex)
@@ -36,6 +56,13 @@ public class CartItemService(
             var item = await cartItemRepository.GetByIdAsync(id);
             if (item is null)
                 return Result<GetCartItemDto?>.Fail("Позиция корзины не найдена", ErrorType.NotFound);
+
+            if (!currentUser.IsAdmin())
+            {
+                var own = await ResolveOwnCustomerProfileAsync();
+                if (!own.IsSuccess || item.CustomerId != own.Data!.Id)
+                    return Result<GetCartItemDto?>.Fail("Нет доступа к этой позиции корзины", ErrorType.Forbidden);
+            }
 
             return Result<GetCartItemDto?>.Ok(ToGetDto(item));
         }
@@ -54,9 +81,10 @@ public class CartItemService(
             if (validation is not null)
                 return validation;
 
-            var customer = await customerProfileRepository.GetByIdAsync(dto.CustomerId);
-            if (customer is null)
-                return Result<string>.Fail("Профиль покупателя не найден", ErrorType.NotFound);
+            var ownProfile = await ResolveOwnCustomerProfileAsync();
+            if (!ownProfile.IsSuccess)
+                return Result<string>.Fail(ownProfile.Error!, ownProfile.ErrorType!.Value);
+            var customer = ownProfile.Data!;
 
             var listing = await productListingRepository.GetByIdAsync(dto.ProductListingId);
             if (listing is null)
@@ -71,12 +99,12 @@ public class CartItemService(
 
             // Раздел 8.9 ТЗ: один и тот же продукт не должен повторяться в корзине.
             var all = await cartItemRepository.GetAllAsync();
-            if (all.Any(c => c.CustomerId == dto.CustomerId && c.ProductListingId == dto.ProductListingId))
+            if (all.Any(c => c.CustomerId == customer.Id && c.ProductListingId == dto.ProductListingId))
                 return Result<string>.Fail("Этот товар уже есть в корзине — измените количество вместо повторного добавления", ErrorType.Conflict);
 
             var item = new CartItem
             {
-                CustomerId = dto.CustomerId,
+                CustomerId = customer.Id,
                 ProductListingId = dto.ProductListingId,
                 Quantity = dto.Quantity,
                 CreatedAt = DateTime.UtcNow,
@@ -105,9 +133,15 @@ public class CartItemService(
             if (item is null)
                 return Result<string>.Fail("Позиция корзины не найдена", ErrorType.NotFound);
 
-            var customer = await customerProfileRepository.GetByIdAsync(dto.CustomerId);
-            if (customer is null)
-                return Result<string>.Fail("Профиль покупателя не найден", ErrorType.NotFound);
+            var ownProfile = await ResolveOwnCustomerProfileAsync();
+            if (!ownProfile.IsSuccess)
+                return Result<string>.Fail(ownProfile.Error!, ownProfile.ErrorType!.Value);
+            var customer = ownProfile.Data!;
+
+            // IDOR-guard (audit 2026-07-28, находка 2.2): нельзя редактировать
+            // чужую позицию корзины, даже зная её Id.
+            if (!currentUser.IsAdmin() && item.CustomerId != customer.Id)
+                return Result<string>.Fail("Нет доступа к этой позиции корзины", ErrorType.Forbidden);
 
             var listing = await productListingRepository.GetByIdAsync(dto.ProductListingId);
             if (listing is null)
@@ -120,10 +154,9 @@ public class CartItemService(
                 return Result<string>.Fail("Quantity не может превышать доступный остаток объявления", ErrorType.Validation);
 
             var all = await cartItemRepository.GetAllAsync();
-            if (all.Any(c => c.Id != id && c.CustomerId == dto.CustomerId && c.ProductListingId == dto.ProductListingId))
+            if (all.Any(c => c.Id != id && c.CustomerId == item.CustomerId && c.ProductListingId == dto.ProductListingId))
                 return Result<string>.Fail("Этот товар уже есть в корзине другой позицией", ErrorType.Conflict);
 
-            item.CustomerId = dto.CustomerId;
             item.ProductListingId = dto.ProductListingId;
             item.Quantity = dto.Quantity;
             item.UpdatedAt = DateTime.UtcNow;
@@ -145,6 +178,13 @@ public class CartItemService(
             var item = await cartItemRepository.GetByIdAsync(id);
             if (item is null)
                 return Result<string>.Fail("Позиция корзины не найдена", ErrorType.NotFound);
+
+            if (!currentUser.IsAdmin())
+            {
+                var own = await ResolveOwnCustomerProfileAsync();
+                if (!own.IsSuccess || item.CustomerId != own.Data!.Id)
+                    return Result<string>.Fail("Нет доступа к этой позиции корзины", ErrorType.Forbidden);
+            }
 
             await cartItemRepository.DeleteAsync(item);
             return Result<string>.Ok("Товар удалён из корзины");

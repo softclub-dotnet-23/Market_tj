@@ -11,10 +11,37 @@ using Microsoft.EntityFrameworkCore;
 using Microsoft.IdentityModel.Tokens;
 using Microsoft.OpenApi;
 
+// Раздел 17: файлы объявлений хранятся в wwwroot/uploads/listings/{listingId}/.
+// Создаётся ДО CreateBuilder — хост резолвит WebRootPath по факту
+// существования wwwroot на диске в момент своего построения, а не лениво.
+// На Railway контейнер стартует с чистого /app, поэтому создание каталога
+// ПОСЛЕ CreateBuilder оставляло WebRootPath как "not found" и UseStaticFiles()
+// переставал отдавать файлы вообще (локально маскировалось тем, что каталог
+// уже существовал с предыдущих запусков).
+Directory.CreateDirectory(Path.Combine(Directory.GetCurrentDirectory(), "wwwroot", "uploads", "listings"));
+
 var builder = WebApplication.CreateBuilder(args);
 
-// Раздел 17: файлы объявлений хранятся в wwwroot/uploads/listings/{listingId}/.
-Directory.CreateDirectory(Path.Combine(builder.Environment.ContentRootPath, "wwwroot", "uploads", "listings"));
+// Railway передаёт порт через PORT (значение каждый раз разное), а не через
+// ASPNETCORE_URLS — локально (docker-compose, dotnet run) переменной нет,
+// остаётся дефолт 8080, на котором и так всё было завязано (Dockerfile EXPOSE,
+// docker-compose "5000:8080").
+var port = Environment.GetEnvironmentVariable("PORT") ?? "8080";
+builder.WebHost.UseUrls($"http://+:{port}");
+
+// Railway Postgres даёт DATABASE_URL в виде URI (postgres://user:pass@host:port/db),
+// а Npgsql ждёт key=value строку — конвертируем и подкладываем обратно в
+// конфигурацию под тем же ключом, которым пользуется AddInfrastructureServices,
+// чтобы не менять сигнатуру DI-регистрации ради одного окружения.
+var databaseUrl = Environment.GetEnvironmentVariable("DATABASE_URL");
+if (!string.IsNullOrEmpty(databaseUrl))
+{
+    var uri = new Uri(databaseUrl);
+    var userInfo = uri.UserInfo.Split(':');
+    builder.Configuration["ConnectionStrings:DefaultConnection"] =
+        $"Host={uri.Host};Port={uri.Port};Database={uri.LocalPath.TrimStart('/')};" +
+        $"Username={userInfo[0]};Password={userInfo[1]};SSL Mode=Require;Trust Server Certificate=true";
+}
 
 builder.Services.AddApplicationServices();
 builder.Services.AddInfrastructureServices(builder.Configuration);
@@ -26,13 +53,22 @@ builder.Services.AddControllers();
 // фронтенда будет другим. AllowCredentials не включаем — токен передаётся
 // через Authorization header, а не через cookies.
 const string FrontendCorsPolicy = "FrontendCorsPolicy";
-var allowedOrigins = builder.Configuration.GetSection("Cors:AllowedOrigins").Get<string[]>() ?? [];
+var allowedOrigins = (builder.Configuration.GetSection("Cors:AllowedOrigins").Get<string[]>() ?? []).ToList();
+
+// FRONTEND_URL — адрес задеплоенного на Railway фронтенда; добавляется поверх
+// локальных origin'ов из конфига, а не вместо них, чтобы локальная разработка
+// не сломалась после деплоя.
+var frontendUrl = Environment.GetEnvironmentVariable("FRONTEND_URL");
+if (!string.IsNullOrEmpty(frontendUrl))
+{
+    allowedOrigins.Add(frontendUrl);
+}
 
 builder.Services.AddCors(options =>
 {
     options.AddPolicy(FrontendCorsPolicy, policy =>
     {
-        policy.WithOrigins(allowedOrigins)
+        policy.WithOrigins(allowedOrigins.ToArray())
             .AllowAnyHeader()
             .AllowAnyMethod();
     });
@@ -95,12 +131,27 @@ builder.Services.AddSwaggerGen(options =>
 
 var app = builder.Build();
 
-// Применяет накопленные миграции при старте. Пока миграций нет — просто no-op.
+// Применяет накопленные миграции при старте. try/catch — чтобы падение
+// миграции (например, недоступна БД на Railway) попало в логи явно, а не
+// уронило контейнер молча без объяснения причины.
 using (var scope = app.Services.CreateScope())
 {
     var context = scope.ServiceProvider.GetRequiredService<AppDbContext>();
-    await context.Database.MigrateAsync();
+    try
+    {
+        await context.Database.MigrateAsync();
+    }
+    catch (Exception ex)
+    {
+        app.Logger.LogError(ex, "Migration failed");
+        throw;
+    }
 }
+
+// Audit 2026-07-28, находка 2.1 — защитная миграция на случай, если через
+// уязвимый POST/PUT /api/users уже успели создать/обновить пользователя с
+// нехэшированным паролем до применения фикса (см. PlaintextPasswordFixup).
+await PlaintextPasswordFixup.RunAsync(app.Services);
 
 await Seeder.SeedAsync(app.Services);
 

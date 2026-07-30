@@ -16,12 +16,16 @@ public class ReportedListingServiceTests
     private readonly Mock<IProductListingRepository> _productListingRepository = new();
     private readonly Mock<IUserRepository> _userRepository = new();
     private readonly Mock<IAuditLogService> _auditLogService = new();
+    private readonly Mock<ICurrentUserService> _currentUser = new();
     private readonly Mock<ILogger<ReportedListingService>> _logger = new();
     private readonly ReportedListingService _service;
 
     public ReportedListingServiceTests()
     {
-        _service = new ReportedListingService(_reportedListingRepository.Object, _productListingRepository.Object, _userRepository.Object, _auditLogService.Object, _logger.Object);
+        _service = new ReportedListingService(_reportedListingRepository.Object, _productListingRepository.Object, _userRepository.Object, _auditLogService.Object, _currentUser.Object, _logger.Object);
+        // Дефолтная жалоба — ReportedByUserId=1 (User.Id напрямую).
+        _currentUser.Setup(c => c.UserId).Returns(1);
+        _currentUser.Setup(c => c.Role).Returns(nameof(UserRole.Customer));
         _productListingRepository.Setup(r => r.GetByIdAsync(It.IsAny<int>())).ReturnsAsync((int id) => new ProductListing
         {
             Id = id, FarmerProfileId = 1, ProductId = 1, Title = "Listing", RetailPricePerKg = 10,
