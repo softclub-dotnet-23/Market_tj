@@ -1,5 +1,6 @@
 using MarketTJ.Application.Dto.FarmerDocumentDto;
 using MarketTJ.Application.Interfaces.Services;
+using MarketTJ.WebApi.Models;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 
@@ -20,6 +21,10 @@ public class FarmerDocumentController(IFarmerDocumentService service) : ApiContr
     [HttpPost]
     public async Task<IActionResult> Create([FromBody] CreateFarmerDocumentDto dto)
         => HandleResult(await service.CreateAsync(dto));
+
+    [HttpPost("upload")]
+    public async Task<IActionResult> Upload([FromForm] UploadFarmerDocumentRequest request)
+        => HandleResult(await service.UploadAsync(request.FarmerProfileId, request.DocumentType, request.File.OpenReadStream(), request.File.FileName, request.File.Length));
 
     [HttpPut("{id:int}")]
     public async Task<IActionResult> Update(int id, [FromBody] UpdateFarmerDocumentDto dto)

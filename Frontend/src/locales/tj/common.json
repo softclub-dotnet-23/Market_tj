@@ -36,7 +36,6 @@
     "cart": "Сабад",
     "close": "Пӯшидан",
     "openMenu": "Кушодани меню",
-    "subscribe": "Обуна шудан",
     "socialNetwork": "Шабакаи иҷтимоӣ",
     "changeLanguage": "Иваз кардани забон",
     "loading": "Боркунӣ...",
@@ -48,7 +47,7 @@
     "add": "Илова кардан",
     "actions": "Амалҳо"
   },
-  "currencySomoni": "сомонӣ",
+  "currencySomoni": "с.",
   "cart": {
     "addedToCart": "{{title}} ба сабад илова шуд",
     "addedToCartDescription": "{{quantity}} {{unit}} × {{price}}"

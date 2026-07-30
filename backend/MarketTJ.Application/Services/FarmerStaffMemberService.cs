@@ -13,6 +13,7 @@ public class FarmerStaffMemberService(
     IFarmerStaffMemberRepository farmerStaffMemberRepository,
     IFarmerProfileRepository farmerProfileRepository,
     IUserRepository userRepository,
+    IEmailSender emailSender,
     ILogger<FarmerStaffMemberService> logger) : IFarmerStaffMemberService
 {
     public async Task<Result<IEnumerable<GetFarmerStaffMemberDto>>> GetAllAsync()
@@ -124,6 +125,60 @@ public class FarmerStaffMemberService(
         {
             logger.LogError(ex, "Ошибка при обновлении сотрудника {Id}", id);
             return Result<string>.Fail("Не удалось обновить данные сотрудника", ErrorType.InternalServerError);
+        }
+    }
+
+    public async Task<Result<string>> CreateByEmailAsync(CreateFarmerStaffMemberByEmailDto dto)
+    {
+        try
+        {
+            if (string.IsNullOrWhiteSpace(dto.Email))
+                return Result<string>.Fail("Email обязателен", ErrorType.Validation);
+
+            var farmerProfile = await farmerProfileRepository.GetByIdAsync(dto.FarmerProfileId);
+            if (farmerProfile is null)
+                return Result<string>.Fail("Профиль фермера не найден", ErrorType.NotFound);
+
+            var user = await userRepository.GetByEmailAsync(dto.Email.Trim().ToLowerInvariant());
+
+            var all = await farmerStaffMemberRepository.GetAllAsync();
+            if (user is null || all.Any(m => m.UserId == user.Id))
+                return Result<string>.Fail("Не удалось добавить сотрудника — проверьте email", ErrorType.NotFound);
+
+            var member = new FarmerStaffMember
+            {
+                FarmerProfileId = dto.FarmerProfileId,
+                UserId = user.Id,
+                Permissions = dto.Permissions,
+                IsActive = dto.IsActive,
+                CreatedAt = DateTime.UtcNow,
+                UpdatedAt = DateTime.UtcNow
+            };
+
+            await farmerStaffMemberRepository.AddAsync(member);
+
+            try
+            {
+                await emailSender.SendAsync(
+                    user.Email,
+                    "Вас добавили сотрудником на Market.tj",
+                    $"<p>Здравствуйте, {user.FullName}!</p><p>Вас добавили сотрудником хозяйства «{farmerProfile.FarmName}» на платформе Market.tj. Войдите в свой аккаунт, чтобы начать работу.</p>");
+            }
+            catch (Exception emailEx)
+            {
+                // Письмо — не критичная часть операции: сотрудник уже добавлен
+                // в базе, повторная попытка при сбое SMTP лишь наткнётся на
+                // "уже сотрудник" и введёт в заблуждение — поэтому не роняем
+                // результат, только логируем.
+                logger.LogWarning(emailEx, "Не удалось отправить письмо новому сотруднику {UserId}", user.Id);
+            }
+
+            return Result<string>.Ok("Сотрудник добавлен");
+        }
+        catch (Exception ex)
+        {
+            logger.LogError(ex, "Ошибка при добавлении сотрудника по email");
+            return Result<string>.Fail("Не удалось добавить сотрудника", ErrorType.InternalServerError);
         }
     }
 

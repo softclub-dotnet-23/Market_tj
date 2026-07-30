@@ -1,6 +1,7 @@
 using MarketTJ.Application.Common;
 using MarketTJ.Application.Dto.FarmerStaffMemberDto;
 using MarketTJ.Application.Interfaces.Repositories;
+using MarketTJ.Application.Interfaces.Services;
 using MarketTJ.Application.Services;
 using MarketTJ.Domain.Entities;
 using MarketTJ.Domain.Enums;
@@ -14,12 +15,13 @@ public class FarmerStaffMemberServiceTests
     private readonly Mock<IFarmerStaffMemberRepository> _farmerStaffMemberRepository = new();
     private readonly Mock<IFarmerProfileRepository> _farmerProfileRepository = new();
     private readonly Mock<IUserRepository> _userRepository = new();
+    private readonly Mock<IEmailSender> _emailSender = new();
     private readonly Mock<ILogger<FarmerStaffMemberService>> _logger = new();
     private readonly FarmerStaffMemberService _service;
 
     public FarmerStaffMemberServiceTests()
     {
-        _service = new FarmerStaffMemberService(_farmerStaffMemberRepository.Object, _farmerProfileRepository.Object, _userRepository.Object, _logger.Object);
+        _service = new FarmerStaffMemberService(_farmerStaffMemberRepository.Object, _farmerProfileRepository.Object, _userRepository.Object, _emailSender.Object, _logger.Object);
         _farmerProfileRepository.Setup(r => r.GetByIdAsync(It.IsAny<int>())).ReturnsAsync((int id) => new FarmerProfile { Id = id, UserId = 1, FarmName = "F", Region = "Хатлон", District = "Бохтар", Village = "V", Address = "A", VerificationStatus = FarmerVerificationStatus.Verified });
         _userRepository.Setup(r => r.GetByIdAsync(It.IsAny<int>())).ReturnsAsync((int id) => new User { Id = id, Role = UserRole.Customer, FullName = "U", Email = "u@e.com", PhoneNumber = "1", PasswordHash = "h" });
         _farmerStaffMemberRepository.Setup(r => r.GetAllAsync()).ReturnsAsync([]);
@@ -320,6 +322,91 @@ public class FarmerStaffMemberServiceTests
         _farmerStaffMemberRepository.Setup(r => r.GetByIdAsync(It.IsAny<int>())).ThrowsAsync(new Exception("db error"));
 
         var result = await _service.DeleteAsync(1);
+
+        Assert.False(result.IsSuccess);
+        Assert.Equal(ErrorType.InternalServerError, result.ErrorType);
+    }
+
+    // ---------- CreateByEmailAsync ----------
+
+    private static CreateFarmerStaffMemberByEmailDto ValidCreateByEmailDto(int farmerProfileId = 1, string email = "staff@e.com") => new()
+    {
+        FarmerProfileId = farmerProfileId,
+        Email = email,
+        Permissions = StaffPermissions.ManageProducts,
+        IsActive = true
+    };
+
+    [Fact]
+    public async Task CreateByEmailAsync_UserExistsAndNotStaffYet_AddsMemberAndSendsEmail()
+    {
+        var user = new User { Id = 7, Role = UserRole.Customer, FullName = "Staffer", Email = "staff@e.com", PhoneNumber = "1", PasswordHash = "h" };
+        _userRepository.Setup(r => r.GetByEmailAsync("staff@e.com")).ReturnsAsync(user);
+
+        var result = await _service.CreateByEmailAsync(ValidCreateByEmailDto());
+
+        Assert.True(result.IsSuccess);
+        _farmerStaffMemberRepository.Verify(r => r.AddAsync(It.Is<FarmerStaffMember>(m => m.UserId == 7 && m.FarmerProfileId == 1)), Times.Once);
+        _emailSender.Verify(e => e.SendAsync("staff@e.com", It.IsAny<string>(), It.IsAny<string>()), Times.Once);
+    }
+
+    [Fact]
+    public async Task CreateByEmailAsync_EmailNotRegistered_ReturnsGenericNotFoundWithoutRevealingReason()
+    {
+        _userRepository.Setup(r => r.GetByEmailAsync(It.IsAny<string>())).ReturnsAsync((User?)null);
+
+        var result = await _service.CreateByEmailAsync(ValidCreateByEmailDto());
+
+        Assert.False(result.IsSuccess);
+        Assert.Equal(ErrorType.NotFound, result.ErrorType);
+        _farmerStaffMemberRepository.Verify(r => r.AddAsync(It.IsAny<FarmerStaffMember>()), Times.Never);
+        _emailSender.Verify(e => e.SendAsync(It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>()), Times.Never);
+    }
+
+    [Fact]
+    public async Task CreateByEmailAsync_UserAlreadyStaffMember_ReturnsSameGenericNotFound()
+    {
+        var user = new User { Id = 7, Role = UserRole.Customer, FullName = "Staffer", Email = "staff@e.com", PhoneNumber = "1", PasswordHash = "h" };
+        _userRepository.Setup(r => r.GetByEmailAsync("staff@e.com")).ReturnsAsync(user);
+        _farmerStaffMemberRepository.Setup(r => r.GetAllAsync()).ReturnsAsync([CreateMember(1, 2, 7)]);
+
+        var result = await _service.CreateByEmailAsync(ValidCreateByEmailDto());
+
+        Assert.False(result.IsSuccess);
+        Assert.Equal(ErrorType.NotFound, result.ErrorType);
+        _farmerStaffMemberRepository.Verify(r => r.AddAsync(It.IsAny<FarmerStaffMember>()), Times.Never);
+    }
+
+    [Fact]
+    public async Task CreateByEmailAsync_FarmerProfileNotFound_ReturnsNotFound()
+    {
+        _farmerProfileRepository.Setup(r => r.GetByIdAsync(It.IsAny<int>())).ReturnsAsync((FarmerProfile?)null);
+
+        var result = await _service.CreateByEmailAsync(ValidCreateByEmailDto());
+
+        Assert.False(result.IsSuccess);
+        Assert.Equal(ErrorType.NotFound, result.ErrorType);
+    }
+
+    [Fact]
+    public async Task CreateByEmailAsync_EmailSendThrows_StillReturnsSuccess()
+    {
+        var user = new User { Id = 7, Role = UserRole.Customer, FullName = "Staffer", Email = "staff@e.com", PhoneNumber = "1", PasswordHash = "h" };
+        _userRepository.Setup(r => r.GetByEmailAsync("staff@e.com")).ReturnsAsync(user);
+        _emailSender.Setup(e => e.SendAsync(It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>())).ThrowsAsync(new Exception("smtp down"));
+
+        var result = await _service.CreateByEmailAsync(ValidCreateByEmailDto());
+
+        Assert.True(result.IsSuccess);
+        _farmerStaffMemberRepository.Verify(r => r.AddAsync(It.IsAny<FarmerStaffMember>()), Times.Once);
+    }
+
+    [Fact]
+    public async Task CreateByEmailAsync_RepositoryThrows_ReturnsInternalServerError()
+    {
+        _farmerProfileRepository.Setup(r => r.GetByIdAsync(It.IsAny<int>())).ThrowsAsync(new Exception("db error"));
+
+        var result = await _service.CreateByEmailAsync(ValidCreateByEmailDto());
 
         Assert.False(result.IsSuccess);
         Assert.Equal(ErrorType.InternalServerError, result.ErrorType);

@@ -235,7 +235,8 @@
       "type": "Document type",
       "status": "Status",
       "rejectionReason": "Rejection reason",
-      "uploadedAt": "Upload date"
+      "uploadedAt": "Upload date",
+      "actions": "Actions"
     },
     "type": {
       "passport": "Passport",
@@ -247,7 +248,25 @@
       "approved": "Approved",
       "rejected": "Rejected"
     },
-    "uploadHint": "Uploading new documents will be available once a file API is added on the backend — for now you can only view already uploaded documents and their review status."
+    "uploadButton": "Upload document",
+    "uploadModalTitle": "New document",
+    "uploadSuccess": "Document uploaded, awaiting review",
+    "uploadError": "Failed to upload document",
+    "deleteAction": "Delete",
+    "deleteSuccess": "Document deleted",
+    "deleteError": "Failed to delete document",
+    "deleteConfirmTitle": "Delete this document?",
+    "deleteConfirmDescription": "This action cannot be undone.",
+    "form": {
+      "documentType": "Document type",
+      "file": "File",
+      "fileHint": "JPG, PNG, WEBP or PDF, up to 10 MB",
+      "fileRequired": "Select a file",
+      "fileInvalidType": "Only jpg, png, webp, pdf formats are allowed",
+      "fileTooLarge": "Maximum file size is 10 MB",
+      "cancel": "Cancel",
+      "submit": "Upload"
+    }
   },
   "staff": {
     "errorTitle": "Failed to load staff",
@@ -258,7 +277,8 @@
       "user": "Staff member",
       "permissions": "Permissions",
       "status": "Status",
-      "createdAt": "Date added"
+      "createdAt": "Date added",
+      "actions": "Actions"
     },
     "userLabel": "Staff member #{{id}}",
     "permissions": {
@@ -270,7 +290,23 @@
       "active": "Active",
       "inactive": "Disabled"
     },
-    "addHint": "Adding new staff members will be available once full user registration is ready on the backend — for now you can only view those already added."
+    "addButton": "Add staff member",
+    "addModalTitle": "New staff member",
+    "addSuccess": "Staff member added, they've been emailed",
+    "addError": "Failed to add staff member — check the email",
+    "deleteAction": "Delete",
+    "deleteSuccess": "Staff member deleted",
+    "deleteError": "Failed to delete staff member",
+    "deleteConfirmTitle": "Delete this staff member?",
+    "deleteConfirmDescription": "This action cannot be undone.",
+    "form": {
+      "email": "Staff member's email",
+      "emailHint": "The staff member must already have a Market.tj account",
+      "required": "Required field",
+      "permissions": "Permissions",
+      "cancel": "Cancel",
+      "submit": "Add"
+    }
   },
   "chat": {
     "aboutOrder": "About order {{orderNumber}}",

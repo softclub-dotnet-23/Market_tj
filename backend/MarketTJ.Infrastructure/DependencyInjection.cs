@@ -1,6 +1,7 @@
 using MarketTJ.Application.Interfaces.Repositories;
 using MarketTJ.Application.Interfaces.Services;
 using MarketTJ.Infrastructure.Caching;
+using MarketTJ.Infrastructure.Email;
 using MarketTJ.Infrastructure.Persistence;
 using MarketTJ.Infrastructure.Persistence.Repositories;
 using MarketTJ.Infrastructure.Security;
@@ -58,6 +59,8 @@ public static class DependencyInjection
         services.AddScoped<IDeliverySlotRepository, DeliverySlotRepository>();
         services.AddScoped<IDailySalesSnapshotRepository, DailySalesSnapshotRepository>();
         services.AddScoped<IAnalyticsRepository, AnalyticsRepository>();
+        services.AddScoped<IEmailVerificationCodeRepository, EmailVerificationCodeRepository>();
+        services.AddScoped<IEmailSender, SmtpEmailSender>();
 
         return services;
     }

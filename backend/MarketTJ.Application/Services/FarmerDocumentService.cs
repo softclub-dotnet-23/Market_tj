@@ -14,6 +14,7 @@ public class FarmerDocumentService(
     IFarmerDocumentRepository farmerDocumentRepository,
     IFarmerProfileRepository farmerProfileRepository,
     IUserRepository userRepository,
+    IFileStorageService fileStorageService,
     ILogger<FarmerDocumentService> logger) : IFarmerDocumentService
 {
     public async Task<Result<IEnumerable<GetFarmerDocumentDto>>> GetAllAsync()
@@ -133,6 +134,39 @@ public class FarmerDocumentService(
         {
             logger.LogError(ex, "Ошибка при обновлении документа {Id}", id);
             return Result<string>.Fail("Не удалось обновить документ", ErrorType.InternalServerError);
+        }
+    }
+
+    public async Task<Result<GetFarmerDocumentDto>> UploadAsync(int farmerProfileId, FarmerDocumentType documentType, Stream fileContent, string fileName, long fileSizeBytes)
+    {
+        try
+        {
+            var fileValidation = FileUploadValidator.ValidateDocument(fileName, fileSizeBytes);
+            if (fileValidation is not null)
+                return Result<GetFarmerDocumentDto>.Fail(fileValidation.Error!, fileValidation.ErrorType!.Value);
+
+            var farmerProfile = await farmerProfileRepository.GetByIdAsync(farmerProfileId);
+            if (farmerProfile is null)
+                return Result<GetFarmerDocumentDto>.Fail("Профиль фермера не найден", ErrorType.NotFound);
+
+            var fileUrl = await fileStorageService.SaveAsync(fileContent, fileName, $"documents/{farmerProfileId}");
+
+            var document = new FarmerDocument
+            {
+                FarmerProfileId = farmerProfileId,
+                DocumentType = documentType,
+                FileUrl = fileUrl,
+                Status = DocumentReviewStatus.Pending,
+                UploadedAt = DateTime.UtcNow
+            };
+
+            await farmerDocumentRepository.AddAsync(document);
+            return Result<GetFarmerDocumentDto>.Ok(ToGetDto(document));
+        }
+        catch (Exception ex)
+        {
+            logger.LogError(ex, "Ошибка при загрузке документа фермера {FarmerProfileId}", farmerProfileId);
+            return Result<GetFarmerDocumentDto>.Fail("Не удалось загрузить документ", ErrorType.InternalServerError);
         }
     }
 

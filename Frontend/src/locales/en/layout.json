@@ -36,11 +36,7 @@
     "login": "Log in",
     "categoriesTitle": "Categories",
     "description": "A marketplace that connects Tajikistan's farmers directly with buyers — fresh produce from the field, no middlemen.",
-    "newsletterTitle": "News and offers",
-    "newsletterSubtitle": "Once a week — seasonal picks and tips from farmers.",
-    "emailPlaceholder": "Your email",
-    "toastTitle": "Thanks for subscribing!",
-    "toastDescription": "We'll only send you useful updates.",
+    "contactsTitle": "Contacts",
     "copyright": "© {{year}} Market.tj. All rights reserved.",
     "terms": "Terms of use",
     "privacy": "Privacy policy"

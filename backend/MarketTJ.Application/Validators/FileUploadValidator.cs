@@ -29,4 +29,28 @@ public static class FileUploadValidator
 
         return null;
     }
+
+    // Документы фермера (паспорт/акт на землю) часто присылают сканом в PDF,
+    // не только фото — отдельный список форматов и больший лимит размера
+    // (многостраничный скан весит больше, чем одно фото).
+    private static readonly string[] AllowedDocumentExtensions = [".jpg", ".jpeg", ".png", ".webp", ".pdf"];
+    private const long MaxDocumentSizeBytes = 10 * 1024 * 1024;
+
+    public static Result<string>? ValidateDocument(string fileName, long sizeBytes)
+    {
+        if (string.IsNullOrWhiteSpace(fileName))
+            return Result<string>.Fail("Файл обязателен", ErrorType.Validation);
+
+        var extension = Path.GetExtension(fileName);
+        if (!AllowedDocumentExtensions.Contains(extension, StringComparer.OrdinalIgnoreCase))
+            return Result<string>.Fail("Разрешены только форматы: jpg, jpeg, png, webp, pdf", ErrorType.Validation);
+
+        if (sizeBytes <= 0)
+            return Result<string>.Fail("Файл пустой", ErrorType.Validation);
+
+        if (sizeBytes > MaxDocumentSizeBytes)
+            return Result<string>.Fail("Максимальный размер файла — 10 МБ", ErrorType.Validation);
+
+        return null;
+    }
 }

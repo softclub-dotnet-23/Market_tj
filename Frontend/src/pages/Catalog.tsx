@@ -65,15 +65,29 @@ export function Catalog() {
 
   useEffect(() => setSearchInput(search), [search]);
 
-  const updateParams = (patch: Record<string, string | null>, resetPage = true) => {
+  const updateParams = (patch: Record<string, string | null>, resetPage = true, replace = false) => {
     const next = new URLSearchParams(searchParams);
     Object.entries(patch).forEach(([key, value]) => {
       if (value === null || value === "") next.delete(key);
       else next.set(key, value);
     });
     if (resetPage) next.delete("page");
-    setSearchParams(next, { replace: false });
+    setSearchParams(next, { replace });
   };
+
+  // Поиск применяется "вживую" по мере ввода (с небольшой задержкой), а не
+  // только по Enter — раньше стирание текста в поле никак не сбрасывало сам
+  // фильтр (search в URL менялся только через submit формы), и товары
+  // оставались отфильтрованы по уже стёртому запросу, хотя поле выглядело
+  // пустым. replace: true — чтобы каждая буква при вводе не плодила запись в
+  // истории браузера (иначе "Назад" пришлось бы жать посимвольно).
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      updateParams({ search: searchInput || null }, true, true);
+    }, 300);
+    return () => clearTimeout(timer);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [searchInput]);
 
   const filterState: CatalogFilterState = { categorySlugs, region, onlyAvailable, priceMin, priceMax };
 

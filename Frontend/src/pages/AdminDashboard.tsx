@@ -1,4 +1,5 @@
 import type { ReactNode } from "react";
+import { useNavigate } from "react-router-dom";
 import { useTranslation } from "react-i18next";
 import { ArrowDownRight, ArrowUpRight, Minus, ShoppingBag, Star } from "lucide-react";
 import {
@@ -16,6 +17,7 @@ import {
   YAxis,
 } from "recharts";
 import { useTheme } from "@/context/ThemeContext";
+import { useCountUp } from "@/lib/useCountUp";
 import { Avatar } from "@/components/ui/Avatar";
 import { PageLoader } from "@/components/layout/PageLoader";
 import { EmptyState } from "@/components/ui/EmptyState";
@@ -82,8 +84,9 @@ function StatCard({ stat }: { stat: AdminStat }) {
   const { t } = useTranslation("admin");
   const accent = ACCENT_CLASSES[stat.accent];
   const chartData = stat.trend.map((v, i) => ({ i, v }));
+  const animatedValue = Math.round(useCountUp(stat.value));
   const displayValue =
-    stat.key === "revenue" ? `${formatNumber(stat.value)} ${stat.suffix}` : formatNumber(stat.value);
+    stat.key === "revenue" ? `${formatNumber(animatedValue)} ${stat.suffix}` : formatNumber(animatedValue);
   const positive = stat.changePercent !== null && stat.changePercent > 0;
   const negative = stat.changePercent !== null && stat.changePercent < 0;
 
@@ -109,7 +112,7 @@ function StatCard({ stat }: { stat: AdminStat }) {
       </div>
       <div>
         <p className="text-sm text-stone-500 dark:text-stone-400">{t(`dashboard.stats.${stat.key}`)}</p>
-        <p className="font-display text-2xl text-stone-900 dark:text-stone-50">{displayValue}</p>
+        <p className="font-display text-2xl tabular-nums text-stone-900 dark:text-stone-50">{displayValue}</p>
       </div>
       <div className="flex items-center justify-between gap-3">
         <p className="text-xs text-stone-400 dark:text-stone-500">
@@ -138,6 +141,7 @@ function RegionDonutCard({ regions }: { regions: RegionSales[] }) {
   const { theme } = useTheme();
   const isDark = theme === "dark";
   const total = regions.reduce((sum, r) => sum + r.amount, 0);
+  const animatedTotal = Math.round(useCountUp(total));
   const surface = isDark ? "#1a1a19" : "#fcfcfb";
   const ink = isDark ? "#ffffff" : "#0b0b0b";
   const muted = "#898781";
@@ -167,6 +171,7 @@ function RegionDonutCard({ regions }: { regions: RegionSales[] }) {
                   ))}
                 </Pie>
                 <Tooltip
+                  wrapperStyle={{ zIndex: 20, whiteSpace: "nowrap" }}
                   formatter={(value) => [`${formatSomoni(Number(value))} ${t("common.somoni")}`, ""]}
                   contentStyle={{
                     background: surface,
@@ -174,13 +179,21 @@ function RegionDonutCard({ regions }: { regions: RegionSales[] }) {
                     borderRadius: 12,
                     fontSize: 12,
                     color: ink,
+                    whiteSpace: "nowrap",
                   }}
                 />
               </PieChart>
             </ResponsiveContainer>
-            <div className="pointer-events-none absolute inset-0 flex flex-col items-center justify-center">
-              <p className="text-xs text-stone-400 dark:text-stone-500">{t("dashboard.total")}</p>
-              <p className="font-display text-xl text-stone-900 dark:text-stone-50">{formatNumber(total)}</p>
+            <div className="pointer-events-none absolute inset-0 flex items-center justify-center">
+              <div
+                className="flex h-[62%] w-[62%] flex-col items-center justify-center rounded-full"
+                style={{ backgroundColor: surface }}
+              >
+                <p className="text-xs text-stone-400 dark:text-stone-500">{t("dashboard.total")}</p>
+                <p className="font-display text-xl tabular-nums text-stone-900 dark:text-stone-50">
+                  {formatNumber(animatedTotal)}
+                </p>
+              </div>
             </div>
           </div>
 
@@ -261,11 +274,15 @@ function OrdersByMonthCard({ visits }: { visits: SiteVisitPoint[] }) {
 
 function RecentOrdersCard({ orders }: { orders: RecentOrder[] }) {
   const { t } = useTranslation("admin");
+  const navigate = useNavigate();
   return (
     <Card>
       <div className="flex items-center justify-between">
         <h2 className="font-display text-lg text-stone-900 dark:text-stone-50">{t("dashboard.recentOrders")}</h2>
-        <button className="text-xs font-semibold text-grove-700 hover:text-grove-800 dark:text-grove-400">
+        <button
+          onClick={() => navigate("/admin/orders")}
+          className="text-xs font-semibold text-grove-700 hover:text-grove-800 dark:text-grove-400"
+        >
           {t("dashboard.viewAll")}
         </button>
       </div>
@@ -309,11 +326,15 @@ function RecentOrdersCard({ orders }: { orders: RecentOrder[] }) {
 
 function TopFarmersCard({ farmers }: { farmers: TopFarmerRow[] }) {
   const { t } = useTranslation("admin");
+  const navigate = useNavigate();
   return (
     <Card>
       <div className="flex items-center justify-between">
         <h2 className="font-display text-lg text-stone-900 dark:text-stone-50">{t("dashboard.topFarmers")}</h2>
-        <button className="text-xs font-semibold text-grove-700 hover:text-grove-800 dark:text-grove-400">
+        <button
+          onClick={() => navigate("/admin/farmers")}
+          className="text-xs font-semibold text-grove-700 hover:text-grove-800 dark:text-grove-400"
+        >
           {t("dashboard.viewAll")}
         </button>
       </div>
@@ -347,11 +368,15 @@ function TopFarmersCard({ farmers }: { farmers: TopFarmerRow[] }) {
 
 function PopularCategoriesCard({ categories }: { categories: PopularCategoryRow[] }) {
   const { t } = useTranslation("admin");
+  const navigate = useNavigate();
   return (
     <Card>
       <div className="flex items-center justify-between">
         <h2 className="font-display text-lg text-stone-900 dark:text-stone-50">{t("dashboard.popularCategories")}</h2>
-        <button className="text-xs font-semibold text-grove-700 hover:text-grove-800 dark:text-grove-400">
+        <button
+          onClick={() => navigate("/admin/products")}
+          className="text-xs font-semibold text-grove-700 hover:text-grove-800 dark:text-grove-400"
+        >
           {t("dashboard.viewAll")}
         </button>
       </div>

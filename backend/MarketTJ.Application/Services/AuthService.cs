@@ -13,6 +13,7 @@ public class AuthService(
     IUserRepository userRepository,
     IRefreshTokenRepository refreshTokenRepository,
     ITokenService tokenService,
+    IEmailVerificationService emailVerificationService,
     ILogger<AuthService> logger) : IAuthService
 {
     public async Task<Result<AuthResponseDto>> RegisterAsync(RegisterRequestDto dto)
@@ -26,6 +27,12 @@ public class AuthService(
             var existing = await userRepository.GetByEmailAsync(dto.Email);
             if (existing is not null)
                 return Result<AuthResponseDto>.Fail("Пользователь с таким Email уже существует", ErrorType.Conflict);
+
+            // Дополнено по явному запросу пользователя (раздел 23 ТЗ) — без
+            // пройденного кода подтверждения регистрация невозможна, даже
+            // если кто-то вызовет /api/auth/register напрямую, минуя форму.
+            if (!await emailVerificationService.IsEmailVerifiedAsync(dto.Email))
+                return Result<AuthResponseDto>.Fail("Email не подтверждён — сначала введите код из письма", ErrorType.Validation);
 
             var user = new User
             {
@@ -101,6 +108,23 @@ public class AuthService(
         }
     }
 
+    public async Task<Result<string>> SendRegistrationVerificationCodeAsync(string email)
+    {
+        try
+        {
+            var existing = await userRepository.GetByEmailAsync(email);
+            if (existing is not null)
+                return Result<string>.Fail("Пользователь с таким Email уже существует", ErrorType.Conflict);
+
+            return await emailVerificationService.SendCodeAsync(email);
+        }
+        catch (Exception ex)
+        {
+            logger.LogError(ex, "Ошибка при отправке кода подтверждения для регистрации {Email}", email);
+            return Result<string>.Fail("Не удалось отправить код подтверждения", ErrorType.InternalServerError);
+        }
+    }
+
     public async Task<Result<string>> LogoutAsync(RefreshTokenRequestDto dto)
     {
         try
@@ -118,6 +142,59 @@ public class AuthService(
         {
             logger.LogError(ex, "Ошибка при выходе из системы");
             return Result<string>.Fail("Не удалось выполнить выход", ErrorType.InternalServerError);
+        }
+    }
+
+    // Дополнено по явному запросу пользователя — раньше "Забыли пароль?" была
+    // честной заглушкой без реализации. Переиспользует тот же код-на-email
+    // механизм, что и подтверждение регистрации (IEmailVerificationService) —
+    // отдельная сущность/таблица под сброс пароля не нужна, суть та же:
+    // доказать владение email.
+    public async Task<Result<string>> ForgotPasswordAsync(ForgotPasswordRequestDto dto)
+    {
+        try
+        {
+            var user = await userRepository.GetByEmailAsync(dto.Email);
+            // Один и тот же ответ для существующего и несуществующего email —
+            // не даём понять снаружи, зарегистрирован ли такой адрес (та же
+            // причина, что и в LoginAsync).
+            if (user is not null && user.IsActive)
+                await emailVerificationService.SendCodeAsync(dto.Email);
+
+            return Result<string>.Ok("Если аккаунт с таким email существует, на него отправлен код");
+        }
+        catch (Exception ex)
+        {
+            logger.LogError(ex, "Ошибка при запросе восстановления пароля для {Email}", dto.Email);
+            return Result<string>.Fail("Не удалось отправить код восстановления", ErrorType.InternalServerError);
+        }
+    }
+
+    public async Task<Result<string>> ResetPasswordAsync(ResetPasswordRequestDto dto)
+    {
+        try
+        {
+            if (string.IsNullOrWhiteSpace(dto.NewPassword) || dto.NewPassword.Length < 6)
+                return Result<string>.Fail("Пароль должен быть не короче 6 символов", ErrorType.Validation);
+
+            var verifyResult = await emailVerificationService.VerifyCodeAsync(dto.Email, dto.Code);
+            if (!verifyResult.IsSuccess)
+                return Result<string>.Fail(verifyResult.Error!, verifyResult.ErrorType!.Value);
+
+            var user = await userRepository.GetByEmailAsync(dto.Email);
+            if (user is null)
+                return Result<string>.Fail("Пользователь не найден", ErrorType.NotFound);
+
+            user.PasswordHash = BCrypt.Net.BCrypt.HashPassword(dto.NewPassword);
+            user.UpdatedAt = DateTime.UtcNow;
+            await userRepository.UpdateAsync(user);
+
+            return Result<string>.Ok("Пароль обновлён");
+        }
+        catch (Exception ex)
+        {
+            logger.LogError(ex, "Ошибка при сбросе пароля для {Email}", dto.Email);
+            return Result<string>.Fail("Не удалось сбросить пароль", ErrorType.InternalServerError);
         }
     }
 

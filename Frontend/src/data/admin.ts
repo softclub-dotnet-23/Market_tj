@@ -5,6 +5,7 @@ import { computeMonthlyTrend, formatNumber } from "@/lib/utils";
 import { OrderStatus } from "@/lib/orderStatus";
 import type { AdminAnalyticsDto, AdminOrderDto, AdminUserDto } from "@/data/adminEntities";
 import type { Category, Farmer } from "@/types";
+import { TAJIKISTAN_REGIONS } from "@/data/tajikistanGeo";
 
 export interface AdminStat {
   key: "revenue" | "customers" | "orders" | "farmers";
@@ -160,22 +161,46 @@ export function useAdminStats(analytics: AdminAnalyticsDto, orders: AdminOrderDt
   ];
 }
 
+// Регион свободный текст (см. Checkout.tsx) — один и тот же город часто
+// попадает в заказы по-разному написанным ("Dushanbe" / "Душанбе" /
+// "г. Душанбе"). Без нормализации это разваливается на несколько строк в
+// диаграмме, хотя город один и тот же. RU_REGION_ALIASES сводит известные
+// варианты написания к одному каноническому названию из справочника
+// областей; нераспознанное написание остаётся как есть (по своему ключу).
+const RU_REGION_ALIASES: Record<string, string> = {
+  dushanbe: "г. Душанбе",
+};
+
+function canonicalRegion(raw: string): { key: string; name: string } {
+  const trimmed = raw.trim();
+  const withoutCityPrefix = trimmed.replace(/^г\.?\s*/i, "");
+  const normalized = withoutCityPrefix.toLowerCase();
+  const aliasName = RU_REGION_ALIASES[normalized];
+  if (aliasName) return { key: aliasName.toLowerCase(), name: aliasName };
+  const known = TAJIKISTAN_REGIONS.find((r) => r.name.replace(/^г\.?\s*/i, "").toLowerCase() === normalized);
+  if (known) return { key: known.name.toLowerCase(), name: known.name };
+  return { key: normalized, name: trimmed };
+}
+
 // Раздел 10.4 ТЗ: "выручка" = сумма Completed-заказов. Регион берётся из
 // Order.Region — это свободный текст, введённый покупателем при оформлении
 // (см. Checkout.tsx), поэтому список регионов складывается из того, что
 // реально встретилось в заказах, а не из фиксированного списка областей.
 export function computeRegionSales(orders: AdminOrderDto[]): RegionSales[] {
   const sums = new Map<string, number>();
+  const displayNames = new Map<string, string>();
   for (const o of orders) {
     if (o.status !== OrderStatus.Completed) continue;
-    sums.set(o.region, (sums.get(o.region) ?? 0) + o.totalAmount);
+    const { key, name } = canonicalRegion(o.region);
+    sums.set(key, (sums.get(key) ?? 0) + o.totalAmount);
+    if (!displayNames.has(key)) displayNames.set(key, name);
   }
   const total = [...sums.values()].reduce((a, b) => a + b, 0);
   return [...sums.entries()]
     .sort((a, b) => b[1] - a[1])
-    .map(([name, amount]) => ({
-      key: name,
-      name,
+    .map(([key, amount]) => ({
+      key,
+      name: displayNames.get(key)!,
       amount,
       percent: total > 0 ? Math.round((amount / total) * 1000) / 10 : 0,
     }));

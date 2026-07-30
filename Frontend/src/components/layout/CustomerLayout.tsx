@@ -255,7 +255,9 @@ export function CustomerLayout() {
             </button>
             <div className="min-w-0">
               <h1 className="truncate font-display text-lg text-stone-900 sm:text-xl dark:text-stone-50">
-                {currentItem?.path === "/customer" ? t("dashboard.greeting") : t(`nav.${currentItem?.labelKey ?? "overview"}`)}
+                {currentItem?.path === "/customer"
+                  ? t("dashboard.greeting")
+                  : t(`nav.${currentItem?.labelKey ?? "catalog"}`)}
               </h1>
               {currentItem?.path === "/customer" && (
                 <p className="hidden truncate text-sm text-stone-400 sm:block dark:text-stone-500">{t("dashboard.greetingSubtitle")}</p>

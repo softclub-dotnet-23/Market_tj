@@ -4,6 +4,7 @@ import { AuthProvider } from "@/context/AuthContext";
 import { CartProvider } from "@/context/CartContext";
 import { FavoritesProvider } from "@/context/FavoritesContext";
 import { RootLayout } from "@/components/layout/RootLayout";
+import { CustomerAwareShell } from "@/components/layout/CustomerAwareShell";
 import { AppChrome } from "@/components/layout/AppChrome";
 import { AdminLayout } from "@/components/layout/AdminLayout";
 import { FarmerLayout } from "@/components/layout/FarmerLayout";
@@ -20,6 +21,7 @@ const About = lazy(() => import("@/pages/About").then((m) => ({ default: m.About
 const Contact = lazy(() => import("@/pages/Contact").then((m) => ({ default: m.Contact })));
 const Login = lazy(() => import("@/pages/Login").then((m) => ({ default: m.Login })));
 const Register = lazy(() => import("@/pages/Register").then((m) => ({ default: m.Register })));
+const ForgotPassword = lazy(() => import("@/pages/ForgotPassword").then((m) => ({ default: m.ForgotPassword })));
 const Forbidden = lazy(() => import("@/pages/Forbidden").then((m) => ({ default: m.Forbidden })));
 const NotFound = lazy(() => import("@/pages/NotFound").then((m) => ({ default: m.NotFound })));
 const AdminDashboard = lazy(() => import("@/pages/AdminDashboard").then((m) => ({ default: m.AdminDashboard })));
@@ -27,10 +29,7 @@ const AdminStatistics = lazy(() => import("@/pages/AdminStatistics").then((m) =>
 const AdminOrders = lazy(() => import("@/pages/AdminOrders").then((m) => ({ default: m.AdminOrders })));
 const AdminProducts = lazy(() => import("@/pages/AdminProducts").then((m) => ({ default: m.AdminProducts })));
 const AdminFarmers = lazy(() => import("@/pages/AdminFarmers").then((m) => ({ default: m.AdminFarmers })));
-const AdminCouriers = lazy(() => import("@/pages/AdminCouriers").then((m) => ({ default: m.AdminCouriers })));
-const AdminDeliveryZones = lazy(() => import("@/pages/AdminDeliveryZones").then((m) => ({ default: m.AdminDeliveryZones })));
 const AdminUsers = lazy(() => import("@/pages/AdminUsers").then((m) => ({ default: m.AdminUsers })));
-const AdminCommissions = lazy(() => import("@/pages/AdminCommissions").then((m) => ({ default: m.AdminCommissions })));
 const AdminReviews = lazy(() => import("@/pages/AdminReviews").then((m) => ({ default: m.AdminReviews })));
 const AdminSettings = lazy(() => import("@/pages/AdminSettings").then((m) => ({ default: m.AdminSettings })));
 const AdminNotifications = lazy(() => import("@/pages/AdminNotifications").then((m) => ({ default: m.AdminNotifications })));
@@ -60,6 +59,7 @@ function App() {
                 <Route element={<AppChrome />}>
                   <Route path="login" element={<Login />} />
                   <Route path="register" element={<Register />} />
+                  <Route path="forgot-password" element={<ForgotPassword />} />
 
                   <Route element={<ProtectedRoute role="Admin" />}>
                     <Route path="admin" element={<AdminLayout />}>
@@ -68,10 +68,7 @@ function App() {
                       <Route path="orders" element={<AdminOrders />} />
                       <Route path="products" element={<AdminProducts />} />
                       <Route path="farmers" element={<AdminFarmers />} />
-                      <Route path="couriers" element={<AdminCouriers />} />
-                      <Route path="delivery-zones" element={<AdminDeliveryZones />} />
                       <Route path="users" element={<AdminUsers />} />
-                      <Route path="commissions" element={<AdminCommissions />} />
                       <Route path="reviews" element={<AdminReviews />} />
                       <Route path="notifications" element={<AdminNotifications />} />
                       <Route path="settings" element={<AdminSettings />} />
@@ -105,12 +102,15 @@ function App() {
                     </Route>
                   </Route>
 
-                  <Route element={<RootLayout />}>
-                    <Route index element={<Home />} />
+                  <Route element={<CustomerAwareShell />}>
                     <Route path="catalog" element={<Catalog />} />
                     <Route path="product/:slug" element={<ProductDetails />} />
                     <Route path="farmers/:id" element={<FarmerPublicProfile />} />
                     <Route path="checkout" element={<Checkout />} />
+                  </Route>
+
+                  <Route element={<RootLayout />}>
+                    <Route index element={<Home />} />
                     <Route path="about" element={<About />} />
                     <Route path="contact" element={<Contact />} />
                     <Route path="forbidden" element={<Forbidden />} />

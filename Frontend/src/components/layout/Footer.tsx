@@ -1,18 +1,14 @@
-import { useState } from "react";
 import { Link } from "react-router-dom";
-import { toast } from "sonner";
 import { useTranslation } from "react-i18next";
-import { Leaf, Mail, MapPin, Phone, Send } from "lucide-react";
+import { Leaf, Mail, MapPin, Phone } from "lucide-react";
 import { useCategories } from "@/data/categories";
 import { useOfficeInfo } from "@/data/site";
 import { FacebookIcon, InstagramIcon, TelegramIcon, WhatsAppIcon } from "@/components/ui/SocialIcons";
-import { Button } from "@/components/ui/Button";
 
 export function Footer() {
   const { t } = useTranslation(["layout", "common"]);
   const categories = useCategories();
   const officeInfo = useOfficeInfo();
-  const [email, setEmail] = useState("");
 
   const columns = [
     {
@@ -29,13 +25,6 @@ export function Footer() {
       links: categories.slice(0, 4).map((c) => ({ label: c.name, to: `/catalog?category=${c.slug}` })),
     },
   ];
-
-  const subscribe = (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!email.trim()) return;
-    toast.success(t("layout:footer.toastTitle"), { description: t("layout:footer.toastDescription") });
-    setEmail("");
-  };
 
   return (
     <footer className="mt-24 border-t border-stone-100 bg-stone-950 text-stone-300">
@@ -82,22 +71,8 @@ export function Footer() {
           ))}
 
           <div className="flex flex-col gap-4">
-            <h4 className="font-display text-sm text-white">{t("layout:footer.newsletterTitle")}</h4>
-            <p className="text-sm text-stone-400">{t("layout:footer.newsletterSubtitle")}</p>
-            <form onSubmit={subscribe} className="flex gap-2">
-              <input
-                type="email"
-                required
-                value={email}
-                onChange={(e) => setEmail(e.target.value)}
-                placeholder={t("layout:footer.emailPlaceholder")}
-                className="h-11 w-full min-w-0 rounded-xl border border-stone-800 bg-stone-900 px-4 text-sm text-white placeholder:text-stone-500 focus:border-grove-500 focus:ring-2 focus:ring-grove-900"
-              />
-              <Button type="submit" size="icon" aria-label={t("common:actions.subscribe")}>
-                <Send size={16} />
-              </Button>
-            </form>
-            <div className="flex flex-col gap-2 pt-1 text-sm text-stone-400">
+            <h4 className="font-display text-sm text-white">{t("layout:footer.contactsTitle")}</h4>
+            <div className="flex flex-col gap-2 text-sm text-stone-400">
               <span className="flex items-center gap-2">
                 <MapPin size={14} className="shrink-0 text-grove-500" />
                 {officeInfo.address}

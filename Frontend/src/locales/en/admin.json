@@ -20,7 +20,9 @@
   "adminName": "Administrator",
   "logout": "Log out",
   "common": {
-    "somoni": "somoni"
+    "somoni": "somoni",
+    "searchEmptyTitle": "Nothing found",
+    "searchEmptyDescription": "Try a different search — no matches on this page."
   },
   "dashboard": {
     "greeting": "Welcome back, admin 👋",
@@ -238,14 +240,28 @@
       "updatedAt": "Updated",
       "actions": "Actions"
     },
+    "addButton": "Add setting",
+    "createModalTitle": "New setting",
+    "createSuccess": "Setting added",
+    "createError": "Failed to add setting",
     "editAction": "Edit",
     "editModalTitle": "Edit setting",
     "updateSuccess": "Setting updated",
     "updateError": "Failed to update setting",
+    "deleteAction": "Delete",
+    "deleteSuccess": "Setting deleted",
+    "deleteError": "Failed to delete setting",
+    "deleteConfirmTitle": "Delete this setting?",
+    "deleteConfirmDescription": "This action cannot be undone.",
     "form": {
       "required": "Required field",
+      "key": "Key",
+      "keyHint": "E.g. min_order_amount — latin letters, no spaces",
+      "description": "Description",
+      "optional": "Optional",
       "cancel": "Cancel",
-      "saveChanges": "Save changes"
+      "saveChanges": "Save changes",
+      "submit": "Add"
     }
   },
   "statistics": {

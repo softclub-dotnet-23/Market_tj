@@ -17,7 +17,7 @@
   "farmerName": "Деҳқон",
   "logout": "Баромадан",
   "common": {
-    "somoni": "сомонӣ"
+    "somoni": "с."
   },
   "dashboard": {
     "greeting": "Боз хуш омадед 👋",
@@ -240,7 +240,8 @@
       "type": "Навъи ҳуҷҷат",
       "status": "Ҳолат",
       "rejectionReason": "Сабаби рад кардан",
-      "uploadedAt": "Санаи боркунӣ"
+      "uploadedAt": "Санаи боркунӣ",
+      "actions": "Амалҳо"
     },
     "type": {
       "passport": "Шиноснома",
@@ -252,7 +253,25 @@
       "approved": "Тасдиқшуда",
       "rejected": "Рад шуда"
     },
-    "uploadHint": "Боркунии ҳуҷҷатҳои нав пас аз илова кардани API-и файлӣ дар бэкенд пайдо мешавад — ҳозир танҳо ҳуҷҷатҳои аллакай боркардашуда ва ҳолати санҷиши онҳоро дидан мумкин аст."
+    "uploadButton": "Боркунии ҳуҷҷат",
+    "uploadModalTitle": "Ҳуҷҷати нав",
+    "uploadSuccess": "Ҳуҷҷат бор шуд, дар навбати санҷиш аст",
+    "uploadError": "Ҳуҷҷат бор нашуд",
+    "deleteAction": "Нест кардан",
+    "deleteSuccess": "Ҳуҷҷат нест карда шуд",
+    "deleteError": "Ҳуҷҷатро нест карда натавонист",
+    "deleteConfirmTitle": "Ҳуҷҷатро нест кунам?",
+    "deleteConfirmDescription": "Ин амалро бекор кардан мумкин нест.",
+    "form": {
+      "documentType": "Навъи ҳуҷҷат",
+      "file": "Файл",
+      "fileHint": "JPG, PNG, WEBP ё PDF, то 10 МБ",
+      "fileRequired": "Файлро интихоб кунед",
+      "fileInvalidType": "Танҳо форматҳои jpg, png, webp, pdf иҷозат дода мешаванд",
+      "fileTooLarge": "Ҳаҷми максималии файл — 10 МБ",
+      "cancel": "Бекор кардан",
+      "submit": "Бор кардан"
+    }
   },
   "staff": {
     "errorTitle": "Кормандон бор нашуданд",
@@ -263,7 +282,8 @@
       "user": "Корманд",
       "permissions": "Ҳуқуқҳо",
       "status": "Ҳолат",
-      "createdAt": "Санаи илова"
+      "createdAt": "Санаи илова",
+      "actions": "Амалҳо"
     },
     "userLabel": "Корманд #{{id}}",
     "permissions": {
@@ -275,7 +295,23 @@
       "active": "Фаъол",
       "inactive": "Хомӯш"
     },
-    "addHint": "Иловаи корманди нав пас аз он ки дар бэкенд сабти пурраи корбарони нав омода шавад пайдо мешавад — ҳозир танҳо кормандони аллакай иловашударо дидан мумкин аст."
+    "addButton": "Илова кардани корманд",
+    "addModalTitle": "Корманди нав",
+    "addSuccess": "Корманд илова шуд, ба почтаи ӯ хат фиристода шуд",
+    "addError": "Корманд илова нашуд — email-ро санҷед",
+    "deleteAction": "Нест кардан",
+    "deleteSuccess": "Корманд нест карда шуд",
+    "deleteError": "Корманд нест карда натавонист",
+    "deleteConfirmTitle": "Корманд нест кунам?",
+    "deleteConfirmDescription": "Ин амалро бекор кардан мумкин нест.",
+    "form": {
+      "email": "Email-и корманд",
+      "emailHint": "Корманд бояд аллакай дар Market.tj ҳисоб дошта бошад",
+      "required": "Майдони ҳатмӣ",
+      "permissions": "Ҳуқуқҳо",
+      "cancel": "Бекор кардан",
+      "submit": "Илова кардан"
+    }
   },
   "chat": {
     "aboutOrder": "Дар бораи фармоиши {{orderNumber}}",

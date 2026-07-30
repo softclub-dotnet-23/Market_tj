@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { apiGet, apiPost, apiPut } from "@/lib/api";
 import { useAuth } from "@/context/AuthContext";
 
@@ -95,9 +95,13 @@ export function useCustomerOrders(customerProfileId: number | null) {
     () => (customerProfileId ? apiGet<CustomerOrderDto[]>("/orders") : Promise.resolve(null as never)),
     [customerProfileId],
   );
-  const orders = data
-    ?.filter((o) => o.customerId === customerProfileId)
-    .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()) ?? null;
+  const orders = useMemo(
+    () =>
+      data
+        ?.filter((o) => o.customerId === customerProfileId)
+        .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()) ?? null,
+    [data, customerProfileId],
+  );
   return { orders, loading, error };
 }
 

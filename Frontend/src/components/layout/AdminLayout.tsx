@@ -1,18 +1,15 @@
 import { useEffect, useRef, useState } from "react";
-import { NavLink, Outlet, useLocation, useNavigate } from "react-router-dom";
+import { NavLink, Outlet, useLocation, useNavigate, useOutletContext } from "react-router-dom";
 import { useTranslation } from "react-i18next";
 import {
   BarChart3,
   Bell,
-  Bike,
   ChevronDown,
   ChevronsLeft,
   ChevronsRight,
-  CreditCard,
   Leaf,
   LayoutDashboard,
   LogOut,
-  MapPinned,
   Menu,
   MessageSquare,
   Package,
@@ -43,16 +40,24 @@ interface AdminNavItem {
   icon: LucideIcon;
 }
 
+export interface AdminOutletContext {
+  searchQuery: string;
+}
+
+// Поиск в шапке фильтрует данные на текущей странице (не глобальный поиск по
+// всей платформе) — каждая admin-страница сама решает, по каким полям
+// фильтровать (см. использование в AdminOrders/AdminProducts/AdminFarmers/AdminUsers).
+export function useAdminSearch(): string {
+  return useOutletContext<AdminOutletContext>().searchQuery;
+}
+
 const NAV_ITEMS: AdminNavItem[] = [
   { labelKey: "overview", path: "/admin", icon: LayoutDashboard },
   { labelKey: "analytics", path: "/admin/statistics", icon: BarChart3 },
   { labelKey: "orders", path: "/admin/orders", icon: ShoppingCart },
   { labelKey: "products", path: "/admin/products", icon: Package },
   { labelKey: "farmers", path: "/admin/farmers", icon: Sprout },
-  { labelKey: "couriers", path: "/admin/couriers", icon: Bike },
-  { labelKey: "delivery", path: "/admin/delivery-zones", icon: MapPinned },
   { labelKey: "customers", path: "/admin/users", icon: Users },
-  { labelKey: "payments", path: "/admin/commissions", icon: CreditCard },
   { labelKey: "reviews", path: "/admin/reviews", icon: MessageSquare },
   { labelKey: "notifications", path: "/admin/notifications", icon: Bell },
   { labelKey: "settings", path: "/admin/settings", icon: Settings },
@@ -66,6 +71,7 @@ export function AdminLayout() {
   const [collapsed, setCollapsed] = useState(false);
   const [mobileNavOpen, setMobileNavOpen] = useState(false);
   const [menuOpen, setMenuOpen] = useState(false);
+  const [searchQuery, setSearchQuery] = useState("");
   const menuRef = useRef<HTMLDivElement>(null);
   const { orders } = useAdminOrders();
   const unseenOrdersCount = useAdminOrdersUnseenCount(orders);
@@ -86,6 +92,7 @@ export function AdminLayout() {
 
   useEffect(() => {
     setMobileNavOpen(false);
+    setSearchQuery("");
   }, [location.pathname]);
 
   const handleLogout = () => {
@@ -233,6 +240,8 @@ export function AdminLayout() {
               <Search size={15} className="text-stone-400 dark:text-stone-500" />
               <input
                 type="text"
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
                 placeholder={t("search")}
                 className="w-40 bg-transparent text-sm outline-none placeholder:text-stone-400 dark:text-stone-100 dark:placeholder:text-stone-500"
               />
@@ -286,7 +295,7 @@ export function AdminLayout() {
         </header>
 
         <main className="flex-1 overflow-y-auto p-4 sm:p-6">
-          <Outlet />
+          <Outlet context={{ searchQuery } satisfies AdminOutletContext} />
         </main>
       </div>
     </div>
