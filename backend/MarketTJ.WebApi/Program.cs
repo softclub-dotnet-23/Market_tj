@@ -199,11 +199,9 @@ app.UseSwagger();
 
 app.UseSwaggerUI(options =>
 {
-    options.SwaggerEndpoint(
-        "/swagger/v1/swagger.json",
-        "Market.tj API v1"
-    );
+    options.SwaggerEndpoint("/swagger/v1/swagger.json", "Market.tj API v1");
 });
+
 
 app.UseStaticFiles();
 
