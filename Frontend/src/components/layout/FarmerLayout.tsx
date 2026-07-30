@@ -21,7 +21,6 @@ import {
 } from "lucide-react";
 import type { LucideIcon } from "lucide-react";
 import { Avatar } from "@/components/ui/Avatar";
-import { AvatarMenuItem } from "@/components/layout/AvatarMenuItem";
 import { PanelMobileDrawer } from "@/components/layout/PanelMobileDrawer";
 import { LanguageSwitcher } from "@/components/ui/LanguageSwitcher";
 import { ThemeToggle } from "@/components/ui/ThemeToggle";
@@ -292,7 +291,6 @@ export function FarmerLayout() {
                     </p>
                     <p className="truncate text-xs text-stone-400 dark:text-stone-500">{user?.email}</p>
                   </div>
-                  <AvatarMenuItem />
                   <button
                     onClick={handleLogout}
                     className="flex w-full items-center gap-2.5 rounded-xl px-2.5 py-2 text-left text-sm text-stone-600 transition hover:bg-stone-50 dark:text-stone-300 dark:hover:bg-stone-800"

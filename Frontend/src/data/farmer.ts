@@ -67,7 +67,8 @@ export interface FarmerDashboardDto {
 export interface ProductListingDto {
   id: number;
   farmerProfileId: number;
-  productId: number;
+  categoryId: number;
+  unit: string;
   title: string;
   description: string | null;
   retailPricePerKg: number;
@@ -93,18 +94,10 @@ interface PagedResultDto<T> {
   pageSize: number;
 }
 
-export interface CatalogProductDto {
-  id: number;
-  categoryId: number;
-  name: string;
-  description: string | null;
-  unit: string;
-  isActive: boolean;
-}
-
 export interface CreateProductListingDto {
   farmerProfileId: number;
-  productId: number;
+  categoryId: number;
+  unit: string;
   title: string;
   description?: string | null;
   retailPricePerKg: number;
@@ -323,13 +316,6 @@ export function useFarmerProducts(farmerProfileId: number | null, refreshKey = 0
   );
   const products = data?.items.filter((p) => p.farmerProfileId === farmerProfileId) ?? null;
   return { products, loading, error };
-}
-
-// Каталог базовых товаров (/api/products) — из него фермер выбирает
-// productId при создании нового объявления.
-export function useProductCatalog() {
-  const { data, loading, error } = useAsync(() => apiGet<CatalogProductDto[]>("/products"), []);
-  return { catalog: data?.filter((p) => p.isActive) ?? null, loading, error };
 }
 
 export function createProductListing(dto: CreateProductListingDto) {

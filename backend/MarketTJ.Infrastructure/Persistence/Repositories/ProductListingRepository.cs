@@ -29,11 +29,14 @@ public class ProductListingRepository(AppDbContext context, ICacheService cache)
     public async Task<ProductListing?> GetByIdAsync(int id)
         => await context.ProductListings.FindAsync(id);
 
+    // p.Product теперь необязателен (см. ProductListing.ProductId) — новые
+    // объявления его не заполняют, поэтому проверка на null обязательна,
+    // иначе ILike(p.Product.Name, ...) уронит запрос на NullReferenceException.
     public async Task<List<ProductListing>> SearchAsync(string query)
         => await context.ProductListings
             .Where(p => EF.Functions.ILike(p.Title, $"%{query}%")
                      || (p.Description != null && EF.Functions.ILike(p.Description, $"%{query}%"))
-                     || EF.Functions.ILike(p.Product.Name, $"%{query}%"))
+                     || (p.Product != null && EF.Functions.ILike(p.Product.Name, $"%{query}%")))
             .Take(10)
             .ToListAsync();
 

@@ -56,7 +56,6 @@ export function Catalog() {
   );
   const region = searchParams.get("region") ?? regions[0];
   const farmerId = searchParams.get("farmer") ? Number(searchParams.get("farmer")) : null;
-  const onlyAvailable = searchParams.get("available") === "1";
   const priceMin = searchParams.get("minPrice") ?? "";
   const priceMax = searchParams.get("maxPrice") ?? "";
   const sortBy = searchParams.get("sortBy") ?? "popularity";
@@ -89,13 +88,12 @@ export function Catalog() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [searchInput]);
 
-  const filterState: CatalogFilterState = { categorySlugs, region, onlyAvailable, priceMin, priceMax };
+  const filterState: CatalogFilterState = { categorySlugs, region, priceMin, priceMax };
 
   const handleFilterChange = (patch: Partial<CatalogFilterState>) => {
     const nextPatch: Record<string, string | null> = {};
     if (patch.categorySlugs) nextPatch.category = patch.categorySlugs.length ? patch.categorySlugs.join(",") : null;
     if (patch.region !== undefined) nextPatch.region = patch.region === regions[0] ? null : patch.region;
-    if (patch.onlyAvailable !== undefined) nextPatch.available = patch.onlyAvailable ? "1" : null;
     if (patch.priceMin !== undefined) nextPatch.minPrice = patch.priceMin || null;
     if (patch.priceMax !== undefined) nextPatch.maxPrice = patch.priceMax || null;
     updateParams(nextPatch);
@@ -119,7 +117,6 @@ export function Catalog() {
     }
     if (region !== regions[0]) list = list.filter((p) => p.region === region);
     if (farmerId) list = list.filter((p) => p.farmerId === farmerId);
-    if (onlyAvailable) list = list.filter((p) => p.status === "active" && p.availableQuantity > 0);
     if (priceMin) list = list.filter((p) => p.retailPricePerKg >= Number(priceMin));
     if (priceMax) list = list.filter((p) => p.retailPricePerKg <= Number(priceMax));
 
@@ -140,7 +137,7 @@ export function Catalog() {
         list.sort((a, b) => b.orderCount - a.orderCount);
     }
     return list;
-  }, [search, categorySlugs, region, regions, farmerId, onlyAvailable, priceMin, priceMax, sortBy, favoritesOnly, favoriteIds, categories, products]);
+  }, [search, categorySlugs, region, regions, farmerId, priceMin, priceMax, sortBy, favoritesOnly, favoriteIds, categories, products]);
 
   const totalPages = Math.max(1, Math.ceil(filtered.length / PAGE_SIZE));
   const currentPage = Math.min(page, totalPages);
@@ -150,7 +147,7 @@ export function Catalog() {
     setLoading(true);
     const t = setTimeout(() => setLoading(false), 420);
     return () => clearTimeout(t);
-  }, [search, categorySlugs.join(), region, farmerId, onlyAvailable, priceMin, priceMax, sortBy, currentPage, favoritesOnly]);
+  }, [search, categorySlugs.join(), region, farmerId, priceMin, priceMax, sortBy, currentPage, favoritesOnly]);
 
   useEffect(() => {
     // Only for page-number changes (not the initial mount) — gently bring the
@@ -173,7 +170,6 @@ export function Catalog() {
     const f = farmers.find((farmer) => farmer.id === farmerId);
     if (f) activeChips.push({ key: "farmer", label: f.farmName, onRemove: () => updateParams({ farmer: null }) });
   }
-  if (onlyAvailable) activeChips.push({ key: "avail", label: t("product:filters.onlyAvailable"), onRemove: () => handleFilterChange({ onlyAvailable: false }) });
   if (priceMin || priceMax) activeChips.push({ key: "price", label: `${priceMin || 0}–${priceMax || "∞"} ${t("common:currencySomoni")}`, onRemove: () => handleFilterChange({ priceMin: "", priceMax: "" }) });
   if (favoritesOnly) activeChips.push({ key: "fav", label: t("common:actions.favorites"), onRemove: () => updateParams({ favorites: null }) });
 

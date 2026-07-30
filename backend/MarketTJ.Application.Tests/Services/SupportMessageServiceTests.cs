@@ -16,12 +16,13 @@ public class SupportMessageServiceTests
     private readonly Mock<ISupportTicketRepository> _supportTicketRepository = new();
     private readonly Mock<IUserRepository> _userRepository = new();
     private readonly Mock<ICurrentUserService> _currentUser = new();
+    private readonly Mock<IEmailSender> _emailSender = new();
     private readonly Mock<ILogger<SupportMessageService>> _logger = new();
     private readonly SupportMessageService _service;
 
     public SupportMessageServiceTests()
     {
-        _service = new SupportMessageService(_supportMessageRepository.Object, _supportTicketRepository.Object, _userRepository.Object, _currentUser.Object, _logger.Object);
+        _service = new SupportMessageService(_supportMessageRepository.Object, _supportTicketRepository.Object, _userRepository.Object, _currentUser.Object, _emailSender.Object, _logger.Object);
         // Дефолтный тикет — UserId=1; залогинены как этот же пользователь.
         _currentUser.Setup(c => c.UserId).Returns(1);
         _currentUser.Setup(c => c.Role).Returns(nameof(UserRole.Customer));
@@ -215,6 +216,59 @@ public class SupportMessageServiceTests
 
         Assert.False(result.IsSuccess);
         Assert.Equal(ErrorType.InternalServerError, result.ErrorType);
+    }
+
+    [Fact]
+    public async Task CreateAsync_AdminRepliesToGuestTicket_SendsEmailToGuestAddress()
+    {
+        _currentUser.Setup(c => c.UserId).Returns(99);
+        _currentUser.Setup(c => c.Role).Returns(nameof(UserRole.Admin));
+        _supportTicketRepository.Setup(r => r.GetByIdAsync(It.IsAny<int>())).ReturnsAsync(new SupportTicket
+        {
+            Id = 1, UserId = null, GuestName = "Гость", GuestEmail = "guest@example.com",
+            Subject = "Вопрос", Status = SupportTicketStatus.Open, Priority = SupportPriority.Normal, CreatedAt = DateTime.UtcNow
+        });
+
+        var result = await _service.CreateAsync(ValidCreateDto());
+
+        Assert.True(result.IsSuccess);
+        _emailSender.Verify(e => e.SendAsync("guest@example.com", It.IsAny<string>(), It.IsAny<string>()), Times.Once);
+    }
+
+    [Fact]
+    public async Task CreateAsync_AdminRepliesToRegisteredUserTicket_SendsEmailToUserAddress()
+    {
+        _currentUser.Setup(c => c.UserId).Returns(99);
+        _currentUser.Setup(c => c.Role).Returns(nameof(UserRole.Admin));
+        // Дефолтный тикет из конструктора (UserId=1); дефолтный _userRepository
+        // отдаёт email "u@e.com" для любого запрошенного Id.
+
+        var result = await _service.CreateAsync(ValidCreateDto());
+
+        Assert.True(result.IsSuccess);
+        _emailSender.Verify(e => e.SendAsync("u@e.com", It.IsAny<string>(), It.IsAny<string>()), Times.Once);
+    }
+
+    [Fact]
+    public async Task CreateAsync_NonAdminSendsOwnMessage_DoesNotSendEmail()
+    {
+        // Дефолт из конструктора уже: currentUser.UserId=1, Role=Customer, тикет.UserId=1.
+        var result = await _service.CreateAsync(ValidCreateDto());
+
+        Assert.True(result.IsSuccess);
+        _emailSender.Verify(e => e.SendAsync(It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>()), Times.Never);
+    }
+
+    [Fact]
+    public async Task CreateAsync_EmailSendingThrows_StillReturnsOk()
+    {
+        _currentUser.Setup(c => c.UserId).Returns(99);
+        _currentUser.Setup(c => c.Role).Returns(nameof(UserRole.Admin));
+        _emailSender.Setup(e => e.SendAsync(It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>())).ThrowsAsync(new Exception("smtp down"));
+
+        var result = await _service.CreateAsync(ValidCreateDto());
+
+        Assert.True(result.IsSuccess);
     }
 
     // ---------- UpdateAsync ----------

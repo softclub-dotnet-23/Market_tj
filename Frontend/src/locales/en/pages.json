@@ -35,8 +35,8 @@
     "toastTitle": "Message sent!",
     "toastDescription": "We'll reply within one business day.",
     "submitError": "Failed to send message",
-    "loginRequiredTitle": "Log in to write to us",
-    "loginRequiredDescription": "Support messages are saved to your account — please log in or sign up first.",
+    "guestHint": "You're not logged in — leave your email and we'll reply there.",
+    "optional": "Optional",
     "mapComingSoon": "An interactive map is coming soon",
     "socialTitle": "Follow us"
   },

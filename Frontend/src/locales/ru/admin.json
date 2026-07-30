@@ -1,15 +1,18 @@
 {
   "nav": {
-    "overview": "Обзор",
-    "analytics": "Аналитика",
+    "overview": "Аналитика",
     "orders": "Заказы",
     "products": "Товары",
+    "catalog": "Категории",
     "farmers": "Фермеры",
+    "farmerDocuments": "Документы фермеров",
     "customers": "Покупатели",
     "payments": "Платежи",
     "reviews": "Отзывы",
+    "support": "Поддержка",
     "notifications": "Уведомления",
     "settings": "Настройки",
+    "profile": "Профиль",
     "couriers": "Курьеры",
     "delivery": "Доставка"
   },
@@ -110,6 +113,7 @@
     },
     "farmerLabel": "Фермер #{{id}}",
     "perKg": "с./кг",
+    "pricePerUnitSuffix": "с./{{unit}}",
     "kg": "кг",
     "originallyOf": "из {{count}} изначально",
     "status": {
@@ -146,6 +150,106 @@
     "verifySuccess": "Фермер подтверждён",
     "rejectSuccess": "Фермер отклонён",
     "actionError": "Не удалось изменить статус"
+  },
+  "farmerDocuments": {
+    "errorTitle": "Не удалось загрузить документы",
+    "errorDescription": "Проверьте подключение к серверу и попробуйте снова.",
+    "emptyTitle": "Пока нет документов",
+    "emptyDescription": "Здесь появятся документы, загруженные фермерами для проверки.",
+    "columns": {
+      "farmer": "Фермер",
+      "type": "Тип документа",
+      "status": "Статус",
+      "rejectionReason": "Причина отклонения",
+      "uploadedAt": "Дата загрузки",
+      "actions": "Действия"
+    },
+    "farmerLabel": "Фермер #{{id}}",
+    "type": {
+      "passport": "Паспорт",
+      "landDeed": "Документ на землю",
+      "other": "Другое"
+    },
+    "status": {
+      "pending": "На проверке",
+      "approved": "Подтверждён",
+      "rejected": "Отклонён"
+    },
+    "viewAction": "Открыть файл",
+    "approveAction": "Подтвердить",
+    "rejectAction": "Отклонить",
+    "approveSuccess": "Документ подтверждён",
+    "rejectSuccess": "Документ отклонён",
+    "actionError": "Не удалось изменить статус документа",
+    "rejectModalTitle": "Причина отклонения",
+    "form": {
+      "reason": "Причина отклонения",
+      "reasonRequired": "Укажите причину отклонения",
+      "cancel": "Отмена"
+    }
+  },
+  "catalog": {
+    "tabCategories": "Категории",
+    "tabProducts": "Товары",
+    "addCategoryButton": "Добавить категорию",
+    "addProductButton": "Добавить товар",
+    "columns": {
+      "name": "Название",
+      "description": "Описание",
+      "category": "Категория",
+      "unit": "Единица",
+      "status": "Статус",
+      "actions": "Действия"
+    },
+    "statusActive": "Активна",
+    "statusInactive": "Скрыта",
+    "editAction": "Редактировать",
+    "deleteAction": "Удалить",
+    "categoryErrorTitle": "Не удалось загрузить категории",
+    "categoryErrorDescription": "Проверьте подключение к серверу и попробуйте снова.",
+    "categoryEmptyTitle": "Пока нет категорий",
+    "categoryEmptyDescription": "Добавьте первую категорию товаров.",
+    "categoryCreateModalTitle": "Новая категория",
+    "categoryEditModalTitle": "Редактировать категорию",
+    "categoryCreateSuccess": "Категория добавлена",
+    "categoryCreateError": "Не удалось добавить категорию",
+    "categoryUpdateSuccess": "Категория обновлена",
+    "categoryUpdateError": "Не удалось обновить категорию",
+    "categoryDeleteSuccess": "Категория удалена",
+    "categoryDeleteError": "Не удалось удалить категорию",
+    "categoryDeleteConfirmTitle": "Удалить категорию?",
+    "categoryDeleteConfirmDescription": "Категория «{{name}}» будет удалена. Товары в ней могут стать недоступны для выбора.",
+    "productErrorTitle": "Не удалось загрузить товары",
+    "productErrorDescription": "Проверьте подключение к серверу и попробуйте снова.",
+    "productEmptyTitle": "Пока нет товаров в каталоге",
+    "productEmptyDescription": "Добавьте базовый товар, чтобы фермеры могли выбрать его при создании объявления.",
+    "productCreateModalTitle": "Новый товар в каталоге",
+    "productEditModalTitle": "Редактировать товар",
+    "productCreateSuccess": "Товар добавлен в каталог",
+    "productCreateError": "Не удалось добавить товар",
+    "productUpdateSuccess": "Товар обновлён",
+    "productUpdateError": "Не удалось обновить товар",
+    "productDeleteSuccess": "Товар удалён из каталога",
+    "productDeleteError": "Не удалось удалить товар",
+    "productDeleteConfirmTitle": "Удалить товар?",
+    "productDeleteConfirmDescription": "Товар «{{name}}» будет удалён из каталога. Существующие объявления фермеров с этим товаром не пострадают.",
+    "form": {
+      "name": "Название",
+      "nameRu": "Название (рус.)",
+      "nameTj": "Номи тоҷикӣ",
+      "nameEn": "Name (English)",
+      "description": "Описание",
+      "imageUrl": "Ссылка на изображение",
+      "category": "Категория",
+      "unit": "Единица измерения",
+      "unitHint": "Например: кг, шт, л",
+      "isActive": "Активна (доступна для выбора)",
+      "required": "Обязательное поле",
+      "optional": "Необязательно",
+      "cancel": "Отмена",
+      "submit": "Добавить",
+      "saveChanges": "Сохранить"
+    }
   },
   "users": {
     "errorTitle": "Не удалось загрузить покупателей",
@@ -368,5 +472,42 @@
       "submit": "Создать",
       "saveChanges": "Сохранить изменения"
     }
+  },
+  "profile": {
+    "errorTitle": "Не удалось загрузить профиль",
+    "errorDescription": "Проверьте подключение к серверу и попробуйте снова.",
+    "roleAdmin": "Администратор",
+    "accountTitle": "Данные аккаунта",
+    "memberSince": "На платформе с",
+    "editAction": "Редактировать",
+    "editModalTitle": "Редактировать аккаунт",
+    "updateSuccess": "Данные аккаунта обновлены",
+    "updateError": "Не удалось обновить данные аккаунта",
+    "form": {
+      "fullName": "ФИО",
+      "email": "Email",
+      "phone": "Телефон",
+      "required": "Обязательное поле",
+      "cancel": "Отмена",
+      "saveChanges": "Сохранить изменения"
+    }
+  },
+  "support": {
+    "errorTitle": "Не удалось загрузить обращения",
+    "errorDescription": "Проверьте подключение к серверу и попробуйте снова.",
+    "emptyTitle": "Пока нет обращений",
+    "emptyDescription": "Здесь появятся сообщения из формы \"Связаться с нами\" — как от гостей, так и от зарегистрированных пользователей.",
+    "allStatuses": "Все",
+    "status": {
+      "open": "Открыт",
+      "inProgress": "В работе",
+      "closed": "Закрыт"
+    },
+    "guestBadge": "Без регистрации",
+    "unknownUser": "Пользователь",
+    "noMessagesYet": "Сообщений пока нет",
+    "replyPlaceholder": "Ваш ответ...",
+    "sendReply": "Отправить ответ",
+    "replyError": "Не удалось отправить ответ"
   }
 }

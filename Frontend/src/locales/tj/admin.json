@@ -1,15 +1,18 @@
 {
   "nav": {
-    "overview": "Хулоса",
-    "analytics": "Таҳлил",
+    "overview": "Таҳлил",
     "orders": "Фармоишҳо",
     "products": "Маҳсулот",
+    "catalog": "Категорияҳо",
     "farmers": "Деҳқонон",
+    "farmerDocuments": "Ҳуҷҷатҳои деҳқонон",
     "customers": "Харидорон",
     "payments": "Пардохтҳо",
     "reviews": "Шарҳҳо",
+    "support": "Дастгирӣ",
     "notifications": "Огоҳиномаҳо",
     "settings": "Танзимот",
+    "profile": "Профил",
     "couriers": "Курерҳо",
     "delivery": "Расонидан"
   },
@@ -110,6 +113,7 @@
     },
     "farmerLabel": "Деҳқон #{{id}}",
     "perKg": "смн./кг",
+    "pricePerUnitSuffix": "смн./{{unit}}",
     "kg": "кг",
     "originallyOf": "аз {{count}} ибтидоӣ",
     "status": {
@@ -146,6 +150,106 @@
     "verifySuccess": "Деҳқон тасдиқ карда шуд",
     "rejectSuccess": "Деҳқон рад карда шуд",
     "actionError": "Ҳолат тағйир дода нашуд"
+  },
+  "farmerDocuments": {
+    "errorTitle": "Ҳуҷҷатҳо бор нашуданд",
+    "errorDescription": "Пайвастшавии худро ба сервер санҷед ва аз нав кӯшиш кунед.",
+    "emptyTitle": "Ҳанӯз ҳуҷҷат нест",
+    "emptyDescription": "Дар ин ҷо ҳуҷҷатҳои аз тарафи деҳқонон боркардашуда барои тафтиш пайдо мешаванд.",
+    "columns": {
+      "farmer": "Деҳқон",
+      "type": "Навъи ҳуҷҷат",
+      "status": "Ҳолат",
+      "rejectionReason": "Сабаби рад кардан",
+      "uploadedAt": "Санаи боркунӣ",
+      "actions": "Амалҳо"
+    },
+    "farmerLabel": "Деҳқон #{{id}}",
+    "type": {
+      "passport": "Шиноснома",
+      "landDeed": "Ҳуҷҷати замин",
+      "other": "Дигар"
+    },
+    "status": {
+      "pending": "Дар тафтиш",
+      "approved": "Тасдиқшуда",
+      "rejected": "Рад шуда"
+    },
+    "viewAction": "Кушодани файл",
+    "approveAction": "Тасдиқ кардан",
+    "rejectAction": "Рад кардан",
+    "approveSuccess": "Ҳуҷҷат тасдиқ карда шуд",
+    "rejectSuccess": "Ҳуҷҷат рад карда шуд",
+    "actionError": "Ҳолати ҳуҷҷат тағйир дода нашуд",
+    "rejectModalTitle": "Сабаби рад кардан",
+    "form": {
+      "reason": "Сабаби рад кардан",
+      "reasonRequired": "Сабабро нишон диҳед",
+      "cancel": "Бекор кардан"
+    }
+  },
+  "catalog": {
+    "tabCategories": "Категорияҳо",
+    "tabProducts": "Маҳсулот",
+    "addCategoryButton": "Илова кардани категория",
+    "addProductButton": "Илова кардани маҳсулот",
+    "columns": {
+      "name": "Ном",
+      "description": "Тавсиф",
+      "category": "Категория",
+      "unit": "Воҳид",
+      "status": "Ҳолат",
+      "actions": "Амалҳо"
+    },
+    "statusActive": "Фаъол",
+    "statusInactive": "Пинҳон",
+    "editAction": "Таҳрир кардан",
+    "deleteAction": "Нест кардан",
+    "categoryErrorTitle": "Категорияҳо бор нашуданд",
+    "categoryErrorDescription": "Пайвастшавии худро ба сервер санҷед ва аз нав кӯшиш кунед.",
+    "categoryEmptyTitle": "Ҳанӯз категория нест",
+    "categoryEmptyDescription": "Аввалин категорияи маҳсулотро илова кунед.",
+    "categoryCreateModalTitle": "Категорияи нав",
+    "categoryEditModalTitle": "Таҳрири категория",
+    "categoryCreateSuccess": "Категория илова карда шуд",
+    "categoryCreateError": "Категория илова нашуд",
+    "categoryUpdateSuccess": "Категория навсозӣ шуд",
+    "categoryUpdateError": "Категория навсозӣ нашуд",
+    "categoryDeleteSuccess": "Категория нест карда шуд",
+    "categoryDeleteError": "Категория нест нашуд",
+    "categoryDeleteConfirmTitle": "Категорияро нест кунем?",
+    "categoryDeleteConfirmDescription": "Категорияи «{{name}}» нест карда мешавад. Маҳсулоти дар он буда метавонанд барои интихоб дастнорас шаванд.",
+    "productErrorTitle": "Маҳсулот бор нашуд",
+    "productErrorDescription": "Пайвастшавии худро ба сервер санҷед ва аз нав кӯшиш кунед.",
+    "productEmptyTitle": "Ҳанӯз маҳсулот дар каталог нест",
+    "productEmptyDescription": "Маҳсулоти асосиро илова кунед, то деҳқонон ҳангоми сохтани эълон онро интихоб карда тавонанд.",
+    "productCreateModalTitle": "Маҳсулоти нав дар каталог",
+    "productEditModalTitle": "Таҳрири маҳсулот",
+    "productCreateSuccess": "Маҳсулот ба каталог илова карда шуд",
+    "productCreateError": "Маҳсулот илова нашуд",
+    "productUpdateSuccess": "Маҳсулот навсозӣ шуд",
+    "productUpdateError": "Маҳсулот навсозӣ нашуд",
+    "productDeleteSuccess": "Маҳсулот аз каталог нест карда шуд",
+    "productDeleteError": "Маҳсулот нест нашуд",
+    "productDeleteConfirmTitle": "Маҳсулотро нест кунем?",
+    "productDeleteConfirmDescription": "Маҳсулоти «{{name}}» аз каталог нест карда мешавад. Эълонҳои мавҷудаи деҳқонон бо ин маҳсулот тағйир намеёбанд.",
+    "form": {
+      "name": "Ном",
+      "nameRu": "Ном (русӣ)",
+      "nameTj": "Номи тоҷикӣ",
+      "nameEn": "Ном (англисӣ)",
+      "description": "Тавсиф",
+      "imageUrl": "Ҳавола ба тасвир",
+      "category": "Категория",
+      "unit": "Воҳиди ченак",
+      "unitHint": "Масалан: кг, дона, л",
+      "isActive": "Фаъол (барои интихоб дастрас)",
+      "required": "Майдони ҳатмӣ",
+      "optional": "Ихтиёрӣ",
+      "cancel": "Бекор кардан",
+      "submit": "Илова кардан",
+      "saveChanges": "Нигоҳ доштан"
+    }
   },
   "users": {
     "errorTitle": "Харидорон бор нашуданд",
@@ -368,5 +472,42 @@
       "submit": "Сохтан",
       "saveChanges": "Нигоҳ доштани тағйирот"
     }
+  },
+  "profile": {
+    "errorTitle": "Профил бор нашуд",
+    "errorDescription": "Пайвастшавии худро ба сервер санҷед ва аз нав кӯшиш кунед.",
+    "roleAdmin": "Маъмур",
+    "accountTitle": "Маълумоти ҳисоб",
+    "memberSince": "Дар платформа аз",
+    "editAction": "Таҳрир кардан",
+    "editModalTitle": "Таҳрири ҳисоб",
+    "updateSuccess": "Маълумоти ҳисоб навсозӣ шуд",
+    "updateError": "Маълумоти ҳисоб навсозӣ нашуд",
+    "form": {
+      "fullName": "Ному насаб",
+      "email": "Email",
+      "phone": "Телефон",
+      "required": "Майдони ҳатмӣ",
+      "cancel": "Бекор кардан",
+      "saveChanges": "Нигоҳ доштани тағйирот"
+    }
+  },
+  "support": {
+    "errorTitle": "Мурожиатҳо бор нашуданд",
+    "errorDescription": "Пайвастшавии худро ба сервер санҷед ва аз нав кӯшиш кунед.",
+    "emptyTitle": "Ҳанӯз мурожиат нест",
+    "emptyDescription": "Дар ин ҷо паёмҳо аз шакли \"Бо мо тамос гиред\" пайдо мешаванд — ҳам аз меҳмонон, ҳам аз корбарони сабтшуда.",
+    "allStatuses": "Ҳама",
+    "status": {
+      "open": "Кушода",
+      "inProgress": "Дар кор",
+      "closed": "Пӯшида"
+    },
+    "guestBadge": "Бе сабти ном",
+    "unknownUser": "Корбар",
+    "noMessagesYet": "Ҳанӯз паём нест",
+    "replyPlaceholder": "Ҷавоби шумо...",
+    "sendReply": "Фиристодани ҷавоб",
+    "replyError": "Ҷавоб фиристода нашуд"
   }
 }

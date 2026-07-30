@@ -6,7 +6,8 @@
     "шт": "pcs",
     "пучок": "bunch",
     "литр": "liter",
-    "л": "l"
+    "л": "l",
+    "голова": "head"
   },
   "filters": {
     "title": "Filters",
@@ -16,7 +17,6 @@
     "price": "Price, somoni",
     "priceFrom": "From",
     "priceTo": "To",
-    "onlyAvailable": "In stock only",
     "resetFilters": "Reset filters"
   },
   "badges": {

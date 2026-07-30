@@ -25,13 +25,16 @@ const ForgotPassword = lazy(() => import("@/pages/ForgotPassword").then((m) => (
 const Forbidden = lazy(() => import("@/pages/Forbidden").then((m) => ({ default: m.Forbidden })));
 const NotFound = lazy(() => import("@/pages/NotFound").then((m) => ({ default: m.NotFound })));
 const AdminDashboard = lazy(() => import("@/pages/AdminDashboard").then((m) => ({ default: m.AdminDashboard })));
-const AdminStatistics = lazy(() => import("@/pages/AdminStatistics").then((m) => ({ default: m.AdminStatistics })));
 const AdminOrders = lazy(() => import("@/pages/AdminOrders").then((m) => ({ default: m.AdminOrders })));
 const AdminProducts = lazy(() => import("@/pages/AdminProducts").then((m) => ({ default: m.AdminProducts })));
 const AdminFarmers = lazy(() => import("@/pages/AdminFarmers").then((m) => ({ default: m.AdminFarmers })));
+const AdminCatalog = lazy(() => import("@/pages/AdminCatalog").then((m) => ({ default: m.AdminCatalog })));
+const AdminFarmerDocuments = lazy(() => import("@/pages/AdminFarmerDocuments").then((m) => ({ default: m.AdminFarmerDocuments })));
 const AdminUsers = lazy(() => import("@/pages/AdminUsers").then((m) => ({ default: m.AdminUsers })));
 const AdminReviews = lazy(() => import("@/pages/AdminReviews").then((m) => ({ default: m.AdminReviews })));
 const AdminSettings = lazy(() => import("@/pages/AdminSettings").then((m) => ({ default: m.AdminSettings })));
+const AdminProfile = lazy(() => import("@/pages/AdminProfile").then((m) => ({ default: m.AdminProfile })));
+const AdminSupport = lazy(() => import("@/pages/AdminSupport").then((m) => ({ default: m.AdminSupport })));
 const AdminNotifications = lazy(() => import("@/pages/AdminNotifications").then((m) => ({ default: m.AdminNotifications })));
 const FarmerDashboard = lazy(() => import("@/pages/FarmerDashboard").then((m) => ({ default: m.FarmerDashboard })));
 const FarmerProducts = lazy(() => import("@/pages/FarmerProducts").then((m) => ({ default: m.FarmerProducts })));
@@ -64,14 +67,17 @@ function App() {
                   <Route element={<ProtectedRoute role="Admin" />}>
                     <Route path="admin" element={<AdminLayout />}>
                       <Route index element={<AdminDashboard />} />
-                      <Route path="statistics" element={<AdminStatistics />} />
                       <Route path="orders" element={<AdminOrders />} />
                       <Route path="products" element={<AdminProducts />} />
+                      <Route path="catalog" element={<AdminCatalog />} />
                       <Route path="farmers" element={<AdminFarmers />} />
+                      <Route path="farmer-documents" element={<AdminFarmerDocuments />} />
                       <Route path="users" element={<AdminUsers />} />
                       <Route path="reviews" element={<AdminReviews />} />
+                      <Route path="support" element={<AdminSupport />} />
                       <Route path="notifications" element={<AdminNotifications />} />
                       <Route path="settings" element={<AdminSettings />} />
+                      <Route path="profile" element={<AdminProfile />} />
                       <Route path="*" element={<Navigate to="/admin" replace />} />
                     </Route>
                   </Route>

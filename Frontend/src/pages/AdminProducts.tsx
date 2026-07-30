@@ -40,7 +40,7 @@ const STATUS_CLASSES: Record<number, string> = {
 const ALL_ITEMS_PAGE_SIZE = 10000;
 
 export function AdminProducts() {
-  const { t } = useTranslation("admin");
+  const { t } = useTranslation(["admin", "product"]);
   const searchQuery = useAdminSearch();
   const [page, setPage] = useState(1);
   const [viewMode, setViewMode] = useState<OrdersViewMode>("table");
@@ -133,11 +133,11 @@ export function AdminProducts() {
         </div>
         <div className="flex items-center justify-between text-sm">
           <span className="font-semibold text-stone-800 dark:text-stone-100">
-            {formatSomoni(product.retailPricePerKg)} {t("products.perKg")}
+            {formatSomoni(product.retailPricePerKg)} {t("products.pricePerUnitSuffix", { unit: t(`product:units.${product.unit}`) })}
           </span>
           <div className="flex flex-col items-end">
             <span className="text-xs text-stone-500 dark:text-stone-400">
-              {product.availableQuantity} {t("products.kg")}
+              {product.availableQuantity} {t(`product:units.${product.unit}`)}
             </span>
             {sold > 0 && (
               <span className="text-xs text-stone-400 dark:text-stone-500">
@@ -203,7 +203,7 @@ export function AdminProducts() {
                   </td>
                   <td className="px-6 py-4 text-stone-600 dark:text-stone-300">{t("products.farmerLabel", { id: product.farmerProfileId })}</td>
                   <td className="px-6 py-4 font-semibold text-stone-800 dark:text-stone-100">
-                    {formatSomoni(product.retailPricePerKg)} {t("products.perKg")}
+                    {formatSomoni(product.retailPricePerKg)} {t("products.pricePerUnitSuffix", { unit: t(`product:units.${product.unit}`) })}
                   </td>
                   <td className="px-6 py-4 text-stone-600 dark:text-stone-300">
                     {(() => {
@@ -211,7 +211,7 @@ export function AdminProducts() {
                       return (
                         <div className="flex flex-col">
                           <span>
-                            {product.availableQuantity} {t("products.kg")}
+                            {product.availableQuantity} {t(`product:units.${product.unit}`)}
                           </span>
                           {sold > 0 && (
                             <span className="text-xs text-stone-400 dark:text-stone-500">

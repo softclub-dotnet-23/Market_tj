@@ -1,15 +1,18 @@
 {
   "nav": {
-    "overview": "Overview",
-    "analytics": "Analytics",
+    "overview": "Analytics",
     "orders": "Orders",
     "products": "Products",
+    "catalog": "Categories",
     "farmers": "Farmers",
+    "farmerDocuments": "Farmer documents",
     "customers": "Customers",
     "payments": "Payments",
     "reviews": "Reviews",
+    "support": "Support",
     "notifications": "Notifications",
     "settings": "Settings",
+    "profile": "Profile",
     "couriers": "Couriers",
     "delivery": "Delivery"
   },
@@ -104,6 +107,7 @@
     },
     "farmerLabel": "Farmer #{{id}}",
     "perKg": "TJS/kg",
+    "pricePerUnitSuffix": "TJS/{{unit}}",
     "kg": "kg",
     "originallyOf": "of {{count}} originally",
     "status": {
@@ -140,6 +144,106 @@
     "verifySuccess": "Farmer verified",
     "rejectSuccess": "Farmer rejected",
     "actionError": "Failed to change status"
+  },
+  "farmerDocuments": {
+    "errorTitle": "Failed to load documents",
+    "errorDescription": "Check your connection to the server and try again.",
+    "emptyTitle": "No documents yet",
+    "emptyDescription": "Documents uploaded by farmers for review will appear here.",
+    "columns": {
+      "farmer": "Farmer",
+      "type": "Document type",
+      "status": "Status",
+      "rejectionReason": "Rejection reason",
+      "uploadedAt": "Upload date",
+      "actions": "Actions"
+    },
+    "farmerLabel": "Farmer #{{id}}",
+    "type": {
+      "passport": "Passport",
+      "landDeed": "Land deed",
+      "other": "Other"
+    },
+    "status": {
+      "pending": "Under review",
+      "approved": "Approved",
+      "rejected": "Rejected"
+    },
+    "viewAction": "Open file",
+    "approveAction": "Approve",
+    "rejectAction": "Reject",
+    "approveSuccess": "Document approved",
+    "rejectSuccess": "Document rejected",
+    "actionError": "Failed to change document status",
+    "rejectModalTitle": "Rejection reason",
+    "form": {
+      "reason": "Rejection reason",
+      "reasonRequired": "Enter a rejection reason",
+      "cancel": "Cancel"
+    }
+  },
+  "catalog": {
+    "tabCategories": "Categories",
+    "tabProducts": "Products",
+    "addCategoryButton": "Add category",
+    "addProductButton": "Add product",
+    "columns": {
+      "name": "Name",
+      "description": "Description",
+      "category": "Category",
+      "unit": "Unit",
+      "status": "Status",
+      "actions": "Actions"
+    },
+    "statusActive": "Active",
+    "statusInactive": "Hidden",
+    "editAction": "Edit",
+    "deleteAction": "Delete",
+    "categoryErrorTitle": "Failed to load categories",
+    "categoryErrorDescription": "Check your connection to the server and try again.",
+    "categoryEmptyTitle": "No categories yet",
+    "categoryEmptyDescription": "Add the first product category.",
+    "categoryCreateModalTitle": "New category",
+    "categoryEditModalTitle": "Edit category",
+    "categoryCreateSuccess": "Category added",
+    "categoryCreateError": "Failed to add category",
+    "categoryUpdateSuccess": "Category updated",
+    "categoryUpdateError": "Failed to update category",
+    "categoryDeleteSuccess": "Category deleted",
+    "categoryDeleteError": "Failed to delete category",
+    "categoryDeleteConfirmTitle": "Delete category?",
+    "categoryDeleteConfirmDescription": "The category \"{{name}}\" will be deleted. Products in it may become unavailable for selection.",
+    "productErrorTitle": "Failed to load products",
+    "productErrorDescription": "Check your connection to the server and try again.",
+    "productEmptyTitle": "No products in the catalog yet",
+    "productEmptyDescription": "Add a base product so farmers can select it when creating a listing.",
+    "productCreateModalTitle": "New catalog product",
+    "productEditModalTitle": "Edit product",
+    "productCreateSuccess": "Product added to catalog",
+    "productCreateError": "Failed to add product",
+    "productUpdateSuccess": "Product updated",
+    "productUpdateError": "Failed to update product",
+    "productDeleteSuccess": "Product removed from catalog",
+    "productDeleteError": "Failed to delete product",
+    "productDeleteConfirmTitle": "Delete product?",
+    "productDeleteConfirmDescription": "The product \"{{name}}\" will be removed from the catalog. Existing farmer listings using it will not be affected.",
+    "form": {
+      "name": "Name",
+      "nameRu": "Name (Russian)",
+      "nameTj": "Name (Tajik)",
+      "nameEn": "Name (English)",
+      "description": "Description",
+      "imageUrl": "Image URL",
+      "category": "Category",
+      "unit": "Unit",
+      "unitHint": "E.g. kg, pcs, l",
+      "isActive": "Active (available for selection)",
+      "required": "This field is required",
+      "optional": "Optional",
+      "cancel": "Cancel",
+      "submit": "Add",
+      "saveChanges": "Save changes"
+    }
   },
   "users": {
     "errorTitle": "Failed to load customers",
@@ -362,5 +466,42 @@
       "submit": "Create",
       "saveChanges": "Save changes"
     }
+  },
+  "profile": {
+    "errorTitle": "Failed to load profile",
+    "errorDescription": "Check your connection to the server and try again.",
+    "roleAdmin": "Administrator",
+    "accountTitle": "Account details",
+    "memberSince": "On the platform since",
+    "editAction": "Edit",
+    "editModalTitle": "Edit account",
+    "updateSuccess": "Account details updated",
+    "updateError": "Failed to update account details",
+    "form": {
+      "fullName": "Full name",
+      "email": "Email",
+      "phone": "Phone",
+      "required": "This field is required",
+      "cancel": "Cancel",
+      "saveChanges": "Save changes"
+    }
+  },
+  "support": {
+    "errorTitle": "Failed to load support requests",
+    "errorDescription": "Check your connection to the server and try again.",
+    "emptyTitle": "No support requests yet",
+    "emptyDescription": "Messages from the \"Contact us\" form will appear here — from both guests and registered users.",
+    "allStatuses": "All",
+    "status": {
+      "open": "Open",
+      "inProgress": "In progress",
+      "closed": "Closed"
+    },
+    "guestBadge": "Not registered",
+    "unknownUser": "User",
+    "noMessagesYet": "No messages yet",
+    "replyPlaceholder": "Your reply...",
+    "sendReply": "Send reply",
+    "replyError": "Failed to send reply"
   }
 }

@@ -6,7 +6,15 @@ public class ProductListing
 {
     public int Id { get; set; }
     public int FarmerProfileId { get; set; }
-    public int ProductId { get; set; }
+    // ProductId — устаревшая связь со справочником Product (Category выбирал
+    // админ, конкретный товар — тоже админ через Product). По прямому запросу
+    // категорию по-прежнему выбирает админ, а название товара и единицу
+    // измерения теперь вводит сам фермер — поэтому CategoryId/Unit переехали
+    // прямо на ProductListing, а ProductId стал необязательным (оставлен
+    // nullable ради уже существующих объявлений, новые его не заполняют).
+    public int? ProductId { get; set; }
+    public int CategoryId { get; set; }
+    public string Unit { get; set; } = null!;
     public string Title { get; set; } = null!;
     public string? Description { get; set; }
     public decimal RetailPricePerKg { get; set; }
@@ -26,8 +34,10 @@ public class ProductListing
     public DateTime CreatedAt { get; set; }
     public DateTime UpdatedAt { get; set; }
 
-    // Product 1 — many ProductListing / FarmerProfile 1 — many ProductListing.
-    public Product Product { get; set; } = null!;
+    // Product 1 — many ProductListing (устаревшая, см. ProductId) / Category 1 —
+    // many ProductListing / FarmerProfile 1 — many ProductListing.
+    public Product? Product { get; set; }
+    public Category Category { get; set; } = null!;
     public FarmerProfile FarmerProfile { get; set; } = null!;
 
     // ProductListing 1 — many ProductImage / CartItem / OrderItem / ReportedListing / Favorite.
