@@ -1,5 +1,5 @@
+import { useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
-import { Leaf } from "lucide-react";
 import { useCategories } from "@/data/categories";
 import { Checkbox } from "@/components/ui/Field";
 import { Dropdown } from "@/components/ui/Dropdown";
@@ -8,7 +8,6 @@ import { Button } from "@/components/ui/Button";
 export interface CatalogFilterState {
   categorySlugs: string[];
   region: string;
-  onlyAvailable: boolean;
   priceMin: string;
   priceMax: string;
 }
@@ -32,6 +31,31 @@ export function CatalogFilters({
       : [...state.categorySlugs, slug];
     onChange({ categorySlugs: next });
   };
+
+  // Локальный debounce для цены — раньше каждая введённая цифра сразу летела
+  // в URL/фильтр (та же проблема, что чинили для поиска: набор "500" успевал
+  // трижды сбросить страницу пагинации, пока пользователь ещё печатает).
+  const [priceMin, setPriceMin] = useState(state.priceMin);
+  const [priceMax, setPriceMax] = useState(state.priceMax);
+
+  useEffect(() => setPriceMin(state.priceMin), [state.priceMin]);
+  useEffect(() => setPriceMax(state.priceMax), [state.priceMax]);
+
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      if (priceMin !== state.priceMin) onChange({ priceMin });
+    }, 400);
+    return () => clearTimeout(timer);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [priceMin]);
+
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      if (priceMax !== state.priceMax) onChange({ priceMax });
+    }, 400);
+    return () => clearTimeout(timer);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [priceMax]);
 
   return (
     <div className="flex flex-col gap-8">
@@ -76,8 +100,8 @@ export function CatalogFilters({
           <input
             type="number"
             min={0}
-            value={state.priceMin}
-            onChange={(e) => onChange({ priceMin: e.target.value })}
+            value={priceMin}
+            onChange={(e) => setPriceMin(e.target.value)}
             placeholder={t("filters.priceFrom")}
             className="h-11 w-full rounded-xl border border-stone-200 bg-white px-3 text-sm focus:border-grove-500 focus:ring-2 focus:ring-grove-100 dark:border-stone-700 dark:bg-stone-900 dark:text-stone-100 dark:placeholder:text-stone-500 dark:focus:ring-grove-900"
           />
@@ -85,33 +109,12 @@ export function CatalogFilters({
           <input
             type="number"
             min={0}
-            value={state.priceMax}
-            onChange={(e) => onChange({ priceMax: e.target.value })}
+            value={priceMax}
+            onChange={(e) => setPriceMax(e.target.value)}
             placeholder={t("filters.priceTo")}
             className="h-11 w-full rounded-xl border border-stone-200 bg-white px-3 text-sm focus:border-grove-500 focus:ring-2 focus:ring-grove-100 dark:border-stone-700 dark:bg-stone-900 dark:text-stone-100 dark:placeholder:text-stone-500 dark:focus:ring-grove-900"
           />
         </div>
-      </div>
-
-      <div className="flex items-center justify-between rounded-xl bg-stone-50 px-4 py-3.5 dark:bg-stone-800">
-        <span className="flex items-center gap-2 text-sm font-medium text-stone-700 dark:text-stone-200">
-          <Leaf size={15} className="text-grove-600 dark:text-grove-400" />
-          {t("filters.onlyAvailable")}
-        </span>
-        <button
-          role="switch"
-          aria-checked={state.onlyAvailable}
-          onClick={() => onChange({ onlyAvailable: !state.onlyAvailable })}
-          className={`relative h-6 w-11 shrink-0 rounded-full transition-colors ${
-            state.onlyAvailable ? "bg-grove-600" : "bg-stone-300 dark:bg-stone-600"
-          }`}
-        >
-          <span
-            className={`absolute top-0.5 h-5 w-5 rounded-full bg-white shadow-sm transition-transform ${
-              state.onlyAvailable ? "translate-x-5.5" : "translate-x-0.5"
-            }`}
-          />
-        </button>
       </div>
 
       <Button variant="outline" onClick={onReset} className="w-full">

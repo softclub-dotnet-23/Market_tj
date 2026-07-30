@@ -14,14 +14,14 @@ public class ProductListingServiceTests
 {
     private readonly Mock<IProductListingRepository> _productListingRepository = new();
     private readonly Mock<IFarmerProfileRepository> _farmerProfileRepository = new();
-    private readonly Mock<IProductRepository> _productRepository = new();
+    private readonly Mock<ICategoryRepository> _categoryRepository = new();
     private readonly Mock<ICurrentUserService> _currentUser = new();
     private readonly Mock<ILogger<ProductListingService>> _logger = new();
     private readonly ProductListingService _service;
 
     public ProductListingServiceTests()
     {
-        _service = new ProductListingService(_productListingRepository.Object, _farmerProfileRepository.Object, _productRepository.Object, _currentUser.Object, _logger.Object);
+        _service = new ProductListingService(_productListingRepository.Object, _farmerProfileRepository.Object, _categoryRepository.Object, _currentUser.Object, _logger.Object);
         // Дефолтный листинг — FarmerProfileId=1 (UserId=1); залогинены как этот фермер.
         _currentUser.Setup(c => c.UserId).Returns(1);
         _currentUser.Setup(c => c.Role).Returns(nameof(UserRole.Farmer));
@@ -47,7 +47,7 @@ public class ProductListingServiceTests
             Address = "A",
             VerificationStatus = FarmerVerificationStatus.Verified
         });
-        _productRepository.Setup(r => r.GetByIdAsync(It.IsAny<int>())).ReturnsAsync((int id) => new Product { Id = id, CategoryId = 1, Name = "Картофель", Unit = "кг", IsActive = true });
+        _categoryRepository.Setup(r => r.GetByIdAsync(It.IsAny<int>())).ReturnsAsync((int id) => new Category { Id = id, Name = "Овощи", IsActive = true });
         _productListingRepository.Setup(r => r.GetAllAsync()).ReturnsAsync([]);
     }
 
@@ -55,7 +55,8 @@ public class ProductListingServiceTests
     {
         Id = id,
         FarmerProfileId = farmerProfileId,
-        ProductId = 1,
+        CategoryId = 1,
+        Unit = "кг",
         Title = "Свежий картофель",
         RetailPricePerKg = 10,
         AvailableQuantity = 100,
@@ -72,7 +73,8 @@ public class ProductListingServiceTests
     private static CreateProductListingDto ValidCreateDto() => new()
     {
         FarmerProfileId = 1,
-        ProductId = 1,
+        CategoryId = 1,
+        Unit = "кг",
         Title = "Свежий картофель",
         RetailPricePerKg = 10,
         AvailableQuantity = 100,
@@ -88,7 +90,8 @@ public class ProductListingServiceTests
     {
         Id = id,
         FarmerProfileId = 1,
-        ProductId = 1,
+        CategoryId = 1,
+        Unit = "кг",
         Title = "Свежий картофель",
         RetailPricePerKg = 10,
         AvailableQuantity = 100,
@@ -241,10 +244,23 @@ public class ProductListingServiceTests
     }
 
     [Fact]
-    public async Task CreateAsync_ZeroProductId_ReturnsValidationError()
+    public async Task CreateAsync_ZeroCategoryId_ReturnsValidationError()
     {
         var dto = ValidCreateDto();
-        dto.ProductId = 0;
+        dto.CategoryId = 0;
+
+        var result = await _service.CreateAsync(dto);
+
+        Assert.False(result.IsSuccess);
+        Assert.Equal(ErrorType.Validation, result.ErrorType);
+        _productListingRepository.Verify(r => r.AddAsync(It.IsAny<ProductListing>()), Times.Never);
+    }
+
+    [Fact]
+    public async Task CreateAsync_EmptyUnit_ReturnsValidationError()
+    {
+        var dto = ValidCreateDto();
+        dto.Unit = "";
 
         var result = await _service.CreateAsync(dto);
 
@@ -493,9 +509,9 @@ public class ProductListingServiceTests
     }
 
     [Fact]
-    public async Task CreateAsync_ProductNotFound_ReturnsNotFound()
+    public async Task CreateAsync_CategoryNotFound_ReturnsNotFound()
     {
-        _productRepository.Setup(r => r.GetByIdAsync(It.IsAny<int>())).ReturnsAsync((Product?)null);
+        _categoryRepository.Setup(r => r.GetByIdAsync(It.IsAny<int>())).ReturnsAsync((Category?)null);
 
         var result = await _service.CreateAsync(ValidCreateDto());
 
@@ -618,11 +634,11 @@ public class ProductListingServiceTests
     }
 
     [Fact]
-    public async Task UpdateAsync_ProductNotFound_ReturnsNotFound()
+    public async Task UpdateAsync_CategoryNotFound_ReturnsNotFound()
     {
         var listing = CreateListing(1);
         _productListingRepository.Setup(r => r.GetByIdAsync(1)).ReturnsAsync(listing);
-        _productRepository.Setup(r => r.GetByIdAsync(It.IsAny<int>())).ReturnsAsync((Product?)null);
+        _categoryRepository.Setup(r => r.GetByIdAsync(It.IsAny<int>())).ReturnsAsync((Category?)null);
 
         var result = await _service.UpdateAsync(1, ValidUpdateDto(1));
 

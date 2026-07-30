@@ -5,13 +5,23 @@ export const SupportPriority = { Low: 1, Normal: 2, High: 3 } as const;
 
 export interface SupportTicketDto {
   id: number;
-  userId: number;
+  userId: number | null;
+  guestName: string | null;
+  guestEmail: string | null;
   subject: string;
   status: number;
   priority: number;
   createdAt: string;
   closedAt: string | null;
   assignedToAdminId: number | null;
+}
+
+export interface SupportMessageDto {
+  id: number;
+  supportTicketId: number;
+  senderId: number | null;
+  message: string;
+  createdAt: string;
 }
 
 // POST /api/support-tickets не возвращает id созданной записи (та же схема,
@@ -45,4 +55,13 @@ export async function submitSupportRequest(userId: number, subject: string, mess
   });
 
   return myTicket;
+}
+
+// Обращение без регистрации (по прямому запросу пользователя — "чтобы без
+// регистрации тоже могли писать") — один запрос сразу создаёт тикет и первое
+// сообщение на бэкенде (POST /api/support-tickets/guest, анонимный доступ).
+// Ответ админа приходит на guestEmail по почте — отдельного экрана "мои
+// обращения" для гостя нет и не нужно, у него нет аккаунта, куда его показывать.
+export async function createGuestSupportTicket(guestName: string, guestEmail: string, subject: string, message: string) {
+  await apiPost<string>("/support-tickets/guest", { guestName, guestEmail, subject, message });
 }

@@ -21,6 +21,7 @@ public class SupportMessageConfiguration : IEntityTypeConfiguration<SupportMessa
         builder.HasOne(x => x.Sender)
             .WithMany(x => x.SentSupportMessages)
             .HasForeignKey(x => x.SenderId)
-            .OnDelete(DeleteBehavior.Restrict);
+            .OnDelete(DeleteBehavior.Restrict)
+            .IsRequired(false);
     }
 }

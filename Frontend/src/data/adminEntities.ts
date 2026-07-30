@@ -3,6 +3,8 @@ import { apiDelete, apiGet, apiPost, apiPut } from "@/lib/api";
 
 export const UserRole = { Admin: 1, Farmer: 2, Customer: 3, Courier: 4 } as const;
 export const FarmerVerificationStatus = { Pending: 1, Verified: 2, Rejected: 3 } as const;
+export const FarmerDocumentType = { Passport: 1, LandDeed: 2, Other: 3 } as const;
+export const DocumentReviewStatus = { Pending: 1, Approved: 2, Rejected: 3 } as const;
 export const ListingStatus = { Draft: 1, Active: 2, OutOfStock: 3, Archived: 4 } as const;
 export const OrderStatus = {
   Pending: 1,
@@ -46,6 +48,7 @@ export interface AdminProductListingDto {
   id: number;
   farmerProfileId: number;
   title: string;
+  unit: string;
   retailPricePerKg: number;
   availableQuantity: number;
   status: number;
@@ -74,6 +77,41 @@ export interface AdminFarmerDto {
   verifiedAt: string | null;
   verifiedByAdminId: number | null;
   createdAt: string;
+}
+
+export interface AdminFarmerDocumentDto {
+  id: number;
+  farmerProfileId: number;
+  documentType: number;
+  fileUrl: string;
+  status: number;
+  uploadedAt: string;
+  reviewedAt: string | null;
+  reviewedByAdminId: number | null;
+  rejectionReason: string | null;
+}
+
+export interface AdminCategoryDto {
+  id: number;
+  name: string;
+  nameTj: string | null;
+  nameEn: string | null;
+  description: string | null;
+  imageUrl: string | null;
+  isActive: boolean;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface AdminCatalogProductDto {
+  id: number;
+  categoryId: number;
+  name: string;
+  description: string | null;
+  unit: string;
+  isActive: boolean;
+  createdAt: string;
+  updatedAt: string;
 }
 
 export interface AdminUserDto {
@@ -294,6 +332,24 @@ export function useAdminFarmers(refreshKey = 0) {
   return { farmers: data, loading, error };
 }
 
+export function useAdminFarmerDocuments(refreshKey = 0) {
+  const { data, loading, error } = useAsync(() => apiGet<AdminFarmerDocumentDto[]>("/farmer-documents"), [refreshKey]);
+  return { documents: data, loading, error };
+}
+
+// Справочник категорий и базовых товаров (/api/categories, /api/products) —
+// из него фермер выбирает при создании объявления (см. useProductCatalog в
+// data/farmer.ts). Управляется только Admin.
+export function useAdminCategories(refreshKey = 0) {
+  const { data, loading, error } = useAsync(() => apiGet<AdminCategoryDto[]>("/categories"), [refreshKey]);
+  return { categories: data, loading, error };
+}
+
+export function useAdminCatalogProducts(refreshKey = 0) {
+  const { data, loading, error } = useAsync(() => apiGet<AdminCatalogProductDto[]>("/products"), [refreshKey]);
+  return { products: data, loading, error };
+}
+
 export function useAdminCustomers() {
   const { data, loading, error } = useAsync(() => apiGet<AdminUserDto[]>("/users"), []);
   const customers = useMemo(() => (data ? data.filter((u) => u.role === UserRole.Customer) : null), [data]);
@@ -348,6 +404,31 @@ export function updateFarmerVerification(farmer: AdminFarmerDto, verificationSta
     verificationStatus,
     verifiedAt: new Date().toISOString(),
     verifiedByAdminId: adminUserId,
+  });
+}
+
+// Дополнено по явному запросу пользователя — раньше документ можно было
+// загрузить (см. FarmerDocuments.tsx), но проверить его в админке было
+// негде, хотя backend (UpdateAsync) уже полностью это поддерживал.
+// UpdateFarmerDocumentDto требует все поля документа, а не только те, что
+// меняются — реконструируем DTO из уже загруженной записи, тот же паттерн,
+// что и в updateFarmerVerification.
+export function updateFarmerDocumentStatus(
+  document: AdminFarmerDocumentDto,
+  status: number,
+  adminUserId: number,
+  rejectionReason: string | null,
+) {
+  return apiPut<string>(`/farmer-documents/${document.id}`, {
+    id: document.id,
+    farmerProfileId: document.farmerProfileId,
+    documentType: document.documentType,
+    fileUrl: document.fileUrl,
+    status,
+    uploadedAt: document.uploadedAt,
+    reviewedAt: new Date().toISOString(),
+    reviewedByAdminId: adminUserId,
+    rejectionReason,
   });
 }
 
@@ -487,4 +568,86 @@ export function updateDeliveryZone(id: number, dto: DeliveryZoneFormDto) {
 
 export function deleteDeliveryZone(id: number) {
   return apiDelete<string>(`/delivery-zones/${id}`);
+}
+
+export interface CategoryFormDto {
+  name: string;
+  nameTj: string;
+  nameEn: string;
+  description: string | null;
+  imageUrl: string | null;
+  isActive: boolean;
+}
+
+export function createCategory(dto: CategoryFormDto) {
+  return apiPost<string>("/categories", dto);
+}
+
+export function updateCategory(id: number, dto: CategoryFormDto) {
+  return apiPut<string>(`/categories/${id}`, { id, ...dto });
+}
+
+export function deleteCategory(id: number) {
+  return apiDelete<string>(`/categories/${id}`);
+}
+
+export interface CatalogProductFormDto {
+  categoryId: number;
+  name: string;
+  description: string | null;
+  unit: string;
+  isActive: boolean;
+}
+
+export function createCatalogProduct(dto: CatalogProductFormDto) {
+  return apiPost<string>("/products", dto);
+}
+
+export function updateCatalogProduct(id: number, dto: CatalogProductFormDto) {
+  return apiPut<string>(`/products/${id}`, { id, ...dto });
+}
+
+export function deleteCatalogProduct(id: number) {
+  return apiDelete<string>(`/products/${id}`);
+}
+
+// Своя учётка админа — отдельного AdminProfile-справочника в проекте нет
+// (в отличие от Farmer/Customer), поэтому переиспользуем существующий
+// Admin-only GET/PUT /api/users/{id} (UserController) — сам на себя тоже
+// имеет право, ограничения по "чужой/свой" там нет.
+export interface AdminOwnUserDto {
+  id: number;
+  fullName: string;
+  email: string;
+  phoneNumber: string;
+  avatarUrl: string | null;
+  role: number;
+  isActive: boolean;
+  createdAt: string;
+}
+
+export function useAdminOwnUser(userId: number | null, refreshKey = 0) {
+  const { data, loading, error } = useAsync(
+    () => (userId ? apiGet<AdminOwnUserDto>(`/users/${userId}`) : Promise.resolve(null as never)),
+    [userId, refreshKey],
+  );
+  return { account: data, loading, error };
+}
+
+export interface AdminAccountFormDto {
+  fullName: string;
+  email: string;
+  phoneNumber: string;
+}
+
+export function updateAdminOwnAccount(current: AdminOwnUserDto, edits: AdminAccountFormDto) {
+  return apiPut<string>(`/users/${current.id}`, {
+    id: current.id,
+    fullName: edits.fullName,
+    email: edits.email,
+    phoneNumber: edits.phoneNumber,
+    password: null,
+    role: current.role,
+    isActive: current.isActive,
+  });
 }

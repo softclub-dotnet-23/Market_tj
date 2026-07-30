@@ -2,13 +2,14 @@ import { useEffect, useRef, useState } from "react";
 import { NavLink, Outlet, useLocation, useNavigate, useOutletContext } from "react-router-dom";
 import { useTranslation } from "react-i18next";
 import {
-  BarChart3,
   Bell,
   ChevronDown,
   ChevronsLeft,
   ChevronsRight,
+  FileText,
   Leaf,
   LayoutDashboard,
+  LifeBuoy,
   LogOut,
   Menu,
   MessageSquare,
@@ -17,13 +18,14 @@ import {
   Settings,
   ShoppingCart,
   Sprout,
+  Tags,
+  User as UserIcon,
   Users,
 } from "lucide-react";
 import type { LucideIcon } from "lucide-react";
 import { Avatar } from "@/components/ui/Avatar";
 import { LanguageSwitcher } from "@/components/ui/LanguageSwitcher";
 import { ThemeToggle } from "@/components/ui/ThemeToggle";
-import { AvatarMenuItem } from "@/components/layout/AvatarMenuItem";
 import { PanelMobileDrawer } from "@/components/layout/PanelMobileDrawer";
 import { useAuth } from "@/context/AuthContext";
 import { useAdminOrders, useAdminOrdersUnseenCount } from "@/data/adminEntities";
@@ -53,14 +55,17 @@ export function useAdminSearch(): string {
 
 const NAV_ITEMS: AdminNavItem[] = [
   { labelKey: "overview", path: "/admin", icon: LayoutDashboard },
-  { labelKey: "analytics", path: "/admin/statistics", icon: BarChart3 },
   { labelKey: "orders", path: "/admin/orders", icon: ShoppingCart },
   { labelKey: "products", path: "/admin/products", icon: Package },
+  { labelKey: "catalog", path: "/admin/catalog", icon: Tags },
   { labelKey: "farmers", path: "/admin/farmers", icon: Sprout },
+  { labelKey: "farmerDocuments", path: "/admin/farmer-documents", icon: FileText },
   { labelKey: "customers", path: "/admin/users", icon: Users },
   { labelKey: "reviews", path: "/admin/reviews", icon: MessageSquare },
+  { labelKey: "support", path: "/admin/support", icon: LifeBuoy },
   { labelKey: "notifications", path: "/admin/notifications", icon: Bell },
   { labelKey: "settings", path: "/admin/settings", icon: Settings },
+  { labelKey: "profile", path: "/admin/profile", icon: UserIcon },
 ];
 
 export function AdminLayout() {
@@ -280,7 +285,6 @@ export function AdminLayout() {
                     </p>
                     <p className="truncate text-xs text-stone-400 dark:text-stone-500">{user?.email}</p>
                   </div>
-                  <AvatarMenuItem />
                   <button
                     onClick={handleLogout}
                     className="flex w-full items-center gap-2.5 rounded-xl px-2.5 py-2 text-left text-sm text-stone-600 transition hover:bg-stone-50 dark:text-stone-300 dark:hover:bg-stone-800"

@@ -26,7 +26,7 @@ public static class Seeder
 
         var categoryIds = await SeedCategoriesAsync(context);
         var productIds = await SeedProductsAsync(context, categoryIds);
-        await SeedProductListingsAsync(context, productIds, farmerProfile);
+        await SeedProductListingsAsync(context, productIds, categoryIds, farmerProfile);
 
         // Без этого Admin/Farmer dashboard-аналитика (выручка, заказы по месяцам,
         // рейтинг фермера) показывает одни нули — не ошибка, а просто нет заказов
@@ -225,10 +225,16 @@ public static class Seeder
     // 16 объявлений (раздел: "15-20 реалистичных товаров"), все от тестового
     // Farmer. Region/District повторяют FarmerProfile — объявление публикуется
     // там же, где хозяйство (раздел 8.7).
-    private static async Task SeedProductListingsAsync(AppDbContext context, Dictionary<string, int> productIds, FarmerProfile farmerProfile)
+    private static async Task SeedProductListingsAsync(
+        AppDbContext context, Dictionary<string, int> productIds, Dictionary<string, int> categoryIds, FarmerProfile farmerProfile)
     {
         if (await context.ProductListings.AnyAsync())
             return;
+
+        // CategoryId/Unit теперь живут прямо на ProductListing (см. миграцию
+        // AddCategoryAndUnitToProductListing) — ProductId оставлен только для
+        // обратной совместимости, но новые поля обязательны у всех строк.
+        var categoryAndUnitByProduct = ProductDefs.ToDictionary(p => p.Name, p => (CategoryId: categoryIds[p.Category], p.Unit));
 
         var listings = new (string Product, string Title, decimal Retail, decimal? Wholesale, decimal? WholesaleMin, decimal Available, decimal MinOrder, string Grade)[]
         {
@@ -254,6 +260,8 @@ public static class Seeder
         {
             FarmerProfileId = farmerProfile.Id,
             ProductId = productIds[l.Product],
+            CategoryId = categoryAndUnitByProduct[l.Product].CategoryId,
+            Unit = categoryAndUnitByProduct[l.Product].Unit,
             Title = l.Title,
             RetailPricePerKg = l.Retail,
             WholesalePricePerKg = l.Wholesale,

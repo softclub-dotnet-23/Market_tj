@@ -58,6 +58,8 @@ public class CategoryService(ICategoryRepository categoryRepository, ILogger<Cat
             var category = new Category
             {
                 Name = dto.Name,
+                NameTj = dto.NameTj,
+                NameEn = dto.NameEn,
                 Description = dto.Description,
                 ImageUrl = dto.ImageUrl,
                 IsActive = dto.IsActive,
@@ -92,6 +94,8 @@ public class CategoryService(ICategoryRepository categoryRepository, ILogger<Cat
                 return Result<string>.Fail("Категория с таким названием уже существует", ErrorType.Conflict);
 
             category.Name = dto.Name;
+            category.NameTj = dto.NameTj;
+            category.NameEn = dto.NameEn;
             category.Description = dto.Description;
             category.ImageUrl = dto.ImageUrl;
             category.IsActive = dto.IsActive;
@@ -129,6 +133,8 @@ public class CategoryService(ICategoryRepository categoryRepository, ILogger<Cat
     {
         Id = category.Id,
         Name = category.Name,
+        NameTj = category.NameTj,
+        NameEn = category.NameEn,
         Description = category.Description,
         ImageUrl = category.ImageUrl,
         IsActive = category.IsActive,

@@ -17,4 +17,10 @@ public static class CurrentUserAuthorizationExtensions
 
     public static bool CanAccess(this ICurrentUserService currentUser, int ownerId)
         => currentUser.IsAdmin() || currentUser.UserId == ownerId;
+
+    // Перегрузка для ресурсов без владельца-User (SupportTicket от гостя —
+    // UserId == null): достучаться до них может только Admin, т.к. у самого
+    // гостя нет сессии/аккаунта, которому можно было бы "принадлежать".
+    public static bool CanAccess(this ICurrentUserService currentUser, int? ownerId)
+        => currentUser.IsAdmin() || (ownerId is not null && currentUser.UserId == ownerId);
 }

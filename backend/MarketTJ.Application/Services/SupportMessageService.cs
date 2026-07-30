@@ -14,6 +14,7 @@ public class SupportMessageService(
     ISupportTicketRepository supportTicketRepository,
     IUserRepository userRepository,
     ICurrentUserService currentUser,
+    IEmailSender emailSender,
     ILogger<SupportMessageService> logger) : ISupportMessageService
 {
     // Audit 2026-07-28, находка 2.2 (IDOR): "моё" здесь — я автор тикета или
@@ -102,6 +103,16 @@ public class SupportMessageService(
             };
 
             await supportMessageRepository.AddAsync(message);
+
+            // Уведомляем автора обращения на email, когда отвечает Admin — для
+            // гостя (ticket.UserId == null) это единственный способ вообще
+            // узнать про ответ, т.к. у него нет сессии/аккаунта с in-app
+            // уведомлениями; залогиненному пользователю письмо тоже не
+            // помешает — отдельного "мои обращения" экрана в интерфейсе пока
+            // нет. Ошибка отправки не должна проваливать сам ответ в переписке.
+            if (currentUser.IsAdmin())
+                await NotifyTicketAuthorAsync(ticket, dto.Message);
+
             return Result<string>.Ok("Сообщение отправлено");
         }
         catch (Exception ex)
@@ -190,6 +201,37 @@ public class SupportMessageService(
         {
             logger.LogError(ex, "Ошибка при получении сообщений тикета {TicketId}", ticketId);
             return Result<IEnumerable<GetSupportMessageDto>>.Fail("Не удалось получить сообщения тикета", ErrorType.InternalServerError);
+        }
+    }
+
+    private async Task NotifyTicketAuthorAsync(SupportTicket ticket, string replyText)
+    {
+        try
+        {
+            var recipientEmail = ticket.UserId is not null
+                ? (await userRepository.GetByIdAsync(ticket.UserId.Value))?.Email
+                : ticket.GuestEmail;
+
+            if (string.IsNullOrWhiteSpace(recipientEmail))
+                return;
+
+            var recipientName = ticket.UserId is not null
+                ? (await userRepository.GetByIdAsync(ticket.UserId.Value))?.FullName
+                : ticket.GuestName;
+
+            var body = $"""
+                <p>Здравствуйте{(string.IsNullOrWhiteSpace(recipientName) ? "" : $", {recipientName}")}!</p>
+                <p>Вам ответили на обращение «{ticket.Subject}» на Market.tj:</p>
+                <blockquote style="border-left:3px solid #298a47;margin:0;padding-left:12px;color:#333;">{replyText}</blockquote>
+                """;
+
+            await emailSender.SendAsync(recipientEmail, $"Ответ на ваше обращение — Market.tj", body);
+        }
+        catch (Exception ex)
+        {
+            // Не проваливаем сам ответ поддержки, если письмо не отправилось
+            // (например, временная проблема с SMTP) — это лишь уведомление.
+            logger.LogError(ex, "Не удалось отправить email-уведомление об ответе на тикет {TicketId}", ticket.Id);
         }
     }
 

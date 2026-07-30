@@ -13,7 +13,7 @@ namespace MarketTJ.Application.Services;
 public class ProductListingService(
     IProductListingRepository productListingRepository,
     IFarmerProfileRepository farmerProfileRepository,
-    IProductRepository productRepository,
+    ICategoryRepository categoryRepository,
     ICurrentUserService currentUser,
     ILogger<ProductListingService> logger) : IProductListingService
 {
@@ -94,9 +94,9 @@ public class ProductListingService(
             if (!await OwnsAsync(dto.FarmerProfileId))
                 return Result<string>.Fail("Нельзя создать объявление для чужой фермы", ErrorType.Forbidden);
 
-            var product = await productRepository.GetByIdAsync(dto.ProductId);
-            if (product is null)
-                return Result<string>.Fail("Продукт не найден", ErrorType.NotFound);
+            var category = await categoryRepository.GetByIdAsync(dto.CategoryId);
+            if (category is null)
+                return Result<string>.Fail("Категория не найдена", ErrorType.NotFound);
 
             // Раздел 10.1 ТЗ: неподтверждённый фермер не может создать активное объявление.
             if (dto.Status == ListingStatus.Active && farmerProfile.VerificationStatus != FarmerVerificationStatus.Verified)
@@ -105,7 +105,8 @@ public class ProductListingService(
             var listing = new ProductListing
             {
                 FarmerProfileId = dto.FarmerProfileId,
-                ProductId = dto.ProductId,
+                CategoryId = dto.CategoryId,
+                Unit = dto.Unit,
                 Title = dto.Title,
                 Description = dto.Description,
                 RetailPricePerKg = dto.RetailPricePerKg,
@@ -154,15 +155,16 @@ public class ProductListingService(
             if (farmerProfile is null)
                 return Result<string>.Fail("Профиль фермера не найден", ErrorType.NotFound);
 
-            var product = await productRepository.GetByIdAsync(dto.ProductId);
-            if (product is null)
-                return Result<string>.Fail("Продукт не найден", ErrorType.NotFound);
+            var category = await categoryRepository.GetByIdAsync(dto.CategoryId);
+            if (category is null)
+                return Result<string>.Fail("Категория не найдена", ErrorType.NotFound);
 
             if (dto.Status == ListingStatus.Active && farmerProfile.VerificationStatus != FarmerVerificationStatus.Verified)
                 return Result<string>.Fail("Неподтверждённый фермер не может создать активное объявление", ErrorType.Validation);
 
             listing.FarmerProfileId = dto.FarmerProfileId;
-            listing.ProductId = dto.ProductId;
+            listing.CategoryId = dto.CategoryId;
+            listing.Unit = dto.Unit;
             listing.Title = dto.Title;
             listing.Description = dto.Description;
             listing.RetailPricePerKg = dto.RetailPricePerKg;
@@ -222,7 +224,8 @@ public class ProductListingService(
     {
         Id = listing.Id,
         FarmerProfileId = listing.FarmerProfileId,
-        ProductId = listing.ProductId,
+        CategoryId = listing.CategoryId,
+        Unit = listing.Unit,
         Title = listing.Title,
         Description = listing.Description,
         RetailPricePerKg = listing.RetailPricePerKg,

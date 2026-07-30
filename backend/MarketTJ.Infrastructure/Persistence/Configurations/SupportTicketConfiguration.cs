@@ -15,7 +15,8 @@ public class SupportTicketConfiguration : IEntityTypeConfiguration<SupportTicket
         builder.HasOne(x => x.User)
             .WithMany(x => x.SupportTickets)
             .HasForeignKey(x => x.UserId)
-            .OnDelete(DeleteBehavior.Restrict);
+            .OnDelete(DeleteBehavior.Restrict)
+            .IsRequired(false);
 
         builder.HasOne(x => x.AssignedToAdmin)
             .WithMany()

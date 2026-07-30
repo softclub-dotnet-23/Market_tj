@@ -21,6 +21,13 @@ public class SupportTicketController(ISupportTicketService service) : ApiControl
     public async Task<IActionResult> Create([FromBody] CreateSupportTicketDto dto)
         => HandleResult(await service.CreateAsync(dto));
 
+    // Обращение без регистрации — единственная анонимная точка входа во всей
+    // группе support-контроллеров (по прямому запросу пользователя).
+    [AllowAnonymous]
+    [HttpPost("guest")]
+    public async Task<IActionResult> CreateGuest([FromBody] CreateGuestSupportTicketDto dto)
+        => HandleResult(await service.CreateGuestAsync(dto));
+
     [HttpPut("{id:int}")]
     public async Task<IActionResult> Update(int id, [FromBody] UpdateSupportTicketDto dto)
         => HandleResult(await service.UpdateAsync(id, dto));

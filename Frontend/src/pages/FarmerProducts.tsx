@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from "react";
-import { useForm } from "react-hook-form";
+import { Controller, useForm } from "react-hook-form";
 import { useTranslation } from "react-i18next";
 import { toast } from "sonner";
 import { Loader2, Package, Pencil, Plus, Trash2 } from "lucide-react";
@@ -11,6 +11,7 @@ import { ConfirmDialog } from "@/components/ui/ConfirmDialog";
 import { Button } from "@/components/ui/Button";
 import { ViewModeToggle, type OrdersViewMode } from "@/components/ui/ViewModeToggle";
 import { Input, Select, Textarea } from "@/components/ui/Field";
+import { useCategories } from "@/data/categories";
 import { ApiError, resolveMediaUrl } from "@/lib/api";
 import { dateInputToIso, formatDate, formatSomoni } from "@/lib/utils";
 import {
@@ -25,7 +26,6 @@ import {
   useFarmerProducts,
   useFarmerProfile,
   useOrderItems,
-  useProductCatalog,
   useProductImages,
   useProductPhotoMap,
   type CreateProductListingDto,
@@ -36,6 +36,13 @@ import {
 const MAX_IMAGES = 5;
 const ALLOWED_IMAGE_TYPES = ["image/jpeg", "image/png", "image/webp"];
 const MAX_IMAGE_SIZE_BYTES = 5 * 1024 * 1024;
+
+// Единица измерения теперь выбирает сам фермер (см. миграцию
+// AddCategoryAndUnitToProductListing) — фиксированный набор, а не свободный
+// ввод, чтобы значение всегда попадало в уже переведённый набор
+// locales/{ru,tj,en}/product.json:units (иначе на карточке товара покупатель
+// увидит непереведённый ключ).
+const UNIT_OPTIONS = ["кг", "шт", "л", "пучок", "голова"];
 
 function ProductImagesField({ listingId }: { listingId: number }) {
   const { t } = useTranslation("farmer");
@@ -135,7 +142,8 @@ function StatusBadge({ status, label }: { status: number; label: string }) {
 }
 
 interface ProductFormValues {
-  productId: string;
+  categoryId: string;
+  unit: string;
   title: string;
   qualityGrade: string;
   retailPricePerKg: string;
@@ -148,9 +156,9 @@ interface ProductFormValues {
   status: string;
 }
 
-function toFormValues(product: ProductListingDto): ProductFormValues {
+function toFormValues(product: ProductListingDto): Omit<ProductFormValues, "categoryId"> {
   return {
-    productId: String(product.productId),
+    unit: product.unit,
     title: product.title,
     qualityGrade: product.qualityGrade,
     retailPricePerKg: String(product.retailPricePerKg),
@@ -177,10 +185,11 @@ function ProductFormModal({
   editing: ProductListingDto | null;
   onSaved: () => void;
 }) {
-  const { t } = useTranslation("farmer");
-  const { catalog, loading: catalogLoading } = useProductCatalog();
+  const { t } = useTranslation(["farmer", "product"]);
+  const categories = useCategories();
   const {
     register,
+    control,
     handleSubmit,
     watch,
     reset,
@@ -190,17 +199,24 @@ function ProductFormModal({
   });
 
   useEffect(() => {
-    if (open) reset(editing ? toFormValues(editing) : { qualityGrade: "Первый сорт", status: String(ListingStatus.Draft) });
+    if (!open) return;
+    if (editing) {
+      reset({ ...toFormValues(editing), categoryId: String(editing.categoryId) });
+    } else {
+      reset({ qualityGrade: "Первый сорт", status: String(ListingStatus.Draft), categoryId: "", unit: "" });
+    }
   }, [open, editing, reset]);
 
   const retailPrice = watch("retailPricePerKg");
   const availableQuantity = watch("availableQuantity");
   const wholesalePrice = watch("wholesalePricePerKg");
+  const unit = watch("unit") || "кг";
 
   const onSubmit = async (values: ProductFormValues) => {
     const dto: CreateProductListingDto = {
       farmerProfileId: farmerProfile.id,
-      productId: Number(values.productId),
+      categoryId: Number(values.categoryId),
+      unit: values.unit,
       title: values.title,
       description: values.description || null,
       retailPricePerKg: Number(values.retailPricePerKg),
@@ -237,22 +253,43 @@ function ProductFormModal({
     <Modal open={open} onClose={onClose} className="max-w-2xl">
       <h2 className="font-display text-xl text-stone-900 dark:text-stone-50">{editing ? t("products.editModalTitle") : t("products.modalTitle")}</h2>
       <form onSubmit={handleSubmit(onSubmit)} className="mt-6 flex flex-col gap-5">
-        <Select
-          label={t("products.form.product")}
-          error={errors.productId?.message}
-          disabled={catalogLoading}
-          defaultValue=""
-          {...register("productId", { required: t("products.form.required") })}
-        >
-          <option value="" disabled>
-            {t("products.form.productPlaceholder")}
-          </option>
-          {catalog?.map((p) => (
-            <option key={p.id} value={p.id}>
-              {p.name}
-            </option>
-          ))}
-        </Select>
+        <div className="grid grid-cols-1 gap-5 sm:grid-cols-2">
+          <Controller
+            name="categoryId"
+            control={control}
+            rules={{ required: t("products.form.required") }}
+            render={({ field, fieldState }) => (
+              <Select label={t("products.form.category")} error={fieldState.error?.message} {...field}>
+                <option value="" disabled>
+                  {t("products.form.categoryPlaceholder")}
+                </option>
+                {categories.map((c) => (
+                  <option key={c.id} value={c.id}>
+                    {c.name}
+                  </option>
+                ))}
+              </Select>
+            )}
+          />
+
+          <Controller
+            name="unit"
+            control={control}
+            rules={{ required: t("products.form.required") }}
+            render={({ field, fieldState }) => (
+              <Select label={t("products.form.unit")} error={fieldState.error?.message} {...field}>
+                <option value="" disabled>
+                  {t("products.form.unitPlaceholder")}
+                </option>
+                {UNIT_OPTIONS.map((u) => (
+                  <option key={u} value={u}>
+                    {t(`product:units.${u}`)}
+                  </option>
+                ))}
+              </Select>
+            )}
+          />
+        </div>
 
         <Input
           label={t("products.form.title")}
@@ -266,21 +303,34 @@ function ProductFormModal({
         />
 
         <div className="grid grid-cols-1 gap-5 sm:grid-cols-2">
-          <Select label={t("products.form.qualityGrade")} error={errors.qualityGrade?.message} {...register("qualityGrade", { required: t("products.form.required") })}>
-            <option value="Премиум">{t("products.form.qualityOptions.premium")}</option>
-            <option value="Первый сорт">{t("products.form.qualityOptions.first")}</option>
-            <option value="Стандарт">{t("products.form.qualityOptions.standard")}</option>
-          </Select>
-          <Select label={t("products.form.status")} {...register("status")}>
-            <option value={ListingStatus.Draft}>{t("products.status.draft")}</option>
-            <option value={ListingStatus.Active}>{t("products.status.active")}</option>
-            {editing && <option value={ListingStatus.Archived}>{t("products.status.archived")}</option>}
-          </Select>
+          <Controller
+            name="qualityGrade"
+            control={control}
+            rules={{ required: t("products.form.required") }}
+            render={({ field, fieldState }) => (
+              <Select label={t("products.form.qualityGrade")} error={fieldState.error?.message} {...field}>
+                <option value="Премиум">{t("products.form.qualityOptions.premium")}</option>
+                <option value="Первый сорт">{t("products.form.qualityOptions.first")}</option>
+                <option value="Стандарт">{t("products.form.qualityOptions.standard")}</option>
+              </Select>
+            )}
+          />
+          <Controller
+            name="status"
+            control={control}
+            render={({ field }) => (
+              <Select label={t("products.form.status")} {...field}>
+                <option value={ListingStatus.Draft}>{t("products.status.draft")}</option>
+                <option value={ListingStatus.Active}>{t("products.status.active")}</option>
+                {editing && <option value={ListingStatus.Archived}>{t("products.status.archived")}</option>}
+              </Select>
+            )}
+          />
         </div>
 
         <div className="grid grid-cols-1 gap-5 sm:grid-cols-2">
           <Input
-            label={t("products.form.retailPrice")}
+            label={t("products.form.retailPrice", { unit })}
             type="number"
             step="0.01"
             min="0.01"
@@ -291,7 +341,7 @@ function ProductFormModal({
             })}
           />
           <Input
-            label={t("products.form.availableQuantity")}
+            label={t("products.form.availableQuantity", { unit })}
             type="number"
             step="0.01"
             min="0"
@@ -305,7 +355,7 @@ function ProductFormModal({
 
         <div className="grid grid-cols-1 gap-5 sm:grid-cols-2">
           <Input
-            label={t("products.form.minimumOrderQuantity")}
+            label={t("products.form.minimumOrderQuantity", { unit })}
             type="number"
             step="0.01"
             min="0.01"
@@ -321,7 +371,7 @@ function ProductFormModal({
 
         <div className="grid grid-cols-1 gap-5 sm:grid-cols-2">
           <Input
-            label={t("products.form.wholesalePrice")}
+            label={t("products.form.wholesalePrice", { unit })}
             type="number"
             step="0.01"
             min="0.01"
@@ -332,7 +382,7 @@ function ProductFormModal({
             })}
           />
           <Input
-            label={t("products.form.wholesaleMinQuantity")}
+            label={t("products.form.wholesaleMinQuantity", { unit })}
             type="number"
             step="0.01"
             min="0.01"
@@ -366,7 +416,7 @@ function ProductFormModal({
 }
 
 export function FarmerProducts() {
-  const { t } = useTranslation("farmer");
+  const { t } = useTranslation(["farmer", "product"]);
   const [page, setPage] = useState(1);
   const [viewMode, setViewMode] = useState<OrdersViewMode>("table");
   const [modalOpen, setModalOpen] = useState(false);
@@ -456,11 +506,11 @@ export function FarmerProducts() {
         </div>
         <div className="flex items-center justify-between text-sm">
           <span className="font-semibold text-stone-800 dark:text-stone-100">
-            {formatSomoni(product.retailPricePerKg)} {t("products.perKg")}
+            {formatSomoni(product.retailPricePerKg)} {t("products.pricePerUnitSuffix", { unit: t(`product:units.${product.unit}`) })}
           </span>
           <div className="flex flex-col items-end">
             <span className="text-xs text-stone-500 dark:text-stone-400">
-              {product.availableQuantity} {t("products.kg")}
+              {product.availableQuantity} {t(`product:units.${product.unit}`)}
             </span>
             {sold > 0 && (
               <span className="text-xs text-stone-400 dark:text-stone-500">
@@ -545,7 +595,7 @@ export function FarmerProducts() {
                         </div>
                       </td>
                       <td className="px-6 py-4 font-semibold text-stone-800 dark:text-stone-100">
-                        {formatSomoni(product.retailPricePerKg)} {t("products.perKg")}
+                        {formatSomoni(product.retailPricePerKg)} {t("products.pricePerUnitSuffix", { unit: t(`product:units.${product.unit}`) })}
                       </td>
                       <td className="px-6 py-4 text-stone-600 dark:text-stone-300">
                         {(() => {
@@ -553,7 +603,7 @@ export function FarmerProducts() {
                           return (
                             <div className="flex flex-col">
                               <span>
-                                {product.availableQuantity} {t("products.kg")}
+                                {product.availableQuantity} {t(`product:units.${product.unit}`)}
                               </span>
                               {sold > 0 && (
                                 <span className="text-xs text-stone-400 dark:text-stone-500">

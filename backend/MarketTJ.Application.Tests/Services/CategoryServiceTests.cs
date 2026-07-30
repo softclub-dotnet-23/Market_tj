@@ -32,6 +32,8 @@ public class CategoryServiceTests
     private static CreateCategoryDto ValidCreateDto(string name = "Овощи") => new()
     {
         Name = name,
+        NameTj = "Сабзавот",
+        NameEn = "Vegetables",
         IsActive = true
     };
 
@@ -39,6 +41,8 @@ public class CategoryServiceTests
     {
         Id = id,
         Name = name,
+        NameTj = "Сабзавот",
+        NameEn = "Vegetables",
         IsActive = true
     };
 
@@ -130,6 +134,32 @@ public class CategoryServiceTests
     {
         var dto = ValidCreateDto();
         dto.Name = "";
+
+        var result = await _service.CreateAsync(dto);
+
+        Assert.False(result.IsSuccess);
+        Assert.Equal(ErrorType.Validation, result.ErrorType);
+        _categoryRepository.Verify(r => r.AddAsync(It.IsAny<Category>()), Times.Never);
+    }
+
+    [Fact]
+    public async Task CreateAsync_EmptyNameTj_ReturnsValidationError()
+    {
+        var dto = ValidCreateDto();
+        dto.NameTj = "";
+
+        var result = await _service.CreateAsync(dto);
+
+        Assert.False(result.IsSuccess);
+        Assert.Equal(ErrorType.Validation, result.ErrorType);
+        _categoryRepository.Verify(r => r.AddAsync(It.IsAny<Category>()), Times.Never);
+    }
+
+    [Fact]
+    public async Task CreateAsync_EmptyNameEn_ReturnsValidationError()
+    {
+        var dto = ValidCreateDto();
+        dto.NameEn = "";
 
         var result = await _service.CreateAsync(dto);
 

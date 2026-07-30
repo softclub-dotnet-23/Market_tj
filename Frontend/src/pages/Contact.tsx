@@ -1,9 +1,8 @@
-import { useState } from "react";
-import { Link } from "react-router-dom";
+import { useEffect, useState } from "react";
 import { motion } from "framer-motion";
 import { toast } from "sonner";
 import { useTranslation } from "react-i18next";
-import { Clock, LogIn, Mail, MapPin, MessageCircle, Phone, Send } from "lucide-react";
+import { Clock, Mail, MapPin, Phone, Send } from "lucide-react";
 import { Breadcrumbs } from "@/components/ui/Breadcrumbs";
 import { Input, Textarea } from "@/components/ui/Field";
 import { Dropdown } from "@/components/ui/Dropdown";
@@ -12,7 +11,7 @@ import { FAQSection } from "@/components/sections/FAQSection";
 import { FacebookIcon, InstagramIcon, TelegramIcon, WhatsAppIcon } from "@/components/ui/SocialIcons";
 import { useAuth } from "@/context/AuthContext";
 import { useOfficeInfo } from "@/data/site";
-import { submitSupportRequest } from "@/data/support";
+import { createGuestSupportTicket, submitSupportRequest } from "@/data/support";
 import { ApiError } from "@/lib/api";
 
 export function Contact() {
@@ -40,25 +39,40 @@ export function Contact() {
   const [message, setMessage] = useState("");
   const [submitting, setSubmitting] = useState(false);
 
-  // SupportTicket/SupportMessage на бэкенде не хранят Имя/Телефон/Email
-  // отдельно (только UserId отправителя) — чтобы не терять то, что человек
-  // ввёл в этих полях формы, собираем их прямо в тело сообщения.
+  // Удобство: залогиненному не нужно заново вводить имя/email — уже знаем их.
+  useEffect(() => {
+    if (user) {
+      setName(user.fullName);
+      setEmail(user.email);
+    }
+  }, [user]);
+
+  // Залогиненный пользователь: SupportTicket/SupportMessage на бэкенде не
+  // хранят Имя/Телефон отдельно (только UserId отправителя) — собираем их
+  // прямо в тело сообщения, как и раньше. Гость (без регистрации, по прямому
+  // запросу пользователя): отдельный анонимный эндпоинт создаёт тикет с
+  // GuestName/GuestEmail — ответ админа придёт на этот email.
   const onSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!user) return;
 
     setSubmitting(true);
     try {
       const subjectLabel = SUBJECTS.find((s) => s.value === subject)?.label ?? subject;
-      const fullMessage = [
-        `${t("pages:contact.nameLabel")}: ${name}`,
-        `${t("pages:contact.phoneLabel")}: ${phone}`,
-        `${t("pages:contact.cardEmail")}: ${email}`,
-        "",
-        message,
-      ].join("\n");
 
-      await submitSupportRequest(user.userId, subjectLabel, fullMessage);
+      if (user) {
+        const fullMessage = [
+          `${t("pages:contact.nameLabel")}: ${name}`,
+          `${t("pages:contact.phoneLabel")}: ${phone}`,
+          `${t("pages:contact.cardEmail")}: ${email}`,
+          "",
+          message,
+        ].join("\n");
+        await submitSupportRequest(user.userId, subjectLabel, fullMessage);
+      } else {
+        const fullMessage = phone ? `${t("pages:contact.phoneLabel")}: ${phone}\n\n${message}` : message;
+        await createGuestSupportTicket(name, email, subjectLabel, fullMessage);
+      }
+
       toast.success(t("pages:contact.toastTitle"), { description: t("pages:contact.toastDescription") });
       setName("");
       setPhone("");
@@ -96,82 +110,60 @@ export function Contact() {
 
       <section className="container-page pb-24">
         <div className="grid grid-cols-1 gap-8 lg:grid-cols-[1fr_0.85fr]">
-          {user ? (
-            <motion.form
-              initial={{ opacity: 0, y: 20 }}
-              whileInView={{ opacity: 1, y: 0 }}
-              viewport={{ once: true }}
-              transition={{ duration: 0.5 }}
-              onSubmit={onSubmit}
-              className="flex flex-col gap-5 rounded-3xl border border-stone-100 bg-white p-6 sm:p-8 dark:border-stone-800 dark:bg-stone-900"
-            >
+          <motion.form
+            initial={{ opacity: 0, y: 20 }}
+            whileInView={{ opacity: 1, y: 0 }}
+            viewport={{ once: true }}
+            transition={{ duration: 0.5 }}
+            onSubmit={onSubmit}
+            className="flex flex-col gap-5 rounded-3xl border border-stone-100 bg-white p-6 sm:p-8 dark:border-stone-800 dark:bg-stone-900"
+          >
+            <div>
               <h2 className="font-display text-xl text-stone-900 dark:text-stone-50">{t("pages:contact.formTitle")}</h2>
-              <div className="grid grid-cols-1 gap-5 sm:grid-cols-2">
-                <Input
-                  label={t("pages:contact.nameLabel")}
-                  placeholder={t("pages:contact.namePlaceholder")}
-                  value={name}
-                  onChange={(e) => setName(e.target.value)}
-                  required
-                />
-                <Input
-                  label={t("pages:contact.phoneLabel")}
-                  type="tel"
-                  placeholder="+992 __ ___ ____"
-                  value={phone}
-                  onChange={(e) => setPhone(e.target.value)}
-                  required
-                />
-              </div>
+              {!user && <p className="mt-1 text-sm text-stone-400 dark:text-stone-500">{t("pages:contact.guestHint")}</p>}
+            </div>
+            <div className="grid grid-cols-1 gap-5 sm:grid-cols-2">
               <Input
-                label={t("pages:contact.cardEmail")}
-                type="email"
-                placeholder="you@example.com"
-                value={email}
-                onChange={(e) => setEmail(e.target.value)}
+                label={t("pages:contact.nameLabel")}
+                placeholder={t("pages:contact.namePlaceholder")}
+                value={name}
+                onChange={(e) => setName(e.target.value)}
                 required
               />
-              <div className="flex flex-col gap-1.5">
-                <span className="text-sm font-medium text-stone-700 dark:text-stone-300">{t("pages:contact.subjectLabel")}</span>
-                <Dropdown options={SUBJECTS} value={subject} onChange={setSubject} />
-              </div>
-              <Textarea
-                label={t("pages:contact.messageLabel")}
-                placeholder={t("pages:contact.messagePlaceholder")}
-                value={message}
-                onChange={(e) => setMessage(e.target.value)}
-                required
-                rows={5}
+              <Input
+                label={t("pages:contact.phoneLabel")}
+                type="tel"
+                placeholder="+992 __ ___ ____"
+                value={phone}
+                onChange={(e) => setPhone(e.target.value)}
+                required={!!user}
+                hint={user ? undefined : t("pages:contact.optional")}
               />
-              <Button type="submit" size="lg" loading={submitting} rightIcon={<Send size={16} />}>
-                {t("pages:contact.submit")}
-              </Button>
-            </motion.form>
-          ) : (
-            <motion.div
-              initial={{ opacity: 0, y: 20 }}
-              whileInView={{ opacity: 1, y: 0 }}
-              viewport={{ once: true }}
-              transition={{ duration: 0.5 }}
-              className="flex flex-col items-center gap-4 rounded-3xl border border-stone-100 bg-white p-8 text-center dark:border-stone-800 dark:bg-stone-900"
-            >
-              <span className="flex h-14 w-14 items-center justify-center rounded-full bg-grove-50 text-grove-700 dark:bg-grove-950 dark:text-grove-400">
-                <MessageCircle size={24} />
-              </span>
-              <h2 className="font-display text-xl text-stone-900 dark:text-stone-50">{t("pages:contact.loginRequiredTitle")}</h2>
-              <p className="text-stone-500 dark:text-stone-400">{t("pages:contact.loginRequiredDescription")}</p>
-              <div className="mt-2 flex gap-3">
-                <Link to="/login">
-                  <Button variant="outline" leftIcon={<LogIn size={16} />}>
-                    {t("common:auth.login")}
-                  </Button>
-                </Link>
-                <Link to="/register">
-                  <Button>{t("common:auth.register")}</Button>
-                </Link>
-              </div>
-            </motion.div>
-          )}
+            </div>
+            <Input
+              label={t("pages:contact.cardEmail")}
+              type="email"
+              placeholder="you@example.com"
+              value={email}
+              onChange={(e) => setEmail(e.target.value)}
+              required
+            />
+            <div className="flex flex-col gap-1.5">
+              <span className="text-sm font-medium text-stone-700 dark:text-stone-300">{t("pages:contact.subjectLabel")}</span>
+              <Dropdown options={SUBJECTS} value={subject} onChange={setSubject} />
+            </div>
+            <Textarea
+              label={t("pages:contact.messageLabel")}
+              placeholder={t("pages:contact.messagePlaceholder")}
+              value={message}
+              onChange={(e) => setMessage(e.target.value)}
+              required
+              rows={5}
+            />
+            <Button type="submit" size="lg" loading={submitting} rightIcon={<Send size={16} />}>
+              {t("pages:contact.submit")}
+            </Button>
+          </motion.form>
 
           <div className="flex flex-col gap-6">
             <motion.div

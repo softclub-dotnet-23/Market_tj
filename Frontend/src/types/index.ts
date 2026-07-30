@@ -3,6 +3,8 @@ import type { LucideIcon } from "lucide-react";
 export interface Category {
   id: number;
   name: string;
+  nameTj?: string;
+  nameEn?: string;
   slug: string;
   description: string;
   icon: LucideIcon;
