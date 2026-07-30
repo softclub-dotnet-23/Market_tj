@@ -21,6 +21,10 @@ public class FarmerStaffMemberController(IFarmerStaffMemberService service) : Ap
     public async Task<IActionResult> Create([FromBody] CreateFarmerStaffMemberDto dto)
         => HandleResult(await service.CreateAsync(dto));
 
+    [HttpPost("add-by-email")]
+    public async Task<IActionResult> AddByEmail([FromBody] CreateFarmerStaffMemberByEmailDto dto)
+        => HandleResult(await service.CreateByEmailAsync(dto));
+
     [HttpPut("{id:int}")]
     public async Task<IActionResult> Update(int id, [FromBody] UpdateFarmerStaffMemberDto dto)
         => HandleResult(await service.UpdateAsync(id, dto));

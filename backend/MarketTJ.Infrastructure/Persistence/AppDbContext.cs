@@ -36,6 +36,7 @@ public class AppDbContext(DbContextOptions<AppDbContext> options) : DbContext(op
     public DbSet<SupportMessage> SupportMessages => Set<SupportMessage>();
     public DbSet<DeliverySlot> DeliverySlots => Set<DeliverySlot>();
     public DbSet<DailySalesSnapshot> DailySalesSnapshots => Set<DailySalesSnapshot>();
+    public DbSet<EmailVerificationCode> EmailVerificationCodes => Set<EmailVerificationCode>();
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {

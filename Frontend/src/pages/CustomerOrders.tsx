@@ -6,6 +6,7 @@ import { ShoppingBag, Star } from "lucide-react";
 import { PageLoader } from "@/components/layout/PageLoader";
 import { EmptyState } from "@/components/ui/EmptyState";
 import { Pagination } from "@/components/ui/Pagination";
+import { ViewModeToggle, type OrdersViewMode } from "@/components/ui/ViewModeToggle";
 import { StatusBadge } from "@/components/ui/StatusBadge";
 import { Button } from "@/components/ui/Button";
 import { OrderItemsPhotoList } from "@/components/ui/OrderItemsPhotoList";
@@ -24,12 +25,33 @@ import {
 // просто ещё один потребитель тех же общих списков.
 import { useDeliveriesByOrder, useOrderItems } from "@/data/farmer";
 import { useProducts } from "@/data/products";
+import { useOrderSequenceMap } from "@/data/orderSequence";
 
-const PAGE_SIZE = 10;
+// Кратно 3 — карточный вид на десктопе всегда 3 колонки (см. xl:grid-cols-3
+// ниже), так последняя строка страницы не остаётся неполной/одинокой.
+const PAGE_SIZE = 9;
+
+// Тот же цветной акцент карточки заказа по статусу, что и в админке
+// (см. AdminOrders.tsx) — левая полоса + едва заметная подложка того же
+// цветового семейства, что и у бейджа статуса.
+const ORDER_STATUS_ACCENT: Record<number, string> = {
+  [OrderStatus.Pending]: "border-l-stone-300 bg-stone-50/70 dark:border-l-stone-600 dark:bg-stone-800/40",
+  [OrderStatus.Accepted]: "border-l-blue-400 bg-blue-50/70 dark:border-l-blue-600 dark:bg-blue-950/30",
+  [OrderStatus.Rejected]: "border-l-rose-400 bg-rose-50/60 dark:border-l-rose-600 dark:bg-rose-950/30",
+  [OrderStatus.Preparing]: "border-l-harvest-400 bg-harvest-50/70 dark:border-l-harvest-600 dark:bg-harvest-900/30",
+  [OrderStatus.ReadyForPickup]: "border-l-harvest-400 bg-harvest-50/70 dark:border-l-harvest-600 dark:bg-harvest-900/30",
+  [OrderStatus.CourierAssigned]: "border-l-blue-400 bg-blue-50/70 dark:border-l-blue-600 dark:bg-blue-950/30",
+  [OrderStatus.PickedUp]: "border-l-blue-400 bg-blue-50/70 dark:border-l-blue-600 dark:bg-blue-950/30",
+  [OrderStatus.InDelivery]: "border-l-blue-400 bg-blue-50/70 dark:border-l-blue-600 dark:bg-blue-950/30",
+  [OrderStatus.Delivered]: "border-l-grove-400 bg-grove-50/70 dark:border-l-grove-600 dark:bg-grove-950/30",
+  [OrderStatus.Completed]: "border-l-grove-400 bg-grove-50/70 dark:border-l-grove-600 dark:bg-grove-950/30",
+  [OrderStatus.Cancelled]: "border-l-rose-400 bg-rose-50/60 dark:border-l-rose-600 dark:bg-rose-950/30",
+};
 
 export function CustomerOrders() {
   const { t } = useTranslation("customer");
   const [page, setPage] = useState(1);
+  const [viewMode, setViewMode] = useState<OrdersViewMode>("table");
   const [reviewRefreshKey, setReviewRefreshKey] = useState(0);
   const [reviewingOrder, setReviewingOrder] = useState<CustomerOrderDto | null>(null);
   const { profile, loading: profileLoading, error: profileError } = useCustomerProfile();
@@ -39,6 +61,7 @@ export function CustomerOrders() {
   const { orderItems } = useOrderItems();
   const products = useProducts();
   const photoByListingId = new Map(products.map((p) => [p.id, p.photoUrl]));
+  const sequenceById = useOrderSequenceMap();
 
   if (profileLoading || (profile && (ordersLoading || deliveriesLoading))) return <PageLoader />;
 
@@ -118,20 +141,28 @@ export function CustomerOrders() {
     const receivedAt = resolveReceivedAt(order.status, order.completedAt, deliveriesByOrderId.get(order.id)?.deliveredAt);
     const items = orderItems?.filter((i) => i.orderId === order.id) ?? [];
     return (
-      <div key={order.id} className="flex flex-col gap-3 rounded-2xl border border-stone-100 p-5 dark:border-stone-800">
+      <div
+        key={order.id}
+        className={`flex flex-col gap-3 rounded-2xl border border-l-4 border-stone-100 p-5 shadow-sm transition hover:shadow-md dark:border-stone-800 ${ORDER_STATUS_ACCENT[order.status] ?? ""}`}
+      >
         <div className="flex items-start justify-between gap-3">
-          <div>
-            <p className="font-medium text-stone-800 dark:text-stone-100">{order.orderNumber}</p>
+          <div className="flex items-center gap-3">
+            <span
+              className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-white font-display text-sm font-semibold text-stone-800 shadow-sm dark:bg-stone-900 dark:text-stone-100"
+              title={order.orderNumber}
+            >
+              {sequenceById.get(order.id) ?? "—"}
+            </span>
             <p className="text-xs text-stone-400 dark:text-stone-500">{formatDateTime(order.createdAt)}</p>
           </div>
-          <p className="font-semibold text-stone-800 dark:text-stone-100">
+          <p className="font-display text-lg font-semibold text-grove-700 dark:text-grove-400">
             {formatSomoni(order.totalAmount)} {t("common.somoni")}
           </p>
         </div>
-        <div className="border-t border-stone-50 pt-3 dark:border-stone-800/60">
+        <div className="border-t border-stone-900/5 pt-3 dark:border-stone-100/5">
           <OrderItemsPhotoList items={items} photoByListingId={photoByListingId} />
         </div>
-        <div className="grid grid-cols-[auto_1fr] gap-x-3 gap-y-1.5 border-t border-stone-50 pt-3 text-sm dark:border-stone-800/60">
+        <div className="grid grid-cols-[auto_1fr] gap-x-3 gap-y-1.5 border-t border-stone-900/5 pt-3 text-sm dark:border-stone-100/5">
           <span className="text-stone-400 dark:text-stone-500">{t("orders.columns.address")}</span>
           <span className="text-stone-700 dark:text-stone-200">
             {order.region}, {order.district}
@@ -150,11 +181,15 @@ export function CustomerOrders() {
   };
 
   return (
-    <div className="rounded-3xl border border-stone-100 bg-white dark:border-stone-800 dark:bg-stone-900">
+    <div className="overflow-hidden rounded-3xl border border-stone-100 bg-linear-to-b from-white to-stone-50/60 shadow-(--shadow-soft) dark:border-stone-800 dark:from-stone-900 dark:to-stone-900">
+      <div className="hidden items-center justify-end border-b border-stone-100 p-4 lg:flex dark:border-stone-800">
+        <ViewModeToggle value={viewMode} onChange={setViewMode} ns="customer" />
+      </div>
+
       {/* Десктоп/планшет — обычная таблица, компактно сжатая до 5 колонок,
           чтобы не требовался горизонтальный скролл на типичном ноутбучном
           экране (даже с учётом сайдбара ~256px). */}
-      <div className="hidden overflow-x-auto lg:block">
+      <div className={viewMode === "table" ? "hidden overflow-x-auto lg:block" : "hidden"}>
         <table className="w-full text-left text-sm">
           <thead>
             <tr className="border-b border-stone-100 text-xs uppercase tracking-wide text-stone-400 dark:border-stone-800 dark:text-stone-500">
@@ -171,7 +206,9 @@ export function CustomerOrders() {
               return (
                 <tr key={order.id} className="border-b border-stone-50 last:border-0 dark:border-stone-800/60">
                   <td className="px-6 py-4">
-                    <span className="font-medium text-stone-800 dark:text-stone-100">{order.orderNumber}</span>
+                    <span className="font-medium text-stone-800 dark:text-stone-100" title={order.orderNumber}>
+                      {sequenceById.get(order.id) ?? "—"}
+                    </span>
                     <span className="mt-0.5 block text-xs text-stone-400 dark:text-stone-500">{formatDateTime(order.createdAt)}</span>
                   </td>
                   <td className="max-w-56 truncate px-6 py-4 text-stone-500 dark:text-stone-400">
@@ -184,7 +221,7 @@ export function CustomerOrders() {
                     <div className="flex flex-col items-start gap-1.5">
                       {statusBadge(order)}
                       <span className="text-xs text-stone-400 dark:text-stone-500">
-                        {receivedAt ? t("orders.columns.receivedAt") + ": " + formatDateTime(receivedAt) : t("orders.notReceivedYet")}
+                        {receivedAt ? formatDateTime(receivedAt) : t("orders.notReceivedYet")}
                       </span>
                     </div>
                   </td>
@@ -196,7 +233,12 @@ export function CustomerOrders() {
         </table>
       </div>
 
-      {/* Мобильный/узкий экран — карточки вместо таблицы, с фото товаров. */}
+      {/* Десктоп — карточки вместо таблицы, если выбрано в переключателе выше. */}
+      {viewMode === "cards" && (
+        <div className="hidden grid-cols-2 gap-4 p-5 lg:grid xl:grid-cols-3">{pageItems.map(renderCard)}</div>
+      )}
+
+      {/* Мобильный/узкий экран — карточки вместо таблицы всегда, с фото товаров. */}
       <div className="grid grid-cols-1 gap-4 p-5 lg:hidden">{pageItems.map(renderCard)}</div>
 
       {totalPages > 1 && (

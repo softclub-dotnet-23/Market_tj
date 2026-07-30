@@ -51,7 +51,7 @@
     "goToCatalog": "Ба каталог"
   },
   "login": {
-    "title": "Хуш омадед боз",
+    "title": "Хуш омадед!",
     "subtitle": "Барои идома додани харид дар Market.tj ворид шавед",
     "emailOrPhoneLabel": "Email ё телефон",
     "emailOrPhoneRequired": "Email ё телефонро нишон диҳед",
@@ -60,13 +60,25 @@
     "passwordMinLength": "Ҳадди ақал 6 аломат",
     "rememberMe": "Маро дар хотир нигоҳ доред",
     "forgotPassword": "Паролро фаромӯш кардед?",
-    "forgotPasswordToast": "Барқарорсозии парол ба зудӣ пайдо мешавад",
     "noAccount": "Ҳанӯз ҳисоб надоред?",
     "signUp": "Сабти ном шудан",
     "privacy": "Махфият",
     "toastTitle": "Воридшавӣ пас аз пайваст ба сервер пайдо мешавад",
     "toastDescription": "Ҳоло интерфейс бо маълумоти намунавӣ кор мекунад.",
     "loginErrorFallback": "Воридшавӣ муяссар нашуд. Аз нав кӯшиш кунед."
+  },
+  "forgotPassword": {
+    "backToLogin": "Бозгашт ба воридшавӣ",
+    "title": "Барқарорсозии парол",
+    "emailStepSubtitle": "Email-и марбут ба ҳисобро ворид кунед — мо рамзи тасдиқ мефиристем",
+    "resetStepSubtitle": "Рамзи фиристодашуда ба {{email}} ва пароли навро ворид кунед",
+    "sendCodeButton": "Фиристодани рамз",
+    "newPasswordLabel": "Пароли нав",
+    "resetButton": "Барқарор кардани парол",
+    "sendErrorFallback": "Рамз фиристода нашуд. Аз нав кӯшиш кунед.",
+    "resetErrorFallback": "Парол барқарор нашуд. Аз нав кӯшиш кунед.",
+    "resetSuccess": "Парол навсозӣ шуд, бо пароли нав ворид шавед",
+    "codeResent": "Рамз аз нав фиристода шуд"
   },
   "register": {
     "title": "Сохтани ҳисоб",
@@ -107,7 +119,19 @@
     "addressLabel": "Суроға",
     "addressPlaceholder": "Кӯча, хона",
     "addressRequired": "Суроғаро нишон диҳед",
-    "registerErrorFallback": "Сабти ном нашуд. Аз нав кӯшиш кунед."
+    "registerErrorFallback": "Сабти ном нашуд. Аз нав кӯшиш кунед.",
+    "stepIndicator": "Қадами {{step}} аз {{total}}",
+    "nextButton": "Минбаъд",
+    "codeStepSubtitle": "Мо ба {{email}} рамзи тасдиқ фиристодем",
+    "codeLabel": "Рамз аз почта",
+    "codePlaceholder": "6 рақам",
+    "codeInvalidLength": "Рамз бояд 6 рақам дошта бошад",
+    "verifyButton": "Тасдиқ кардан",
+    "changeEmail": "Иваз кардани email",
+    "resendButton": "Рамзро аз нав фиристодан",
+    "resendIn": "Аз нав пас аз {{seconds}} сония",
+    "sendCodeErrorFallback": "Рамз фиристода нашуд. Аз нав кӯшиш кунед.",
+    "verifyCodeErrorFallback": "Рамз тасдиқ нашуд. Аз нав кӯшиш кунед."
   },
   "catalog": {
     "favoritesTitle": "Маҳсулоти дӯстдошта",

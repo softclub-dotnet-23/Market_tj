@@ -97,9 +97,9 @@ export function Login() {
 
             <div className="flex items-center justify-between">
               <Checkbox label={t("pages:login.rememberMe")} {...register("remember")} />
-              <button type="button" onClick={() => toast(t("pages:login.forgotPasswordToast"))} className="text-sm font-medium text-grove-700 hover:text-grove-800 dark:text-grove-400 dark:hover:text-grove-300">
+              <Link to="/forgot-password" className="text-sm font-medium text-grove-700 hover:text-grove-800 dark:text-grove-400 dark:hover:text-grove-300">
                 {t("pages:login.forgotPassword")}
-              </button>
+              </Link>
             </div>
 
             <Button type="submit" size="lg" loading={isSubmitting} className="mt-1">

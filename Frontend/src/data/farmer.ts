@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { apiDelete, apiGet, apiPost, apiPut, apiUpload, resolveMediaUrl } from "@/lib/api";
 import { useAuth } from "@/context/AuthContext";
 import { productPhotos } from "@/assets/photos";
@@ -433,9 +433,18 @@ export function useFarmerOrders(farmerProfileId: number | null, refreshKey = 0) 
     () => (farmerProfileId ? apiGet<FarmerOrderDto[]>("/orders") : Promise.resolve(null as never)),
     [farmerProfileId, refreshKey, externalRefresh],
   );
-  const orders = data
-    ?.filter((o) => o.farmerId === farmerProfileId)
-    .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()) ?? null;
+  // useMemo — без него filter+sort пересоздавали бы новый массив на каждый
+  // рендер даже при неизменной data, что для листов с частыми ре-рендерами
+  // (см. AdminOrders.tsx — тот же паттерн там довёл до бесконечного цикла) —
+  // лишняя нагрузка, которой стоит избегать системно, а не только там, где
+  // уже рвануло.
+  const orders = useMemo(
+    () =>
+      data
+        ?.filter((o) => o.farmerId === farmerProfileId)
+        .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()) ?? null,
+    [data, farmerProfileId],
+  );
   return { orders, loading, error };
 }
 
@@ -467,8 +476,11 @@ export function updateFarmerOrderStatus(order: FarmerOrderDto, status: number) {
 // чтобы показать, назначен ли курьер и на каком этапе доставка.
 export function useDeliveriesByOrder() {
   const { data, loading, error } = useAsync(() => apiGet<DeliveryDto[]>("/deliveries"), []);
-  const byOrderId = new Map<number, DeliveryDto>();
-  data?.forEach((d) => byOrderId.set(d.orderId, d));
+  const byOrderId = useMemo(() => {
+    const map = new Map<number, DeliveryDto>();
+    data?.forEach((d) => map.set(d.orderId, d));
+    return map;
+  }, [data]);
   return { deliveriesByOrderId: byOrderId, loading, error };
 }
 
@@ -479,9 +491,13 @@ export function useFarmerReviews(farmerProfileId: number | null) {
     () => (farmerProfileId ? apiGet<FarmerReviewDto[]>("/reviews") : Promise.resolve(null as never)),
     [farmerProfileId],
   );
-  const reviews = data
-    ?.filter((r) => r.farmerId === farmerProfileId)
-    .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()) ?? null;
+  const reviews = useMemo(
+    () =>
+      data
+        ?.filter((r) => r.farmerId === farmerProfileId)
+        .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()) ?? null,
+    [data, farmerProfileId],
+  );
   return { reviews, loading, error };
 }
 
@@ -514,9 +530,16 @@ export function useFarmerNotifications(userId: number | null, refreshKey = 0) {
     () => (userId ? apiGet<NotificationDto[]>("/notifications") : Promise.resolve(null as never)),
     [userId, refreshKey, externalRefresh],
   );
-  const notifications = data
-    ?.filter((n) => n.userId === userId)
-    .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()) ?? null;
+  // useMemo — этот хук вызывается на каждом рендере layout'а (бейдж-
+  // колокольчик в AdminLayout/FarmerLayout/CustomerLayout), так что
+  // нестабильная ссылка здесь пересчитывалась бы особенно часто.
+  const notifications = useMemo(
+    () =>
+      data
+        ?.filter((n) => n.userId === userId)
+        .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()) ?? null,
+    [data, userId],
+  );
   return { notifications, loading, error };
 }
 
@@ -530,20 +553,48 @@ export function markNotificationRead(notification: NotificationDto) {
   });
 }
 
-export function useFarmerDocuments(farmerProfileId: number | null) {
+export function useFarmerDocuments(farmerProfileId: number | null, refreshKey = 0) {
   const { data, loading, error } = useAsync(
     () => (farmerProfileId ? apiGet<FarmerDocumentDto[]>("/farmer-documents") : Promise.resolve(null as never)),
-    [farmerProfileId],
+    [farmerProfileId, refreshKey],
   );
   const documents = data?.filter((d) => d.farmerProfileId === farmerProfileId) ?? null;
   return { documents, loading, error };
 }
 
-export function useFarmerStaff(farmerProfileId: number | null) {
+// Дополнено по явному запросу пользователя — раньше загрузка нового
+// документа не работала вообще (не было файлового эндпоинта на бэкенде,
+// см. POST /farmer-documents/upload). Новый документ всегда создаётся со
+// статусом "На проверке" — админ должен подтвердить/отклонить его отдельно.
+export function uploadFarmerDocument(farmerProfileId: number, documentType: number, file: File) {
+  const formData = new FormData();
+  formData.append("file", file);
+  formData.append("farmerProfileId", String(farmerProfileId));
+  formData.append("documentType", String(documentType));
+  return apiUpload<FarmerDocumentDto>("/farmer-documents/upload", formData);
+}
+
+export function deleteFarmerDocument(id: number) {
+  return apiDelete<string>(`/farmer-documents/${id}`);
+}
+
+export function useFarmerStaff(farmerProfileId: number | null, refreshKey = 0) {
   const { data, loading, error } = useAsync(
     () => (farmerProfileId ? apiGet<FarmerStaffMemberDto[]>("/farmer-staff-members") : Promise.resolve(null as never)),
-    [farmerProfileId],
+    [farmerProfileId, refreshKey],
   );
   const staff = data?.filter((s) => s.farmerProfileId === farmerProfileId) ?? null;
   return { staff, loading, error };
+}
+
+// Дополнено по явному запросу пользователя — фермер ищет будущего сотрудника
+// по email (нет доступа к общему списку пользователей, это Admin-only), при
+// успехе сотруднику приходит письмо на почту (см. FarmerStaffMemberService.
+// CreateByEmailAsync на бэкенде).
+export function addFarmerStaffByEmail(farmerProfileId: number, email: string, permissions: number) {
+  return apiPost<string>("/farmer-staff-members/add-by-email", { farmerProfileId, email, permissions, isActive: true });
+}
+
+export function deleteFarmerStaffMember(id: number) {
+  return apiDelete<string>(`/farmer-staff-members/${id}`);
 }

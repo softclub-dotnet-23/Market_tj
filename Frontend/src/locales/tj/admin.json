@@ -20,7 +20,9 @@
   "adminName": "Маъмур",
   "logout": "Баромадан",
   "common": {
-    "somoni": "сомонӣ"
+    "somoni": "с.",
+    "searchEmptyTitle": "Ҳеҷ чиз ёфт нашуд",
+    "searchEmptyDescription": "Дархостро тағйир диҳед — дар ин саҳифа мутобиқат нест."
   },
   "dashboard": {
     "greeting": "Хуш омадед, маъмур 👋",
@@ -244,14 +246,28 @@
       "updatedAt": "Навсозӣ шуд",
       "actions": "Амалҳо"
     },
+    "addButton": "Илова кардани танзимот",
+    "createModalTitle": "Танзимоти нав",
+    "createSuccess": "Танзимот илова шуд",
+    "createError": "Танзимот илова нашуд",
     "editAction": "Таҳрир",
     "editModalTitle": "Таҳрири танзимот",
     "updateSuccess": "Танзимот навсозӣ шуд",
     "updateError": "Танзимот навсозӣ нашуд",
+    "deleteAction": "Нест кардан",
+    "deleteSuccess": "Танзимот нест карда шуд",
+    "deleteError": "Танзимотро нест карда натавонист",
+    "deleteConfirmTitle": "Танзимотро нест кунам?",
+    "deleteConfirmDescription": "Ин амалро бекор кардан мумкин нест.",
     "form": {
       "required": "Майдони ҳатмӣ",
+      "key": "Калид",
+      "keyHint": "Масалан: min_order_amount — бо ҳарфҳои лотинӣ, бе фосила",
+      "description": "Тавсиф",
+      "optional": "Ихтиёрӣ",
       "cancel": "Бекор кардан",
-      "saveChanges": "Нигоҳ доштани тағйирот"
+      "saveChanges": "Нигоҳ доштани тағйирот",
+      "submit": "Илова кардан"
     }
   },
   "statistics": {

@@ -159,11 +159,8 @@
     "hours": "Mon–Sat: 09:00–19:00, Sun: 10:00–16:00"
   },
   "testimonials": {
-    "1": { "name": "Farida Nazarova", "role": "Customer, Dushanbe", "quote": "I've been ordering vegetables and greens every week for six months now. The difference from the market is huge — everything arrives fresh, as if I'd picked it myself that morning." },
-    "2": { "name": "Rustam Abdulloev", "role": "Owner, \"Oshkhona\" café", "quote": "Reliable supply and honest weight matter a lot for our café. Market.tj delivers on both — orders arrive on the same day, no surprises." },
-    "3": { "name": "Gulbahor Rahimova", "role": "Customer, Khujand", "quote": "What I love most is that you can see exactly which farmer you're buying from — with photos of the farm, reviews and history. It builds a trust the market never had." },
-    "4": { "name": "Sherali Yusupov", "role": "Customer, Bokhtar", "quote": "I used to have to drive across the whole city for fresh fruit. Now I just place an order in the evening — and everything's already at my door by morning." },
-    "5": { "name": "Nargis Karimova", "role": "Chef, \"Dastarkhon\" restaurant", "quote": "We work directly with several farms through the platform. The quality is noticeably higher than with our previous suppliers." }
+    "genericCustomerName": "Market.tj customer",
+    "verifiedPurchase": "Verified purchase"
   },
   "faqGroups": {
     "Заказ и доставка": "Order & delivery",

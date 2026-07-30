@@ -1,7 +1,8 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { toast } from "sonner";
-import { Package, Trash2 } from "lucide-react";
+import { Package, Search, Trash2 } from "lucide-react";
+import { useAdminSearch } from "@/components/layout/AdminLayout";
 import { PageLoader } from "@/components/layout/PageLoader";
 import { EmptyState } from "@/components/ui/EmptyState";
 import { Pagination } from "@/components/ui/Pagination";
@@ -31,16 +32,28 @@ const STATUS_CLASSES: Record<number, string> = {
   [ListingStatus.Archived]: "bg-stone-100 text-stone-400 dark:bg-stone-800 dark:text-stone-500",
 };
 
+// Загружаем весь каталог одним запросом (сервер не ограничивает pageSize,
+// см. ProductListingService.GetAllAsync — Skip/Take и так уже в памяти) и
+// пагинируем/фильтруем на фронте — тот же "грузим всё" подход, что и у
+// Заказов/Фермеров/Покупателей, нужен, чтобы поиск в шапке видел весь список,
+// а не только текущие 10 строк с сервера.
+const ALL_ITEMS_PAGE_SIZE = 10000;
+
 export function AdminProducts() {
   const { t } = useTranslation("admin");
+  const searchQuery = useAdminSearch();
   const [page, setPage] = useState(1);
   const [viewMode, setViewMode] = useState<OrdersViewMode>("table");
   const [refreshKey, setRefreshKey] = useState(0);
   const [deleting, setDeleting] = useState<AdminProductListingDto | null>(null);
-  const { data, loading, error } = useAdminProducts(page, PAGE_SIZE, refreshKey);
+  const { data, loading, error } = useAdminProducts(1, ALL_ITEMS_PAGE_SIZE, refreshKey);
   const { orders } = useAdminOrders();
   const { orderItems } = useAdminOrderItems();
   const photoByListingId = useProductPhotoMap(data?.items);
+
+  useEffect(() => {
+    setPage(1);
+  }, [searchQuery]);
 
   if (loading) return <PageLoader />;
 
@@ -55,7 +68,23 @@ export function AdminProducts() {
   const statusLabel = (status: number) =>
     t(`products.status.${status === ListingStatus.Active ? "active" : status === ListingStatus.OutOfStock ? "outOfStock" : status === ListingStatus.Archived ? "archived" : "draft"}`);
 
-  const totalPages = Math.max(1, Math.ceil(data.totalCount / PAGE_SIZE));
+  const query = searchQuery.trim().toLowerCase();
+  const filteredItems = query
+    ? data.items.filter(
+        (p) =>
+          p.title.toLowerCase().includes(query) ||
+          t("products.farmerLabel", { id: p.farmerProfileId }).toLowerCase().includes(query) ||
+          `${p.region}, ${p.district}`.toLowerCase().includes(query),
+      )
+    : data.items;
+
+  if (query && filteredItems.length === 0) {
+    return <EmptyState icon={<Search size={26} />} title={t("common.searchEmptyTitle")} description={t("common.searchEmptyDescription")} />;
+  }
+
+  const totalPages = Math.max(1, Math.ceil(filteredItems.length / PAGE_SIZE));
+  const currentPage = Math.min(page, totalPages);
+  const pageItems = filteredItems.slice((currentPage - 1) * PAGE_SIZE, currentPage * PAGE_SIZE);
 
   // "Изначально" = остаток сейчас + всё, что реально списано активными
   // (не отклонёнными/отменёнными) заказами — см. тот же расчёт в FarmerProducts.tsx.
@@ -135,14 +164,11 @@ export function AdminProducts() {
 
   return (
     <div className="overflow-hidden rounded-3xl border border-stone-100 bg-linear-to-b from-white to-stone-50/60 shadow-(--shadow-soft) dark:border-stone-800 dark:from-stone-900 dark:to-stone-900">
-      <div className="flex items-center justify-end border-b border-stone-100 p-4 dark:border-stone-800">
+      <div className="hidden items-center justify-end border-b border-stone-100 p-4 lg:flex dark:border-stone-800">
         <ViewModeToggle value={viewMode} onChange={setViewMode} ns="admin" />
       </div>
 
-      {viewMode === "cards" ? (
-        <div className="grid grid-cols-2 gap-3 p-5 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5">{data.items.map(renderCard)}</div>
-      ) : (
-      <div className="overflow-x-auto">
+      <div className={viewMode === "table" ? "hidden overflow-x-auto lg:block" : "hidden"}>
         <table className="w-full text-left text-sm">
           <thead>
             <tr className="border-b border-stone-100 text-xs uppercase tracking-wide text-stone-400 dark:border-stone-800 dark:text-stone-500">
@@ -156,7 +182,7 @@ export function AdminProducts() {
             </tr>
           </thead>
           <tbody>
-            {data.items.map((product) => {
+            {pageItems.map((product) => {
               const photo = photoByListingId.get(product.id);
               return (
                 <tr
@@ -221,11 +247,16 @@ export function AdminProducts() {
           </tbody>
         </table>
       </div>
+
+      {viewMode === "cards" && (
+        <div className="hidden grid-cols-3 gap-3 p-5 lg:grid xl:grid-cols-4 2xl:grid-cols-5">{pageItems.map(renderCard)}</div>
       )}
+
+      <div className="grid grid-cols-2 gap-3 p-5 sm:grid-cols-3 lg:hidden">{pageItems.map(renderCard)}</div>
 
       {totalPages > 1 && (
         <div className="border-t border-stone-100 p-4 dark:border-stone-800">
-          <Pagination page={Math.min(page, totalPages)} totalPages={totalPages} onPageChange={setPage} />
+          <Pagination page={currentPage} totalPages={totalPages} onPageChange={setPage} />
         </div>
       )}
 

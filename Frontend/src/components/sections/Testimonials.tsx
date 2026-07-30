@@ -5,11 +5,13 @@ import { Carousel } from "@/components/ui/Carousel";
 import { Avatar } from "@/components/ui/Avatar";
 import { RatingStars } from "@/components/ui/RatingStars";
 import { useTestimonials } from "@/data/testimonials";
-import { getCustomerPhoto } from "@/assets/photos";
 
 export function Testimonials() {
   const { t } = useTranslation("sections");
-  const testimonials = useTestimonials();
+  const { testimonials, loading } = useTestimonials();
+
+  if (loading || testimonials.length === 0) return null;
+
   return (
     <section className="container-page py-14 sm:py-20">
       <SectionHeading
@@ -26,7 +28,7 @@ export function Testimonials() {
             <Quote size={28} className="text-grove-200 dark:text-grove-800" fill="currentColor" />
             <p className="flex-1 text-[15px] leading-relaxed text-stone-600 dark:text-stone-300">"{item.quote}"</p>
             <div className="flex items-center gap-3 border-t border-stone-100 pt-5 dark:border-stone-800">
-              <Avatar name={item.name} src={getCustomerPhoto(item.id)} size={44} />
+              <Avatar name={item.name} size={44} />
               <div>
                 <p className="text-sm font-semibold text-stone-800 dark:text-stone-100">{item.name}</p>
                 <p className="text-xs text-stone-400 dark:text-stone-500">{item.role}</p>

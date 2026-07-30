@@ -16,12 +16,13 @@ public class FarmerDocumentServiceTests
     private readonly Mock<IFarmerProfileRepository> _farmerProfileRepository = new();
     private readonly Mock<IUserRepository> _userRepository = new();
     private readonly Mock<ICurrentUserService> _currentUser = new();
+    private readonly Mock<IFileStorageService> _fileStorageService = new();
     private readonly Mock<ILogger<FarmerDocumentService>> _logger = new();
     private readonly FarmerDocumentService _service;
 
     public FarmerDocumentServiceTests()
     {
-        _service = new FarmerDocumentService(_farmerDocumentRepository.Object, _farmerProfileRepository.Object, _userRepository.Object, _currentUser.Object, _logger.Object);
+        _service = new FarmerDocumentService(_farmerDocumentRepository.Object, _farmerProfileRepository.Object, _userRepository.Object, _currentUser.Object, _fileStorageService.Object, _logger.Object);
         // Дефолтный документ — FarmerProfileId=1 (UserId=1); залогинены как этот фермер.
         _currentUser.Setup(c => c.UserId).Returns(1);
         _currentUser.Setup(c => c.Role).Returns(nameof(UserRole.Farmer));
@@ -356,6 +357,74 @@ public class FarmerDocumentServiceTests
         _farmerDocumentRepository.Setup(r => r.GetByIdAsync(It.IsAny<int>())).ThrowsAsync(new Exception("db error"));
 
         var result = await _service.DeleteAsync(1);
+
+        Assert.False(result.IsSuccess);
+        Assert.Equal(ErrorType.InternalServerError, result.ErrorType);
+    }
+
+    // ---------- UploadAsync ----------
+
+    [Fact]
+    public async Task UploadAsync_ValidFile_SavesAndCreatesPendingDocument()
+    {
+        _fileStorageService.Setup(f => f.SaveAsync(It.IsAny<Stream>(), "passport.jpg", "documents/1")).ReturnsAsync("/uploads/documents/1/passport.jpg");
+        using var stream = new MemoryStream([1, 2, 3]);
+
+        var result = await _service.UploadAsync(1, FarmerDocumentType.Passport, stream, "passport.jpg", 3);
+
+        Assert.True(result.IsSuccess);
+        Assert.Equal(DocumentReviewStatus.Pending, result.Data!.Status);
+        Assert.Equal("/uploads/documents/1/passport.jpg", result.Data.FileUrl);
+        _farmerDocumentRepository.Verify(r => r.AddAsync(It.Is<FarmerDocument>(d => d.FarmerProfileId == 1 && d.Status == DocumentReviewStatus.Pending)), Times.Once);
+    }
+
+    [Fact]
+    public async Task UploadAsync_InvalidExtension_ReturnsValidationErrorWithoutSaving()
+    {
+        using var stream = new MemoryStream([1, 2, 3]);
+
+        var result = await _service.UploadAsync(1, FarmerDocumentType.Passport, stream, "passport.exe", 3);
+
+        Assert.False(result.IsSuccess);
+        Assert.Equal(ErrorType.Validation, result.ErrorType);
+        _fileStorageService.Verify(f => f.SaveAsync(It.IsAny<Stream>(), It.IsAny<string>(), It.IsAny<string>()), Times.Never);
+        _farmerDocumentRepository.Verify(r => r.AddAsync(It.IsAny<FarmerDocument>()), Times.Never);
+    }
+
+    [Fact]
+    public async Task UploadAsync_FarmerProfileNotFound_ReturnsNotFound()
+    {
+        _farmerProfileRepository.Setup(r => r.GetByIdAsync(It.IsAny<int>())).ReturnsAsync((FarmerProfile?)null);
+        using var stream = new MemoryStream([1, 2, 3]);
+
+        var result = await _service.UploadAsync(999, FarmerDocumentType.Passport, stream, "passport.jpg", 3);
+
+        Assert.False(result.IsSuccess);
+        Assert.Equal(ErrorType.NotFound, result.ErrorType);
+        _fileStorageService.Verify(f => f.SaveAsync(It.IsAny<Stream>(), It.IsAny<string>(), It.IsAny<string>()), Times.Never);
+    }
+
+    [Fact]
+    public async Task UploadAsync_NotOwner_ReturnsForbidden()
+    {
+        _currentUser.Setup(c => c.UserId).Returns(2);
+        _farmerProfileRepository.Setup(r => r.GetByUserIdAsync(2)).ReturnsAsync((FarmerProfile?)null);
+        using var stream = new MemoryStream([1, 2, 3]);
+
+        var result = await _service.UploadAsync(1, FarmerDocumentType.Passport, stream, "passport.jpg", 3);
+
+        Assert.False(result.IsSuccess);
+        Assert.Equal(ErrorType.Forbidden, result.ErrorType);
+        _fileStorageService.Verify(f => f.SaveAsync(It.IsAny<Stream>(), It.IsAny<string>(), It.IsAny<string>()), Times.Never);
+    }
+
+    [Fact]
+    public async Task UploadAsync_RepositoryThrows_ReturnsInternalServerError()
+    {
+        _farmerProfileRepository.Setup(r => r.GetByIdAsync(It.IsAny<int>())).ThrowsAsync(new Exception("db error"));
+        using var stream = new MemoryStream([1, 2, 3]);
+
+        var result = await _service.UploadAsync(1, FarmerDocumentType.Passport, stream, "passport.jpg", 3);
 
         Assert.False(result.IsSuccess);
         Assert.Equal(ErrorType.InternalServerError, result.ErrorType);

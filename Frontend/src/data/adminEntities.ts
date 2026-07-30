@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { apiDelete, apiGet, apiPost, apiPut } from "@/lib/api";
 
 export const UserRole = { Admin: 1, Farmer: 2, Customer: 3, Courier: 4 } as const;
@@ -201,7 +201,17 @@ function useAsync<T>(fetcher: () => Promise<T>, deps: unknown[]): AsyncState<T> 
 
 export function useAdminOrders(refreshKey = 0) {
   const { data, loading, error } = useAsync(() => apiGet<AdminOrderDto[]>("/orders"), [refreshKey]);
-  const orders = data ? [...data].sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()) : null;
+  // useMemo — критично, не косметика: без него [...data].sort(...) создаёт
+  // новый массив на КАЖДЫЙ рендер, даже если data не изменилась. Компоненты
+  // (AdminOrders.tsx) кладут orders в зависимости useEffect — с нестабильной
+  // ссылкой это давало бесконечный цикл ре-рендеров (markAdminOrdersSeen →
+  // notify listeners → forceRerender в AdminLayout → AdminOrders
+  // перерисовывается → новый orders → эффект снова срабатывает → ...),
+  // из-за которого зависала вся навигация после захода на "Заказы".
+  const orders = useMemo(
+    () => (data ? [...data].sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()) : null),
+    [data],
+  );
   return { orders, loading, error };
 }
 
@@ -286,7 +296,7 @@ export function useAdminFarmers(refreshKey = 0) {
 
 export function useAdminCustomers() {
   const { data, loading, error } = useAsync(() => apiGet<AdminUserDto[]>("/users"), []);
-  const customers = data ? data.filter((u) => u.role === UserRole.Customer) : null;
+  const customers = useMemo(() => (data ? data.filter((u) => u.role === UserRole.Customer) : null), [data]);
   return { customers, loading, error };
 }
 
@@ -368,6 +378,20 @@ export function updateSettingValue(setting: AdminSettingDto, value: string, admi
     description: setting.description,
     updatedByAdminId: adminUserId,
   });
+}
+
+export interface AppSettingFormDto {
+  key: string;
+  value: string;
+  description: string | null;
+}
+
+export function createAppSetting(dto: AppSettingFormDto, adminUserId: number) {
+  return apiPost<string>("/app-settings", { ...dto, updatedByAdminId: adminUserId });
+}
+
+export function deleteAppSetting(id: number) {
+  return apiDelete<string>(`/app-settings/${id}`);
 }
 
 // Бэкенд сам расставляет AcceptedAt/CompletedAt/CancelledAt при первом

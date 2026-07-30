@@ -1,19 +1,23 @@
 import { useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { toast } from "sonner";
-import { ShoppingCart } from "lucide-react";
+import { Search, ShoppingCart } from "lucide-react";
+import { useAdminSearch } from "@/components/layout/AdminLayout";
 import { PageLoader } from "@/components/layout/PageLoader";
 import { EmptyState } from "@/components/ui/EmptyState";
 import { Pagination } from "@/components/ui/Pagination";
+import { ViewModeToggle, type OrdersViewMode } from "@/components/ui/ViewModeToggle";
 import { StatusMenu } from "@/components/ui/StatusMenu";
 import { OrderItemsCell } from "@/components/ui/OrderItemsCell";
 import { OrderItemsPhotoList } from "@/components/ui/OrderItemsPhotoList";
 import { formatDateTime, formatSomoni } from "@/lib/utils";
 import { ORDER_STATUS_CLASSES, ORDER_STATUS_ICONS, ORDER_STATUS_KEYS, getAdminNextStatuses, resolveReceivedAt } from "@/lib/orderStatus";
 import {
+  OrderStatus,
   markAdminOrdersSeen,
   notifyCustomerAboutOrderStatus,
   updateOrderStatus,
+  useAdminFarmers,
   useAdminOrderItems,
   useAdminOrders,
   type AdminOrderDto,
@@ -23,19 +27,45 @@ import {
 // по orderId, чтобы показать реальное время получения.
 import { useDeliveriesByOrder } from "@/data/farmer";
 import { useProducts } from "@/data/products";
+import { useOrderSequenceMap } from "@/data/orderSequence";
 
-const PAGE_SIZE = 10;
+// Кратно 3 — карточный вид на десктопе всегда 3 колонки (см. xl:grid-cols-3
+// ниже), так последняя строка страницы не остаётся неполной/одинокой.
+const PAGE_SIZE = 9;
+
+// Лёгкий цветной акцент карточки заказа по статусу (левая полоса + едва
+// заметная подложка) — то же цветовое семейство, что и у бейджа статуса
+// (ORDER_STATUS_CLASSES), просто перенесённое на всю карточку, чтобы список
+// заказов не выглядел монотонным белым полотном.
+const ORDER_STATUS_ACCENT: Record<number, string> = {
+  [OrderStatus.Pending]: "border-l-stone-300 bg-stone-50/70 dark:border-l-stone-600 dark:bg-stone-800/40",
+  [OrderStatus.Accepted]: "border-l-blue-400 bg-blue-50/70 dark:border-l-blue-600 dark:bg-blue-950/30",
+  [OrderStatus.Rejected]: "border-l-rose-400 bg-rose-50/60 dark:border-l-rose-600 dark:bg-rose-950/30",
+  [OrderStatus.Preparing]: "border-l-harvest-400 bg-harvest-50/70 dark:border-l-harvest-600 dark:bg-harvest-900/30",
+  [OrderStatus.ReadyForPickup]: "border-l-harvest-400 bg-harvest-50/70 dark:border-l-harvest-600 dark:bg-harvest-900/30",
+  [OrderStatus.CourierAssigned]: "border-l-blue-400 bg-blue-50/70 dark:border-l-blue-600 dark:bg-blue-950/30",
+  [OrderStatus.PickedUp]: "border-l-blue-400 bg-blue-50/70 dark:border-l-blue-600 dark:bg-blue-950/30",
+  [OrderStatus.InDelivery]: "border-l-blue-400 bg-blue-50/70 dark:border-l-blue-600 dark:bg-blue-950/30",
+  [OrderStatus.Delivered]: "border-l-grove-400 bg-grove-50/70 dark:border-l-grove-600 dark:bg-grove-950/30",
+  [OrderStatus.Completed]: "border-l-grove-400 bg-grove-50/70 dark:border-l-grove-600 dark:bg-grove-950/30",
+  [OrderStatus.Cancelled]: "border-l-rose-400 bg-rose-50/60 dark:border-l-rose-600 dark:bg-rose-950/30",
+};
 
 export function AdminOrders() {
   const { t } = useTranslation("admin");
+  const searchQuery = useAdminSearch();
   const [page, setPage] = useState(1);
+  const [viewMode, setViewMode] = useState<OrdersViewMode>("table");
   const [refreshKey, setRefreshKey] = useState(0);
   const [busyId, setBusyId] = useState<number | null>(null);
   const { orders, loading, error } = useAdminOrders(refreshKey);
   const { deliveriesByOrderId, loading: deliveriesLoading } = useDeliveriesByOrder();
   const { orderItems } = useAdminOrderItems();
+  const { farmers } = useAdminFarmers();
   const products = useProducts();
   const photoByListingId = new Map(products.map((p) => [p.id, p.photoUrl]));
+  const farmNameById = new Map((farmers ?? []).map((f) => [f.id, f.farmName]));
+  const sequenceById = useOrderSequenceMap();
 
   // Всё, что видно на этой странице, считается просмотренным — бейдж
   // "Заказы" в сайдбаре (AdminLayout) сразу пересчитывается через
@@ -43,6 +73,10 @@ export function AdminOrders() {
   useEffect(() => {
     if (orders) markAdminOrdersSeen(orders);
   }, [orders]);
+
+  useEffect(() => {
+    setPage(1);
+  }, [searchQuery]);
 
   if (loading || deliveriesLoading) return <PageLoader />;
 
@@ -54,9 +88,28 @@ export function AdminOrders() {
     return <EmptyState icon={<ShoppingCart size={26} />} title={t("orders.emptyTitle")} description={t("orders.emptyDescription")} />;
   }
 
-  const totalPages = Math.max(1, Math.ceil(orders.length / PAGE_SIZE));
+  const query = searchQuery.trim().toLowerCase();
+  const filteredOrders = query
+    ? orders.filter((o) => {
+        const farmerName = farmNameById.get(o.farmerId) ?? "";
+        const sequence = sequenceById.get(o.id);
+        return (
+          (sequence !== undefined && String(sequence).includes(query)) ||
+          o.orderNumber.toLowerCase().includes(query) ||
+          (o.customerFullName ?? "").toLowerCase().includes(query) ||
+          farmerName.toLowerCase().includes(query) ||
+          `${o.region}, ${o.district}`.toLowerCase().includes(query)
+        );
+      })
+    : orders;
+
+  if (query && filteredOrders.length === 0) {
+    return <EmptyState icon={<Search size={26} />} title={t("common.searchEmptyTitle")} description={t("common.searchEmptyDescription")} />;
+  }
+
+  const totalPages = Math.max(1, Math.ceil(filteredOrders.length / PAGE_SIZE));
   const currentPage = Math.min(page, totalPages);
-  const pageItems: AdminOrderDto[] = orders.slice((currentPage - 1) * PAGE_SIZE, currentPage * PAGE_SIZE);
+  const pageItems: AdminOrderDto[] = filteredOrders.slice((currentPage - 1) * PAGE_SIZE, currentPage * PAGE_SIZE);
 
   const handleStatusChange = async (order: AdminOrderDto, status: number) => {
     if (status === order.status) return;
@@ -75,13 +128,13 @@ export function AdminOrders() {
 
   const participants = (order: AdminOrderDto) => (
     <div className="flex flex-col gap-1">
-      <span>
+      <span className="block truncate" title={order.customerFullName ?? undefined}>
         <span className="text-stone-400 dark:text-stone-500">{t("orders.columns.customer")}: </span>
         {order.customerFullName ?? t("orders.customerLabel", { id: order.customerId })}
       </span>
-      <span>
+      <span className="block truncate" title={farmNameById.get(order.farmerId)}>
         <span className="text-stone-400 dark:text-stone-500">{t("orders.columns.farmer")}: </span>
-        {t("orders.farmerLabel", { id: order.farmerId })}
+        {farmNameById.get(order.farmerId) ?? t("orders.farmerLabel", { id: order.farmerId })}
       </span>
     </div>
   );
@@ -101,7 +154,7 @@ export function AdminOrders() {
         }))}
       />
       <span className="text-xs text-stone-400 dark:text-stone-500">
-        {receivedAt ? t("orders.columns.receivedAt") + ": " + formatDateTime(receivedAt) : t("orders.notReceivedYet")}
+        {receivedAt ? formatDateTime(receivedAt) : t("orders.notReceivedYet")}
       </span>
     </div>
   );
@@ -110,21 +163,29 @@ export function AdminOrders() {
     const receivedAt = resolveReceivedAt(order.status, order.completedAt, deliveriesByOrderId.get(order.id)?.deliveredAt);
     const items = orderItems?.filter((i) => i.orderId === order.id) ?? [];
     return (
-      <div key={order.id} className="flex flex-col gap-3 rounded-2xl border border-stone-100 p-5 dark:border-stone-800">
+      <div
+        key={order.id}
+        className={`flex flex-col gap-3 rounded-2xl border border-l-4 border-stone-100 p-5 shadow-sm transition hover:shadow-md dark:border-stone-800 ${ORDER_STATUS_ACCENT[order.status] ?? ""}`}
+      >
         <div className="flex items-start justify-between gap-3">
-          <div>
-            <p className="font-medium text-stone-800 dark:text-stone-100">{order.orderNumber}</p>
+          <div className="flex items-center gap-3">
+            <span
+              className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-white font-display text-sm font-semibold text-stone-800 shadow-sm dark:bg-stone-900 dark:text-stone-100"
+              title={order.orderNumber}
+            >
+              {sequenceById.get(order.id) ?? "—"}
+            </span>
             <p className="text-xs text-stone-400 dark:text-stone-500">{formatDateTime(order.createdAt)}</p>
           </div>
-          <p className="font-semibold text-stone-800 dark:text-stone-100">
+          <p className="font-display text-lg font-semibold text-grove-700 dark:text-grove-400">
             {formatSomoni(order.totalAmount)} {t("common.somoni")}
           </p>
         </div>
         <div className="text-sm text-stone-600 dark:text-stone-300">{participants(order)}</div>
-        <div className="border-t border-stone-50 pt-3 dark:border-stone-800/60">
+        <div className="border-t border-stone-900/5 pt-3 dark:border-stone-100/5">
           <OrderItemsPhotoList items={items} photoByListingId={photoByListingId} />
         </div>
-        <div className="grid grid-cols-[auto_1fr] gap-x-3 gap-y-1.5 border-t border-stone-50 pt-3 text-sm dark:border-stone-800/60">
+        <div className="grid grid-cols-[auto_1fr] gap-x-3 gap-y-1.5 border-t border-stone-900/5 pt-3 text-sm dark:border-stone-100/5">
           <span className="text-stone-400 dark:text-stone-500">{t("orders.columns.region")}</span>
           <span className="text-stone-700 dark:text-stone-200">
             {order.region}, {order.district}
@@ -136,10 +197,14 @@ export function AdminOrders() {
   };
 
   return (
-    <div className="rounded-3xl border border-stone-100 bg-white dark:border-stone-800 dark:bg-stone-900">
+    <div className="overflow-hidden rounded-3xl border border-stone-100 bg-linear-to-b from-white to-stone-50/60 shadow-(--shadow-soft) dark:border-stone-800 dark:from-stone-900 dark:to-stone-900">
+      <div className="hidden items-center justify-end border-b border-stone-100 p-4 lg:flex dark:border-stone-800">
+        <ViewModeToggle value={viewMode} onChange={setViewMode} ns="admin" />
+      </div>
+
       {/* Десктоп/планшет — компактная таблица (6 колонок), без
           горизонтального скролла на типичном ноутбучном экране. */}
-      <div className="hidden overflow-x-auto lg:block">
+      <div className={viewMode === "table" ? "hidden overflow-x-auto lg:block" : "hidden"}>
         <table className="w-full text-left text-sm">
           <thead>
             <tr className="border-b border-stone-100 text-xs uppercase tracking-wide text-stone-400 dark:border-stone-800 dark:text-stone-500">
@@ -158,7 +223,9 @@ export function AdminOrders() {
               return (
                 <tr key={order.id} className="border-b border-stone-50 last:border-0 dark:border-stone-800/60">
                   <td className="px-6 py-4">
-                    <span className="font-medium text-stone-800 dark:text-stone-100">{order.orderNumber}</span>
+                    <span className="font-medium text-stone-800 dark:text-stone-100" title={order.orderNumber}>
+                      {sequenceById.get(order.id) ?? "—"}
+                    </span>
                     <span className="mt-0.5 block text-xs text-stone-400 dark:text-stone-500">{formatDateTime(order.createdAt)}</span>
                   </td>
                   <td className="max-w-48 px-6 py-4 text-stone-600 dark:text-stone-300">{participants(order)}</td>
@@ -179,7 +246,12 @@ export function AdminOrders() {
         </table>
       </div>
 
-      {/* Мобильный/узкий экран — карточки вместо таблицы, с фото товаров. */}
+      {/* Десктоп — карточки вместо таблицы, если выбрано в переключателе выше. */}
+      {viewMode === "cards" && (
+        <div className="hidden grid-cols-2 gap-4 p-5 lg:grid xl:grid-cols-3">{pageItems.map(renderCard)}</div>
+      )}
+
+      {/* Мобильный/узкий экран — карточки вместо таблицы всегда, с фото товаров. */}
       <div className="grid grid-cols-1 gap-4 p-5 lg:hidden">{pageItems.map(renderCard)}</div>
 
       {totalPages > 1 && (

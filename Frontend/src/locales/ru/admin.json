@@ -20,7 +20,9 @@
   "adminName": "Администратор",
   "logout": "Выйти",
   "common": {
-    "somoni": "сомони"
+    "somoni": "с.",
+    "searchEmptyTitle": "Ничего не найдено",
+    "searchEmptyDescription": "Измените запрос в поиске — по нему нет совпадений на этой странице."
   },
   "dashboard": {
     "greeting": "С возвращением, администратор 👋",
@@ -244,14 +246,28 @@
       "updatedAt": "Обновлено",
       "actions": "Действия"
     },
+    "addButton": "Добавить настройку",
+    "createModalTitle": "Новая настройка",
+    "createSuccess": "Настройка добавлена",
+    "createError": "Не удалось добавить настройку",
     "editAction": "Редактировать",
     "editModalTitle": "Редактировать настройку",
     "updateSuccess": "Настройка обновлена",
     "updateError": "Не удалось обновить настройку",
+    "deleteAction": "Удалить",
+    "deleteSuccess": "Настройка удалена",
+    "deleteError": "Не удалось удалить настройку",
+    "deleteConfirmTitle": "Удалить настройку?",
+    "deleteConfirmDescription": "Это действие нельзя отменить.",
     "form": {
       "required": "Обязательное поле",
+      "key": "Ключ",
+      "keyHint": "Например: min_order_amount — латиницей, без пробелов",
+      "description": "Описание",
+      "optional": "Необязательно",
       "cancel": "Отмена",
-      "saveChanges": "Сохранить изменения"
+      "saveChanges": "Сохранить изменения",
+      "submit": "Добавить"
     }
   },
   "statistics": {

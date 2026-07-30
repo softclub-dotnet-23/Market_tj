@@ -1,6 +1,6 @@
 import { createContext, useContext, useState } from "react";
 import type { ReactNode } from "react";
-import { api, apiUpload } from "@/lib/api";
+import { api, apiPost, apiUpload } from "@/lib/api";
 
 export type UserRole = "Admin" | "Farmer" | "Customer" | "Courier";
 
@@ -142,4 +142,27 @@ export function useAuth() {
   const ctx = useContext(AuthContext);
   if (!ctx) throw new Error("useAuth must be used within AuthProvider");
   return ctx;
+}
+
+// Шаг подтверждения email перед регистрацией (по явному запросу пользователя
+// — до этого регистрация была одношаговой). Вне AuthProvider/контекста —
+// вызывается ДО того, как у человека вообще появляется аккаунт/токен.
+export function sendVerificationCode(email: string) {
+  return apiPost<string>("/auth/send-verification-code", { email });
+}
+
+export function verifyEmailCode(email: string, code: string) {
+  return apiPost<string>("/auth/verify-email-code", { email, code });
+}
+
+// "Забыли пароль?" — переиспользует тот же код-на-email механизм на бэкенде
+// (тот же /auth/send-verification-code под капотом, просто с проверкой, что
+// аккаунт существует), но это отдельные, семантически честные эндпоинты, а
+// не подмена регистрационных.
+export function forgotPassword(email: string) {
+  return apiPost<string>("/auth/forgot-password", { email });
+}
+
+export function resetPassword(email: string, code: string, newPassword: string) {
+  return apiPost<string>("/auth/reset-password", { email, code, newPassword });
 }
