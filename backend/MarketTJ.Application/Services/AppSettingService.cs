@@ -72,6 +72,7 @@ public class AppSettingService(
             {
                 Key = dto.Key,
                 Value = dto.Value,
+                Category = dto.Category,
                 Description = dto.Description,
                 UpdatedByAdminId = dto.UpdatedByAdminId,
                 UpdatedAt = DateTime.UtcNow
@@ -115,6 +116,7 @@ public class AppSettingService(
 
             setting.Key = dto.Key;
             setting.Value = dto.Value;
+            setting.Category = dto.Category;
             setting.Description = dto.Description;
             setting.UpdatedByAdminId = dto.UpdatedByAdminId;
             setting.UpdatedAt = DateTime.UtcNow;
@@ -152,6 +154,7 @@ public class AppSettingService(
         Id = setting.Id,
         Key = setting.Key,
         Value = setting.Value,
+        Category = setting.Category,
         Description = setting.Description,
         UpdatedAt = setting.UpdatedAt,
         UpdatedByAdminId = setting.UpdatedByAdminId

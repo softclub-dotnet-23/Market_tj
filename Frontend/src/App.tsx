@@ -29,6 +29,7 @@ const AdminStatistics = lazy(() => import("@/pages/AdminStatistics").then((m) =>
 const AdminOrders = lazy(() => import("@/pages/AdminOrders").then((m) => ({ default: m.AdminOrders })));
 const AdminProducts = lazy(() => import("@/pages/AdminProducts").then((m) => ({ default: m.AdminProducts })));
 const AdminFarmers = lazy(() => import("@/pages/AdminFarmers").then((m) => ({ default: m.AdminFarmers })));
+const AdminFarmerDocuments = lazy(() => import("@/pages/AdminFarmerDocuments").then((m) => ({ default: m.AdminFarmerDocuments })));
 const AdminUsers = lazy(() => import("@/pages/AdminUsers").then((m) => ({ default: m.AdminUsers })));
 const AdminReviews = lazy(() => import("@/pages/AdminReviews").then((m) => ({ default: m.AdminReviews })));
 const AdminSettings = lazy(() => import("@/pages/AdminSettings").then((m) => ({ default: m.AdminSettings })));
@@ -68,6 +69,7 @@ function App() {
                       <Route path="orders" element={<AdminOrders />} />
                       <Route path="products" element={<AdminProducts />} />
                       <Route path="farmers" element={<AdminFarmers />} />
+                      <Route path="farmer-documents" element={<AdminFarmerDocuments />} />
                       <Route path="users" element={<AdminUsers />} />
                       <Route path="reviews" element={<AdminReviews />} />
                       <Route path="notifications" element={<AdminNotifications />} />
