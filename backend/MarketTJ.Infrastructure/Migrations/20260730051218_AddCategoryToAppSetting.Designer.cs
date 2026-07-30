@@ -3,6 +3,7 @@ using System;
 using MarketTJ.Infrastructure.Persistence;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 
@@ -11,9 +12,11 @@ using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 namespace MarketTJ.Infrastructure.Migrations
 {
     [DbContext(typeof(AppDbContext))]
-    partial class AppDbContextModelSnapshot : ModelSnapshot
+    [Migration("20260730051218_AddCategoryToAppSetting")]
+    partial class AddCategoryToAppSetting
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
@@ -152,12 +155,6 @@ namespace MarketTJ.Infrastructure.Migrations
 
                     b.Property<string>("Name")
                         .IsRequired()
-                        .HasColumnType("text");
-
-                    b.Property<string>("NameEn")
-                        .HasColumnType("text");
-
-                    b.Property<string>("NameTj")
                         .HasColumnType("text");
 
                     b.Property<DateTime>("UpdatedAt")
@@ -999,9 +996,6 @@ namespace MarketTJ.Infrastructure.Migrations
                         .HasPrecision(18, 3)
                         .HasColumnType("numeric(18,3)");
 
-                    b.Property<int>("CategoryId")
-                        .HasColumnType("integer");
-
                     b.Property<DateTime>("CreatedAt")
                         .HasColumnType("timestamp with time zone");
 
@@ -1031,7 +1025,7 @@ namespace MarketTJ.Infrastructure.Migrations
                         .HasPrecision(18, 3)
                         .HasColumnType("numeric(18,3)");
 
-                    b.Property<int?>("ProductId")
+                    b.Property<int>("ProductId")
                         .HasColumnType("integer");
 
                     b.Property<string>("QualityGrade")
@@ -1053,10 +1047,6 @@ namespace MarketTJ.Infrastructure.Migrations
                         .IsRequired()
                         .HasColumnType("text");
 
-                    b.Property<string>("Unit")
-                        .IsRequired()
-                        .HasColumnType("text");
-
                     b.Property<DateTime>("UpdatedAt")
                         .HasColumnType("timestamp with time zone");
 
@@ -1069,8 +1059,6 @@ namespace MarketTJ.Infrastructure.Migrations
                         .HasColumnType("numeric(18,2)");
 
                     b.HasKey("Id");
-
-                    b.HasIndex("CategoryId");
 
                     b.HasIndex("FarmerProfileId");
 
@@ -1256,7 +1244,7 @@ namespace MarketTJ.Infrastructure.Migrations
                         .IsRequired()
                         .HasColumnType("text");
 
-                    b.Property<int?>("SenderId")
+                    b.Property<int>("SenderId")
                         .HasColumnType("integer");
 
                     b.Property<int>("SupportTicketId")
@@ -1288,12 +1276,6 @@ namespace MarketTJ.Infrastructure.Migrations
                     b.Property<DateTime>("CreatedAt")
                         .HasColumnType("timestamp with time zone");
 
-                    b.Property<string>("GuestEmail")
-                        .HasColumnType("text");
-
-                    b.Property<string>("GuestName")
-                        .HasColumnType("text");
-
                     b.Property<int>("Priority")
                         .HasColumnType("integer");
 
@@ -1304,7 +1286,7 @@ namespace MarketTJ.Infrastructure.Migrations
                         .IsRequired()
                         .HasColumnType("text");
 
-                    b.Property<int?>("UserId")
+                    b.Property<int>("UserId")
                         .HasColumnType("integer");
 
                     b.HasKey("Id");
@@ -1676,12 +1658,6 @@ namespace MarketTJ.Infrastructure.Migrations
 
             modelBuilder.Entity("MarketTJ.Domain.Entities.ProductListing", b =>
                 {
-                    b.HasOne("MarketTJ.Domain.Entities.Category", "Category")
-                        .WithMany("ProductListings")
-                        .HasForeignKey("CategoryId")
-                        .OnDelete(DeleteBehavior.Restrict)
-                        .IsRequired();
-
                     b.HasOne("MarketTJ.Domain.Entities.FarmerProfile", "FarmerProfile")
                         .WithMany("ProductListings")
                         .HasForeignKey("FarmerProfileId")
@@ -1691,9 +1667,8 @@ namespace MarketTJ.Infrastructure.Migrations
                     b.HasOne("MarketTJ.Domain.Entities.Product", "Product")
                         .WithMany("ProductListings")
                         .HasForeignKey("ProductId")
-                        .OnDelete(DeleteBehavior.Restrict);
-
-                    b.Navigation("Category");
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
 
                     b.Navigation("FarmerProfile");
 
@@ -1795,7 +1770,8 @@ namespace MarketTJ.Infrastructure.Migrations
                     b.HasOne("MarketTJ.Domain.Entities.User", "Sender")
                         .WithMany("SentSupportMessages")
                         .HasForeignKey("SenderId")
-                        .OnDelete(DeleteBehavior.Restrict);
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
 
                     b.HasOne("MarketTJ.Domain.Entities.SupportTicket", "SupportTicket")
                         .WithMany("Messages")
@@ -1818,7 +1794,8 @@ namespace MarketTJ.Infrastructure.Migrations
                     b.HasOne("MarketTJ.Domain.Entities.User", "User")
                         .WithMany("SupportTickets")
                         .HasForeignKey("UserId")
-                        .OnDelete(DeleteBehavior.Restrict);
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
 
                     b.Navigation("AssignedToAdmin");
 
@@ -1828,8 +1805,6 @@ namespace MarketTJ.Infrastructure.Migrations
             modelBuilder.Entity("MarketTJ.Domain.Entities.Category", b =>
                 {
                     b.Navigation("Commissions");
-
-                    b.Navigation("ProductListings");
 
                     b.Navigation("Products");
                 });

@@ -1,3 +1,5 @@
+using MarketTJ.Application.Common;
+using MarketTJ.Application.Dto.Admin;
 using MarketTJ.Application.Results;
 using MarketTJ.Application.Dto.FarmerDocumentDto;
 using MarketTJ.Domain.Enums;
@@ -18,4 +20,10 @@ public interface IFarmerDocumentService
     // Новая запись всегда создаётся со Status = Pending, ReviewedAt/
     // ReviewedByAdminId = null — как и положено свежезагруженному документу.
     Task<Result<GetFarmerDocumentDto>> UploadAsync(int farmerProfileId, FarmerDocumentType documentType, Stream fileContent, string fileName, long fileSizeBytes);
+
+    // Admin-модерация загруженных документов (паспорт и т.д.) — раньше
+    // фермер мог загрузить документ, но админ его нигде не видел и не мог
+    // одобрить/отклонить (см. Admin/AdminFarmerDocumentController).
+    Task<Result<PagedResult<GetAdminFarmerDocumentDto>>> GetPagedAsync(PagedRequest request, DocumentReviewStatus? status);
+    Task<Result<string>> ReviewAsync(int id, ReviewFarmerDocumentDto dto, int adminId);
 }

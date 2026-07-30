@@ -90,6 +90,8 @@ export const api = {
     request<T>(path, { method: "POST", body: JSON.stringify(payload) }),
   put: <T>(path: string, payload: unknown) =>
     request<T>(path, { method: "PUT", body: JSON.stringify(payload) }),
+  patch: <T>(path: string, payload: unknown) =>
+    request<T>(path, { method: "PATCH", body: JSON.stringify(payload) }),
   delete: <T>(path: string) => request<T>(path, { method: "DELETE" }),
   upload: <T>(path: string, formData: FormData) => request<T>(path, { method: "POST", body: formData }),
 };
@@ -99,5 +101,6 @@ export const api = {
 export const apiGet = api.get;
 export const apiPost = api.post;
 export const apiPut = api.put;
+export const apiPatch = api.patch;
 export const apiDelete = api.delete;
 export const apiUpload = api.upload;

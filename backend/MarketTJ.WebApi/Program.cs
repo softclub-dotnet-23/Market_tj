@@ -23,11 +23,18 @@ Directory.CreateDirectory(Path.Combine(Directory.GetCurrentDirectory(), "wwwroot
 var builder = WebApplication.CreateBuilder(args);
 
 // Railway передаёт порт через PORT (значение каждый раз разное), а не через
-// ASPNETCORE_URLS — локально (docker-compose, dotnet run) переменной нет,
-// остаётся дефолт 8080, на котором и так всё было завязано (Dockerfile EXPOSE,
-// docker-compose "5000:8080").
-var port = Environment.GetEnvironmentVariable("PORT") ?? "8080";
-builder.WebHost.UseUrls($"http://+:{port}");
+// ASPNETCORE_URLS — в контейнере (Railway/docker-compose) переменной либо нет
+// (docker-compose), либо есть (Railway), но в обоих случаях это Production,
+// поэтому дефолт 8080 корректен (Dockerfile EXPOSE, docker-compose "5000:8080").
+// В Development (обычный "dotnet run" с рабочего стола) UseUrls пропускаем —
+// иначе он перекрывает applicationUrl из launchSettings.json (5193/7099), на
+// который жёстко рассчитан локальный фронтенд (VITE_API_BASE_URL), и рвёт
+// связь backend/frontend при локальной разработке.
+if (!builder.Environment.IsDevelopment())
+{
+    var port = Environment.GetEnvironmentVariable("PORT") ?? "8080";
+    builder.WebHost.UseUrls($"http://+:{port}");
+}
 
 // Railway Postgres даёт DATABASE_URL в виде URI (postgres://user:pass@host:port/db),
 // а Npgsql ждёт key=value строку — конвертируем и подкладываем обратно в

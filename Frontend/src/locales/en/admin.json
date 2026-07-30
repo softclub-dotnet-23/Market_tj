@@ -368,6 +368,89 @@
       "submit": "Add"
     }
   },
+  "farmerDocuments": {
+    "title": "Farmer documents",
+    "subtitle": "Review uploaded passports and other documents before verifying a farmer",
+    "errorTitle": "Failed to load documents",
+    "errorDescription": "Check your connection to the server and try again.",
+    "emptyTitle": "No documents",
+    "emptyDescription": "Documents uploaded by farmers for review will appear here.",
+    "filterAll": "All statuses",
+    "columns": {
+      "farm": "Farm",
+      "type": "Document type",
+      "file": "File",
+      "status": "Status",
+      "uploadedAt": "Uploaded",
+      "actions": "Actions"
+    },
+    "type": {
+      "passport": "Passport",
+      "landDeed": "Land deed",
+      "other": "Other"
+    },
+    "status": {
+      "pending": "Pending",
+      "approved": "Approved",
+      "rejected": "Rejected"
+    },
+    "viewFile": "View file",
+    "approveAction": "Approve",
+    "rejectAction": "Reject",
+    "approveSuccess": "Document approved",
+    "approveError": "Failed to approve document",
+    "rejectSuccess": "Document rejected",
+    "rejectError": "Failed to reject document",
+    "rejectModalTitle": "Reject document",
+    "rejectionReasonLabel": "Rejection reason",
+    "rejectionReasonHint": "Shown to the farmer",
+    "required": "Required field",
+    "cancel": "Cancel"
+  },
+  "platformSettings": {
+    "title": "General platform settings",
+    "subtitle": "Site info, contacts, commission, notifications and maintenance mode",
+    "errorTitle": "Failed to load settings",
+    "errorDescription": "Check your connection to the server and try again.",
+    "saveButton": "Save",
+    "saveSuccess": "Settings saved",
+    "saveError": "Failed to save settings",
+    "lastUpdated": "Updated {{date}}",
+    "required": "Required field",
+    "invalidEmail": "Invalid email",
+    "sections": {
+      "general": {
+        "title": "General",
+        "description": "Site name and contact details",
+        "siteName": "Site name",
+        "logoUrl": "Logo URL",
+        "logoUrlHint": "Optional",
+        "contactEmail": "Contact email",
+        "contactPhone": "Contact phone"
+      },
+      "commission": {
+        "title": "Commission & currency",
+        "description": "Platform commission on farmer sales and the minimum order amount",
+        "commissionPercent": "Platform commission (%)",
+        "currency": "Currency",
+        "minimumOrderAmount": "Minimum order amount"
+      },
+      "notifications": {
+        "title": "Notifications",
+        "description": "Channels the platform uses to notify users",
+        "emailEnabled": "Email notifications",
+        "smsEnabled": "SMS notifications"
+      },
+      "maintenance": {
+        "title": "Maintenance mode",
+        "description": "Temporarily close the platform to users with an explanation",
+        "enabled": "Enable maintenance mode",
+        "message": "Message for users",
+        "messageHint": "Shown to everyone while maintenance mode is on",
+        "messageRequired": "A message is required while maintenance mode is enabled"
+      }
+    }
+  },
   "statistics": {
     "errorTitle": "Failed to load analytics",
     "errorDescription": "Check your connection to the server and try again.",

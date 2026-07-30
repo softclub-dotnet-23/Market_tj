@@ -1,4 +1,6 @@
 using MarketTJ.Application.Common;
+using MarketTJ.Application.Dto.Admin;
+using MarketTJ.Application.Dto.AuditLogDto;
 using MarketTJ.Application.Dto.FarmerDocumentDto;
 using MarketTJ.Application.Interfaces.Repositories;
 using MarketTJ.Application.Interfaces.Services;
@@ -14,6 +16,7 @@ public class FarmerDocumentService(
     IFarmerDocumentRepository farmerDocumentRepository,
     IFarmerProfileRepository farmerProfileRepository,
     IUserRepository userRepository,
+    IAuditLogService auditLogService,
     ICurrentUserService currentUser,
     IFileStorageService fileStorageService,
     ILogger<FarmerDocumentService> logger) : IFarmerDocumentService
@@ -228,6 +231,107 @@ public class FarmerDocumentService(
             logger.LogError(ex, "Ошибка при удалении документа {Id}", id);
             return Result<string>.Fail("Не удалось удалить документ", ErrorType.InternalServerError);
         }
+    }
+
+    public async Task<Result<PagedResult<GetAdminFarmerDocumentDto>>> GetPagedAsync(PagedRequest request, DocumentReviewStatus? status)
+    {
+        try
+        {
+            var all = await farmerDocumentRepository.GetAllAsync();
+
+            IEnumerable<FarmerDocument> filtered = all;
+            if (status is not null)
+                filtered = filtered.Where(d => d.Status == status);
+
+            filtered = request.SortDescending
+                ? filtered.OrderByDescending(d => d.UploadedAt)
+                : filtered.OrderBy(d => d.UploadedAt);
+
+            var materialized = filtered.ToList();
+
+            var farmerProfiles = (await farmerProfileRepository.GetAllAsync()).ToDictionary(f => f.Id, f => f);
+            var farmerUserIds = farmerProfiles.Values.Select(f => f.UserId).Distinct().ToHashSet();
+            var users = (await userRepository.GetAllAsync())
+                .Where(u => farmerUserIds.Contains(u.Id))
+                .ToDictionary(u => u.Id, u => u);
+
+            var page = materialized
+                .Skip((request.PageNumber - 1) * request.PageSize)
+                .Take(request.PageSize)
+                .Select(d => ToAdminGetDto(d, farmerProfiles, users))
+                .ToList();
+
+            return Result<PagedResult<GetAdminFarmerDocumentDto>>.Ok(
+                PagedResult<GetAdminFarmerDocumentDto>.Ok(page, materialized.Count, request.PageNumber, request.PageSize));
+        }
+        catch (Exception ex)
+        {
+            logger.LogError(ex, "Ошибка при получении списка документов фермеров (paged)");
+            return Result<PagedResult<GetAdminFarmerDocumentDto>>.Fail("Не удалось получить список документов", ErrorType.InternalServerError);
+        }
+    }
+
+    public async Task<Result<string>> ReviewAsync(int id, ReviewFarmerDocumentDto dto, int adminId)
+    {
+        try
+        {
+            if (dto.Status is not (DocumentReviewStatus.Approved or DocumentReviewStatus.Rejected))
+                return Result<string>.Fail("Рассмотреть документ можно только в статус Approved или Rejected", ErrorType.Validation);
+
+            if (dto.Status == DocumentReviewStatus.Rejected && string.IsNullOrWhiteSpace(dto.RejectionReason))
+                return Result<string>.Fail("При отклонении документа причина обязательна", ErrorType.Validation);
+
+            var document = await farmerDocumentRepository.GetByIdAsync(id);
+            if (document is null)
+                return Result<string>.Fail("Документ не найден", ErrorType.NotFound);
+
+            if (document.Status != DocumentReviewStatus.Pending)
+                return Result<string>.Fail("Рассмотреть можно только документ в статусе Pending", ErrorType.Validation);
+
+            document.Status = dto.Status;
+            document.ReviewedAt = DateTime.UtcNow;
+            document.ReviewedByAdminId = adminId;
+            document.RejectionReason = dto.Status == DocumentReviewStatus.Rejected ? dto.RejectionReason : null;
+
+            await farmerDocumentRepository.UpdateAsync(document);
+
+            await auditLogService.CreateAsync(new CreateAuditLogDto
+            {
+                AdminId = adminId,
+                Action = "ReviewFarmerDocument",
+                EntityType = nameof(FarmerDocument),
+                EntityId = id,
+                Details = $"Документ рассмотрен, статус: {dto.Status}"
+            });
+
+            return Result<string>.Ok("Документ рассмотрен");
+        }
+        catch (Exception ex)
+        {
+            logger.LogError(ex, "Ошибка при рассмотрении документа {Id}", id);
+            return Result<string>.Fail("Не удалось рассмотреть документ", ErrorType.InternalServerError);
+        }
+    }
+
+    private static GetAdminFarmerDocumentDto ToAdminGetDto(FarmerDocument document, IReadOnlyDictionary<int, FarmerProfile> farmerProfiles, IReadOnlyDictionary<int, User> users)
+    {
+        farmerProfiles.TryGetValue(document.FarmerProfileId, out var farmerProfile);
+        User? farmerUser = farmerProfile is not null && users.TryGetValue(farmerProfile.UserId, out var u) ? u : null;
+
+        return new GetAdminFarmerDocumentDto
+        {
+            Id = document.Id,
+            FarmerProfileId = document.FarmerProfileId,
+            FarmName = farmerProfile?.FarmName ?? "—",
+            FarmerFullName = farmerUser?.FullName,
+            DocumentType = document.DocumentType,
+            FileUrl = document.FileUrl,
+            Status = document.Status,
+            UploadedAt = document.UploadedAt,
+            ReviewedAt = document.ReviewedAt,
+            ReviewedByAdminId = document.ReviewedByAdminId,
+            RejectionReason = document.RejectionReason
+        };
     }
 
     private static GetFarmerDocumentDto ToGetDto(FarmerDocument document) => new()

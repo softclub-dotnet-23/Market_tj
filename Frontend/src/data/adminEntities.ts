@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
-import { apiDelete, apiGet, apiPost, apiPut } from "@/lib/api";
+import { apiDelete, apiGet, apiPatch, apiPost, apiPut } from "@/lib/api";
 
 export const UserRole = { Admin: 1, Farmer: 2, Customer: 3, Courier: 4 } as const;
 export const FarmerVerificationStatus = { Pending: 1, Verified: 2, Rejected: 3 } as const;
@@ -77,18 +77,6 @@ export interface AdminFarmerDto {
   verifiedAt: string | null;
   verifiedByAdminId: number | null;
   createdAt: string;
-}
-
-export interface AdminFarmerDocumentDto {
-  id: number;
-  farmerProfileId: number;
-  documentType: number;
-  fileUrl: string;
-  status: number;
-  uploadedAt: string;
-  reviewedAt: string | null;
-  reviewedByAdminId: number | null;
-  rejectionReason: string | null;
 }
 
 export interface AdminCategoryDto {
@@ -332,11 +320,6 @@ export function useAdminFarmers(refreshKey = 0) {
   return { farmers: data, loading, error };
 }
 
-export function useAdminFarmerDocuments(refreshKey = 0) {
-  const { data, loading, error } = useAsync(() => apiGet<AdminFarmerDocumentDto[]>("/farmer-documents"), [refreshKey]);
-  return { documents: data, loading, error };
-}
-
 // Справочник категорий и базовых товаров (/api/categories, /api/products) —
 // из него фермер выбирает при создании объявления (см. useProductCatalog в
 // data/farmer.ts). Управляется только Admin.
@@ -369,6 +352,72 @@ export function useAdminReviews(refreshKey = 0) {
 export function useAdminSettings(refreshKey = 0) {
   const { data, loading, error } = useAsync(() => apiGet<AdminSettingDto[]>("/app-settings"), [refreshKey]);
   return { settings: data, loading, error };
+}
+
+// Структурированные "общие настройки платформы" (Admin → Настройки) — читаются
+// и пишутся одним запросом (GET/PUT /api/admin/settings), в отличие от
+// generic key-value CRUD выше (/app-settings), который остаётся для
+// произвольных ad-hoc настроек.
+export interface PlatformSettingsDto {
+  siteName: string;
+  logoUrl: string | null;
+  contactEmail: string;
+  contactPhone: string;
+  commissionPercent: number;
+  currency: string;
+  minimumOrderAmount: number;
+  maintenanceModeEnabled: boolean;
+  maintenanceMessage: string | null;
+  emailNotificationsEnabled: boolean;
+  smsNotificationsEnabled: boolean;
+  updatedAt: string | null;
+  updatedByAdminId: number | null;
+}
+
+export type PlatformSettingsFormDto = Omit<PlatformSettingsDto, "updatedAt" | "updatedByAdminId">;
+
+export function usePlatformSettings(refreshKey = 0) {
+  const { data, loading, error } = useAsync(() => apiGet<PlatformSettingsDto>("/admin/settings"), [refreshKey]);
+  return { settings: data, loading, error };
+}
+
+export function updatePlatformSettings(dto: PlatformSettingsFormDto) {
+  return apiPut<string>("/admin/settings", dto);
+}
+
+// Модерация документов фермеров (паспорт и т.д.) — раньше документ загружался
+// фермером, но нигде не был виден админу для одобрения/отклонения.
+export interface AdminFarmerDocumentDto {
+  id: number;
+  farmerProfileId: number;
+  farmName: string;
+  farmerFullName: string | null;
+  documentType: number;
+  fileUrl: string;
+  status: number;
+  uploadedAt: string;
+  reviewedAt: string | null;
+  reviewedByAdminId: number | null;
+  rejectionReason: string | null;
+}
+
+interface AdminFarmerDocumentsPage {
+  items: AdminFarmerDocumentDto[];
+  totalCount: number;
+  page: number;
+  pageSize: number;
+}
+
+export function useAdminFarmerDocuments(page: number, pageSize: number, status: number | null, refreshKey = 0) {
+  const statusQuery = status !== null ? `&status=${status}` : "";
+  return useAsync(
+    () => apiGet<AdminFarmerDocumentsPage>(`/admin/farmer-documents?pageNumber=${page}&pageSize=${pageSize}${statusQuery}`),
+    [page, pageSize, status, refreshKey],
+  );
+}
+
+export function reviewFarmerDocument(id: number, status: number, rejectionReason: string | null) {
+  return apiPatch<string>(`/admin/farmer-documents/${id}/review`, { status, rejectionReason });
 }
 
 export function useAdminCouriers(refreshKey = 0) {
@@ -410,28 +459,6 @@ export function updateFarmerVerification(farmer: AdminFarmerDto, verificationSta
 // Дополнено по явному запросу пользователя — раньше документ можно было
 // загрузить (см. FarmerDocuments.tsx), но проверить его в админке было
 // негде, хотя backend (UpdateAsync) уже полностью это поддерживал.
-// UpdateFarmerDocumentDto требует все поля документа, а не только те, что
-// меняются — реконструируем DTO из уже загруженной записи, тот же паттерн,
-// что и в updateFarmerVerification.
-export function updateFarmerDocumentStatus(
-  document: AdminFarmerDocumentDto,
-  status: number,
-  adminUserId: number,
-  rejectionReason: string | null,
-) {
-  return apiPut<string>(`/farmer-documents/${document.id}`, {
-    id: document.id,
-    farmerProfileId: document.farmerProfileId,
-    documentType: document.documentType,
-    fileUrl: document.fileUrl,
-    status,
-    uploadedAt: document.uploadedAt,
-    reviewedAt: new Date().toISOString(),
-    reviewedByAdminId: adminUserId,
-    rejectionReason,
-  });
-}
-
 export interface CommissionFormDto {
   categoryId: number | null;
   percentage: number;

@@ -1,8 +1,10 @@
-# Локальные dev-настройки backend (appsettings.Development.json — там Jwt:Secret
-# для локальной разработки) — не коммитятся, у каждого разработчика свой секрет.
-# Базовый appsettings.json (Jwt:ExpiryMinutes, Cors, Logging) секретов не содержит
-# и ДОЛЖЕН коммититься — без него в Production падает всё, что читает конфиг
-# без переменных окружения (например TokenService.AccessTokenExpiryMinutes).
+# Локальные настройки backend (appsettings.json содержит реальный пароль
+# Postgres, appsettings.Development.json — реальный Jwt:Secret) — не
+# коммитятся. Non-secret ключи (Jwt:ExpiryMinutes/Issuer/Audience и т.д.),
+# нужные Production, продублированы переменными окружения на Railway
+# (Jwt__ExpiryMinutes/Jwt__Issuer/Jwt__Audience) — см. 2026-07-30, иначе
+# TokenService.AccessTokenExpiryMinutes падает на каждом логине.
+backend/MarketTJ.WebApi/appsettings.json
 backend/MarketTJ.WebApi/appsettings.*.json
 
 # .NET build artifacts — не коммитятся (были причиной постоянных merge-конфликтов

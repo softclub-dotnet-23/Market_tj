@@ -1,4 +1,5 @@
 using MarketTJ.Application.Common;
+using MarketTJ.Application.Dto.Admin;
 using MarketTJ.Application.Dto.FarmerDocumentDto;
 using MarketTJ.Application.Interfaces.Repositories;
 using MarketTJ.Application.Interfaces.Services;
@@ -15,6 +16,7 @@ public class FarmerDocumentServiceTests
     private readonly Mock<IFarmerDocumentRepository> _farmerDocumentRepository = new();
     private readonly Mock<IFarmerProfileRepository> _farmerProfileRepository = new();
     private readonly Mock<IUserRepository> _userRepository = new();
+    private readonly Mock<IAuditLogService> _auditLogService = new();
     private readonly Mock<ICurrentUserService> _currentUser = new();
     private readonly Mock<IFileStorageService> _fileStorageService = new();
     private readonly Mock<ILogger<FarmerDocumentService>> _logger = new();
@@ -22,7 +24,7 @@ public class FarmerDocumentServiceTests
 
     public FarmerDocumentServiceTests()
     {
-        _service = new FarmerDocumentService(_farmerDocumentRepository.Object, _farmerProfileRepository.Object, _userRepository.Object, _currentUser.Object, _fileStorageService.Object, _logger.Object);
+        _service = new FarmerDocumentService(_farmerDocumentRepository.Object, _farmerProfileRepository.Object, _userRepository.Object, _auditLogService.Object, _currentUser.Object, _fileStorageService.Object, _logger.Object);
         // Дефолтный документ — FarmerProfileId=1 (UserId=1); залогинены как этот фермер.
         _currentUser.Setup(c => c.UserId).Returns(1);
         _currentUser.Setup(c => c.Role).Returns(nameof(UserRole.Farmer));
@@ -425,6 +427,146 @@ public class FarmerDocumentServiceTests
         using var stream = new MemoryStream([1, 2, 3]);
 
         var result = await _service.UploadAsync(1, FarmerDocumentType.Passport, stream, "passport.jpg", 3);
+
+        Assert.False(result.IsSuccess);
+        Assert.Equal(ErrorType.InternalServerError, result.ErrorType);
+    }
+
+    // ---------- GetPagedAsync (admin) ----------
+
+    [Fact]
+    public async Task GetPagedAsync_ResolvesFarmNameAndFarmerFullName()
+    {
+        _farmerDocumentRepository.Setup(r => r.GetAllAsync()).ReturnsAsync([CreateDocument(1)]);
+        _farmerProfileRepository.Setup(r => r.GetAllAsync()).ReturnsAsync([
+            new FarmerProfile { Id = 1, UserId = 10, FarmName = "Хосилот", Region = "Хатлон", District = "Бохтар", Village = "V", Address = "A", VerificationStatus = FarmerVerificationStatus.Verified }
+        ]);
+        _userRepository.Setup(r => r.GetAllAsync()).ReturnsAsync([
+            new User { Id = 10, Role = UserRole.Farmer, FullName = "Фермер Тестов", Email = "f@e.com", PhoneNumber = "1", PasswordHash = "h" }
+        ]);
+
+        var result = await _service.GetPagedAsync(new PagedRequest(), null);
+
+        Assert.True(result.IsSuccess);
+        var item = Assert.Single(result.Data!.Items);
+        Assert.Equal("Хосилот", item.FarmName);
+        Assert.Equal("Фермер Тестов", item.FarmerFullName);
+    }
+
+    [Fact]
+    public async Task GetPagedAsync_FilterByStatus_ReturnsOnlyMatching()
+    {
+        var pending = CreateDocument(1);
+        var approved = CreateDocument(2);
+        approved.Status = DocumentReviewStatus.Approved;
+        _farmerDocumentRepository.Setup(r => r.GetAllAsync()).ReturnsAsync([pending, approved]);
+        _farmerProfileRepository.Setup(r => r.GetAllAsync()).ReturnsAsync([]);
+        _userRepository.Setup(r => r.GetAllAsync()).ReturnsAsync([]);
+
+        var result = await _service.GetPagedAsync(new PagedRequest(), DocumentReviewStatus.Approved);
+
+        Assert.True(result.IsSuccess);
+        Assert.Single(result.Data!.Items);
+        Assert.Equal(2, result.Data!.Items[0].Id);
+    }
+
+    [Fact]
+    public async Task GetPagedAsync_RepositoryThrows_ReturnsInternalServerError()
+    {
+        _farmerDocumentRepository.Setup(r => r.GetAllAsync()).ThrowsAsync(new Exception("db error"));
+
+        var result = await _service.GetPagedAsync(new PagedRequest(), null);
+
+        Assert.False(result.IsSuccess);
+        Assert.Equal(ErrorType.InternalServerError, result.ErrorType);
+    }
+
+    // ---------- ReviewAsync (admin) ----------
+
+    [Fact]
+    public async Task ReviewAsync_Approve_UpdatesDocumentAndWritesAuditLog()
+    {
+        var document = CreateDocument(1);
+        _farmerDocumentRepository.Setup(r => r.GetByIdAsync(1)).ReturnsAsync(document);
+
+        var result = await _service.ReviewAsync(1, new ReviewFarmerDocumentDto { Status = DocumentReviewStatus.Approved }, adminId: 99);
+
+        Assert.True(result.IsSuccess);
+        Assert.Equal(DocumentReviewStatus.Approved, document.Status);
+        Assert.Equal(99, document.ReviewedByAdminId);
+        Assert.Null(document.RejectionReason);
+        _farmerDocumentRepository.Verify(r => r.UpdateAsync(document), Times.Once);
+        _auditLogService.Verify(a => a.CreateAsync(It.Is<Dto.AuditLogDto.CreateAuditLogDto>(d => d.AdminId == 99 && d.EntityId == 1)), Times.Once);
+    }
+
+    [Fact]
+    public async Task ReviewAsync_RejectWithoutReason_ReturnsValidationError()
+    {
+        var document = CreateDocument(1);
+        _farmerDocumentRepository.Setup(r => r.GetByIdAsync(1)).ReturnsAsync(document);
+
+        var result = await _service.ReviewAsync(1, new ReviewFarmerDocumentDto { Status = DocumentReviewStatus.Rejected, RejectionReason = null }, adminId: 99);
+
+        Assert.False(result.IsSuccess);
+        Assert.Equal(ErrorType.Validation, result.ErrorType);
+        _farmerDocumentRepository.Verify(r => r.UpdateAsync(It.IsAny<FarmerDocument>()), Times.Never);
+    }
+
+    [Fact]
+    public async Task ReviewAsync_RejectWithReason_SetsRejectionReason()
+    {
+        var document = CreateDocument(1);
+        _farmerDocumentRepository.Setup(r => r.GetByIdAsync(1)).ReturnsAsync(document);
+
+        var result = await _service.ReviewAsync(1, new ReviewFarmerDocumentDto { Status = DocumentReviewStatus.Rejected, RejectionReason = "Нечитаемое фото" }, adminId: 99);
+
+        Assert.True(result.IsSuccess);
+        Assert.Equal("Нечитаемое фото", document.RejectionReason);
+    }
+
+    [Fact]
+    public async Task ReviewAsync_BackToPendingStatus_ReturnsValidationError()
+    {
+        var document = CreateDocument(1);
+        _farmerDocumentRepository.Setup(r => r.GetByIdAsync(1)).ReturnsAsync(document);
+
+        var result = await _service.ReviewAsync(1, new ReviewFarmerDocumentDto { Status = DocumentReviewStatus.Pending }, adminId: 99);
+
+        Assert.False(result.IsSuccess);
+        Assert.Equal(ErrorType.Validation, result.ErrorType);
+    }
+
+    [Fact]
+    public async Task ReviewAsync_DocumentNotFound_ReturnsNotFound()
+    {
+        _farmerDocumentRepository.Setup(r => r.GetByIdAsync(It.IsAny<int>())).ReturnsAsync((FarmerDocument?)null);
+
+        var result = await _service.ReviewAsync(999, new ReviewFarmerDocumentDto { Status = DocumentReviewStatus.Approved }, adminId: 99);
+
+        Assert.False(result.IsSuccess);
+        Assert.Equal(ErrorType.NotFound, result.ErrorType);
+    }
+
+    [Fact]
+    public async Task ReviewAsync_AlreadyReviewed_ReturnsValidationError()
+    {
+        var document = CreateDocument(1);
+        document.Status = DocumentReviewStatus.Approved;
+        _farmerDocumentRepository.Setup(r => r.GetByIdAsync(1)).ReturnsAsync(document);
+
+        var result = await _service.ReviewAsync(1, new ReviewFarmerDocumentDto { Status = DocumentReviewStatus.Rejected, RejectionReason = "Причина" }, adminId: 99);
+
+        Assert.False(result.IsSuccess);
+        Assert.Equal(ErrorType.Validation, result.ErrorType);
+        _farmerDocumentRepository.Verify(r => r.UpdateAsync(It.IsAny<FarmerDocument>()), Times.Never);
+    }
+
+    [Fact]
+    public async Task ReviewAsync_RepositoryThrows_ReturnsInternalServerError()
+    {
+        _farmerDocumentRepository.Setup(r => r.GetByIdAsync(It.IsAny<int>())).ThrowsAsync(new Exception("db error"));
+
+        var result = await _service.ReviewAsync(1, new ReviewFarmerDocumentDto { Status = DocumentReviewStatus.Approved }, adminId: 99);
 
         Assert.False(result.IsSuccess);
         Assert.Equal(ErrorType.InternalServerError, result.ErrorType);
