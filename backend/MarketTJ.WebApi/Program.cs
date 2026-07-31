@@ -131,6 +131,10 @@ if (!int.TryParse(jwtSection["ExpiryMinutes"], out _))
 // (500 на POST /api/auth/send-verification-code, глубоко внутри
 // SmtpEmailSender) — проверяем при старте, чтобы ошибка была видна сразу
 // в логах деплоя, а не после первой жалобы пользователя на регистрацию.
+// ВАЖНО: только предупреждение, никогда не throw — SMTP нужен только для
+// одной фичи (подтверждение email при регистрации), а не для работы всего
+// backend целиком. Безусловный throw здесь однажды уже уронил весь сервис
+// на Railway при отсутствии реальных Smtp-переменных (2026-07-31).
 var smtpSection = builder.Configuration.GetSection("Smtp");
 var smtpConfigured = !string.IsNullOrWhiteSpace(smtpSection["Host"])
     && !string.IsNullOrWhiteSpace(smtpSection["User"])
@@ -138,22 +142,12 @@ var smtpConfigured = !string.IsNullOrWhiteSpace(smtpSection["Host"])
 
 if (!smtpConfigured)
 {
-    const string smtpMissingMessage =
-        "SMTP не настроен (Smtp:Host/Port/User/Password/From) — подтверждение email при " +
-        "регистрации работать не будет. Задайте Smtp__Host, Smtp__Port, Smtp__User, " +
-        "Smtp__Password, Smtp__From через переменные окружения (Railway) или " +
-        "dotnet user-secrets (локально).";
-
-    if (builder.Environment.IsDevelopment())
-    {
-        // Локальная разработка не обязана иметь настоящий SMTP — только
-        // предупреждаем в консоль, не роняем весь backend ради одной фичи.
-        Console.WriteLine($"[WARN] {smtpMissingMessage}");
-    }
-    else
-    {
-        throw new InvalidOperationException(smtpMissingMessage);
-    }
+    Console.WriteLine(
+        "[WARN] SMTP не настроен (Smtp:Host/Port/User/Password/From) — подтверждение email при " +
+        "регистрации работать не будет (остальной backend продолжит работать нормально). " +
+        "Задайте Smtp__Host, Smtp__Port, Smtp__User, Smtp__Password, Smtp__From через переменные " +
+        "окружения (Railway) или dotnet user-secrets (локально)."
+    );
 }
 
 builder.Services
