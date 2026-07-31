@@ -31,7 +31,12 @@ export function MiniCart({ onClose }: { onClose: () => void }) {
       animate={{ opacity: 1, y: 0, scale: 1 }}
       exit={{ opacity: 0, y: -8, scale: 0.98 }}
       transition={{ duration: 0.18 }}
-      className="absolute right-0 top-full z-50 mt-3 w-[min(380px,90vw)] rounded-2xl border border-stone-100 bg-white p-4 shadow-(--shadow-lifted) dark:border-stone-800 dark:bg-stone-900"
+      // На мобильных — фиксированный "лист" от края до края экрана (с
+      // отступами), а не выпадашка от кнопки: при w-[min(380px,90vw)] +
+      // right-0 от самой кнопки корзины (а не от края экрана) левый край
+      // уезжал за пределы viewport на ~30px, потому что справа от кнопки ещё
+      // стоит гамбургер-меню — на десктопе места достаточно, там ok.
+      className="fixed inset-x-3 top-20 z-50 rounded-2xl border border-stone-100 bg-white p-4 shadow-(--shadow-lifted) sm:absolute sm:inset-x-auto sm:top-full sm:right-0 sm:mt-3 sm:w-[min(380px,90vw)] dark:border-stone-800 dark:bg-stone-900"
     >
       <div className="mb-3 flex items-center justify-between">
         <h3 className="font-display text-base text-stone-900 dark:text-stone-50">{t("miniCart.title")}</h3>

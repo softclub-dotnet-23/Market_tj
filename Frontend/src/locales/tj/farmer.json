@@ -10,6 +10,11 @@
     "staff": "Кормандон",
     "notifications": "Огоҳиномаҳо"
   },
+  "navSections": {
+    "overview": "Дидгоҳ",
+    "management": "Хоҷагии ман",
+    "account": "Ҳисоб"
+  },
   "collapseSidebar": "Пӯшидани меню",
   "expandSidebar": "Кушодани меню",
   "search": "Ҷустуҷӯ...",

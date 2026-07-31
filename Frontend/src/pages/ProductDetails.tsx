@@ -161,11 +161,20 @@ export function ProductDetails() {
             <div className="flex flex-wrap items-center gap-2">
               <Link
                 to={`/catalog?farmer=${farmer.id}`}
-                className="flex w-fit items-center gap-2 rounded-full bg-stone-50 py-1.5 pl-1.5 pr-4 text-sm text-stone-600 transition hover:bg-stone-100 dark:bg-stone-800 dark:text-stone-300 dark:hover:bg-stone-700"
+                className="flex w-fit items-center gap-3 rounded-full bg-stone-50 py-1.5 pl-1.5 pr-4 text-sm text-stone-600 transition hover:bg-stone-100 dark:bg-stone-800 dark:text-stone-300 dark:hover:bg-stone-700"
               >
-                <Avatar name={farmer.farmName} src={farmer.avatarUrl ? resolveMediaUrl(farmer.avatarUrl) : undefined} size={28} />
-                {t("pages:productDetails.farmerPrefix")}{" "}
-                <span className="font-medium text-stone-800 dark:text-stone-100">{farmer.farmName}</span>
+                <Avatar name={farmer.farmName} src={farmer.avatarUrl ? resolveMediaUrl(farmer.avatarUrl) : undefined} size={44} ring />
+                <span className="flex flex-col">
+                  <span>
+                    {t("pages:productDetails.farmerPrefix")}{" "}
+                    <span className="font-medium text-stone-800 dark:text-stone-100">{farmer.farmName}</span>
+                  </span>
+                  {farmer.productCount > 1 && (
+                    <span className="text-xs text-stone-400 dark:text-stone-500">
+                      {t("product:productsCount", { count: farmer.productCount })}
+                    </span>
+                  )}
+                </span>
               </Link>
               <button
                 onClick={handleAskFarmer}

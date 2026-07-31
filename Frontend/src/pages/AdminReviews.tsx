@@ -57,9 +57,34 @@ export function AdminReviews() {
     }
   };
 
+  const renderCard = (review: AdminReviewDto) => (
+    <div key={review.id} className="flex flex-col gap-2.5 rounded-2xl border border-stone-100 bg-white p-4 shadow-sm dark:border-stone-800 dark:bg-stone-900">
+      <div className="flex items-start justify-between gap-3">
+        <div className="min-w-0">
+          <p className="truncate text-sm font-medium text-stone-800 dark:text-stone-100">{t("reviews.orderLabel", { id: review.orderId })}</p>
+          <p className="truncate text-xs text-stone-400 dark:text-stone-500">
+            {review.customerFullName ?? t("reviews.customerLabel", { id: review.customerId })} · {t("reviews.farmerLabel", { id: review.farmerId })}
+          </p>
+        </div>
+        <button
+          onClick={() => setDeleting(review)}
+          aria-label={t("reviews.deleteAction")}
+          className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg text-stone-400 transition hover:bg-rose-50 hover:text-rose-600 dark:text-stone-500 dark:hover:bg-rose-950 dark:hover:text-rose-400"
+        >
+          <Trash2 size={15} />
+        </button>
+      </div>
+      <RatingStars rating={review.rating} />
+      {review.comment && <p className="text-sm text-stone-600 dark:text-stone-300">{review.comment}</p>}
+      <p className="text-xs text-stone-400 dark:text-stone-500">{formatDate(review.createdAt)}</p>
+    </div>
+  );
+
   return (
     <div className="rounded-3xl border border-stone-100 bg-white dark:border-stone-800 dark:bg-stone-900">
-      <div className="overflow-x-auto">
+      <div className="flex flex-col gap-3 p-4 lg:hidden">{pageItems.map(renderCard)}</div>
+
+      <div className="hidden overflow-x-auto lg:block">
         <table className="w-full text-left text-sm">
           <thead>
             <tr className="border-b border-stone-100 text-xs uppercase tracking-wide text-stone-400 dark:border-stone-800 dark:text-stone-500">
@@ -76,7 +101,7 @@ export function AdminReviews() {
             {pageItems.map((review) => (
               <tr key={review.id} className="border-b border-stone-50 last:border-0 dark:border-stone-800/60">
                 <td className="px-6 py-4 text-stone-600 dark:text-stone-300">{t("reviews.orderLabel", { id: review.orderId })}</td>
-                <td className="px-6 py-4 text-stone-600 dark:text-stone-300">{t("reviews.customerLabel", { id: review.customerId })}</td>
+                <td className="px-6 py-4 text-stone-600 dark:text-stone-300">{review.customerFullName ?? t("reviews.customerLabel", { id: review.customerId })}</td>
                 <td className="px-6 py-4 text-stone-600 dark:text-stone-300">{t("reviews.farmerLabel", { id: review.farmerId })}</td>
                 <td className="px-6 py-4">
                   <RatingStars rating={review.rating} />

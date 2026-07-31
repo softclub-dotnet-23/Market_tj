@@ -16,6 +16,11 @@
     "couriers": "Курьеры",
     "delivery": "Доставка"
   },
+  "navSections": {
+    "overview": "Обзор",
+    "management": "Управление",
+    "account": "Аккаунт"
+  },
   "collapseSidebar": "Свернуть меню",
   "expandSidebar": "Развернуть меню",
   "search": "Поиск...",
@@ -256,16 +261,44 @@
     "errorDescription": "Проверьте подключение к серверу и попробуйте снова.",
     "emptyTitle": "Пока нет покупателей",
     "emptyDescription": "Здесь появятся зарегистрированные покупатели.",
+    "addButton": "Добавить покупателя",
+    "editAction": "Редактировать",
+    "deleteAction": "Удалить",
     "columns": {
       "fullName": "ФИО",
       "email": "Email",
       "phone": "Телефон",
       "status": "Статус",
-      "createdAt": "Дата регистрации"
+      "createdAt": "Дата регистрации",
+      "actions": "Действия"
     },
     "status": {
       "active": "Активен",
       "inactive": "Неактивен"
+    },
+    "createModalTitle": "Новый покупатель",
+    "editModalTitle": "Редактировать покупателя",
+    "createSuccess": "Покупатель добавлен",
+    "createError": "Не удалось добавить покупателя",
+    "updateSuccess": "Покупатель обновлён",
+    "updateError": "Не удалось обновить покупателя",
+    "deleteSuccess": "Покупатель удалён",
+    "deleteError": "Не удалось удалить покупателя",
+    "deleteConfirmTitle": "Удалить покупателя?",
+    "deleteConfirmDescription": "Покупатель «{{name}}» будет удалён без возможности восстановления.",
+    "form": {
+      "fullName": "ФИО",
+      "email": "Email",
+      "phone": "Телефон",
+      "password": "Пароль",
+      "passwordCreateHint": "Минимум 6 символов",
+      "passwordEditHint": "Оставьте пустым, чтобы не менять пароль",
+      "passwordTooShort": "Пароль должен быть не короче 6 символов",
+      "isActive": "Активен",
+      "required": "Обязательное поле",
+      "cancel": "Отмена",
+      "submit": "Добавить",
+      "saveChanges": "Сохранить"
     }
   },
   "commissions": {

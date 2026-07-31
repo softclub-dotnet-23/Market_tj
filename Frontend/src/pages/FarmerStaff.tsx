@@ -128,7 +128,37 @@ export function FarmerStaff() {
         <EmptyState icon={<Users size={26} />} title={t("staff.emptyTitle")} description={t("staff.emptyDescription")} />
       ) : (
         <div className="rounded-3xl border border-stone-100 bg-white dark:border-stone-800 dark:bg-stone-900">
-          <div className="overflow-x-auto">
+          <div className="flex flex-col gap-3 p-4 lg:hidden">
+            {staff.map((member) => (
+              <div key={member.id} className="flex flex-col gap-2 rounded-2xl border border-stone-100 p-4 dark:border-stone-800">
+                <div className="flex items-start justify-between gap-3">
+                  <p className="font-medium text-stone-800 dark:text-stone-100">{t("staff.userLabel", { id: member.userId })}</p>
+                  <span
+                    className={`shrink-0 rounded-full px-2.5 py-1 text-xs font-semibold ${
+                      member.isActive
+                        ? "bg-grove-100 text-grove-700 dark:bg-grove-900 dark:text-grove-300"
+                        : "bg-stone-100 text-stone-400 dark:bg-stone-800 dark:text-stone-500"
+                    }`}
+                  >
+                    {t(member.isActive ? "staff.status.active" : "staff.status.inactive")}
+                  </span>
+                </div>
+                <p className="text-sm text-stone-600 dark:text-stone-300">{permissionLabels(member.permissions).join(", ")}</p>
+                <div className="flex items-center justify-between border-t border-stone-50 pt-2 dark:border-stone-800/60">
+                  <p className="text-xs text-stone-400 dark:text-stone-500">{formatDate(member.createdAt)}</p>
+                  <button
+                    onClick={() => setDeleting(member)}
+                    aria-label={t("staff.deleteAction")}
+                    className="flex h-8 w-8 items-center justify-center rounded-lg text-stone-400 transition hover:bg-rose-50 hover:text-rose-600 dark:text-stone-500 dark:hover:bg-rose-950 dark:hover:text-rose-400"
+                  >
+                    <Trash2 size={15} />
+                  </button>
+                </div>
+              </div>
+            ))}
+          </div>
+
+          <div className="hidden overflow-x-auto lg:block">
             <table className="w-full text-left text-sm">
               <thead>
                 <tr className="border-b border-stone-100 text-xs uppercase tracking-wide text-stone-400 dark:border-stone-800 dark:text-stone-500">

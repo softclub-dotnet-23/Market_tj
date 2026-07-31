@@ -9,6 +9,11 @@
     "notifications": "Уведомления",
     "profile": "Профиль"
   },
+  "navSections": {
+    "overview": "Обзор",
+    "management": "Покупки",
+    "account": "Аккаунт"
+  },
   "collapseSidebar": "Свернуть меню",
   "expandSidebar": "Развернуть меню",
   "search": "Поиск...",

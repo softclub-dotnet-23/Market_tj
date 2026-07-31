@@ -170,6 +170,7 @@ export interface FarmerReviewDto {
   id: number;
   orderId: number;
   customerId: number;
+  customerFullName: string | null;
   farmerId: number;
   rating: number;
   comment: string | null;

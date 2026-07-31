@@ -9,6 +9,11 @@
     "notifications": "Огоҳиномаҳо",
     "profile": "Профил"
   },
+  "navSections": {
+    "overview": "Дидгоҳ",
+    "management": "Харидҳо",
+    "account": "Ҳисоб"
+  },
   "collapseSidebar": "Пӯшидани меню",
   "expandSidebar": "Кушодани меню",
   "search": "Ҷустуҷӯ...",

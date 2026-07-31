@@ -7,10 +7,11 @@ import { AnimatedCounter } from "@/components/ui/AnimatedCounter";
 import { PhotoTile } from "@/components/ui/PhotoTile";
 import { CTASection } from "@/components/sections/CTASection";
 import { useAboutValues, useImpactStats, useTimeline, useTeamValues } from "@/data/about";
+import { useCategories } from "@/data/categories";
 import { categoryPhotos } from "@/assets/photos";
+import { resolveMediaUrl } from "@/lib/api";
 
 const VALUE_ICONS = [ShieldCheck, HandHeart, Sprout, Target];
-const MISSION_PHOTO_KEYS = ["vegetables", "fruits", "dried", "dairy"];
 
 export function About() {
   const { t } = useTranslation(["pages", "layout"]);
@@ -18,6 +19,11 @@ export function About() {
   const impactStats = useImpactStats();
   const timeline = useTimeline();
   const teamValues = useTeamValues();
+  // Раньше 4 фото были жёстко зашиты по ключам ("vegetables"/"fruits"/...) —
+  // не реагировали ни на новые категории, ни на imageUrl, заданный админом.
+  // Теперь берём реальные первые 4 категории — то же приоритет imageUrl→
+  // забандленное фото, что и в CategoryCard/MegaMenu (см. 2026-07-31).
+  const missionCategories = useCategories().slice(0, 4);
   return (
     <div>
       <div className="container-page pb-4 pt-8">
@@ -48,12 +54,16 @@ export function About() {
           transition={{ duration: 0.7, delay: 0.1 }}
           className="grid grid-cols-2 gap-4"
         >
-          {MISSION_PHOTO_KEYS.map((key, i) => (
+          {missionCategories.map((category, i) => (
             <div
-              key={key}
+              key={category.id}
               className={`aspect-square overflow-hidden rounded-3xl ${i === 1 ? "translate-y-6" : ""} ${i === 2 ? "-translate-y-6" : ""}`}
             >
-              <PhotoTile src={categoryPhotos[key]} alt="" className="h-full w-full" />
+              <PhotoTile
+                src={category.imageUrl ? resolveMediaUrl(category.imageUrl) : categoryPhotos[category.photoKey]}
+                alt={category.name}
+                className="h-full w-full"
+              />
             </div>
           ))}
         </motion.div>

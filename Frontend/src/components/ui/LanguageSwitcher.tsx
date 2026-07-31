@@ -100,15 +100,15 @@ export function LanguageSwitcher({ className }: { className?: string }) {
         aria-haspopup="listbox"
         aria-expanded={open}
         className={cn(
-          "flex h-10 items-center gap-1.5 rounded-full pl-2 pr-2.5 text-stone-600 transition hover:bg-stone-100 dark:text-stone-300 dark:hover:bg-stone-800",
+          "flex h-10 items-center gap-1.5 rounded-full px-2 text-stone-600 transition hover:bg-stone-100 sm:pr-2.5 dark:text-stone-300 dark:hover:bg-stone-800",
           open && "bg-stone-100 dark:bg-stone-800",
         )}
       >
         <Globe size={18} className="text-grove-600 dark:text-grove-400" />
-        <span className="text-xs font-semibold tabular-nums">{active.short}</span>
+        <span className="hidden text-xs font-semibold tabular-nums sm:inline">{active.short}</span>
         <ChevronDown
           size={14}
-          className={cn("text-stone-400 transition-transform dark:text-stone-500", open && "rotate-180")}
+          className={cn("hidden text-stone-400 transition-transform sm:block dark:text-stone-500", open && "rotate-180")}
         />
       </button>
 

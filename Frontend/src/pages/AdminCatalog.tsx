@@ -121,8 +121,19 @@ const INACTIVE_CLASSES = "bg-stone-100 text-stone-400 dark:bg-stone-800 dark:tex
 // справочник базовых "Товаров", но по прямому запросу пользователя название
 // товара и единицу измерения теперь вводит сам фермер при создании
 // объявления — см. FarmerProducts.tsx, ProductListing.CategoryId/Unit).
+// Список показывает название на текущем языке интерфейса админа (та же логика,
+// что и в data/categories.ts для публичного каталога) — раньше всегда показывал
+// c.name (русский) независимо от выбранного языка, хотя админ обязан вводить
+// все 3 варианта именно для этого. Форма редактирования по-прежнему показывает
+// все 3 поля явно — их вводит и правит сам админ, а не текущий язык интерфейса.
+function displayName(c: AdminCategoryDto, language: string): string {
+  if (language === "tj") return c.nameTj ?? c.name;
+  if (language === "en") return c.nameEn ?? c.name;
+  return c.name;
+}
+
 export function AdminCatalog() {
-  const { t } = useTranslation("admin");
+  const { t, i18n } = useTranslation("admin");
   const [refreshKey, setRefreshKey] = useState(0);
   const { categories, loading, error } = useAdminCategories(refreshKey);
 
@@ -167,7 +178,42 @@ export function AdminCatalog() {
         <EmptyState icon={<Tags size={26} />} title={t("catalog.categoryEmptyTitle")} description={t("catalog.categoryEmptyDescription")} />
       ) : (
         <div className="rounded-3xl border border-stone-100 bg-white dark:border-stone-800 dark:bg-stone-900">
-          <div className="overflow-x-auto">
+          <div className="flex flex-col gap-3 p-4 lg:hidden">
+            {categories.map((c) => (
+              <div key={c.id} className="flex flex-col gap-2 rounded-2xl border border-stone-100 p-4 dark:border-stone-800">
+                <div className="flex items-start justify-between gap-3">
+                  <div className="min-w-0">
+                    <p className="truncate font-medium text-stone-800 dark:text-stone-100">{displayName(c, i18n.language)}</p>
+                    {c.description && <p className="mt-0.5 truncate text-sm text-stone-500 dark:text-stone-400">{c.description}</p>}
+                  </div>
+                  <span className={cn("shrink-0 rounded-full px-2.5 py-1 text-xs font-semibold", c.isActive ? ACTIVE_CLASSES : INACTIVE_CLASSES)}>
+                    {c.isActive ? t("catalog.statusActive") : t("catalog.statusInactive")}
+                  </span>
+                </div>
+                <div className="flex items-center justify-end gap-1.5 border-t border-stone-50 pt-2 dark:border-stone-800/60">
+                  <button
+                    onClick={() => {
+                      setEditingCategory(c);
+                      setCategoryModalOpen(true);
+                    }}
+                    aria-label={t("catalog.editAction")}
+                    className="flex h-8 w-8 items-center justify-center rounded-lg text-stone-400 transition hover:bg-stone-100 hover:text-grove-700 dark:text-stone-500 dark:hover:bg-stone-800 dark:hover:text-grove-400"
+                  >
+                    <Pencil size={15} />
+                  </button>
+                  <button
+                    onClick={() => setDeletingCategory(c)}
+                    aria-label={t("catalog.deleteAction")}
+                    className="flex h-8 w-8 items-center justify-center rounded-lg text-stone-400 transition hover:bg-rose-50 hover:text-rose-600 dark:text-stone-500 dark:hover:bg-rose-950 dark:hover:text-rose-400"
+                  >
+                    <Trash2 size={15} />
+                  </button>
+                </div>
+              </div>
+            ))}
+          </div>
+
+          <div className="hidden overflow-x-auto lg:block">
             <table className="w-full text-left text-sm">
               <thead>
                 <tr className="border-b border-stone-100 text-xs uppercase tracking-wide text-stone-400 dark:border-stone-800 dark:text-stone-500">
@@ -180,7 +226,7 @@ export function AdminCatalog() {
               <tbody>
                 {categories.map((c) => (
                   <tr key={c.id} className="border-b border-stone-50 last:border-0 dark:border-stone-800/60">
-                    <td className="px-6 py-4 font-medium text-stone-800 dark:text-stone-100">{c.name}</td>
+                    <td className="px-6 py-4 font-medium text-stone-800 dark:text-stone-100">{displayName(c, i18n.language)}</td>
                     <td className="max-w-80 truncate px-6 py-4 text-stone-500 dark:text-stone-400">{c.description ?? "—"}</td>
                     <td className="px-6 py-4">
                       <span className={cn("rounded-full px-2.5 py-1 text-xs font-semibold", c.isActive ? ACTIVE_CLASSES : INACTIVE_CLASSES)}>

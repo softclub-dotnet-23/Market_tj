@@ -7,6 +7,7 @@ interface ReviewDto {
   id: number;
   orderId: number;
   customerId: number;
+  customerFullName: string | null;
   farmerId: number;
   rating: number;
   comment: string | null;
@@ -16,10 +17,9 @@ interface ReviewDto {
 const MAX_TESTIMONIALS = 6;
 
 // Отзывы реальные (GET /reviews, публичный эндпоинт) — раньше здесь были
-// придуманные люди с придуманными цитатами. Имя покупателя не раскрывается
-// публично (та же причина, что и у customerName в getCatalogReviewsByFarmerId
-// и ownerName фермера) — общий подписанный ярлык вместо личных данных, но
-// текст отзыва и оценка настоящие.
+// придуманные люди с придуманными цитатами. Имя покупателя теперь тоже
+// настоящее (по прямому запросу пользователя 2026-07-31 — отзыв публичный,
+// скрывать автора незачем), сервер резолвит его через CustomerProfile→User.
 export function useTestimonials(): { testimonials: Testimonial[]; loading: boolean } {
   const { t } = useTranslation("data");
   const [reviews, setReviews] = useState<ReviewDto[] | null>(null);
@@ -44,7 +44,7 @@ export function useTestimonials(): { testimonials: Testimonial[]; loading: boole
     .slice(0, MAX_TESTIMONIALS)
     .map((r) => ({
       id: r.id,
-      name: t("testimonials.genericCustomerName"),
+      name: r.customerFullName ?? t("testimonials.genericCustomerName"),
       role: t("testimonials.verifiedPurchase"),
       quote: r.comment as string,
       rating: r.rating,

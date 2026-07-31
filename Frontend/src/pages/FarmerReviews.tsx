@@ -61,7 +61,23 @@ export function FarmerReviews() {
       </div>
 
       <div className="rounded-3xl border border-stone-100 bg-white dark:border-stone-800 dark:bg-stone-900">
-        <div className="overflow-x-auto">
+        <div className="flex flex-col gap-3 p-4 lg:hidden">
+          {pageItems.map((review) => (
+            <div key={review.id} className="flex flex-col gap-2 rounded-2xl border border-stone-100 p-4 dark:border-stone-800">
+              <div className="flex items-start justify-between gap-3">
+                <div className="min-w-0">
+                  <p className="truncate text-sm font-medium text-stone-800 dark:text-stone-100">{t("reviews.orderLabel", { id: review.orderId })}</p>
+                  <p className="truncate text-xs text-stone-400 dark:text-stone-500">{review.customerFullName ?? t("reviews.customerLabel", { id: review.customerId })}</p>
+                </div>
+                <RatingStars rating={review.rating} />
+              </div>
+              {review.comment && <p className="text-sm text-stone-600 dark:text-stone-300">{review.comment}</p>}
+              <p className="text-xs text-stone-400 dark:text-stone-500">{formatDate(review.createdAt)}</p>
+            </div>
+          ))}
+        </div>
+
+        <div className="hidden overflow-x-auto lg:block">
           <table className="w-full text-left text-sm">
             <thead>
               <tr className="border-b border-stone-100 text-xs uppercase tracking-wide text-stone-400 dark:border-stone-800 dark:text-stone-500">
@@ -76,7 +92,7 @@ export function FarmerReviews() {
               {pageItems.map((review) => (
                 <tr key={review.id} className="border-b border-stone-50 last:border-0 dark:border-stone-800/60">
                   <td className="px-6 py-4 text-stone-600 dark:text-stone-300">{t("reviews.orderLabel", { id: review.orderId })}</td>
-                  <td className="px-6 py-4 text-stone-600 dark:text-stone-300">{t("reviews.customerLabel", { id: review.customerId })}</td>
+                  <td className="px-6 py-4 text-stone-600 dark:text-stone-300">{review.customerFullName ?? t("reviews.customerLabel", { id: review.customerId })}</td>
                   <td className="px-6 py-4">
                     <RatingStars rating={review.rating} />
                   </td>

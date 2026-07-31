@@ -112,19 +112,11 @@ export interface AdminUserDto {
   createdAt: string;
 }
 
-export interface AdminCommissionDto {
-  id: number;
-  categoryId: number | null;
-  percentage: number;
-  effectiveFrom: string;
-  effectiveTo: string | null;
-  createdAt: string;
-}
-
 export interface AdminReviewDto {
   id: number;
   orderId: number;
   customerId: number;
+  customerFullName: string | null;
   farmerId: number;
   rating: number;
   comment: string | null;
@@ -137,28 +129,6 @@ export interface AdminSettingDto {
   value: string;
   description: string | null;
   updatedAt: string;
-}
-
-export interface AdminCourierDto {
-  id: number;
-  userId: number;
-  transportType: string;
-  vehicleNumber: string;
-  region: string;
-  district: string;
-  isAvailable: boolean;
-  isActive: boolean;
-  createdAt: string;
-}
-
-export interface AdminDeliveryZoneDto {
-  id: number;
-  region: string;
-  district: string;
-  basePrice: number;
-  pricePerKm: number | null;
-  isActive: boolean;
-  createdAt: string;
 }
 
 export interface TopSellingProductDto {
@@ -333,15 +303,33 @@ export function useAdminCatalogProducts(refreshKey = 0) {
   return { products: data, loading, error };
 }
 
-export function useAdminCustomers() {
-  const { data, loading, error } = useAsync(() => apiGet<AdminUserDto[]>("/users"), []);
+export function useAdminCustomers(refreshKey = 0) {
+  const { data, loading, error } = useAsync(() => apiGet<AdminUserDto[]>("/users"), [refreshKey]);
   const customers = useMemo(() => (data ? data.filter((u) => u.role === UserRole.Customer) : null), [data]);
   return { customers, loading, error };
 }
 
-export function useAdminCommissions(refreshKey = 0) {
-  const { data, loading, error } = useAsync(() => apiGet<AdminCommissionDto[]>("/commissions"), [refreshKey]);
-  return { commissions: data, loading, error };
+// Форма покупателя в админке (Покупатели → добавить/редактировать) — переиспользует
+// общий Admin-only CRUD /api/users (UserController), уже готовый на бэкенде для
+// любой роли; здесь роль всегда фиксируется как Customer.
+export interface CustomerFormDto {
+  fullName: string;
+  email: string;
+  phoneNumber: string;
+  password: string | null;
+  isActive: boolean;
+}
+
+export function createCustomer(dto: CustomerFormDto) {
+  return apiPost<string>("/users", { ...dto, password: dto.password ?? "", role: UserRole.Customer });
+}
+
+export function updateCustomer(id: number, dto: CustomerFormDto) {
+  return apiPut<string>(`/users/${id}`, { id, ...dto, role: UserRole.Customer });
+}
+
+export function deleteCustomer(id: number) {
+  return apiDelete<string>(`/users/${id}`);
 }
 
 export function useAdminReviews(refreshKey = 0) {
@@ -420,16 +408,6 @@ export function reviewFarmerDocument(id: number, status: number, rejectionReason
   return apiPatch<string>(`/admin/farmer-documents/${id}/review`, { status, rejectionReason });
 }
 
-export function useAdminCouriers(refreshKey = 0) {
-  const { data, loading, error } = useAsync(() => apiGet<AdminCourierDto[]>("/courier-profiles"), [refreshKey]);
-  return { couriers: data, loading, error };
-}
-
-export function useAdminDeliveryZones(refreshKey = 0) {
-  const { data, loading, error } = useAsync(() => apiGet<AdminDeliveryZoneDto[]>("/delivery-zones"), [refreshKey]);
-  return { zones: data, loading, error };
-}
-
 export function useAdminAnalytics() {
   const { data, loading, error } = useAsync(() => apiGet<AdminAnalyticsDto>("/analytics/admin/dashboard"), []);
   return { analytics: data, loading, error };
@@ -459,25 +437,6 @@ export function updateFarmerVerification(farmer: AdminFarmerDto, verificationSta
 // Дополнено по явному запросу пользователя — раньше документ можно было
 // загрузить (см. FarmerDocuments.tsx), но проверить его в админке было
 // негде, хотя backend (UpdateAsync) уже полностью это поддерживал.
-export interface CommissionFormDto {
-  categoryId: number | null;
-  percentage: number;
-  effectiveFrom: string;
-  effectiveTo: string | null;
-}
-
-export function createCommission(dto: CommissionFormDto) {
-  return apiPost<string>("/commissions", dto);
-}
-
-export function updateCommission(id: number, dto: CommissionFormDto) {
-  return apiPut<string>(`/commissions/${id}`, { id, ...dto });
-}
-
-export function deleteCommission(id: number) {
-  return apiDelete<string>(`/commissions/${id}`);
-}
-
 export function updateSettingValue(setting: AdminSettingDto, value: string, adminUserId: number) {
   return apiPut<string>(`/app-settings/${setting.id}`, {
     id: setting.id,
@@ -560,41 +519,6 @@ export function deleteReview(id: number) {
 
 export function deleteAdminProductListing(id: number) {
   return apiDelete<string>(`/product-listings/${id}`);
-}
-
-// UpdateCourierProfileDto требует полный набор полей — переносим текущие
-// значения и меняем только isActive/isAvailable (быстрые действия в таблице).
-export function updateCourierStatus(courier: AdminCourierDto, changes: { isActive?: boolean; isAvailable?: boolean }) {
-  return apiPut<string>(`/courier-profiles/${courier.id}`, {
-    id: courier.id,
-    userId: courier.userId,
-    transportType: courier.transportType,
-    vehicleNumber: courier.vehicleNumber,
-    region: courier.region,
-    district: courier.district,
-    isAvailable: changes.isAvailable ?? courier.isAvailable,
-    isActive: changes.isActive ?? courier.isActive,
-  });
-}
-
-export interface DeliveryZoneFormDto {
-  region: string;
-  district: string;
-  basePrice: number;
-  pricePerKm: number | null;
-  isActive: boolean;
-}
-
-export function createDeliveryZone(dto: DeliveryZoneFormDto) {
-  return apiPost<string>("/delivery-zones", dto);
-}
-
-export function updateDeliveryZone(id: number, dto: DeliveryZoneFormDto) {
-  return apiPut<string>(`/delivery-zones/${id}`, { id, ...dto });
-}
-
-export function deleteDeliveryZone(id: number) {
-  return apiDelete<string>(`/delivery-zones/${id}`);
 }
 
 export interface CategoryFormDto {

@@ -14,6 +14,7 @@ public class ReviewService(
     IReviewRepository reviewRepository,
     IOrderRepository orderRepository,
     ICustomerProfileRepository customerProfileRepository,
+    IUserRepository userRepository,
     ICurrentUserService currentUser,
     ILogger<ReviewService> logger) : IReviewService
 {
@@ -39,7 +40,8 @@ public class ReviewService(
         try
         {
             var reviews = await reviewRepository.GetAllAsync();
-            return Result<IEnumerable<GetReviewDto>>.Ok(reviews.Select(ToGetDto));
+            var nameByCustomerId = await BuildCustomerNameMapAsync();
+            return Result<IEnumerable<GetReviewDto>>.Ok(reviews.Select(r => ToGetDto(r, nameByCustomerId.GetValueOrDefault(r.CustomerId))));
         }
         catch (Exception ex)
         {
@@ -56,13 +58,27 @@ public class ReviewService(
             if (review is null)
                 return Result<GetReviewDto?>.Fail("Отзыв не найден", ErrorType.NotFound);
 
-            return Result<GetReviewDto?>.Ok(ToGetDto(review));
+            var customerProfile = await customerProfileRepository.GetByIdAsync(review.CustomerId);
+            var user = customerProfile is null ? null : await userRepository.GetByIdAsync(customerProfile.UserId);
+            return Result<GetReviewDto?>.Ok(ToGetDto(review, user?.FullName));
         }
         catch (Exception ex)
         {
             logger.LogError(ex, "Ошибка при получении отзыва {Id}", id);
             return Result<GetReviewDto?>.Fail("Не удалось получить отзыв", ErrorType.InternalServerError);
         }
+    }
+
+    // Батч вместо N+1: у отзывов нет прямого CustomerId->FullName (только через
+    // CustomerProfile.UserId), а GetAllAsync может отдавать десятки отзывов сразу.
+    private async Task<Dictionary<int, string>> BuildCustomerNameMapAsync()
+    {
+        var profiles = await customerProfileRepository.GetAllAsync();
+        var users = await userRepository.GetAllAsync();
+        var userNameById = users.ToDictionary(u => u.Id, u => u.FullName);
+        return profiles
+            .Where(p => userNameById.ContainsKey(p.UserId))
+            .ToDictionary(p => p.Id, p => userNameById[p.UserId]);
     }
 
     public async Task<Result<string>> CreateAsync(CreateReviewDto dto)
@@ -191,11 +207,12 @@ public class ReviewService(
         }
     }
 
-    private static GetReviewDto ToGetDto(Review review) => new()
+    private static GetReviewDto ToGetDto(Review review, string? customerFullName = null) => new()
     {
         Id = review.Id,
         OrderId = review.OrderId,
         CustomerId = review.CustomerId,
+        CustomerFullName = customerFullName,
         FarmerId = review.FarmerId,
         Rating = review.Rating,
         Comment = review.Comment,
