@@ -16,6 +16,11 @@
     "couriers": "Курерҳо",
     "delivery": "Расонидан"
   },
+  "navSections": {
+    "overview": "Дидгоҳ",
+    "management": "Идоракунӣ",
+    "account": "Ҳисоб"
+  },
   "collapseSidebar": "Пӯшидани меню",
   "expandSidebar": "Кушодани меню",
   "search": "Ҷустуҷӯ...",
@@ -256,16 +261,44 @@
     "errorDescription": "Пайвастшавии худро ба сервер санҷед ва аз нав кӯшиш кунед.",
     "emptyTitle": "Ҳанӯз харидор нест",
     "emptyDescription": "Дар ин ҷо харидорони сабтшуда пайдо мешаванд.",
+    "addButton": "Илова кардани харидор",
+    "editAction": "Таҳрир кардан",
+    "deleteAction": "Нест кардан",
     "columns": {
       "fullName": "Ному насаб",
       "email": "Email",
       "phone": "Телефон",
       "status": "Ҳолат",
-      "createdAt": "Санаи сабт"
+      "createdAt": "Санаи сабт",
+      "actions": "Амалҳо"
     },
     "status": {
       "active": "Фаъол",
       "inactive": "Ғайрифаъол"
+    },
+    "createModalTitle": "Харидори нав",
+    "editModalTitle": "Таҳрир кардани харидор",
+    "createSuccess": "Харидор илова карда шуд",
+    "createError": "Харидор илова карда нашуд",
+    "updateSuccess": "Харидор навсозӣ шуд",
+    "updateError": "Харидор навсозӣ нашуд",
+    "deleteSuccess": "Харидор нест карда шуд",
+    "deleteError": "Харидор нест карда нашуд",
+    "deleteConfirmTitle": "Харидор нест карда шавад?",
+    "deleteConfirmDescription": "Харидори «{{name}}» нест карда мешавад. Ин амалро бекор кардан мумкин нест.",
+    "form": {
+      "fullName": "Ному насаб",
+      "email": "Email",
+      "phone": "Телефон",
+      "password": "Парол",
+      "passwordCreateHint": "Ҳадди ақал 6 аломат",
+      "passwordEditHint": "Барои тағйир надодани парол холӣ гузоред",
+      "passwordTooShort": "Парол бояд на камтар аз 6 аломат бошад",
+      "isActive": "Фаъол",
+      "required": "Майдони ҳатмӣ",
+      "cancel": "Бекор кардан",
+      "submit": "Илова кардан",
+      "saveChanges": "Нигоҳ доштан"
     }
   },
   "commissions": {

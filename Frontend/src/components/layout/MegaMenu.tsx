@@ -5,6 +5,7 @@ import { ArrowRight } from "lucide-react";
 import { useCategories } from "@/data/categories";
 import { PhotoTile } from "@/components/ui/PhotoTile";
 import { categoryPhotos } from "@/assets/photos";
+import { resolveMediaUrl } from "@/lib/api";
 
 export function MegaMenu({ onNavigate }: { onNavigate?: () => void }) {
   const { t } = useTranslation(["layout", "product"]);
@@ -28,7 +29,11 @@ export function MegaMenu({ onNavigate }: { onNavigate?: () => void }) {
               className="group flex items-center gap-3 rounded-2xl p-3 transition hover:bg-stone-50 dark:hover:bg-stone-800"
             >
               <div className="h-14 w-14 shrink-0 overflow-hidden rounded-xl">
-                <PhotoTile src={categoryPhotos[category.photoKey]} alt={category.name} className="h-full w-full" />
+                <PhotoTile
+                  src={category.imageUrl ? resolveMediaUrl(category.imageUrl) : categoryPhotos[category.photoKey]}
+                  alt={category.name}
+                  className="h-full w-full"
+                />
               </div>
               <div className="min-w-0">
                 <p className="flex items-center gap-1 font-display text-[15px] text-stone-900 dark:text-stone-100">

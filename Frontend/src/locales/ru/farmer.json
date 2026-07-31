@@ -10,6 +10,11 @@
     "staff": "Сотрудники",
     "notifications": "Уведомления"
   },
+  "navSections": {
+    "overview": "Обзор",
+    "management": "Моё хозяйство",
+    "account": "Аккаунт"
+  },
   "collapseSidebar": "Свернуть меню",
   "expandSidebar": "Развернуть меню",
   "search": "Поиск...",

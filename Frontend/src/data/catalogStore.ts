@@ -2,7 +2,7 @@ import { useEffect, useState } from "react";
 import { Apple, Carrot, Leaf, Milk, Nut, Wheat } from "lucide-react";
 import type { LucideIcon } from "lucide-react";
 import type { Category, Farmer, Product, Review } from "@/types";
-import { apiGet, resolveMediaUrl } from "@/lib/api";
+import { apiGet, hasAuthToken, resolveMediaUrl } from "@/lib/api";
 import { slugify } from "@/lib/utils";
 import { productPhotos } from "@/assets/photos";
 import { FarmerVerificationStatus, ListingStatus } from "@/data/farmer";
@@ -69,6 +69,7 @@ interface RawFarmerProfile {
 interface RawReview {
   id: number;
   farmerId: number;
+  customerFullName: string | null;
   rating: number;
   comment: string | null;
   createdAt: string;
@@ -100,6 +101,14 @@ const CATEGORY_PHOTO_KEY_BY_NAME: Record<string, string> = {
   "Молочная продукция": "dairy",
 };
 
+// Категории, которых не было среди изначальных 6 (админ добавил новую,
+// например "Скот") — своей фотографии-заглушки для них не нарисовано, так что
+// раньше ВСЕ они получали один и тот же "vegetables" и выглядели как дубликат
+// уже показанной категории рядом. Пока админ не задаст своё фото (см.
+// imageUrl ниже), детерминированно раздаём один из существующих 6 вариантов
+// по id — не идеально тематически, зато не повторяет соседнюю карточку 1-в-1.
+const FALLBACK_PHOTO_KEYS = ["vegetables", "fruits", "greens", "dried", "nuts", "dairy"];
+
 interface CatalogData {
   categories: Category[];
   farmers: Farmer[];
@@ -114,10 +123,15 @@ let loadPromise: Promise<CatalogData> | null = null;
 const listeners = new Set<() => void>();
 
 async function fetchOrderCounts(): Promise<Map<number, number>> {
+  // /api/order-items требует входа (история заказов — не публичные данные) —
+  // гостю недоступно. Без токена даже не пытаемся — запрос гарантированно
+  // получит 401 (это подтверждено живым прогоном 2026-07-31), а до фикса
+  // просто ловился как ошибка, засоряя консоль на каждой гостевой странице.
+  // Честно считаем orderCount нулевым, а не подделываем: бейдж "Хит продаж"
+  // тогда просто не показывается.
+  if (!hasAuthToken()) return new Map();
+
   try {
-    // /api/order-items требует входа (история заказов — не публичные данные) —
-    // гостю недоступно. Честно считаем orderCount нулевым в этом случае, а не
-    // подделываем: бейдж "Хит продаж" тогда просто не показывается.
     const items = await apiGet<RawOrderItem[]>("/order-items");
     const counts = new Map<number, number>();
     for (const item of items) {
@@ -174,9 +188,10 @@ async function loadCatalog(): Promise<CatalogData> {
 
   // CreateReviewDto требует OrderId (раздел 8.13 ТЗ) — отзыв физически не
   // может существовать без завершённого заказа, поэтому verifiedPurchase для
-  // реальных отзывов всегда true, это не выдумка. Имя покупателя недоступно
-  // публично (та же причина, что и у ownerName фермера) — общий подписанный
-  // ярлык вместо личных данных.
+  // реальных отзывов всегда true, это не выдумка. Имя покупателя теперь
+  // настоящее (по прямому запросу пользователя 2026-07-31 — отзыв публичный,
+  // покупатель сам согласился, что его видно всем, включая фермера) — сервер
+  // резолвит его через CustomerProfile→User (см. ReviewService.ToGetDto).
   const reviewsByFarmerId = new Map<number, Review[]>(
     Array.from(rawReviewsByFarmerId.entries()).map(([farmerId, list]) => [
       farmerId,
@@ -184,7 +199,7 @@ async function loadCatalog(): Promise<CatalogData> {
         .map((r) => ({
           id: r.id,
           productId: 0,
-          customerName: "Покупатель Market.tj",
+          customerName: r.customerFullName ?? "Покупатель Market.tj",
           rating: r.rating,
           comment: r.comment ?? "",
           createdAt: r.createdAt,
@@ -215,7 +230,8 @@ async function loadCatalog(): Promise<CatalogData> {
     nameEn: c.nameEn ?? undefined,
     description: c.description ?? "",
     icon: CATEGORY_ICON_BY_NAME[c.name] ?? Leaf,
-    photoKey: CATEGORY_PHOTO_KEY_BY_NAME[c.name] ?? "vegetables",
+    photoKey: CATEGORY_PHOTO_KEY_BY_NAME[c.name] ?? FALLBACK_PHOTO_KEYS[c.id % FALLBACK_PHOTO_KEYS.length],
+    imageUrl: c.imageUrl,
     productCount: activeListings.filter((l) => l.categoryId === c.id).length,
   }));
 
@@ -289,6 +305,7 @@ async function loadCatalog(): Promise<CatalogData> {
       availableQuantity: listing.availableQuantity,
       minimumOrderQuantity: listing.minimumOrderQuantity,
       harvestDate,
+      createdAt: listing.createdAt,
       qualityGrade: listing.qualityGrade,
       region: listing.region,
       district: listing.district,

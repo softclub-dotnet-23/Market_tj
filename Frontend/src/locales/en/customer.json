@@ -9,6 +9,11 @@
     "notifications": "Notifications",
     "profile": "Profile"
   },
+  "navSections": {
+    "overview": "Overview",
+    "management": "Shopping",
+    "account": "Account"
+  },
   "collapseSidebar": "Collapse menu",
   "expandSidebar": "Expand menu",
   "search": "Search...",

@@ -15,18 +15,24 @@ public class ReviewServiceTests
     private readonly Mock<IReviewRepository> _reviewRepository = new();
     private readonly Mock<IOrderRepository> _orderRepository = new();
     private readonly Mock<ICustomerProfileRepository> _customerProfileRepository = new();
+    private readonly Mock<IUserRepository> _userRepository = new();
     private readonly Mock<ICurrentUserService> _currentUser = new();
     private readonly Mock<ILogger<ReviewService>> _logger = new();
     private readonly ReviewService _service;
 
     public ReviewServiceTests()
     {
-        _service = new ReviewService(_reviewRepository.Object, _orderRepository.Object, _customerProfileRepository.Object, _currentUser.Object, _logger.Object);
+        _service = new ReviewService(_reviewRepository.Object, _orderRepository.Object, _customerProfileRepository.Object, _userRepository.Object, _currentUser.Object, _logger.Object);
         // Дефолтный Order/Review — CustomerId=1/FarmerId=1; залогинены как
         // покупатель, чей CustomerProfile.Id=1.
         _currentUser.Setup(c => c.UserId).Returns(10);
         _currentUser.Setup(c => c.Role).Returns(nameof(UserRole.Customer));
         _customerProfileRepository.Setup(r => r.GetByUserIdAsync(10)).ReturnsAsync(new CustomerProfile { Id = 1, UserId = 10, CustomerType = CustomerType.Retail, Region = "Хатлон", District = "Бохтар" });
+        // GetAllAsync резолвит имя покупателя батчем (CustomerProfile→User) —
+        // по умолчанию пустые списки, чтобы не падать в тестах, которые этого
+        // не проверяют явно (см. GetAllAsync_ReviewsExist_ResolvesCustomerFullName).
+        _customerProfileRepository.Setup(r => r.GetAllAsync()).ReturnsAsync([]);
+        _userRepository.Setup(r => r.GetAllAsync()).ReturnsAsync([]);
         _orderRepository.Setup(r => r.GetByIdAsync(It.IsAny<int>())).ReturnsAsync((int id) => new Order
         {
             Id = id, OrderNumber = "ORD-1", CustomerId = 1, FarmerId = 1, Status = OrderStatus.Completed,
@@ -73,6 +79,19 @@ public class ReviewServiceTests
 
         Assert.True(result.IsSuccess);
         Assert.Equal(2, result.Data!.Count());
+    }
+
+    [Fact]
+    public async Task GetAllAsync_ReviewsExist_ResolvesCustomerFullName()
+    {
+        _reviewRepository.Setup(r => r.GetAllAsync()).ReturnsAsync([CreateReview(1)]);
+        _customerProfileRepository.Setup(r => r.GetAllAsync()).ReturnsAsync([new CustomerProfile { Id = 1, UserId = 42, CustomerType = CustomerType.Retail, Region = "Хатлон", District = "Бохтар" }]);
+        _userRepository.Setup(r => r.GetAllAsync()).ReturnsAsync([new User { Id = 42, FullName = "Азиз Каримов", Email = "aziz@test.tj", PhoneNumber = "900000000", PasswordHash = "x", Role = UserRole.Customer }]);
+
+        var result = await _service.GetAllAsync();
+
+        Assert.True(result.IsSuccess);
+        Assert.Equal("Азиз Каримов", result.Data!.Single().CustomerFullName);
     }
 
     [Fact]

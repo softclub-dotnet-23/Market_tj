@@ -29,8 +29,20 @@ function Grid({ items }: { items: Product[] }) {
 export function FeaturedProducts() {
   const { t } = useTranslation("sections");
   const products = useProducts();
-  const bestsellers = products.filter((p) => p.badges.includes("bestseller")).slice(0, 8);
-  const newArrivals = products.filter((p) => p.badges.includes("new")).slice(0, 8);
+  // orderCount видит только Admin-сессия (см. catalogStore.ts — гостю/покупателю/
+  // фермеру /order-items либо недоступен, либо отдаёт только СВОИ заказы) —
+  // для абсолютного большинства посетителей orderCount всегда 0, и строгий
+  // фильтр по бейджу "bestseller" оставлял вкладку вечно пустой. Сортируем по
+  // orderCount, а при его отсутствии — по рейтингу×отзывам, чтобы вкладка
+  // всегда показывала 8 живых товаров, а не пустоту.
+  const bestsellers = [...products]
+    .sort((a, b) => b.orderCount - a.orderCount || b.rating * b.reviewCount - a.rating * a.reviewCount)
+    .slice(0, 8);
+  // "Новинки" — реально самые недавно добавленные, а не только те, что
+  // попадают под бейдж "new" (<=14 дней, см. catalogStore.ts) — тот порог
+  // мог оставить вкладку пустой/неполной сразу после сидирования. Сортируем
+  // по createdAt, вкладка всегда полная, пока в каталоге есть хотя бы 8 товаров.
+  const newArrivals = [...products].sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()).slice(0, 8);
   const premium = products.filter((p) => p.badges.includes("premium")).slice(0, 8);
   return (
     <section className="bg-stone-50/60 py-14 sm:py-20 dark:bg-stone-900/40">

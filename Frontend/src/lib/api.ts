@@ -25,6 +25,14 @@ function getStoredToken(): string | null {
   }
 }
 
+// Для эндпоинтов вроде /order-items, которые ВСЕГДА отвечают 401 без токена
+// (см. catalogStore.ts) — так вызывающий код может пропустить заведомо
+// провальный запрос вместо "запросить и поймать ошибку", избавляя консоль
+// от красных 401 на каждой гостевой странице.
+export function hasAuthToken(): boolean {
+  return getStoredToken() !== null;
+}
+
 // Ответ бэкенда MarketTJ.WebApi (см. ApiControllerBase.HandleResult):
 // успех — { isSuccess: true, message, data }, ошибка — { isSuccess: false, message, errors }.
 interface ApiSuccessResponse<T> {

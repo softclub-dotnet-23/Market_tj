@@ -40,6 +40,7 @@ interface AdminNavItem {
   labelKey: string;
   path: string;
   icon: LucideIcon;
+  section: "overview" | "management" | "account";
 }
 
 export interface AdminOutletContext {
@@ -54,19 +55,21 @@ export function useAdminSearch(): string {
 }
 
 const NAV_ITEMS: AdminNavItem[] = [
-  { labelKey: "overview", path: "/admin", icon: LayoutDashboard },
-  { labelKey: "orders", path: "/admin/orders", icon: ShoppingCart },
-  { labelKey: "products", path: "/admin/products", icon: Package },
-  { labelKey: "catalog", path: "/admin/catalog", icon: Tags },
-  { labelKey: "farmers", path: "/admin/farmers", icon: Sprout },
-  { labelKey: "farmerDocuments", path: "/admin/farmer-documents", icon: FileText },
-  { labelKey: "customers", path: "/admin/users", icon: Users },
-  { labelKey: "reviews", path: "/admin/reviews", icon: MessageSquare },
-  { labelKey: "support", path: "/admin/support", icon: LifeBuoy },
-  { labelKey: "notifications", path: "/admin/notifications", icon: Bell },
-  { labelKey: "settings", path: "/admin/settings", icon: Settings },
-  { labelKey: "profile", path: "/admin/profile", icon: UserIcon },
+  { labelKey: "overview", path: "/admin", icon: LayoutDashboard, section: "overview" },
+  { labelKey: "orders", path: "/admin/orders", icon: ShoppingCart, section: "management" },
+  { labelKey: "products", path: "/admin/products", icon: Package, section: "management" },
+  { labelKey: "catalog", path: "/admin/catalog", icon: Tags, section: "management" },
+  { labelKey: "farmers", path: "/admin/farmers", icon: Sprout, section: "management" },
+  { labelKey: "farmerDocuments", path: "/admin/farmer-documents", icon: FileText, section: "management" },
+  { labelKey: "customers", path: "/admin/users", icon: Users, section: "management" },
+  { labelKey: "reviews", path: "/admin/reviews", icon: MessageSquare, section: "management" },
+  { labelKey: "support", path: "/admin/support", icon: LifeBuoy, section: "management" },
+  { labelKey: "notifications", path: "/admin/notifications", icon: Bell, section: "account" },
+  { labelKey: "settings", path: "/admin/settings", icon: Settings, section: "account" },
+  { labelKey: "profile", path: "/admin/profile", icon: UserIcon, section: "account" },
 ];
+
+const NAV_SECTIONS = ["overview", "management", "account"] as const;
 
 export function AdminLayout() {
   const { t } = useTranslation("admin");
@@ -106,80 +109,95 @@ export function AdminLayout() {
   };
 
   const navList = (collapsed: boolean) => (
-    <ul className="flex flex-col gap-1">
-      {NAV_ITEMS.map((item) => {
-        const isActive = item.path === "/admin" ? location.pathname === "/admin" : location.pathname.startsWith(item.path);
-        const badge = item.labelKey === "orders" ? unseenOrdersCount : item.labelKey === "notifications" ? unreadCount : 0;
+    <div className="flex flex-col gap-5">
+      {NAV_SECTIONS.map((section) => {
+        const items = NAV_ITEMS.filter((item) => item.section === section);
+        if (items.length === 0) return null;
         return (
-          <li key={item.path}>
-            <NavLink
-              to={item.path}
-              className={cn(
-                "group flex items-center gap-3 rounded-2xl px-2.5 py-2 text-sm font-medium transition-all",
-                isActive
-                  ? "bg-grove-50 text-grove-700 dark:bg-grove-950/70 dark:text-grove-300"
-                  : "text-stone-600 hover:bg-stone-50 dark:text-stone-300 dark:hover:bg-stone-800",
-                collapsed && "justify-center px-0",
-              )}
-            >
-              <span
-                className={cn(
-                  "flex h-8 w-8 shrink-0 items-center justify-center rounded-xl transition-all",
-                  isActive
-                    ? "bg-linear-to-br from-grove-500 to-grove-700 text-white shadow-[0_6px_14px_-4px_rgba(59,168,90,0.55)]"
-                    : "bg-stone-100 text-stone-500 group-hover:bg-stone-200 group-hover:text-stone-700 dark:bg-stone-800 dark:text-stone-400 dark:group-hover:bg-stone-700 dark:group-hover:text-stone-200",
-                )}
-              >
-                <item.icon size={16} />
-              </span>
-              {!collapsed && <span className="flex-1 truncate">{t(`nav.${item.labelKey}`)}</span>}
-              {!collapsed && badge > 0 && (
-                <span
-                  className={cn(
-                    "flex h-5 min-w-5 items-center justify-center rounded-full px-1.5 text-[11px] font-semibold",
-                    item.labelKey === "notifications" ? "bg-clay-500 text-white" : "bg-stone-100 text-stone-600 dark:bg-stone-800 dark:text-stone-300",
-                  )}
-                >
-                  {badge}
-                </span>
-              )}
-            </NavLink>
-          </li>
+          <div key={section} className="flex flex-col gap-1">
+            {!collapsed && (
+              <p className="px-2.5 text-[11px] font-semibold tracking-wide text-stone-400 uppercase dark:text-stone-500">
+                {t(`navSections.${section}`)}
+              </p>
+            )}
+            <ul className="flex flex-col gap-1">
+              {items.map((item) => {
+                const isActive = item.path === "/admin" ? location.pathname === "/admin" : location.pathname.startsWith(item.path);
+                const badge = item.labelKey === "orders" ? unseenOrdersCount : item.labelKey === "notifications" ? unreadCount : 0;
+                return (
+                  <li key={item.path}>
+                    <NavLink
+                      to={item.path}
+                      className={cn(
+                        "group flex items-center gap-3 rounded-2xl px-2.5 py-2 text-sm font-medium transition-all",
+                        isActive
+                          ? "bg-grove-50 text-grove-700 dark:bg-grove-950/70 dark:text-grove-300"
+                          : "text-stone-600 hover:bg-stone-50 dark:text-stone-300 dark:hover:bg-stone-800",
+                        collapsed && "justify-center px-0",
+                      )}
+                    >
+                      <span
+                        className={cn(
+                          "flex h-8 w-8 shrink-0 items-center justify-center rounded-xl transition-all",
+                          isActive
+                            ? "bg-linear-to-br from-grove-500 to-grove-700 text-white shadow-[0_6px_14px_-4px_rgba(59,168,90,0.55)]"
+                            : "bg-stone-100 text-stone-500 group-hover:bg-stone-200 group-hover:text-stone-700 dark:bg-stone-800 dark:text-stone-400 dark:group-hover:bg-stone-700 dark:group-hover:text-stone-200",
+                        )}
+                      >
+                        <item.icon size={16} />
+                      </span>
+                      {!collapsed && <span className="flex-1 truncate">{t(`nav.${item.labelKey}`)}</span>}
+                      {!collapsed && badge > 0 && (
+                        <span
+                          className={cn(
+                            "flex h-5 min-w-5 items-center justify-center rounded-full px-1.5 text-[11px] font-semibold",
+                            item.labelKey === "notifications" ? "bg-clay-500 text-white" : "bg-stone-100 text-stone-600 dark:bg-stone-800 dark:text-stone-300",
+                          )}
+                        >
+                          {badge}
+                        </span>
+                      )}
+                    </NavLink>
+                  </li>
+                );
+              })}
+            </ul>
+          </div>
         );
       })}
-    </ul>
+    </div>
   );
 
   return (
     <div className="flex h-screen bg-stone-25 dark:bg-stone-950">
       <aside
         className={cn(
-          "hidden shrink-0 flex-col border-r border-stone-100 bg-white transition-[width] duration-200 lg:flex dark:border-stone-800 dark:bg-stone-900",
+          "relative hidden shrink-0 flex-col border-r border-stone-100 bg-white transition-[width] duration-200 lg:flex dark:border-stone-800 dark:bg-stone-900",
           collapsed ? "w-20" : "w-64",
         )}
       >
-        <div className="flex h-18 items-center justify-between border-b border-stone-100 px-5 dark:border-stone-800">
-          {!collapsed && (
-            <div className="flex items-center gap-2">
-              <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-grove-700 text-white">
-                <Leaf size={18} />
-              </span>
+        <div className={cn("flex h-18 shrink-0 items-center border-b border-stone-100 px-5 dark:border-stone-800", collapsed && "justify-center px-0")}>
+          <div className="flex items-center gap-2">
+            <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-grove-700 text-white">
+              <Leaf size={18} />
+            </span>
+            {!collapsed && (
               <span className="font-display text-lg text-stone-900 dark:text-stone-50">
                 Market<span className="text-grove-600 dark:text-grove-400">.tj</span>
               </span>
-            </div>
-          )}
-          <button
-            onClick={() => setCollapsed((c) => !c)}
-            aria-label={t(collapsed ? "expandSidebar" : "collapseSidebar")}
-            className={cn(
-              "flex h-8 w-8 items-center justify-center rounded-lg text-stone-400 transition hover:bg-stone-100 hover:text-stone-700 dark:text-stone-500 dark:hover:bg-stone-800 dark:hover:text-stone-200",
-              collapsed && "mx-auto",
             )}
-          >
-            {collapsed ? <ChevronsRight size={16} /> : <ChevronsLeft size={16} />}
-          </button>
+          </div>
         </div>
+
+        {/* Кнопка сворачивания сидит на самом краю сайдбара — плавающая
+            кнопка поверх границы, а не отдельная строка в шапке. */}
+        <button
+          onClick={() => setCollapsed((c) => !c)}
+          aria-label={t(collapsed ? "expandSidebar" : "collapseSidebar")}
+          className="absolute -right-3 top-14 z-10 flex h-7 w-7 items-center justify-center rounded-full border border-stone-200 bg-white text-stone-500 shadow-(--shadow-soft) transition hover:bg-stone-50 hover:text-stone-700 dark:border-stone-700 dark:bg-stone-800 dark:text-stone-400 dark:hover:bg-stone-700"
+        >
+          {collapsed ? <ChevronsRight size={14} /> : <ChevronsLeft size={14} />}
+        </button>
 
         <nav className="flex-1 overflow-y-auto p-3">{navList(collapsed)}</nav>
 
@@ -221,7 +239,7 @@ export function AdminLayout() {
       </PanelMobileDrawer>
 
       <div className="flex min-w-0 flex-1 flex-col">
-        <header className="flex h-18 shrink-0 items-center justify-between gap-4 border-b border-stone-100 bg-white px-4 shadow-(--shadow-soft) sm:px-6 dark:border-stone-800 dark:bg-stone-900">
+        <header className="flex h-18 shrink-0 items-center justify-between gap-2 border-b border-stone-100 bg-white px-4 shadow-(--shadow-soft) sm:gap-4 sm:px-6 dark:border-stone-800 dark:bg-stone-900">
           <div className="flex min-w-0 items-center gap-3">
             <button
               onClick={() => setMobileNavOpen(true)}
@@ -240,7 +258,7 @@ export function AdminLayout() {
             </div>
           </div>
 
-          <div className="flex shrink-0 items-center gap-1.5 sm:gap-3">
+          <div className="flex shrink-0 items-center gap-1 sm:gap-3">
             <div className="hidden h-10 items-center gap-2 rounded-xl border border-stone-200 bg-stone-25 px-3.5 lg:flex dark:border-stone-700 dark:bg-stone-950">
               <Search size={15} className="text-stone-400 dark:text-stone-500" />
               <input

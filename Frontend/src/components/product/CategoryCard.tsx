@@ -4,6 +4,7 @@ import { useTranslation } from "react-i18next";
 import type { Category } from "@/types";
 import { PhotoTile } from "@/components/ui/PhotoTile";
 import { categoryPhotos } from "@/assets/photos";
+import { resolveMediaUrl } from "@/lib/api";
 import { cn } from "@/lib/utils";
 
 export function CategoryCard({ category, className }: { category: Category; className?: string }) {
@@ -19,7 +20,11 @@ export function CategoryCard({ category, className }: { category: Category; clas
       >
         <div className="relative aspect-square overflow-hidden">
           <motion.div whileHover={{ scale: 1.08 }} transition={{ duration: 0.5 }} className="h-full w-full">
-            <PhotoTile src={categoryPhotos[category.photoKey]} alt={category.name} className="h-full w-full" />
+            <PhotoTile
+              src={category.imageUrl ? resolveMediaUrl(category.imageUrl) : categoryPhotos[category.photoKey]}
+              alt={category.name}
+              className="h-full w-full"
+            />
           </motion.div>
         </div>
         <div className="flex flex-col gap-0.5 p-4">

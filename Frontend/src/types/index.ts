@@ -9,6 +9,7 @@ export interface Category {
   description: string;
   icon: LucideIcon;
   photoKey: string;
+  imageUrl: string | null;
   productCount: number;
 }
 
@@ -52,6 +53,7 @@ export interface Product {
   availableQuantity: number;
   minimumOrderQuantity: number;
   harvestDate: string;
+  createdAt: string;
   qualityGrade: string;
   region: string;
   district: string;

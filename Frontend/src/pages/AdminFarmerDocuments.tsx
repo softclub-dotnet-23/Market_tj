@@ -138,7 +138,55 @@ export function AdminFarmerDocuments() {
         <EmptyState icon={<FileText size={26} />} title={t("farmerDocuments.emptyTitle")} description={t("farmerDocuments.emptyDescription")} />
       ) : (
         <div className="rounded-3xl border border-stone-100 bg-white dark:border-stone-800 dark:bg-stone-900">
-          <div className="overflow-x-auto">
+          <div className="flex flex-col gap-3 p-4 lg:hidden">
+            {data.items.map((doc) => (
+              <div key={doc.id} className="flex flex-col gap-2 rounded-2xl border border-stone-100 p-4 dark:border-stone-800">
+                <div className="flex items-start justify-between gap-3">
+                  <div className="min-w-0">
+                    <p className="truncate font-medium text-stone-800 dark:text-stone-100">{doc.farmName}</p>
+                    <p className="truncate text-xs text-stone-400 dark:text-stone-500">{doc.farmerFullName ?? "—"}</p>
+                  </div>
+                  <span className={`shrink-0 rounded-full px-2.5 py-1 text-xs font-semibold ${STATUS_CLASSES[doc.status] ?? STATUS_CLASSES[DocumentReviewStatus.Pending]}`}>
+                    {statusLabel(doc.status)}
+                  </span>
+                </div>
+                <p className="text-sm text-stone-600 dark:text-stone-300">{typeLabel(doc.documentType)}</p>
+                {doc.status === DocumentReviewStatus.Rejected && doc.rejectionReason && (
+                  <p className="text-xs text-stone-400 dark:text-stone-500">{doc.rejectionReason}</p>
+                )}
+                <div className="flex items-center justify-between border-t border-stone-50 pt-2 dark:border-stone-800/60">
+                  <a
+                    href={resolveMediaUrl(doc.fileUrl)}
+                    target="_blank"
+                    rel="noreferrer"
+                    className="text-sm font-medium text-grove-700 underline-offset-4 hover:underline dark:text-grove-400"
+                  >
+                    {t("farmerDocuments.viewFile")}
+                  </a>
+                  {doc.status === DocumentReviewStatus.Pending && (
+                    <div className="flex items-center gap-1.5">
+                      <button
+                        onClick={() => handleApprove(doc)}
+                        aria-label={t("farmerDocuments.approveAction")}
+                        className="flex h-8 w-8 items-center justify-center rounded-lg text-stone-400 transition hover:bg-grove-50 hover:text-grove-700 dark:text-stone-500 dark:hover:bg-grove-950 dark:hover:text-grove-400"
+                      >
+                        <Check size={15} />
+                      </button>
+                      <button
+                        onClick={() => setRejecting(doc)}
+                        aria-label={t("farmerDocuments.rejectAction")}
+                        className="flex h-8 w-8 items-center justify-center rounded-lg text-stone-400 transition hover:bg-rose-50 hover:text-rose-600 dark:text-stone-500 dark:hover:bg-rose-950 dark:hover:text-rose-400"
+                      >
+                        <X size={15} />
+                      </button>
+                    </div>
+                  )}
+                </div>
+              </div>
+            ))}
+          </div>
+
+          <div className="hidden overflow-x-auto lg:block">
             <table className="w-full text-left text-sm">
               <thead>
                 <tr className="border-b border-stone-100 text-xs uppercase tracking-wide text-stone-400 dark:border-stone-800 dark:text-stone-500">

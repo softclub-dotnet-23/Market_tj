@@ -555,14 +555,19 @@ export function FarmerProducts() {
         />
       ) : (
         <div className="overflow-hidden rounded-3xl border border-stone-100 bg-linear-to-b from-white to-stone-50/60 shadow-(--shadow-soft) dark:border-stone-800 dark:from-stone-900 dark:to-stone-900">
-          <div className="flex items-center justify-end border-b border-stone-100 p-4 dark:border-stone-800">
+          <div className="hidden items-center justify-end border-b border-stone-100 p-4 lg:flex dark:border-stone-800">
             <ViewModeToggle value={viewMode} onChange={setViewMode} ns="farmer" />
           </div>
 
+          {/* На мобильных (<lg) таблица не помещается по ширине, поэтому там
+              всегда карточки, независимо от выбранного desktop-режима — тот же
+              приём, что и в AdminUsers/AdminProducts/AdminOrders. */}
+          <div className="grid grid-cols-2 gap-3 p-5 sm:grid-cols-3 lg:hidden">{pageItems.map(renderCard)}</div>
+
           {viewMode === "cards" ? (
-            <div className="grid grid-cols-2 gap-3 p-5 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5">{pageItems.map(renderCard)}</div>
+            <div className="hidden grid-cols-2 gap-3 p-5 lg:grid lg:grid-cols-4 xl:grid-cols-5">{pageItems.map(renderCard)}</div>
           ) : (
-          <div className="overflow-x-auto">
+          <div className="hidden overflow-x-auto lg:block">
             <table className="w-full text-left text-sm">
               <thead>
                 <tr className="border-b border-stone-100 text-xs uppercase tracking-wide text-stone-400 dark:border-stone-800 dark:text-stone-500">

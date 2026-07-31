@@ -188,7 +188,11 @@ export function Catalog() {
 
       <div className="grid grid-cols-1 gap-10 lg:grid-cols-[260px_1fr]">
         <aside className="hidden lg:block">
-          <div className="sticky top-24 rounded-3xl border border-stone-100 bg-white p-6 dark:border-stone-800 dark:bg-stone-900">
+          {/* max-h+overflow — иначе "прилипшую" панель выше видимой области
+              нельзя докрутить: sticky фиксирует её позицию, а не размер, и
+              нижние поля (цена, "Сбросить") становились недостижимы на
+              невысоких экранах. Теперь панель скроллится сама в себе. */}
+          <div className="sticky top-24 max-h-[calc(100vh-7rem)] overflow-y-auto rounded-3xl border border-stone-100 bg-white p-6 dark:border-stone-800 dark:bg-stone-900">
             <CatalogFilters state={filterState} regions={regions} onChange={handleFilterChange} onReset={resetFilters} />
           </div>
         </aside>

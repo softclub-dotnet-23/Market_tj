@@ -16,6 +16,11 @@
     "couriers": "Couriers",
     "delivery": "Delivery"
   },
+  "navSections": {
+    "overview": "Overview",
+    "management": "Management",
+    "account": "Account"
+  },
   "collapseSidebar": "Collapse menu",
   "expandSidebar": "Expand menu",
   "search": "Search...",
@@ -250,16 +255,44 @@
     "errorDescription": "Check your connection to the server and try again.",
     "emptyTitle": "No customers yet",
     "emptyDescription": "Registered customers will appear here.",
+    "addButton": "Add customer",
+    "editAction": "Edit",
+    "deleteAction": "Delete",
     "columns": {
       "fullName": "Full name",
       "email": "Email",
       "phone": "Phone",
       "status": "Status",
-      "createdAt": "Registration date"
+      "createdAt": "Registration date",
+      "actions": "Actions"
     },
     "status": {
       "active": "Active",
       "inactive": "Inactive"
+    },
+    "createModalTitle": "New customer",
+    "editModalTitle": "Edit customer",
+    "createSuccess": "Customer added",
+    "createError": "Failed to add customer",
+    "updateSuccess": "Customer updated",
+    "updateError": "Failed to update customer",
+    "deleteSuccess": "Customer deleted",
+    "deleteError": "Failed to delete customer",
+    "deleteConfirmTitle": "Delete this customer?",
+    "deleteConfirmDescription": "Customer \"{{name}}\" will be permanently deleted. This action cannot be undone.",
+    "form": {
+      "fullName": "Full name",
+      "email": "Email",
+      "phone": "Phone",
+      "password": "Password",
+      "passwordCreateHint": "At least 6 characters",
+      "passwordEditHint": "Leave blank to keep the current password",
+      "passwordTooShort": "Password must be at least 6 characters",
+      "isActive": "Active",
+      "required": "Required field",
+      "cancel": "Cancel",
+      "submit": "Add",
+      "saveChanges": "Save changes"
     }
   },
   "commissions": {

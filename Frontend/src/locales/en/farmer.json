@@ -10,6 +10,11 @@
     "staff": "Staff",
     "notifications": "Notifications"
   },
+  "navSections": {
+    "overview": "Overview",
+    "management": "My farm",
+    "account": "Account"
+  },
   "collapseSidebar": "Collapse menu",
   "expandSidebar": "Expand menu",
   "search": "Search...",
