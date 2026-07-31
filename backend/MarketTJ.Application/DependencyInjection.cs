@@ -10,8 +10,14 @@ public static class DependencyInjection
     {
         // AddHttpClient<TInterface, TImplementation> сам регистрирует
         // IAiAssistantService со scoped-совместимым временем жизни и внедряет
-        // сконфигурированный HttpClient в конструктор.
-        services.AddHttpClient<IAiAssistantService, AiAssistantService>();
+        // сконфигурированный HttpClient в конструктор. Без явного Timeout
+        // дефолт HttpClient — 100 секунд: при недоступности Anthropic API
+        // запрос пользователя к AI-ассистенту завис бы почти на две минуты
+        // вместо быстрой понятной ошибки.
+        services.AddHttpClient<IAiAssistantService, AiAssistantService>(client =>
+        {
+            client.Timeout = TimeSpan.FromSeconds(15);
+        });
 
         services.AddScoped<IAuthService, AuthService>();
         services.AddScoped<IUserService, UserService>();

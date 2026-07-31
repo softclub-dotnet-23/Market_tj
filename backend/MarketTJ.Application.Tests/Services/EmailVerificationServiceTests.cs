@@ -80,6 +80,10 @@ public class EmailVerificationServiceTests
 
         Assert.False(result.IsSuccess);
         Assert.Equal(ErrorType.InternalServerError, result.ErrorType);
+        // Письмо не ушло — запись о коде не должна создаваться, иначе
+        // следующая попытка натыкается на "подождите N сек" без реально
+        // отправленного письма (см. Program.cs / SendCodeAsync).
+        _repository.Verify(r => r.AddAsync(It.IsAny<EmailVerificationCode>()), Times.Never);
     }
 
     // ---------- VerifyCodeAsync ----------
