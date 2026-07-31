@@ -19,13 +19,14 @@ public class ExceptionHandlingMiddleware(
         }
         catch (Exception ex)
         {
-            logger.LogError(ex, "Необработанное исключение при обработке {Method} {Path}", context.Request.Method, context.Request.Path);
+            logger.LogError(ex, "[{TraceId}] Необработанное исключение при обработке {Method} {Path}", context.TraceIdentifier, context.Request.Method, context.Request.Path);
 
             context.Response.ContentType = "application/json";
             context.Response.StatusCode = StatusCodes.Status500InternalServerError;
 
             // В Production клиенту не отдаём детали исключения/stack trace —
-            // только общее сообщение.
+            // только общее сообщение + traceId, по которому можно найти эту
+            // же ошибку в логах Railway (грепом по [{TraceId}] в RequestLoggingMiddleware).
             var message = environment.IsDevelopment()
                 ? ex.Message
                 : "Произошла внутренняя ошибка сервера";
@@ -33,7 +34,8 @@ public class ExceptionHandlingMiddleware(
             var payload = JsonSerializer.Serialize(new
             {
                 statusCode = context.Response.StatusCode,
-                message
+                message,
+                traceId = context.TraceIdentifier
             });
 
             await context.Response.WriteAsync(payload);
