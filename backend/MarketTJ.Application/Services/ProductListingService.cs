@@ -62,6 +62,43 @@ public class ProductListingService(
         }
     }
 
+    public async Task<Result<PagedResult<GetCatalogListingDto>>> SearchCatalogAsync(ProductListingSearchFilter filter)
+    {
+        try
+        {
+            if (filter.PageNumber <= 0)
+                return Result<PagedResult<GetCatalogListingDto>>.Fail("pageNumber должен быть больше 0", ErrorType.Validation);
+
+            if (filter.PageSize <= 0)
+                return Result<PagedResult<GetCatalogListingDto>>.Fail("pageSize должен быть больше 0", ErrorType.Validation);
+
+            var (items, totalCount) = await productListingRepository.SearchCatalogAsync(filter);
+            var dtos = items.Select(x => ToGetCatalogDto(x.Listing, x.Rating, x.OrderCount)).ToList();
+
+            return Result<PagedResult<GetCatalogListingDto>>.Ok(
+                PagedResult<GetCatalogListingDto>.Ok(dtos, totalCount, filter.PageNumber, filter.PageSize));
+        }
+        catch (Exception ex)
+        {
+            logger.LogError(ex, "Ошибка при поиске по каталогу");
+            return Result<PagedResult<GetCatalogListingDto>>.Fail("Не удалось выполнить поиск по каталогу", ErrorType.InternalServerError);
+        }
+    }
+
+    public async Task<Result<List<string>>> GetDistinctActiveRegionsAsync()
+    {
+        try
+        {
+            var regions = await productListingRepository.GetDistinctActiveRegionsAsync();
+            return Result<List<string>>.Ok(regions);
+        }
+        catch (Exception ex)
+        {
+            logger.LogError(ex, "Ошибка при получении списка регионов каталога");
+            return Result<List<string>>.Fail("Не удалось получить список регионов", ErrorType.InternalServerError);
+        }
+    }
+
     public async Task<Result<GetProductListingDto?>> GetByIdAsync(int id)
     {
         try
@@ -219,6 +256,32 @@ public class ProductListingService(
             return Result<string>.Fail("Не удалось удалить объявление", ErrorType.InternalServerError);
         }
     }
+
+    private static GetCatalogListingDto ToGetCatalogDto(ProductListing listing, double rating, int orderCount) => new()
+    {
+        Id = listing.Id,
+        FarmerProfileId = listing.FarmerProfileId,
+        CategoryId = listing.CategoryId,
+        Unit = listing.Unit,
+        Title = listing.Title,
+        Description = listing.Description,
+        RetailPricePerKg = listing.RetailPricePerKg,
+        WholesalePricePerKg = listing.WholesalePricePerKg,
+        WholesaleMinimumQuantity = listing.WholesaleMinimumQuantity,
+        AvailableQuantity = listing.AvailableQuantity,
+        MinimumOrderQuantity = listing.MinimumOrderQuantity,
+        HarvestDate = listing.HarvestDate,
+        ExpectedHarvestDate = listing.ExpectedHarvestDate,
+        QualityGrade = listing.QualityGrade,
+        Region = listing.Region,
+        District = listing.District,
+        Address = listing.Address,
+        Status = listing.Status,
+        CreatedAt = listing.CreatedAt,
+        UpdatedAt = listing.UpdatedAt,
+        Rating = Math.Round(rating, 1),
+        OrderCount = orderCount,
+    };
 
     private static GetProductListingDto ToGetDto(ProductListing listing) => new()
     {

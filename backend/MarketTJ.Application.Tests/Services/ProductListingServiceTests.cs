@@ -182,6 +182,98 @@ public class ProductListingServiceTests
         Assert.Equal(ErrorType.InternalServerError, result.ErrorType);
     }
 
+    // ---------- SearchCatalogAsync ----------
+
+    [Fact]
+    public async Task SearchCatalogAsync_DataExists_ReturnsMappedDtosWithRatingAndOrderCount()
+    {
+        var listing = CreateListing(1);
+        _productListingRepository
+            .Setup(r => r.SearchCatalogAsync(It.IsAny<ProductListingSearchFilter>()))
+            .ReturnsAsync(([(listing, 4.5, 3)], 1));
+
+        var result = await _service.SearchCatalogAsync(new ProductListingSearchFilter());
+
+        Assert.True(result.IsSuccess);
+        Assert.Single(result.Data!.Items);
+        Assert.Equal(1, result.Data!.TotalCount);
+        Assert.Equal(4.5, result.Data!.Items[0].Rating);
+        Assert.Equal(3, result.Data!.Items[0].OrderCount);
+    }
+
+    [Fact]
+    public async Task SearchCatalogAsync_RepositoryEmpty_ReturnsEmptyPage()
+    {
+        _productListingRepository
+            .Setup(r => r.SearchCatalogAsync(It.IsAny<ProductListingSearchFilter>()))
+            .ReturnsAsync(([], 0));
+
+        var result = await _service.SearchCatalogAsync(new ProductListingSearchFilter());
+
+        Assert.True(result.IsSuccess);
+        Assert.Empty(result.Data!.Items);
+        Assert.Equal(0, result.Data!.TotalCount);
+    }
+
+    [Fact]
+    public async Task SearchCatalogAsync_ZeroPageNumber_ReturnsValidationError()
+    {
+        var result = await _service.SearchCatalogAsync(new ProductListingSearchFilter { PageNumber = 0 });
+
+        Assert.False(result.IsSuccess);
+        Assert.Equal(ErrorType.Validation, result.ErrorType);
+    }
+
+    [Fact]
+    public async Task SearchCatalogAsync_ZeroPageSize_ReturnsValidationError()
+    {
+        var result = await _service.SearchCatalogAsync(new ProductListingSearchFilter { PageSize = 0 });
+
+        Assert.False(result.IsSuccess);
+        Assert.Equal(ErrorType.Validation, result.ErrorType);
+    }
+
+    [Fact]
+    public async Task SearchCatalogAsync_RepositoryThrows_ReturnsInternalServerError()
+    {
+        _productListingRepository
+            .Setup(r => r.SearchCatalogAsync(It.IsAny<ProductListingSearchFilter>()))
+            .ThrowsAsync(new Exception("db error"));
+
+        var result = await _service.SearchCatalogAsync(new ProductListingSearchFilter());
+
+        Assert.False(result.IsSuccess);
+        Assert.Equal(ErrorType.InternalServerError, result.ErrorType);
+    }
+
+    // ---------- GetDistinctActiveRegionsAsync ----------
+
+    [Fact]
+    public async Task GetDistinctActiveRegionsAsync_DataExists_ReturnsRegions()
+    {
+        _productListingRepository
+            .Setup(r => r.GetDistinctActiveRegionsAsync())
+            .ReturnsAsync(["Хатлон", "Согд"]);
+
+        var result = await _service.GetDistinctActiveRegionsAsync();
+
+        Assert.True(result.IsSuccess);
+        Assert.Equal(2, result.Data!.Count);
+    }
+
+    [Fact]
+    public async Task GetDistinctActiveRegionsAsync_RepositoryThrows_ReturnsInternalServerError()
+    {
+        _productListingRepository
+            .Setup(r => r.GetDistinctActiveRegionsAsync())
+            .ThrowsAsync(new Exception("db error"));
+
+        var result = await _service.GetDistinctActiveRegionsAsync();
+
+        Assert.False(result.IsSuccess);
+        Assert.Equal(ErrorType.InternalServerError, result.ErrorType);
+    }
+
     // ---------- GetByIdAsync ----------
 
     [Fact]
