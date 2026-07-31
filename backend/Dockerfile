@@ -3,19 +3,20 @@ FROM mcr.microsoft.com/dotnet/sdk:10.0 AS build
 
 WORKDIR /src
 
-# Build-контекст — корень репозитория (docker-compose.yml: context: ".",
-# dockerfile: "backend/Dockerfile"; Railway CLI тоже аплоадит от git-root),
-# поэтому все COPY-пути ниже с префиксом backend/.
-COPY backend/MarketTJ.Domain/MarketTJ.Domain.csproj MarketTJ.Domain/
-COPY backend/MarketTJ.Application/MarketTJ.Application.csproj MarketTJ.Application/
-COPY backend/MarketTJ.Infrastructure/MarketTJ.Infrastructure.csproj MarketTJ.Infrastructure/
-COPY backend/MarketTJ.WebApi/MarketTJ.WebApi.csproj MarketTJ.WebApi/
+# Build-контекст — папка backend/ (Railway: rootDirectory сервиса выставлен
+# в "/backend" в настройках самого сервиса — подтверждено фактическим
+# успешным деплоем с этими же путями; docker-compose.yml ниже настроен на
+# тот же context: ./backend, чтобы совпадало с одним и тем же Dockerfile).
+COPY MarketTJ.Domain/MarketTJ.Domain.csproj MarketTJ.Domain/
+COPY MarketTJ.Application/MarketTJ.Application.csproj MarketTJ.Application/
+COPY MarketTJ.Infrastructure/MarketTJ.Infrastructure.csproj MarketTJ.Infrastructure/
+COPY MarketTJ.WebApi/MarketTJ.WebApi.csproj MarketTJ.WebApi/
 
 # Восстанавливаем NuGet-пакеты
 RUN dotnet restore MarketTJ.WebApi/MarketTJ.WebApi.csproj
 
 # Копируем весь backend
-COPY backend/ .
+COPY . .
 
 # Публикуем Web API
 RUN dotnet publish MarketTJ.WebApi/MarketTJ.WebApi.csproj \
