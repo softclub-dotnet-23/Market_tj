@@ -13,10 +13,11 @@ import { Modal } from "@/components/ui/Modal";
 import { Button } from "@/components/ui/Button";
 import { ProductCard } from "@/components/product/ProductCard";
 import { CatalogFilters, type CatalogFilterState } from "@/components/product/CatalogFilters";
-import { useProducts } from "@/data/products";
 import { useCategories } from "@/data/categories";
 import { useFarmers } from "@/data/farmers";
 import { useFavorites } from "@/context/FavoritesContext";
+import { searchCatalog, fetchCatalogRegions } from "@/data/catalogSearch";
+import type { Product } from "@/types";
 
 const PAGE_SIZE = 12;
 
@@ -30,23 +31,35 @@ export function Catalog() {
     { value: "fresh", label: t("pages:catalog.sortFresh") },
   ];
   const farmers = useFarmers();
-  const products = useProducts();
+  const categories = useCategories();
   const [searchParams, setSearchParams] = useSearchParams();
   const [mobileFiltersOpen, setMobileFiltersOpen] = useState(false);
   const [loading, setLoading] = useState(true);
+  const [items, setItems] = useState<Product[]>([]);
+  const [totalCount, setTotalCount] = useState(0);
   const { favoriteIds } = useFavorites();
-  const categories = useCategories();
   const resultsTopRef = useRef<HTMLDivElement>(null);
   const isFirstPageRender = useRef(true);
 
-  // Регион теперь свободный текст на бэкенде (то, что фермер указал в
-  // профиле), а не фиксированный список — показываем только те значения,
-  // которые реально встречаются среди товаров в каталоге.
+  // Раздел 13.5 ТЗ: регионы — реально встречающиеся значения среди видимых
+  // объявлений, отдаёт бэкенд (GET /product-listings/regions), а не
+  // Set(...) поверх уже скачанного полного списка товаров, как раньше.
   const allRegionsLabel = t("pages:catalog.allRegions");
-  const regions = useMemo(
-    () => [allRegionsLabel, ...Array.from(new Set(products.map((p) => p.region))).sort()],
-    [products, allRegionsLabel],
-  );
+  const [backendRegions, setBackendRegions] = useState<string[]>([]);
+  useEffect(() => {
+    let cancelled = false;
+    fetchCatalogRegions()
+      .then((list) => {
+        if (!cancelled) setBackendRegions(list);
+      })
+      .catch(() => {
+        if (!cancelled) setBackendRegions([]);
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+  const regions = useMemo(() => [allRegionsLabel, ...backendRegions], [allRegionsLabel, backendRegions]);
 
   const search = searchParams.get("search") ?? "";
   const [searchInput, setSearchInput] = useState(search);
@@ -54,7 +67,12 @@ export function Catalog() {
     () => (searchParams.get("category") ? searchParams.get("category")!.split(",") : []),
     [searchParams],
   );
-  const region = searchParams.get("region") ?? regions[0];
+  // regions[0] === allRegionsLabel всегда (см. useMemo выше) — сравниваем
+  // напрямую с allRegionsLabel, а не с regions[0], чтобы поисковый эффект
+  // ниже не зависел от массива regions целиком (тот меняет identity, как
+  // только приходит ответ /product-listings/regions, и заново перевызывал
+  // бы поиск без реальной смены значения фильтра).
+  const region = searchParams.get("region") ?? allRegionsLabel;
   const farmerId = searchParams.get("farmer") ? Number(searchParams.get("farmer")) : null;
   const priceMin = searchParams.get("minPrice") ?? "";
   const priceMax = searchParams.get("maxPrice") ?? "";
@@ -104,50 +122,64 @@ export function Catalog() {
     setSearchInput("");
   };
 
-  const filtered = useMemo(() => {
-    let list = [...products];
-    if (favoritesOnly) list = list.filter((p) => favoriteIds.includes(p.id));
-    if (search) {
-      const q = search.toLowerCase();
-      list = list.filter((p) => p.title.toLowerCase().includes(q) || p.shortDescription.toLowerCase().includes(q));
-    }
-    if (categorySlugs.length) {
-      const ids = categorySlugs.map((s) => categories.find((c) => c.slug === s)?.id).filter(Boolean);
-      list = list.filter((p) => ids.includes(p.categoryId));
-    }
-    if (region !== regions[0]) list = list.filter((p) => p.region === region);
-    if (farmerId) list = list.filter((p) => p.farmerId === farmerId);
-    if (priceMin) list = list.filter((p) => p.retailPricePerKg >= Number(priceMin));
-    if (priceMax) list = list.filter((p) => p.retailPricePerKg <= Number(priceMax));
-
-    switch (sortBy) {
-      case "price-asc":
-        list.sort((a, b) => a.retailPricePerKg - b.retailPricePerKg);
-        break;
-      case "price-desc":
-        list.sort((a, b) => b.retailPricePerKg - a.retailPricePerKg);
-        break;
-      case "rating":
-        list.sort((a, b) => b.rating - a.rating);
-        break;
-      case "fresh":
-        list.sort((a, b) => new Date(b.harvestDate).getTime() - new Date(a.harvestDate).getTime());
-        break;
-      default:
-        list.sort((a, b) => b.orderCount - a.orderCount);
-    }
-    return list;
-  }, [search, categorySlugs, region, regions, farmerId, priceMin, priceMax, sortBy, favoritesOnly, favoriteIds, categories, products]);
-
-  const totalPages = Math.max(1, Math.ceil(filtered.length / PAGE_SIZE));
-  const currentPage = Math.min(page, totalPages);
-  const pageItems = filtered.slice((currentPage - 1) * PAGE_SIZE, currentPage * PAGE_SIZE);
-
+  // Раздел 13.5 ТЗ: сам поиск/фильтр/сортировка/пагинация выполняются на
+  // бэкенде (GET /product-listings/search) — здесь только собираем параметры
+  // из состояния URL и отправляем запрос, вместо client-side .filter()/.sort()
+  // поверх заранее выгруженного полного списка товаров.
   useEffect(() => {
+    // slug категории — это её id (см. catalogStore.ts: slug: String(c.id)),
+    // конвертация не требует поиска по массиву categories — это важно, иначе
+    // пришлось бы держать нестабильный (каждый рендер новый) объект
+    // categories в зависимостях эффекта и слать лишние запросы.
+    const categoryIds = categorySlugs.map(Number).filter((id) => !Number.isNaN(id));
+
+    // Избранное — чисто клиентский localStorage (см. FavoritesContext), не
+    // таблица в БД, поэтому фильтр "только избранное" передаётся как
+    // конкретный список id. Если избранного нет вообще — сети можно не
+    // дожидаться, результат заведомо пуст (backend трактует пустой
+    // listingIds как "фильтр не применён", что дало бы ложно ВСЕ товары).
+    if (favoritesOnly && favoriteIds.length === 0) {
+      setItems([]);
+      setTotalCount(0);
+      setLoading(false);
+      return;
+    }
+
+    let cancelled = false;
     setLoading(true);
-    const t = setTimeout(() => setLoading(false), 420);
-    return () => clearTimeout(t);
-  }, [search, categorySlugs.join(), region, farmerId, priceMin, priceMax, sortBy, currentPage, favoritesOnly]);
+    searchCatalog({
+      pageNumber: page,
+      pageSize: PAGE_SIZE,
+      categoryIds: categoryIds.length ? categoryIds : undefined,
+      region: region !== allRegionsLabel ? region : undefined,
+      farmerId: farmerId || undefined,
+      priceMin: priceMin ? Number(priceMin) : undefined,
+      priceMax: priceMax ? Number(priceMax) : undefined,
+      search: search || undefined,
+      sortBy,
+      listingIds: favoritesOnly ? favoriteIds : undefined,
+    })
+      .then((result) => {
+        if (cancelled) return;
+        setItems(result.items);
+        setTotalCount(result.totalCount);
+      })
+      .catch(() => {
+        if (cancelled) return;
+        setItems([]);
+        setTotalCount(0);
+      })
+      .finally(() => {
+        if (!cancelled) setLoading(false);
+      });
+    return () => {
+      cancelled = true;
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [search, categorySlugs.join(), region, allRegionsLabel, farmerId, priceMin, priceMax, sortBy, page, favoritesOnly, favoriteIds.join()]);
+
+  const totalPages = Math.max(1, Math.ceil(totalCount / PAGE_SIZE));
+  const currentPage = Math.min(page, totalPages);
 
   useEffect(() => {
     // Only for page-number changes (not the initial mount) — gently bring the
@@ -182,7 +214,7 @@ export function Catalog() {
           {favoritesOnly ? t("pages:catalog.favoritesTitle") : t("pages:catalog.title")}
         </h1>
         <p className="text-stone-500 dark:text-stone-400">
-          {loading ? t("pages:catalog.searching") : t("pages:catalog.foundCount", { count: filtered.length })}
+          {loading ? t("pages:catalog.searching") : t("pages:catalog.foundCount", { count: totalCount })}
         </p>
       </div>
 
@@ -254,11 +286,11 @@ export function Catalog() {
 
           {loading ? (
             <div className="grid grid-cols-2 gap-4 sm:grid-cols-3 sm:gap-5 xl:grid-cols-4">
-              {Array.from({ length: pageItems.length || PAGE_SIZE }).map((_, i) => (
+              {Array.from({ length: items.length || PAGE_SIZE }).map((_, i) => (
                 <ProductCardSkeleton key={i} />
               ))}
             </div>
-          ) : pageItems.length === 0 ? (
+          ) : items.length === 0 ? (
             <EmptyState
               icon={favoritesOnly ? <Heart size={26} /> : <PackageSearch size={26} />}
               title={favoritesOnly ? t("pages:catalog.emptyFavoritesTitle") : t("pages:catalog.emptyResultsTitle")}
@@ -280,7 +312,7 @@ export function Catalog() {
               variants={{ visible: { transition: { staggerChildren: 0.04 } } }}
               className="grid grid-cols-2 gap-4 sm:grid-cols-3 sm:gap-5 xl:grid-cols-4"
             >
-              {pageItems.map((product) => (
+              {items.map((product) => (
                 <motion.div
                   key={product.id}
                   variants={{ hidden: { opacity: 0, y: 16 }, visible: { opacity: 1, y: 0 } }}
@@ -291,7 +323,7 @@ export function Catalog() {
             </motion.div>
           )}
 
-          {!loading && pageItems.length > 0 && (
+          {!loading && items.length > 0 && (
             <Pagination
               page={currentPage}
               totalPages={totalPages}
@@ -313,7 +345,7 @@ export function Catalog() {
           }}
         />
         <Button className="mt-6 w-full" onClick={() => setMobileFiltersOpen(false)}>
-          {t("pages:catalog.showCount", { count: filtered.length })}
+          {t("pages:catalog.showCount", { count: totalCount })}
         </Button>
       </Modal>
     </div>

@@ -1,3 +1,4 @@
+using MarketTJ.Application.Common;
 using MarketTJ.Application.Dto.ProductListingDto;
 using MarketTJ.Application.Interfaces.Services;
 using Microsoft.AspNetCore.Authorization;
@@ -18,6 +19,45 @@ public class ProductListingController(IProductListingService service) : ApiContr
     public async Task<IActionResult> GetAll([FromQuery] int pageNumber = 1, [FromQuery] int pageSize = 10)
         => HandleResult(await service.GetAllAsync(pageNumber, pageSize));
 
+    // Раздел 13.5 ТЗ: публичный поиск по каталогу — фильтры/сортировка/
+    // пагинация целиком на бэкенде (см. ProductListingSearchFilter). Отдельно
+    // от GetAll выше — тот отдаёт объявления любого статуса (нужно админке),
+    // здесь всегда только Active + в наличии.
+    [AllowAnonymous]
+    [HttpGet("search")]
+    public async Task<IActionResult> SearchCatalog(
+        [FromQuery] int pageNumber = 1,
+        [FromQuery] int pageSize = 12,
+        [FromQuery] string? categoryIds = null,
+        [FromQuery] string? region = null,
+        [FromQuery] int? farmerId = null,
+        [FromQuery] decimal? priceMin = null,
+        [FromQuery] decimal? priceMax = null,
+        [FromQuery] string? search = null,
+        [FromQuery] string sortBy = "popularity",
+        [FromQuery] string? listingIds = null)
+    {
+        var filter = new ProductListingSearchFilter
+        {
+            PageNumber = pageNumber,
+            PageSize = pageSize,
+            CategoryIds = ParseIntList(categoryIds),
+            Region = region,
+            FarmerProfileId = farmerId,
+            PriceMin = priceMin,
+            PriceMax = priceMax,
+            Search = search,
+            SortBy = sortBy,
+            ListingIds = ParseIntList(listingIds),
+        };
+        return HandleResult(await service.SearchCatalogAsync(filter));
+    }
+
+    [AllowAnonymous]
+    [HttpGet("regions")]
+    public async Task<IActionResult> GetRegions()
+        => HandleResult(await service.GetDistinctActiveRegionsAsync());
+
     [AllowAnonymous]
     [HttpGet("{id:int}")]
     public async Task<IActionResult> GetById(int id)
@@ -34,4 +74,16 @@ public class ProductListingController(IProductListingService service) : ApiContr
     [HttpDelete("{id:int}")]
     public async Task<IActionResult> Delete(int id)
         => HandleResult(await service.DeleteAsync(id));
+
+    // categoryIds/listingIds приходят как "1,2,3" из query-string — единого
+    // биндера списка int из CSV в ASP.NET Core нет, поэтому парсим вручную.
+    private static List<int>? ParseIntList(string? csv)
+    {
+        if (string.IsNullOrWhiteSpace(csv))
+            return null;
+
+        return csv.Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries)
+            .Select(int.Parse)
+            .ToList();
+    }
 }
