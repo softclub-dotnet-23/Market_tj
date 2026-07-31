@@ -38,6 +38,8 @@
       "orders": "Заказы",
       "farmers": "Активные фермеры"
     },
+    "thisMonth": "Этот месяц",
+    "allTime": "За всё время",
     "vsLastMonth": "vs прошлого месяца {{value}}",
     "newMetric": "Новое",
     "salesByRegion": "Продажи по регионам",

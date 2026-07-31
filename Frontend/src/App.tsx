@@ -30,6 +30,9 @@ const AdminProducts = lazy(() => import("@/pages/AdminProducts").then((m) => ({ 
 const AdminFarmers = lazy(() => import("@/pages/AdminFarmers").then((m) => ({ default: m.AdminFarmers })));
 const AdminCatalog = lazy(() => import("@/pages/AdminCatalog").then((m) => ({ default: m.AdminCatalog })));
 const AdminFarmerDocuments = lazy(() => import("@/pages/AdminFarmerDocuments").then((m) => ({ default: m.AdminFarmerDocuments })));
+const AdminCouriers = lazy(() => import("@/pages/AdminCouriers").then((m) => ({ default: m.AdminCouriers })));
+const AdminDeliveryZones = lazy(() => import("@/pages/AdminDeliveryZones").then((m) => ({ default: m.AdminDeliveryZones })));
+const AdminCommissions = lazy(() => import("@/pages/AdminCommissions").then((m) => ({ default: m.AdminCommissions })));
 const AdminUsers = lazy(() => import("@/pages/AdminUsers").then((m) => ({ default: m.AdminUsers })));
 const AdminReviews = lazy(() => import("@/pages/AdminReviews").then((m) => ({ default: m.AdminReviews })));
 const AdminSettings = lazy(() => import("@/pages/AdminSettings").then((m) => ({ default: m.AdminSettings })));
@@ -72,8 +75,11 @@ function App() {
                       <Route path="catalog" element={<AdminCatalog />} />
                       <Route path="farmers" element={<AdminFarmers />} />
                       <Route path="farmer-documents" element={<AdminFarmerDocuments />} />
+                      <Route path="couriers" element={<AdminCouriers />} />
+                      <Route path="delivery-zones" element={<AdminDeliveryZones />} />
                       <Route path="users" element={<AdminUsers />} />
                       <Route path="reviews" element={<AdminReviews />} />
+                      <Route path="commissions" element={<AdminCommissions />} />
                       <Route path="support" element={<AdminSupport />} />
                       <Route path="notifications" element={<AdminNotifications />} />
                       <Route path="settings" element={<AdminSettings />} />
