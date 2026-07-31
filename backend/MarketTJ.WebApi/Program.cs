@@ -11,43 +11,46 @@ using Microsoft.EntityFrameworkCore;
 using Microsoft.IdentityModel.Tokens;
 using Microsoft.OpenApi;
 
-// Раздел 17: файлы объявлений хранятся в wwwroot/uploads/listings/{listingId}/.
-// Создаётся ДО CreateBuilder — хост резолвит WebRootPath по факту
-// существования wwwroot на диске в момент своего построения, а не лениво.
-// На Railway контейнер стартует с чистого /app, поэтому создание каталога
-// ПОСЛЕ CreateBuilder оставляло WebRootPath как "not found" и UseStaticFiles()
-// переставал отдавать файлы вообще (локально маскировалось тем, что каталог
-// уже существовал с предыдущих запусков).
-Directory.CreateDirectory(Path.Combine(Directory.GetCurrentDirectory(), "wwwroot", "uploads", "listings"));
+Directory.CreateDirectory(
+    Path.Combine(
+        Directory.GetCurrentDirectory(),
+        "wwwroot",
+        "uploads",
+        "listings"
+    )
+);
 
 var builder = WebApplication.CreateBuilder(args);
 
-// Railway передаёт порт через PORT (значение каждый раз разное), а не через
-// ASPNETCORE_URLS — в контейнере (Railway/docker-compose) переменной либо нет
-// (docker-compose), либо есть (Railway), но в обоих случаях это Production,
-// поэтому дефолт 8080 корректен (Dockerfile EXPOSE, docker-compose "5000:8080").
-// В Development (обычный "dotnet run" с рабочего стола) UseUrls пропускаем —
-// иначе он перекрывает applicationUrl из launchSettings.json (5193/7099), на
-// который жёстко рассчитан локальный фронтенд (VITE_API_BASE_URL), и рвёт
-// связь backend/frontend при локальной разработке.
 if (!builder.Environment.IsDevelopment())
 {
     var port = Environment.GetEnvironmentVariable("PORT") ?? "8080";
-    builder.WebHost.UseUrls($"http://+:{port}");
+    builder.WebHost.UseUrls($"http://0.0.0.0:{port}");
 }
 
-// Railway Postgres даёт DATABASE_URL в виде URI (postgres://user:pass@host:port/db),
-// а Npgsql ждёт key=value строку — конвертируем и подкладываем обратно в
-// конфигурацию под тем же ключом, которым пользуется AddInfrastructureServices,
-// чтобы не менять сигнатуру DI-регистрации ради одного окружения.
+// Railway PostgreSQL connection
 var databaseUrl = Environment.GetEnvironmentVariable("DATABASE_URL");
-if (!string.IsNullOrEmpty(databaseUrl))
+
+if (!string.IsNullOrWhiteSpace(databaseUrl))
 {
     var uri = new Uri(databaseUrl);
-    var userInfo = uri.UserInfo.Split(':');
+    var userInfo = uri.UserInfo.Split(':', 2);
+
+    var username = Uri.UnescapeDataString(userInfo[0]);
+    var password = userInfo.Length > 1
+        ? Uri.UnescapeDataString(userInfo[1])
+        : string.Empty;
+
+    var database = uri.LocalPath.TrimStart('/');
+
     builder.Configuration["ConnectionStrings:DefaultConnection"] =
-        $"Host={uri.Host};Port={uri.Port};Database={uri.LocalPath.TrimStart('/')};" +
-        $"Username={userInfo[0]};Password={userInfo[1]};SSL Mode=Require;Trust Server Certificate=true";
+        $"Host={uri.Host};" +
+        $"Port={uri.Port};" +
+        $"Database={database};" +
+        $"Username={username};" +
+        $"Password={password};" +
+        $"SSL Mode=Require;" +
+        $"Trust Server Certificate=true";
 }
 
 builder.Services.AddApplicationServices();
@@ -55,36 +58,98 @@ builder.Services.AddInfrastructureServices(builder.Configuration);
 
 builder.Services.AddControllers();
 
-// CORS для React-фронтенда (Frontend/, Vite dev server) — origin'ы берутся
-// из конфига (Cors:AllowedOrigins), а не хардкодятся, т.к. в проде адрес
-// фронтенда будет другим. AllowCredentials не включаем — токен передаётся
-// через Authorization header, а не через cookies.
 const string FrontendCorsPolicy = "FrontendCorsPolicy";
-var allowedOrigins = (builder.Configuration.GetSection("Cors:AllowedOrigins").Get<string[]>() ?? []).ToList();
 
-// FRONTEND_URL — адрес задеплоенного на Railway фронтенда; добавляется поверх
-// локальных origin'ов из конфига, а не вместо них, чтобы локальная разработка
-// не сломалась после деплоя.
+var allowedOrigins =
+    (builder.Configuration
+        .GetSection("Cors:AllowedOrigins")
+        .Get<string[]>() ?? [])
+    .ToList();
+
 var frontendUrl = Environment.GetEnvironmentVariable("FRONTEND_URL");
-if (!string.IsNullOrEmpty(frontendUrl))
+
+if (!string.IsNullOrWhiteSpace(frontendUrl))
 {
-    allowedOrigins.Add(frontendUrl);
+    allowedOrigins.Add(frontendUrl.TrimEnd('/'));
 }
 
 builder.Services.AddCors(options =>
 {
     options.AddPolicy(FrontendCorsPolicy, policy =>
     {
-        policy.WithOrigins(allowedOrigins.ToArray())
-            .AllowAnyHeader()
-            .AllowAnyMethod();
+        if (allowedOrigins.Count > 0)
+        {
+            policy
+                .WithOrigins(allowedOrigins.Distinct().ToArray())
+                .AllowAnyHeader()
+                .AllowAnyMethod();
+        }
+        else if (builder.Environment.IsDevelopment())
+        {
+            // Только для локальной разработки — порт Vite меняется чаще,
+            // чем хочется поддерживать в конфиге вручную.
+            policy
+                .AllowAnyOrigin()
+                .AllowAnyHeader()
+                .AllowAnyMethod();
+        }
+        else
+        {
+            // Production с пустым Cors:AllowedOrigins — это ошибка
+            // конфигурации (забыли FRONTEND_URL/Cors:AllowedOrigins), а не
+            // сигнал "разреши всем". Fail closed (CORS не разрешит ни один
+            // origin) + громкий warning в лог вместо тихого wildcard.
+            Console.WriteLine(
+                "[WARN] Cors:AllowedOrigins пуст в Production — CORS не разрешит ни один " +
+                "origin, пока не будет задан FRONTEND_URL или Cors__AllowedOrigins__0."
+            );
+        }
     });
 });
 
-// Минимальный login для админа (раздел 23 ТЗ — полноценная Authentication с
-// регистрацией Customer/Farmer остаётся отдельным этапом, здесь только JWT
-// issue/validate для уже существующих сидированных пользователей).
 var jwtSection = builder.Configuration.GetSection("Jwt");
+var jwtSecret = jwtSection["Secret"];
+
+if (string.IsNullOrWhiteSpace(jwtSecret))
+{
+    throw new InvalidOperationException(
+        "JWT Secret is missing. Add Jwt__Secret in Railway Variables."
+    );
+}
+
+// TokenService.AccessTokenExpiryMinutes делает int.Parse(...) без проверки —
+// раньше это падало необработанным исключением при первом логине, а не при
+// старте приложения. Проверяем здесь по той же схеме, что и Jwt:Secret выше.
+if (!int.TryParse(jwtSection["ExpiryMinutes"], out _))
+{
+    throw new InvalidOperationException(
+        "Jwt:ExpiryMinutes is missing or not a valid integer. Add Jwt__ExpiryMinutes in Railway Variables (or appsettings.json locally)."
+    );
+}
+
+// Раньше отсутствие SMTP всплывало только на первом реальном запросе
+// (500 на POST /api/auth/send-verification-code, глубоко внутри
+// SmtpEmailSender) — проверяем при старте, чтобы ошибка была видна сразу
+// в логах деплоя, а не после первой жалобы пользователя на регистрацию.
+// ВАЖНО: только предупреждение, никогда не throw — SMTP нужен только для
+// одной фичи (подтверждение email при регистрации), а не для работы всего
+// backend целиком. Безусловный throw здесь однажды уже уронил весь сервис
+// на Railway при отсутствии реальных Smtp-переменных (2026-07-31).
+var smtpSection = builder.Configuration.GetSection("Smtp");
+var smtpConfigured = !string.IsNullOrWhiteSpace(smtpSection["Host"])
+    && !string.IsNullOrWhiteSpace(smtpSection["User"])
+    && !string.IsNullOrWhiteSpace(smtpSection["Password"]);
+
+if (!smtpConfigured)
+{
+    Console.WriteLine(
+        "[WARN] SMTP не настроен (Smtp:Host/Port/User/Password/From) — подтверждение email при " +
+        "регистрации работать не будет (остальной backend продолжит работать нормально). " +
+        "Задайте Smtp__Host, Smtp__Port, Smtp__User, Smtp__Password, Smtp__From через переменные " +
+        "окружения (Railway) или dotnet user-secrets (локально)."
+    );
+}
+
 builder.Services
     .AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
     .AddJwtBearer(options =>
@@ -93,29 +158,39 @@ builder.Services
         {
             ValidateIssuer = true,
             ValidIssuer = jwtSection["Issuer"],
+
             ValidateAudience = true,
             ValidAudience = jwtSection["Audience"],
+
             ValidateIssuerSigningKey = true,
-            IssuerSigningKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(jwtSection["Secret"]!)),
+            IssuerSigningKey = new SymmetricSecurityKey(
+                Encoding.UTF8.GetBytes(jwtSecret)
+            ),
+
             ValidateLifetime = true,
             ClockSkew = TimeSpan.Zero
         };
     });
+
 builder.Services.AddAuthorization();
 
 builder.Services.AddHttpContextAccessor();
 builder.Services.AddScoped<ICurrentUserService, CurrentUserService>();
 builder.Services.AddScoped<IFileStorageService, LocalFileStorageService>();
 
-// GET /health — для docker-compose healthcheck / внешнего мониторинга,
-// без авторизации (см. app.MapHealthChecks ниже — не под UseAuthorization).
-builder.Services.AddHealthChecks()
+builder.Services
+    .AddHealthChecks()
     .AddDbContextCheck<AppDbContext>();
 
 builder.Services.AddEndpointsApiExplorer();
+
 builder.Services.AddSwaggerGen(options =>
 {
-    options.SwaggerDoc("v1", new OpenApiInfo { Title = "Market.tj API", Version = "v1" });
+    options.SwaggerDoc("v1", new OpenApiInfo
+    {
+        Title = "Market.tj API",
+        Version = "v1"
+    });
 
     options.AddSecurityDefinition("Bearer", new OpenApiSecurityScheme
     {
@@ -124,29 +199,30 @@ builder.Services.AddSwaggerGen(options =>
         Scheme = "bearer",
         BearerFormat = "JWT",
         In = ParameterLocation.Header,
-        Description = "Вставьте только сам JWT-токен (без слова \"Bearer\")."
+        Description = "Вставьте только JWT-токен без слова Bearer."
     });
 
-    // Без этого SecurityDefinition выше только описывает схему в JSON-схеме,
-    // но кнопка Authorize в Swagger UI не подставляет токен в запросы —
-    // требование должно быть явно привязано к операциям.
-    options.AddSecurityRequirement(doc => new OpenApiSecurityRequirement
+    options.AddSecurityRequirement(document => new OpenApiSecurityRequirement
     {
-        { new OpenApiSecuritySchemeReference("Bearer", doc), new List<string>() }
+        {
+            new OpenApiSecuritySchemeReference("Bearer", document),
+            new List<string>()
+        }
     });
 });
 
 var app = builder.Build();
 
-// Применяет накопленные миграции при старте. try/catch — чтобы падение
-// миграции (например, недоступна БД на Railway) попало в логи явно, а не
-// уронило контейнер молча без объяснения причины.
+app.Logger.LogInformation("Starting database migration...");
+
 using (var scope = app.Services.CreateScope())
 {
     var context = scope.ServiceProvider.GetRequiredService<AppDbContext>();
+
     try
     {
         await context.Database.MigrateAsync();
+        app.Logger.LogInformation("Database migration completed.");
     }
     catch (Exception ex)
     {
@@ -155,30 +231,22 @@ using (var scope = app.Services.CreateScope())
     }
 }
 
-// Audit 2026-07-28, находка 2.1 — защитная миграция на случай, если через
-// уязвимый POST/PUT /api/users уже успели создать/обновить пользователя с
-// нехэшированным паролем до применения фикса (см. PlaintextPasswordFixup).
+// Audit 2026-07-28, находка 2.1 — защитная миграция: деактивирует аккаунты
+// с нехэшированным паролем, если такие успели попасть в базу до фикса.
 await PlaintextPasswordFixup.RunAsync(app.Services);
-
 await Seeder.SeedAsync(app.Services);
 
-// ExceptionHandling — самым первым в pipeline, чтобы ловить исключения из
-// всех последующих middleware/контроллеров. RequestLogging — сразу после,
-// чтобы в лог запроса попадал в том числе статус-код, который расставил
-// ExceptionHandling при необработанном исключении.
 app.UseMiddleware<ExceptionHandlingMiddleware>();
 app.UseMiddleware<RequestLoggingMiddleware>();
 
-if (app.Environment.IsDevelopment())
-{
-    app.UseSwagger();
-    app.UseSwaggerUI(options =>
-    {
-        options.SwaggerEndpoint("/swagger/v1/swagger.json", "Market.tj API v1");
-    });
-}
+// Swagger включён и в Production
+app.UseSwagger();
 
-app.UseHttpsRedirection();
+app.UseSwaggerUI(options =>
+{
+    options.SwaggerEndpoint("/swagger/v1/swagger.json", "Market.tj API v1");
+});
+
 
 app.UseStaticFiles();
 
@@ -189,5 +257,15 @@ app.UseAuthorization();
 
 app.MapControllers();
 app.MapHealthChecks("/health").AllowAnonymous();
+
+app.MapGet("/", () => Results.Ok(new
+{
+    application = "Market.tj API",
+    status = "running",
+    swagger = "/swagger",
+    health = "/health"
+}));
+
+app.Logger.LogInformation("MarketTJ API is starting...");
 
 app.Run();

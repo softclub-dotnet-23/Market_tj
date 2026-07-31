@@ -15,7 +15,8 @@ public class RequestLoggingMiddleware(RequestDelegate next, ILogger<RequestLoggi
         stopwatch.Stop();
 
         logger.LogInformation(
-            "{Method} {Path} responded {StatusCode} in {ElapsedMilliseconds}ms",
+            "[{TraceId}] {Method} {Path} responded {StatusCode} in {ElapsedMilliseconds}ms",
+            context.TraceIdentifier,
             context.Request.Method,
             context.Request.Path,
             context.Response.StatusCode,

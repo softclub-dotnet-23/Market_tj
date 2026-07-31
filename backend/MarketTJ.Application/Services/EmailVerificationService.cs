@@ -41,6 +41,13 @@ public class EmailVerificationService(
             }
 
             var code = GenerateCode();
+
+            // Письмо отправляется ДО записи в БД — иначе при сбое SMTP запись
+            // всё равно создавалась, и следующая попытка натыкалась на
+            // "подождите N сек" (ResendCooldownSeconds выше), хотя письмо
+            // ни разу не ушло.
+            await emailSender.SendAsync(normalizedEmail, "Код подтверждения Market.tj", BuildEmailBody(code));
+
             var entity = new EmailVerificationCode
             {
                 Email = normalizedEmail,
@@ -51,8 +58,6 @@ public class EmailVerificationService(
                 CreatedAt = DateTime.UtcNow
             };
             await repository.AddAsync(entity);
-
-            await emailSender.SendAsync(normalizedEmail, "Код подтверждения Market.tj", BuildEmailBody(code));
 
             return Result<string>.Ok("Код отправлен на email");
         }
