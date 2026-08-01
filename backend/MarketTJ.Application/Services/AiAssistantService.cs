@@ -1,3 +1,4 @@
+using System.Net.Http.Headers;
 using System.Text;
 using System.Text.Json;
 using System.Text.Json.Nodes;
@@ -13,15 +14,18 @@ using Microsoft.Extensions.Logging;
 
 namespace MarketTJ.Application.Services;
 
-// AI-ассистент (Google Gemini API) — осознанное отклонение от раздела 3 ТЗ
-// («В MVP не входят: искусственный интеллект»), подтверждено пользователем
-// явно, зафиксировано в TZ_MarketTJ_ClaudeCode.md, раздел 38. Изначально —
-// только покупатель/гость (поиск по каталогу). С 2026-08-01 — роль-осознанный:
-// покупателю доступен поиск по каталогу, фермеру и админу — информационные
-// вопросы по своим данным плюс ПРЕДЛОЖЕНИЯ действий (см. AssistantActionDto —
-// сам ассистент ничего не мутирует, только предлагает, реальное выполнение —
-// через ExecuteActionAsync после подтверждения пользователем на фронтенде,
-// с повторной проверкой прав на сервере).
+// AI-ассистент (Groq API, OpenAI-совместимый формат) — осознанное отклонение
+// от раздела 3 ТЗ («В MVP не входят: искусственный интеллект»), подтверждено
+// пользователем явно, зафиксировано в TZ_MarketTJ_ClaudeCode.md, раздел 38.
+// Изначально — только покупатель/гость (поиск по каталогу). С 2026-08-01 —
+// роль-осознанный: покупателю доступен поиск по каталогу, фермеру и админу —
+// информационные вопросы по своим данным плюс ПРЕДЛОЖЕНИЯ действий (см.
+// AssistantActionDto — сам ассистент ничего не мутирует, только предлагает,
+// реальное выполнение — через ExecuteActionAsync после подтверждения
+// пользователем на фронтенде, с повторной проверкой прав на сервере).
+// Провайдер сменён с Google Gemini на Groq 2026-08-01 — Gemini на бесплатном
+// тарифе в текущем регионе требует привязанный billing даже для free tier
+// (quota=0 без него), у Groq есть настоящий free tier без карты.
 public class AiAssistantService(
     HttpClient httpClient,
     IProductListingRepository productListingRepository,
@@ -34,8 +38,10 @@ public class AiAssistantService(
     IConfiguration configuration,
     ILogger<AiAssistantService> logger) : IAiAssistantService
 {
-    private const string Model = "gemini-2.0-flash";
-    private const string ApiUrlTemplate = "https://generativelanguage.googleapis.com/v1beta/models/{0}:generateContent";
+    // Актуальная бесплатная модель Groq с поддержкой tool calling на
+    // 2026-08-01 (console.groq.com/docs/models) — Meta Llama 3.3 70B.
+    private const string Model = "llama-3.3-70b-versatile";
+    private const string ApiUrl = "https://api.groq.com/openai/v1/chat/completions";
 
     private const string CustomerSystemPrompt =
         "Ты ассистент маркетплейса Market.tj. Определи что ищет пользователь, " +
@@ -73,38 +79,37 @@ public class AiAssistantService(
     {
         try
         {
-            var apiKey = configuration["Gemini:ApiKey"];
+            var apiKey = configuration["Groq:ApiKey"];
             if (string.IsNullOrWhiteSpace(apiKey))
             {
-                logger.LogError("Gemini:ApiKey не задан (appsettings.json / User Secrets)");
+                logger.LogError("Groq:ApiKey не задан (appsettings.json / User Secrets)");
                 return Result<AssistantResponseDto>.Fail("AI-ассистент временно недоступен", ErrorType.InternalServerError);
             }
 
             var role = currentUser.Role;
             var (systemPrompt, tools) = BuildPromptAndTools(role);
 
-            var contents = new JsonArray
+            var messages = new JsonArray
             {
-                new JsonObject
-                {
-                    ["role"] = "user",
-                    ["parts"] = new JsonArray { new JsonObject { ["text"] = message } }
-                }
+                new JsonObject { ["role"] = "system", ["content"] = systemPrompt },
+                new JsonObject { ["role"] = "user", ["content"] = message }
             };
 
-            var response = await SendToGeminiAsync(apiKey, systemPrompt, tools, contents);
-            var parts = GetFirstCandidateParts(response);
+            var response = await SendToGroqAsync(apiKey, tools, messages);
+            var responseMessage = GetFirstChoiceMessage(response);
 
-            var functionCallPart = parts?.FirstOrDefault(p => p!["functionCall"] is not null);
+            var toolCall = responseMessage?["tool_calls"]?.AsArray().FirstOrDefault();
 
-            if (functionCallPart is not null)
+            if (toolCall is not null)
             {
-                var functionCall = functionCallPart["functionCall"]!;
-                var functionName = functionCall["name"]!.GetValue<string>();
-                var args = functionCall["args"];
+                var function = toolCall["function"]!;
+                var functionName = function["name"]!.GetValue<string>();
+                var argumentsJson = function["arguments"]?.GetValue<string>();
+                var args = string.IsNullOrWhiteSpace(argumentsJson) ? null : JsonNode.Parse(argumentsJson);
+                var toolCallId = toolCall["id"]!.GetValue<string>();
 
                 // propose_* — предложение действия формируется сразу, без второго
-                // обращения к Gemini: модель просто должна была вызвать инструмент
+                // обращения к Groq: модель просто должна была вызвать инструмент
                 // с правильными параметрами, сочинять текст ей тут не нужно.
                 if (functionName == "propose_update_listing")
                 {
@@ -117,39 +122,31 @@ public class AiAssistantService(
 
                 var toolResultText = await ExecuteReadToolAsync(functionName, args);
 
-                contents.Add(new JsonObject
+                messages.Add(new JsonObject
                 {
-                    ["role"] = "model",
-                    ["parts"] = parts!.DeepClone()
+                    ["role"] = "assistant",
+                    ["content"] = null,
+                    ["tool_calls"] = new JsonArray { toolCall.DeepClone() }
                 });
-                contents.Add(new JsonObject
+                messages.Add(new JsonObject
                 {
-                    ["role"] = "user",
-                    ["parts"] = new JsonArray
-                    {
-                        new JsonObject
-                        {
-                            ["functionResponse"] = new JsonObject
-                            {
-                                ["name"] = functionName,
-                                ["response"] = new JsonObject { ["content"] = toolResultText }
-                            }
-                        }
-                    }
+                    ["role"] = "tool",
+                    ["tool_call_id"] = toolCallId,
+                    ["content"] = toolResultText
                 });
 
-                response = await SendToGeminiAsync(apiKey, systemPrompt, tools, contents);
-                parts = GetFirstCandidateParts(response);
+                response = await SendToGroqAsync(apiKey, tools, messages);
+                responseMessage = GetFirstChoiceMessage(response);
             }
 
-            var textPart = parts?.FirstOrDefault(p => p!["text"] is not null);
-            if (textPart is null)
+            var textContent = responseMessage?["content"]?.GetValue<string>();
+            if (string.IsNullOrWhiteSpace(textContent))
             {
-                logger.LogError("Gemini не вернул текстовый ответ: {Response}", response.ToJsonString());
+                logger.LogError("Groq не вернул текстовый ответ: {Response}", response.ToJsonString());
                 return Result<AssistantResponseDto>.Fail("Не удалось получить ответ ассистента", ErrorType.InternalServerError);
             }
 
-            var json = textPart["text"]!.GetValue<string>().Trim().Trim('`');
+            var json = textContent.Trim().Trim('`');
             if (json.StartsWith("json", StringComparison.OrdinalIgnoreCase))
             {
                 json = json[4..].Trim();
@@ -213,7 +210,7 @@ public class AiAssistantService(
                     ("field", "string", new[] { "price", "status" }, true),
                     ("value", "string", null, true)),
             };
-            return (FarmerSystemPrompt, new JsonArray { new JsonObject { ["function_declarations"] = tools } });
+            return (FarmerSystemPrompt, tools);
         }
 
         if (role == "Admin")
@@ -227,13 +224,15 @@ public class AiAssistantService(
                     ("reportId", "integer", null, true),
                     ("resolution", "string", new[] { "Reviewed", "Dismissed" }, true)),
             };
-            return (AdminSystemPrompt, new JsonArray { new JsonObject { ["function_declarations"] = tools } });
+            return (AdminSystemPrompt, tools);
         }
 
         // Покупатель, курьер или гость (без токена) — тот же customer-flow, что и раньше.
-        return (CustomerSystemPrompt, new JsonArray { new JsonObject { ["function_declarations"] = new JsonArray { customerTool } } });
+        return (CustomerSystemPrompt, new JsonArray { customerTool });
     }
 
+    // Формат Groq/OpenAI: {"type":"function","function":{name,description,parameters}} —
+    // отличается от Gemini обёрткой type+function, сама схема parameters та же.
     private static JsonObject BuildFunctionDeclaration(
         string name, string description, params (string Name, string Type, string[]? Enum, bool Required)[] parameters)
     {
@@ -252,13 +251,17 @@ public class AiAssistantService(
 
         return new JsonObject
         {
-            ["name"] = name,
-            ["description"] = description,
-            ["parameters"] = new JsonObject
+            ["type"] = "function",
+            ["function"] = new JsonObject
             {
-                ["type"] = "object",
-                ["properties"] = properties,
-                ["required"] = required
+                ["name"] = name,
+                ["description"] = description,
+                ["parameters"] = new JsonObject
+                {
+                    ["type"] = "object",
+                    ["properties"] = properties,
+                    ["required"] = required
+                }
             }
         };
     }
@@ -476,39 +479,34 @@ public class AiAssistantService(
         return await reportedListingService.ResolveAsync(reportId, resolution, currentUser.UserId.Value);
     }
 
-    // === Gemini HTTP ===
+    // === Groq HTTP (OpenAI-совместимый chat completions) ===
 
-    private static JsonArray? GetFirstCandidateParts(JsonObject response)
-        => response["candidates"]?.AsArray().FirstOrDefault()?["content"]?["parts"]?.AsArray();
+    private static JsonObject? GetFirstChoiceMessage(JsonObject response)
+        => response["choices"]?.AsArray().FirstOrDefault()?["message"]?.AsObject();
 
-    private async Task<JsonObject> SendToGeminiAsync(string apiKey, string systemPrompt, JsonArray tools, JsonArray contents)
+    private async Task<JsonObject> SendToGroqAsync(string apiKey, JsonArray tools, JsonArray messages)
     {
         var requestBody = new JsonObject
         {
-            ["system_instruction"] = new JsonObject
-            {
-                ["parts"] = new JsonArray { new JsonObject { ["text"] = systemPrompt } }
-            },
+            ["model"] = Model,
+            ["messages"] = messages.DeepClone(),
             ["tools"] = tools.DeepClone(),
-            ["contents"] = contents.DeepClone()
+            ["tool_choice"] = "auto"
         };
 
-        var url = string.Format(ApiUrlTemplate, Model);
-        using var request = new HttpRequestMessage(HttpMethod.Post, url)
+        using var request = new HttpRequestMessage(HttpMethod.Post, ApiUrl)
         {
             Content = new StringContent(requestBody.ToJsonString(), Encoding.UTF8, "application/json")
         };
-        // Заголовок вместо ?key=... в URL — HttpClientFactory логирует полный
-        // URI запроса на уровне Information, ключ в query string утёк бы в логи.
-        request.Headers.Add("x-goog-api-key", apiKey);
+        request.Headers.Authorization = new AuthenticationHeaderValue("Bearer", apiKey);
 
         using var response = await httpClient.SendAsync(request);
         var responseBody = await response.Content.ReadAsStringAsync();
 
         if (!response.IsSuccessStatusCode)
         {
-            logger.LogError("Gemini API вернул {StatusCode}: {Body}", response.StatusCode, responseBody);
-            throw new InvalidOperationException($"Gemini API error {response.StatusCode}");
+            logger.LogError("Groq API вернул {StatusCode}: {Body}", response.StatusCode, responseBody);
+            throw new InvalidOperationException($"Groq API error {response.StatusCode}");
         }
 
         return JsonNode.Parse(responseBody)!.AsObject();
