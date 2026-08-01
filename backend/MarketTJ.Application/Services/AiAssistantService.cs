@@ -211,13 +211,28 @@ public class AiAssistantService(
 
             messages.Add(new JsonObject { ["role"] = "user", ["content"] = message });
 
-            var response = await SendToGroqAsync(apiKey, tools, messages);
-            var responseMessage = GetFirstChoiceMessage(response);
+            // Цикл, а не одна проверка — с историей диалога модель иногда вызывает
+            // инструмент повторно на втором круге (например, чтобы освежить
+            // данные перед уточняющим ответом), а не сразу отдаёт финальный
+            // текст. Раньше здесь была одна проверка toolCall без цикла, и
+            // второй tool_calls подряд приводил к ложной ошибке "не удалось
+            // получить ответ" (найдено 2026-08-02 при живой проверке follow-up
+            // вопросов). Ограничение в 3 круга — защита от зацикливания.
+            const int maxToolRounds = 3;
+            JsonObject? response = null;
+            JsonObject? responseMessage = null;
 
-            var toolCall = responseMessage?["tool_calls"]?.AsArray().FirstOrDefault();
-
-            if (toolCall is not null)
+            for (var round = 0; round < maxToolRounds; round++)
             {
+                response = await SendToGroqAsync(apiKey, tools, messages);
+                responseMessage = GetFirstChoiceMessage(response);
+
+                var toolCall = responseMessage?["tool_calls"]?.AsArray().FirstOrDefault();
+                if (toolCall is null)
+                {
+                    break;
+                }
+
                 var function = toolCall["function"]!;
                 var functionName = function["name"]!.GetValue<string>();
                 var argumentsJson = function["arguments"]?.GetValue<string>();
@@ -250,15 +265,12 @@ public class AiAssistantService(
                     ["tool_call_id"] = toolCallId,
                     ["content"] = toolResultText
                 });
-
-                response = await SendToGroqAsync(apiKey, tools, messages);
-                responseMessage = GetFirstChoiceMessage(response);
             }
 
             var textContent = responseMessage?["content"]?.GetValue<string>();
             if (string.IsNullOrWhiteSpace(textContent))
             {
-                logger.LogError("Groq не вернул текстовый ответ: {Response}", response.ToJsonString());
+                logger.LogError("Groq не вернул текстовый ответ: {Response}", response!.ToJsonString());
                 return Result<AssistantResponseDto>.Fail("Не удалось получить ответ ассистента", ErrorType.InternalServerError);
             }
 

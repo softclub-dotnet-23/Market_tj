@@ -346,6 +346,65 @@ public class AiAssistantServiceTests
     }
 
     [Fact]
+    public async Task AskAsync_TwoConsecutiveToolCalls_ExecutesBothAndReturnsFinalText()
+    {
+        // Регрессия: с историей диалога модель иногда вызывает инструмент
+        // повторно на втором круге вместо того, чтобы сразу вернуть текст —
+        // раньше AskAsync обрабатывал только один раунд tool_calls и на
+        // втором инструменте ошибочно считал, что текстового ответа нет.
+        _currentUser.Setup(c => c.UserId).Returns(42);
+        _customerProfileRepository.Setup(r => r.GetByUserIdAsync(42)).ReturnsAsync(new CustomerProfile { Id = 7, UserId = 42 });
+        _orderRepository.Setup(r => r.GetAllAsync()).ReturnsAsync(
+        [
+            new Order { Id = 1, OrderNumber = "ORD-001", CustomerId = 7, Status = Domain.Enums.OrderStatus.InDelivery, TotalAmount = 150, DeliveryAddress = "ул. Рудаки 1" }
+        ]);
+        _deliveryZoneRepository.Setup(r => r.GetAllAsync()).ReturnsAsync(
+        [
+            new DeliveryZone { Id = 1, Region = "Душанбе", District = "Сино", BasePrice = 20, PricePerKm = 2, IsActive = true }
+        ]);
+
+        var first = GroqToolCallResponse("call_1", "get_order_status", "{\"orderNumber\":\"ORD-001\"}");
+        var second = GroqToolCallResponse("call_2", "get_delivery_info", "{}");
+        var third = GroqTextResponse("{\"intent\":\"orders\",\"message\":\"Заказ ORD-001 в пути, доставка по Душанбе от 20 сомони\"}");
+        var handler = MockHandlerSequence((HttpStatusCode.OK, first), (HttpStatusCode.OK, second), (HttpStatusCode.OK, third));
+        var service = CreateService(handler);
+
+        var history = new List<AssistantHistoryMessageDto>
+        {
+            new() { Role = "user", Text = "статус заказа ORD-001?" },
+            new() { Role = "assistant", Text = "Заказ ORD-001 в пути." }
+        };
+
+        var result = await service.AskAsync("а сколько будет стоить доставка туда же?", history);
+
+        Assert.True(result.IsSuccess);
+        Assert.Equal("orders", result.Data!.Intent);
+        Assert.Equal("Заказ ORD-001 в пути, доставка по Душанбе от 20 сомони", result.Data.Message);
+        _orderRepository.Verify(r => r.GetAllAsync(), Times.Once);
+        _deliveryZoneRepository.Verify(r => r.GetAllAsync(), Times.Once);
+        handler.Protected().Verify("SendAsync", Times.Exactly(3), ItExpr.IsAny<HttpRequestMessage>(), ItExpr.IsAny<CancellationToken>());
+    }
+
+    [Fact]
+    public async Task AskAsync_ToolCallsExceedMaxRounds_StopsAfterThreeRoundsWithoutInfiniteLoop()
+    {
+        _productListingRepository.Setup(r => r.SearchAsync(It.IsAny<string>())).ReturnsAsync([]);
+
+        var alwaysToolCall = GroqToolCallResponse("call_x", "search_products", "{\"query\":\"tomato\"}");
+        var handler = MockHandlerSequence(
+            (HttpStatusCode.OK, alwaysToolCall),
+            (HttpStatusCode.OK, alwaysToolCall),
+            (HttpStatusCode.OK, alwaysToolCall));
+        var service = CreateService(handler);
+
+        var result = await service.AskAsync("tomatoes?", null);
+
+        Assert.False(result.IsSuccess);
+        Assert.Equal(ErrorType.InternalServerError, result.ErrorType);
+        handler.Protected().Verify("SendAsync", Times.Exactly(3), ItExpr.IsAny<HttpRequestMessage>(), ItExpr.IsAny<CancellationToken>());
+    }
+
+    [Fact]
     public async Task AskAsync_FarmerProposeUpdateListing_ReturnsActionPendingWithoutSecondHttpCall()
     {
         _currentUser.Setup(c => c.Role).Returns("Farmer");
