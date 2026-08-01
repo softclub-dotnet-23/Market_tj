@@ -3,13 +3,22 @@ using System.Net.Http.Headers;
 using System.Text.Json.Nodes;
 using MarketTJ.Application.Common;
 using MarketTJ.Application.Dto.AiAssistantDto;
+using MarketTJ.Application.Dto.CommissionDto;
+using MarketTJ.Application.Dto.CourierProfileDto;
+using MarketTJ.Application.Dto.FarmerDocumentDto;
+using MarketTJ.Application.Dto.FarmerStaffMemberDto;
+using MarketTJ.Application.Dto.FavoriteDto;
+using MarketTJ.Application.Dto.OrderDto;
 using MarketTJ.Application.Dto.ProductListingDto;
 using MarketTJ.Application.Dto.ReportedListingDto;
+using MarketTJ.Application.Dto.ReviewDto;
+using MarketTJ.Application.Dto.UserDto;
 using MarketTJ.Application.Interfaces.Repositories;
 using MarketTJ.Application.Interfaces.Services;
 using MarketTJ.Application.Results;
 using MarketTJ.Application.Services;
 using MarketTJ.Domain.Entities;
+using MarketTJ.Domain.Enums;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Logging;
 using Moq;
@@ -28,6 +37,14 @@ public class AiAssistantServiceTests
     private readonly Mock<IOrderRepository> _orderRepository = new();
     private readonly Mock<ICustomerProfileRepository> _customerProfileRepository = new();
     private readonly Mock<IDeliveryZoneRepository> _deliveryZoneRepository = new();
+    private readonly Mock<IOrderService> _orderService = new();
+    private readonly Mock<IUserService> _userService = new();
+    private readonly Mock<ICourierProfileService> _courierProfileService = new();
+    private readonly Mock<ICommissionService> _commissionService = new();
+    private readonly Mock<IFarmerDocumentService> _farmerDocumentService = new();
+    private readonly Mock<IFarmerStaffMemberService> _farmerStaffMemberService = new();
+    private readonly Mock<IFavoriteService> _favoriteService = new();
+    private readonly Mock<IReviewService> _reviewService = new();
     private readonly Mock<ICurrentUserService> _currentUser = new();
     private readonly Mock<IConfiguration> _configuration = new();
     private readonly Mock<ILogger<AiAssistantService>> _logger = new();
@@ -68,6 +85,14 @@ public class AiAssistantServiceTests
             _orderRepository.Object,
             _customerProfileRepository.Object,
             _deliveryZoneRepository.Object,
+            _orderService.Object,
+            _userService.Object,
+            _courierProfileService.Object,
+            _commissionService.Object,
+            _farmerDocumentService.Object,
+            _farmerStaffMemberService.Object,
+            _favoriteService.Object,
+            _reviewService.Object,
             _currentUser.Object,
             _configuration.Object,
             _logger.Object);
@@ -402,6 +427,344 @@ public class AiAssistantServiceTests
         Assert.False(result.IsSuccess);
         Assert.Equal(ErrorType.InternalServerError, result.ErrorType);
         handler.Protected().Verify("SendAsync", Times.Exactly(3), ItExpr.IsAny<HttpRequestMessage>(), ItExpr.IsAny<CancellationToken>());
+    }
+
+    // === Полный доступ к данным своей роли (2026-08-02) ===
+
+    [Fact]
+    public async Task AskAsync_CustomerGetMyOrders_CallsSelfFilteredOrderService()
+    {
+        // IOrderService.GetAllAsync() уже сам self-фильтрует по currentUser
+        // (проверено чтением исходника OrderService перед подключением) —
+        // здесь достаточно убедиться, что AiAssistantService зовёт именно
+        // его и корректно форматирует результат, без собственной доп.
+        // фильтрации (которая была бы дублированием и точкой рассинхрона).
+        _orderService.Setup(s => s.GetAllAsync()).ReturnsAsync(Result<IEnumerable<GetOrderDto>>.Ok(
+        [
+            new GetOrderDto { Id = 1, OrderNumber = "ORD-001", CustomerId = 7, FarmerId = 1, Status = Domain.Enums.OrderStatus.InDelivery, DeliveryAddress = "ул. Рудаки 1", Region = "Душанбе", District = "Сино", TotalAmount = 150, CreatedAt = DateTime.UtcNow }
+        ]));
+
+        var first = GroqToolCallResponse("call_1", "get_my_orders", "{}");
+        var second = GroqTextResponse("{\"intent\":\"orders\",\"message\":\"У вас один заказ ORD-001, он в пути\"}");
+        var handler = MockHandlerSequence((HttpStatusCode.OK, first), (HttpStatusCode.OK, second));
+        var service = CreateService(handler);
+
+        var result = await service.AskAsync("покажи все мои заказы", null);
+
+        Assert.True(result.IsSuccess);
+        _orderService.Verify(s => s.GetAllAsync(), Times.Once);
+    }
+
+    [Fact]
+    public async Task AskAsync_CustomerGetMyFavorites_EnrichesWithProductTitleAndPrice()
+    {
+        _favoriteService.Setup(s => s.GetAllAsync()).ReturnsAsync(Result<IEnumerable<GetFavoriteDto>>.Ok(
+        [
+            new GetFavoriteDto { Id = 1, CustomerId = 42, ProductListingId = 5, CreatedAt = DateTime.UtcNow }
+        ]));
+        _productListingRepository.Setup(r => r.GetByIdAsync(5)).ReturnsAsync(new ProductListing { Id = 5, Title = "Морковь", RetailPricePerKg = 8 });
+
+        var first = GroqToolCallResponse("call_1", "get_my_favorites", "{}");
+        var second = GroqTextResponse("{\"intent\":\"none\",\"message\":\"В избранном у вас морковь\"}");
+        var handler = MockHandlerSequence((HttpStatusCode.OK, first), (HttpStatusCode.OK, second));
+        var service = CreateService(handler);
+
+        var result = await service.AskAsync("что у меня в избранном?", null);
+
+        Assert.True(result.IsSuccess);
+        _favoriteService.Verify(s => s.GetAllAsync(), Times.Once);
+        _productListingRepository.Verify(r => r.GetByIdAsync(5), Times.Once);
+    }
+
+    [Fact]
+    public async Task AskAsync_CustomerGetMyReviews_FiltersOutOtherCustomersReviews()
+    {
+        // ReviewService.GetAllAsync() намеренно публичный (витрина отзывов
+        // фермера) — ownership-фильтрация "мои отзывы" целиком реализована
+        // внутри AiAssistantService, поэтому это единственное место, где её
+        // действительно нужно проверить юнит-тестом на утечку чужих данных.
+        _currentUser.Setup(c => c.UserId).Returns(42);
+        _customerProfileRepository.Setup(r => r.GetByUserIdAsync(42)).ReturnsAsync(new CustomerProfile { Id = 7, UserId = 42 });
+        _reviewService.Setup(s => s.GetAllAsync()).ReturnsAsync(Result<IEnumerable<GetReviewDto>>.Ok(
+        [
+            new GetReviewDto { Id = 1, CustomerId = 7, FarmerId = 1, Rating = 5, Comment = "Отлично", CreatedAt = DateTime.UtcNow },
+            new GetReviewDto { Id = 2, CustomerId = 99, FarmerId = 1, Rating = 1, Comment = "Чужой отзыв, не мой", CreatedAt = DateTime.UtcNow }
+        ]));
+
+        JsonNode? capturedToolResult = null;
+        var handler = new Mock<HttpMessageHandler>();
+        var responses = new Queue<string>(new[]
+        {
+            GroqToolCallResponse("call_1", "get_my_reviews", "{}"),
+            GroqTextResponse("{\"intent\":\"none\",\"message\":\"У вас один отзыв\"}")
+        });
+        handler.Protected()
+            .Setup<Task<HttpResponseMessage>>("SendAsync", ItExpr.IsAny<HttpRequestMessage>(), ItExpr.IsAny<CancellationToken>())
+            .Returns<HttpRequestMessage, CancellationToken>(async (req, _) =>
+            {
+                var text = await req.Content!.ReadAsStringAsync();
+                var body = JsonNode.Parse(text)!.AsObject();
+                var messages = body["messages"]!.AsArray();
+                var toolMessage = messages.FirstOrDefault(m => m!["role"]!.GetValue<string>() == "tool");
+                if (toolMessage is not null) capturedToolResult = JsonNode.Parse(toolMessage["content"]!.GetValue<string>());
+                return new HttpResponseMessage { StatusCode = HttpStatusCode.OK, Content = new StringContent(responses.Dequeue()) };
+            });
+        var service = CreateService(handler);
+
+        var result = await service.AskAsync("какие отзывы я оставлял?", null);
+
+        Assert.True(result.IsSuccess);
+        // Если бы чужой отзыв (Id=2, CustomerId=99) просочился, в массиве
+        // было бы 2 элемента вместо одного, и Id=2 присутствовал бы.
+        var reviewArray = capturedToolResult!.AsArray();
+        Assert.Single(reviewArray);
+        Assert.Equal(1, reviewArray[0]!["Id"]!.GetValue<int>());
+    }
+
+    [Fact]
+    public async Task AskAsync_CustomerGetMyProfile_ReturnsOwnProfileData()
+    {
+        _currentUser.Setup(c => c.UserId).Returns(42);
+        _customerProfileRepository.Setup(r => r.GetByUserIdAsync(42)).ReturnsAsync(
+            new CustomerProfile { Id = 7, UserId = 42, Region = "Душанбе", District = "Сино", DefaultAddress = "ул. Рудаки 1", CustomerType = CustomerType.Retail });
+
+        var first = GroqToolCallResponse("call_1", "get_my_profile", "{}");
+        var second = GroqTextResponse("{\"intent\":\"none\",\"message\":\"Ваш адрес: ул. Рудаки 1\"}");
+        var handler = MockHandlerSequence((HttpStatusCode.OK, first), (HttpStatusCode.OK, second));
+        var service = CreateService(handler);
+
+        var result = await service.AskAsync("мой профиль", null);
+
+        Assert.True(result.IsSuccess);
+        _customerProfileRepository.Verify(r => r.GetByUserIdAsync(42), Times.Once);
+    }
+
+    [Fact]
+    public async Task AskAsync_FarmerGetMyOrders_CallsSelfFilteredOrderService()
+    {
+        _currentUser.Setup(c => c.Role).Returns("Farmer");
+        _orderService.Setup(s => s.GetAllAsync()).ReturnsAsync(Result<IEnumerable<GetOrderDto>>.Ok(
+        [
+            new GetOrderDto { Id = 1, OrderNumber = "ORD-500", CustomerId = 3, FarmerId = 1, Status = Domain.Enums.OrderStatus.Pending, DeliveryAddress = "ул. Ленина 1", Region = "Хатлон", District = "Бохтар", TotalAmount = 60, CreatedAt = DateTime.UtcNow }
+        ]));
+
+        var first = GroqToolCallResponse("call_1", "get_my_orders", "{}");
+        var second = GroqTextResponse("{\"intent\":\"info\",\"message\":\"У вас один новый заказ ORD-500\"}");
+        var handler = MockHandlerSequence((HttpStatusCode.OK, first), (HttpStatusCode.OK, second));
+        var service = CreateService(handler);
+
+        var result = await service.AskAsync("какие у меня заказы?", null);
+
+        Assert.True(result.IsSuccess);
+        _orderService.Verify(s => s.GetAllAsync(), Times.Once);
+    }
+
+    [Fact]
+    public async Task AskAsync_FarmerGetMyDocuments_CallsSelfFilteredFarmerDocumentService()
+    {
+        _currentUser.Setup(c => c.Role).Returns("Farmer");
+        _farmerDocumentService.Setup(s => s.GetAllAsync()).ReturnsAsync(Result<IEnumerable<GetFarmerDocumentDto>>.Ok(
+        [
+            new GetFarmerDocumentDto { Id = 1, FarmerProfileId = 4, DocumentType = FarmerDocumentType.Passport, FileUrl = "url", Status = DocumentReviewStatus.Approved, UploadedAt = DateTime.UtcNow }
+        ]));
+
+        var first = GroqToolCallResponse("call_1", "get_my_documents", "{}");
+        var second = GroqTextResponse("{\"intent\":\"info\",\"message\":\"Ваш паспорт одобрен\"}");
+        var handler = MockHandlerSequence((HttpStatusCode.OK, first), (HttpStatusCode.OK, second));
+        var service = CreateService(handler);
+
+        var result = await service.AskAsync("мои документы", null);
+
+        Assert.True(result.IsSuccess);
+        _farmerDocumentService.Verify(s => s.GetAllAsync(), Times.Once);
+    }
+
+    [Fact]
+    public async Task AskAsync_FarmerGetVerificationStatus_ResolvesOwnProfileByCurrentUserId()
+    {
+        _currentUser.Setup(c => c.Role).Returns("Farmer");
+        _currentUser.Setup(c => c.UserId).Returns(15);
+        _farmerProfileRepository.Setup(r => r.GetByUserIdAsync(15)).ReturnsAsync(
+            new FarmerProfile { Id = 4, UserId = 15, FarmName = "Ферма Солнце", VerificationStatus = FarmerVerificationStatus.Verified, VerifiedAt = DateTime.UtcNow });
+
+        var first = GroqToolCallResponse("call_1", "get_verification_status", "{}");
+        var second = GroqTextResponse("{\"intent\":\"info\",\"message\":\"Ваш профиль подтверждён\"}");
+        var handler = MockHandlerSequence((HttpStatusCode.OK, first), (HttpStatusCode.OK, second));
+        var service = CreateService(handler);
+
+        var result = await service.AskAsync("я верифицирован?", null);
+
+        Assert.True(result.IsSuccess);
+        // Ключевая проверка владения: резолвим профиль по ID ИМЕННО текущего
+        // пользователя (15), а не по какому-то другому — нет способа узнать
+        // чужой статус верификации через этот tool.
+        _farmerProfileRepository.Verify(r => r.GetByUserIdAsync(15), Times.Once);
+    }
+
+    [Fact]
+    public async Task AskAsync_FarmerGetMyStaff_CallsSelfFilteredFarmerStaffMemberService()
+    {
+        _currentUser.Setup(c => c.Role).Returns("Farmer");
+        _farmerStaffMemberService.Setup(s => s.GetAllAsync()).ReturnsAsync(Result<IEnumerable<GetFarmerStaffMemberDto>>.Ok(
+        [
+            new GetFarmerStaffMemberDto { Id = 1, FarmerProfileId = 4, UserId = 20, Permissions = StaffPermissions.ManageProducts, IsActive = true }
+        ]));
+
+        var first = GroqToolCallResponse("call_1", "get_my_staff", "{}");
+        var second = GroqTextResponse("{\"intent\":\"info\",\"message\":\"У вас один сотрудник\"}");
+        var handler = MockHandlerSequence((HttpStatusCode.OK, first), (HttpStatusCode.OK, second));
+        var service = CreateService(handler);
+
+        var result = await service.AskAsync("мои сотрудники", null);
+
+        Assert.True(result.IsSuccess);
+        _farmerStaffMemberService.Verify(s => s.GetAllAsync(), Times.Once);
+    }
+
+    [Fact]
+    public async Task AskAsync_AdminGetAllProducts_ReturnsCatalogAcrossAllFarmers()
+    {
+        _currentUser.Setup(c => c.Role).Returns("Admin");
+        _productListingService.Setup(s => s.GetAllAsync(1, 20)).ReturnsAsync(Result<PagedResult<GetProductListingDto>>.Ok(
+            PagedResult<GetProductListingDto>.Ok(
+            [
+                new GetProductListingDto { Id = 1, FarmerProfileId = 4, Title = "Морковь", Status = ListingStatus.Active, RetailPricePerKg = 8, Region = "Хатлон" },
+                new GetProductListingDto { Id = 2, FarmerProfileId = 9, Title = "Картофель", Status = ListingStatus.Active, RetailPricePerKg = 5, Region = "Согд" }
+            ], 2, 1, 20)));
+
+        var first = GroqToolCallResponse("call_1", "get_all_products", "{}");
+        var second = GroqTextResponse("{\"intent\":\"info\",\"message\":\"В каталоге 2 товара\"}");
+        var handler = MockHandlerSequence((HttpStatusCode.OK, first), (HttpStatusCode.OK, second));
+        var service = CreateService(handler);
+
+        var result = await service.AskAsync("покажи все товары", null);
+
+        Assert.True(result.IsSuccess);
+        _productListingService.Verify(s => s.GetAllAsync(1, 20), Times.Once);
+    }
+
+    [Fact]
+    public async Task AskAsync_AdminGetAllOrders_CallsPagedServiceAcrossPlatform()
+    {
+        _currentUser.Setup(c => c.Role).Returns("Admin");
+        _orderService.Setup(s => s.GetPagedAsync(It.IsAny<PagedRequest>(), null)).ReturnsAsync(Result<PagedResult<GetOrderDto>>.Ok(
+            PagedResult<GetOrderDto>.Ok(
+            [
+                new GetOrderDto { Id = 1, OrderNumber = "ORD-1", CustomerId = 1, FarmerId = 1, Status = Domain.Enums.OrderStatus.Pending, DeliveryAddress = "a", Region = "r", District = "d", TotalAmount = 10, CreatedAt = DateTime.UtcNow },
+                new GetOrderDto { Id = 2, OrderNumber = "ORD-2", CustomerId = 2, FarmerId = 2, Status = Domain.Enums.OrderStatus.Completed, DeliveryAddress = "b", Region = "r", District = "d", TotalAmount = 20, CreatedAt = DateTime.UtcNow }
+            ], 2, 1, 20)));
+
+        var first = GroqToolCallResponse("call_1", "get_all_orders", "{}");
+        var second = GroqTextResponse("{\"intent\":\"info\",\"message\":\"На платформе 2 заказа\"}");
+        var handler = MockHandlerSequence((HttpStatusCode.OK, first), (HttpStatusCode.OK, second));
+        var service = CreateService(handler);
+
+        var result = await service.AskAsync("все заказы", null);
+
+        Assert.True(result.IsSuccess);
+        _orderService.Verify(s => s.GetPagedAsync(It.IsAny<PagedRequest>(), null), Times.Once);
+    }
+
+    [Fact]
+    public async Task AskAsync_AdminGetUsersList_FiltersByRoleWhenSpecified()
+    {
+        _currentUser.Setup(c => c.Role).Returns("Admin");
+        _userService.Setup(s => s.GetPagedAsync(It.IsAny<PagedRequest>(), UserRole.Farmer, null)).ReturnsAsync(Result<PagedResult<GetUserDto>>.Ok(
+            PagedResult<GetUserDto>.Ok(
+            [
+                new GetUserDto { Id = 4, FullName = "Фермер Иван", Email = "farmer@market.tj", PhoneNumber = "123", Role = UserRole.Farmer, IsActive = true, CreatedAt = DateTime.UtcNow, UpdatedAt = DateTime.UtcNow }
+            ], 1, 1, 20)));
+
+        var first = GroqToolCallResponse("call_1", "get_users_list", "{\"role\":\"Farmer\"}");
+        var second = GroqTextResponse("{\"intent\":\"info\",\"message\":\"Найден один фермер\"}");
+        var handler = MockHandlerSequence((HttpStatusCode.OK, first), (HttpStatusCode.OK, second));
+        var service = CreateService(handler);
+
+        var result = await service.AskAsync("покажи всех фермеров", null);
+
+        Assert.True(result.IsSuccess);
+        _userService.Verify(s => s.GetPagedAsync(It.IsAny<PagedRequest>(), UserRole.Farmer, null), Times.Once);
+    }
+
+    [Fact]
+    public async Task AskAsync_AdminGetCouriers_ReturnsCourierList()
+    {
+        _currentUser.Setup(c => c.Role).Returns("Admin");
+        _courierProfileService.Setup(s => s.GetAllAsync()).ReturnsAsync(Result<IEnumerable<GetCourierProfileDto>>.Ok(
+        [
+            new GetCourierProfileDto { Id = 1, UserId = 30, TransportType = "Car", VehicleNumber = "01A123", Region = "Душанбе", District = "Сино", IsAvailable = true, IsActive = true }
+        ]));
+
+        var first = GroqToolCallResponse("call_1", "get_couriers", "{}");
+        var second = GroqTextResponse("{\"intent\":\"info\",\"message\":\"У нас один курьер\"}");
+        var handler = MockHandlerSequence((HttpStatusCode.OK, first), (HttpStatusCode.OK, second));
+        var service = CreateService(handler);
+
+        var result = await service.AskAsync("список курьеров", null);
+
+        Assert.True(result.IsSuccess);
+        _courierProfileService.Verify(s => s.GetAllAsync(), Times.Once);
+    }
+
+    [Fact]
+    public async Task AskAsync_AdminGetCommissions_ReturnsCommissionList()
+    {
+        _currentUser.Setup(c => c.Role).Returns("Admin");
+        _commissionService.Setup(s => s.GetAllAsync()).ReturnsAsync(Result<IEnumerable<GetCommissionDto>>.Ok(
+        [
+            new GetCommissionDto { Id = 1, CategoryId = null, Percentage = 5, EffectiveFrom = DateTime.UtcNow }
+        ]));
+
+        var first = GroqToolCallResponse("call_1", "get_commissions", "{}");
+        var second = GroqTextResponse("{\"intent\":\"info\",\"message\":\"Комиссия 5%\"}");
+        var handler = MockHandlerSequence((HttpStatusCode.OK, first), (HttpStatusCode.OK, second));
+        var service = CreateService(handler);
+
+        var result = await service.AskAsync("какая у нас комиссия?", null);
+
+        Assert.True(result.IsSuccess);
+        _commissionService.Verify(s => s.GetAllAsync(), Times.Once);
+    }
+
+    [Fact]
+    public async Task AskAsync_AdminGetDeliveryZones_IncludesInactiveZonesUnlikeCustomerTool()
+    {
+        // Отличие от customer-инструмента get_delivery_info (тот показывает
+        // только активные зоны) — админу нужно видеть ВСЕ зоны, включая
+        // неактивные, чтобы ими управлять.
+        _currentUser.Setup(c => c.Role).Returns("Admin");
+        _deliveryZoneRepository.Setup(r => r.GetAllAsync()).ReturnsAsync(
+        [
+            new DeliveryZone { Id = 1, Region = "Душанбе", District = "Сино", BasePrice = 20, PricePerKm = 2, IsActive = true },
+            new DeliveryZone { Id = 2, Region = "Хатлон", District = "Бохтар", BasePrice = 15, PricePerKm = 1.5m, IsActive = false }
+        ]);
+
+        JsonNode? capturedToolResult = null;
+        var handler = new Mock<HttpMessageHandler>();
+        var responses = new Queue<string>(new[]
+        {
+            GroqToolCallResponse("call_1", "get_delivery_zones", "{}"),
+            GroqTextResponse("{\"intent\":\"info\",\"message\":\"Всего 2 зоны\"}")
+        });
+        handler.Protected()
+            .Setup<Task<HttpResponseMessage>>("SendAsync", ItExpr.IsAny<HttpRequestMessage>(), ItExpr.IsAny<CancellationToken>())
+            .Returns<HttpRequestMessage, CancellationToken>(async (req, _) =>
+            {
+                var text = await req.Content!.ReadAsStringAsync();
+                var body = JsonNode.Parse(text)!.AsObject();
+                var messages = body["messages"]!.AsArray();
+                var toolMessage = messages.FirstOrDefault(m => m!["role"]!.GetValue<string>() == "tool");
+                if (toolMessage is not null) capturedToolResult = JsonNode.Parse(toolMessage["content"]!.GetValue<string>());
+                return new HttpResponseMessage { StatusCode = HttpStatusCode.OK, Content = new StringContent(responses.Dequeue()) };
+            });
+        var service = CreateService(handler);
+
+        var result = await service.AskAsync("покажи зоны доставки", null);
+
+        Assert.True(result.IsSuccess);
+        var zoneArray = capturedToolResult!.AsArray();
+        Assert.Equal(2, zoneArray.Count);
+        Assert.Contains(zoneArray, z => z!["IsActive"]!.GetValue<bool>() == false);
     }
 
     [Fact]

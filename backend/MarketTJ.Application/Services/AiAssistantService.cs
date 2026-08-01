@@ -37,6 +37,21 @@ public class AiAssistantService(
     IOrderRepository orderRepository,
     ICustomerProfileRepository customerProfileRepository,
     IDeliveryZoneRepository deliveryZoneRepository,
+    // Добавлено 2026-08-02 по явному запросу пользователя — полный доступ к
+    // данным СВОЕЙ роли (не только к узкому набору изначальных tools). Все
+    // эти сервисы уже существовали и уже сами self-фильтруют "GetAllAsync"
+    // по currentUser для не-админов (OrderService/FavoriteService/
+    // FarmerDocumentService/FarmerStaffMemberService — проверено чтением
+    // исходников перед подключением), поэтому переиспользуются как есть, без
+    // дублирования логики владения внутри AiAssistantService.
+    IOrderService orderService,
+    IUserService userService,
+    ICourierProfileService courierProfileService,
+    ICommissionService commissionService,
+    IFarmerDocumentService farmerDocumentService,
+    IFarmerStaffMemberService farmerStaffMemberService,
+    IFavoriteService favoriteService,
+    IReviewService reviewService,
     ICurrentUserService currentUser,
     IConfiguration configuration,
     ILogger<AiAssistantService> logger) : IAiAssistantService
@@ -86,19 +101,32 @@ public class AiAssistantService(
         "вызывай инструмент, спроси номер заказа.\n" +
         "- \"есть помидоры\", \"нужны помидоры\", \"ищу помидоры\", \"продаёте ли вы помидоры\", " +
         "\"do you have tomatoes\" — во всех случаях вызови search_products(query=\"помидоры\"/" +
-        "\"tomatoes\").\n\n";
+        "\"tomatoes\").\n" +
+        "- \"покажи все мои заказы\", \"мои заказы\", \"история заказов\" (без конкретного номера) " +
+        "— вызови get_my_orders (без orderNumber).\n" +
+        "- \"что у меня в избранном\", \"мой список желаний\", \"favorites\" — вызови " +
+        "get_my_favorites.\n" +
+        "- \"какие отзывы я оставлял\", \"мои отзывы\" — вызови get_my_reviews.\n" +
+        "- \"мой адрес\", \"мой профиль\", \"мои данные\" — вызови get_my_profile.\n\n";
 
     private const string CustomerSystemPrompt =
         "Ты AI-ассистент маркетплейса Market.tj — платформы, где фермеры продают свежую " +
-        "продукцию напрямую покупателям. Общайся дружелюбно и по делу.\n\n" +
+        "продукцию напрямую покупателям. Общайся дружелюбно и по делу. У тебя есть полный " +
+        "доступ ко ВСЕМ данным ЭТОГО покупателя (его заказы, избранное, отзывы, профиль) — " +
+        "не ограничивайся только статусом одного заказа, если пользователь спрашивает шире.\n\n" +
         ResponseStyleInstruction + "\n\n" +
         IntentUnderstandingInstruction + "\n\n" +
         CustomerFewShotExamples +
         "Инструменты (вызывай, когда вопрос требует конкретных данных):\n" +
         "- search_products(query) — ищет товары в каталоге по ключевому слову.\n" +
-        "- get_order_status(orderNumber) — статус конкретного заказа текущего покупателя по " +
-        "номеру заказа (доступно только авторизованным покупателям).\n" +
-        "- get_delivery_info() — список зон доставки с базовой ценой и ценой за километр.\n\n" +
+        "- get_order_status(orderNumber) — статус ОДНОГО конкретного заказа по номеру.\n" +
+        "- get_my_orders() — список ВСЕХ заказов текущего покупателя (используй, если номер " +
+        "заказа не назван или просят показать все заказы/историю).\n" +
+        "- get_delivery_info() — список зон доставки с базовой ценой и ценой за километр.\n" +
+        "- get_my_favorites() — список товаров, добавленных покупателем в избранное.\n" +
+        "- get_my_reviews() — список отзывов, которые покупатель сам оставил на фермеров.\n" +
+        "- get_my_profile() — данные профиля покупателя (адрес по умолчанию, регион, район, " +
+        "тип покупателя).\n\n" +
         "Без инструментов, своими словами, ты также должен уметь объяснять:\n" +
         "- Как оформить заказ: добавить нужные товары в корзину на странице товара или каталога, " +
         "перейти в оформление заказа (Checkout), указать адрес доставки и подтвердить.\n" +
@@ -129,16 +157,31 @@ public class AiAssistantService(
         "случаях вызови get_dashboard.\n" +
         "- \"подними цену на картошку\" без указания, на сколько и на какое именно объявление — " +
         "не вызывай propose_update_listing с придуманными данными, сначала уточни, на какое " +
-        "объявление и до какой цены.\n\n";
+        "объявление и до какой цены.\n" +
+        "- \"какие у меня заказы\", \"что заказали покупатели\", \"новые заказы\", \"мои " +
+        "продажи\" — во всех случаях вызови get_my_orders.\n" +
+        "- \"мои документы\", \"загруженные документы\", \"статус документов\" — вызови " +
+        "get_my_documents.\n" +
+        "- \"проверили меня?\", \"я верифицирован?\", \"статус верификации\", \"когда одобрят " +
+        "профиль\" — вызови get_verification_status.\n" +
+        "- \"мои сотрудники\", \"кто у меня работает\", \"staff\", \"кому я дал доступ\" — вызови " +
+        "get_my_staff.\n\n";
 
     private const string FarmerSystemPrompt =
         "Ты AI-ассистент маркетплейса Market.tj для ФЕРМЕРА (продавца), уже авторизованного " +
-        "в системе. Общайся дружелюбно и по делу.\n\n" +
+        "в системе. Общайся дружелюбно и по делу. У тебя есть полный доступ ко ВСЕМ данным " +
+        "ЭТОГО фермера — не только к списку товаров, но и к его заказам, документам, статусу " +
+        "верификации и сотрудникам; не ограничивайся узким набором тем.\n\n" +
         ResponseStyleInstruction + "\n\n" +
         IntentUnderstandingInstruction + "\n\n" +
         FarmerFewShotExamples +
         "Инструменты: get_dashboard — сводка по моим товарам/заказам/выручке; " +
         "get_my_listings — список МОИХ объявлений (можно фильтровать по статусу); " +
+        "get_my_orders — список заказов, полученных от покупателей на мои товары (можно " +
+        "фильтровать по статусу заказа); get_my_documents — мои загруженные документы для " +
+        "верификации и статус их проверки администратором; get_verification_status — статус " +
+        "проверки (верификации) моего профиля фермера в целом; get_my_staff — список моих " +
+        "сотрудников (staff), которым я дал доступ к управлению хозяйством; " +
         "propose_update_listing — предложить изменить цену или статус ОДНОГО из МОИХ " +
         "объявлений (сам ничего не меняет — только предлагает фермеру подтвердить, " +
         "используй его как только фермер просит что-то изменить). Всегда вызывай " +
@@ -155,17 +198,39 @@ public class AiAssistantService(
         "- \"кто ждёт проверки\", \"новые фермеры\", \"верификации\" — во всех случаях вызови " +
         "get_pending_verifications.\n" +
         "- \"отклони жалобу\" без номера жалобы — не вызывай propose_resolve_report с " +
-        "придуманным reportId, сначала уточни, какую именно жалобу.\n\n";
+        "придуманным reportId, сначала уточни, какую именно жалобу.\n" +
+        "- \"покажи все товары\", \"весь каталог\", \"список объявлений\" — вызови " +
+        "get_all_products.\n" +
+        "- \"все заказы\", \"последние заказы на платформе\", \"заказы за сегодня\" — вызови " +
+        "get_all_orders.\n" +
+        "- \"список пользователей\", \"все фермеры\", \"все покупатели\", \"кто зарегистрирован\" " +
+        "— вызови get_users_list (с role, если роль явно названа).\n" +
+        "- \"курьеры\", \"список курьеров\", \"кто развозит заказы\" — вызови get_couriers.\n" +
+        "- \"комиссии\", \"какая у нас комиссия\", \"настройки комиссии\" — вызови " +
+        "get_commissions.\n" +
+        "- \"зоны доставки\", \"тарифы доставки\", \"районы доставки\" — вызови " +
+        "get_delivery_zones.\n\n";
 
     private const string AdminSystemPrompt =
         "Ты AI-ассистент маркетплейса Market.tj для АДМИНИСТРАТОРА, уже авторизованного " +
-        "в системе. Общайся дружелюбно и по делу.\n\n" +
+        "в системе. Общайся дружелюбно и по делу. Как админ, у тебя есть полный доступ ко " +
+        "ВСЕМ данным платформы — весь каталог товаров, все заказы, все пользователи, " +
+        "курьеры, комиссии, зоны доставки, а не только к жалобам и верификациям — свободно " +
+        "отвечай на вопросы по любому из этих разделов.\n\n" +
         ResponseStyleInstruction + "\n\n" +
         IntentUnderstandingInstruction + "\n\n" +
         AdminFewShotExamples +
-        "Инструменты: get_dashboard — сводка по всей платформе (заказы, выручка, " +
+        "Инструменты: get_dashboard — сводная аналитика по всей платформе (заказы, выручка, " +
         "пользователи); get_pending_verifications — фермеры, ожидающие проверки; " +
         "get_pending_reports — жалобы на объявления, ожидающие рассмотрения; " +
+        "get_all_products(status?, pageNumber?, pageSize?) — полный каталог товаров всех " +
+        "фермеров, можно фильтровать по статусу и листать страницами; " +
+        "get_all_orders(status?, pageNumber?, pageSize?) — все заказы на платформе, можно " +
+        "фильтровать по статусу и листать страницами; " +
+        "get_users_list(role?, isActive?, pageNumber?, pageSize?) — список всех " +
+        "зарегистрированных пользователей, можно фильтровать по роли и активности; " +
+        "get_couriers — список всех курьеров; get_commissions — настроенные комиссии " +
+        "платформы; get_delivery_zones — все зоны доставки (включая неактивные); " +
         "propose_resolve_report — предложить рассмотреть жалобу (Reviewed) или отклонить " +
         "(Dismissed) — сам ничего не меняет, только предлагает админу подтвердить. Всегда " +
         "вызывай подходящий инструмент, если вопрос требует данных.\n\n" +
@@ -333,6 +398,11 @@ public class AiAssistantService(
                 BuildFunctionDeclaration("get_dashboard", "Сводка по моим товарам, заказам и выручке"),
                 BuildFunctionDeclaration("get_my_listings", "Список моих объявлений, можно отфильтровать по статусу",
                     ("status", "string", new[] { "Draft", "Active", "OutOfStock", "Archived" }, false)),
+                BuildFunctionDeclaration("get_my_orders", "Список заказов, полученных от покупателей на мои товары, можно отфильтровать по статусу",
+                    ("status", "string", OrderStatusValues, false)),
+                BuildFunctionDeclaration("get_my_documents", "Мои загруженные документы для верификации и статус их проверки администратором"),
+                BuildFunctionDeclaration("get_verification_status", "Статус проверки (верификации) моего профиля фермера администратором"),
+                BuildFunctionDeclaration("get_my_staff", "Список моих сотрудников (staff), которым я дал доступ к управлению хозяйством"),
                 BuildFunctionDeclaration("propose_update_listing", "Предложить изменить цену или статус одного из моих объявлений",
                     ("listingId", "integer", null, true),
                     ("field", "string", new[] { "price", "status" }, true),
@@ -348,6 +418,22 @@ public class AiAssistantService(
                 BuildFunctionDeclaration("get_dashboard", "Сводная аналитика по всей платформе"),
                 BuildFunctionDeclaration("get_pending_verifications", "Список фермеров, ожидающих проверки"),
                 BuildFunctionDeclaration("get_pending_reports", "Список жалоб на объявления, ожидающих рассмотрения"),
+                BuildFunctionDeclaration("get_all_products", "Полный каталог товаров всех фермеров на платформе, можно фильтровать по статусу",
+                    ("status", "string", new[] { "Draft", "Active", "OutOfStock", "Archived" }, false),
+                    ("pageNumber", "integer", null, false),
+                    ("pageSize", "integer", null, false)),
+                BuildFunctionDeclaration("get_all_orders", "Все заказы на платформе, можно фильтровать по статусу",
+                    ("status", "string", OrderStatusValues, false),
+                    ("pageNumber", "integer", null, false),
+                    ("pageSize", "integer", null, false)),
+                BuildFunctionDeclaration("get_users_list", "Список всех зарегистрированных пользователей, можно фильтровать по роли и активности",
+                    ("role", "string", new[] { "Admin", "Farmer", "Customer", "Courier" }, false),
+                    ("isActive", "boolean", null, false),
+                    ("pageNumber", "integer", null, false),
+                    ("pageSize", "integer", null, false)),
+                BuildFunctionDeclaration("get_couriers", "Список всех курьеров платформы"),
+                BuildFunctionDeclaration("get_commissions", "Настроенные комиссии платформы"),
+                BuildFunctionDeclaration("get_delivery_zones", "Все зоны доставки, включая неактивные"),
                 BuildFunctionDeclaration("propose_resolve_report", "Предложить рассмотреть или отклонить жалобу на объявление",
                     ("reportId", "integer", null, true),
                     ("resolution", "string", new[] { "Reviewed", "Dismissed" }, true)),
@@ -356,16 +442,25 @@ public class AiAssistantService(
         }
 
         // Покупатель, курьер или гость (без токена) — тот же customer-flow, что и раньше,
-        // плюс статус заказа и информация о доставке (2026-08-01).
+        // плюс статус заказа и информация о доставке (2026-08-01), плюс полный доступ к
+        // своим заказам/избранному/отзывам/профилю (2026-08-02).
         var customerTools = new JsonArray
         {
             customerTool,
             BuildFunctionDeclaration("get_order_status", "Статус конкретного заказа текущего покупателя по номеру заказа",
                 ("orderNumber", "string", null, true)),
+            BuildFunctionDeclaration("get_my_orders", "Список всех заказов текущего покупателя, можно отфильтровать по статусу",
+                ("status", "string", OrderStatusValues, false)),
             BuildFunctionDeclaration("get_delivery_info", "Список зон доставки с базовой ценой и ценой за километр"),
+            BuildFunctionDeclaration("get_my_favorites", "Список товаров, добавленных покупателем в избранное"),
+            BuildFunctionDeclaration("get_my_reviews", "Список отзывов, которые покупатель сам оставил на фермеров"),
+            BuildFunctionDeclaration("get_my_profile", "Данные профиля покупателя: адрес по умолчанию, регион, район, тип покупателя"),
         };
         return (CustomerSystemPrompt, customerTools);
     }
+
+    private static readonly string[] OrderStatusValues =
+        Enum.GetNames<OrderStatus>();
 
     // Формат Groq/OpenAI: {"type":"function","function":{name,description,parameters}} —
     // отличается от Gemini обёрткой type+function, сама схема parameters та же.
@@ -414,6 +509,20 @@ public class AiAssistantService(
             "get_my_listings" => await ExecuteGetMyListingsAsync(args),
             "get_pending_verifications" => await ExecuteGetPendingVerificationsAsync(),
             "get_pending_reports" => await ExecuteGetPendingReportsAsync(),
+            // Добавлено 2026-08-02 — полный доступ к данным своей роли.
+            "get_my_orders" => await ExecuteGetMyOrdersAsync(args),
+            "get_my_favorites" => await ExecuteGetMyFavoritesAsync(),
+            "get_my_reviews" => await ExecuteGetMyReviewsAsync(),
+            "get_my_profile" => await ExecuteGetMyProfileAsync(),
+            "get_my_documents" => await ExecuteGetMyDocumentsAsync(),
+            "get_verification_status" => await ExecuteGetVerificationStatusAsync(),
+            "get_my_staff" => await ExecuteGetMyStaffAsync(),
+            "get_all_products" => await ExecuteGetAllProductsAsync(args),
+            "get_all_orders" => await ExecuteGetAllOrdersAsync(args),
+            "get_users_list" => await ExecuteGetUsersListAsync(args),
+            "get_couriers" => await ExecuteGetCouriersAsync(),
+            "get_commissions" => await ExecuteGetCommissionsAsync(),
+            "get_delivery_zones" => await ExecuteGetAllDeliveryZonesAsync(),
             _ => "Неизвестный инструмент"
         };
 
@@ -509,6 +618,218 @@ public class AiAssistantService(
             .Select(r => new { r.Id, r.ProductListingId, Reason = r.Reason.ToString(), r.Comment, r.CreatedAt })
             .ToList();
         return items.Count == 0 ? "Нет жалоб, ожидающих рассмотрения" : JsonSerializer.Serialize(items);
+    }
+
+    // === Полный доступ к данным своей роли (2026-08-02) ===
+    // get_my_orders переиспользуется и Farmer, и Customer — IOrderService.GetAllAsync()
+    // уже сам self-фильтрует по currentUser (не-админ видит только заказы, где он
+    // покупатель ИЛИ фермер, см. OrderService.GetAllAsync), поэтому один и тот же
+    // код безопасен для обеих ролей без дублирования проверки владения.
+
+    private async Task<string> ExecuteGetMyOrdersAsync(JsonNode? args)
+    {
+        var result = await orderService.GetAllAsync();
+        if (!result.IsSuccess) return "Не удалось получить список заказов";
+
+        var orders = result.Data!.AsEnumerable();
+        var statusFilter = args?["status"]?.GetValue<string>();
+        if (!string.IsNullOrWhiteSpace(statusFilter) && Enum.TryParse<OrderStatus>(statusFilter, out var status))
+        {
+            orders = orders.Where(o => o.Status == status);
+        }
+
+        var list = orders
+            .Select(o => new { o.OrderNumber, Status = o.Status.ToString(), o.CustomerFullName, o.TotalAmount, o.DeliveryAddress, o.CreatedAt })
+            .ToList();
+        return list.Count == 0 ? "Заказов с такими параметрами нет" : JsonSerializer.Serialize(list);
+    }
+
+    private async Task<string> ExecuteGetMyFavoritesAsync()
+    {
+        var result = await favoriteService.GetAllAsync();
+        if (!result.IsSuccess) return "Не удалось получить список избранного";
+
+        var favorites = result.Data!.ToList();
+        if (favorites.Count == 0) return "В избранном пока пусто";
+
+        var enriched = new List<object>();
+        foreach (var f in favorites)
+        {
+            var listing = await productListingRepository.GetByIdAsync(f.ProductListingId);
+            enriched.Add(new { f.ProductListingId, Title = listing?.Title, Price = listing?.RetailPricePerKg });
+        }
+        return JsonSerializer.Serialize(enriched);
+    }
+
+    private async Task<string> ExecuteGetMyReviewsAsync()
+    {
+        if (currentUser.UserId is null) return "Нет доступа";
+        var profile = await customerProfileRepository.GetByUserIdAsync(currentUser.UserId.Value);
+        if (profile is null) return "Профиль покупателя не найден";
+
+        // ReviewService.GetAllAsync() намеренно публичный/нефильтрованный
+        // (витрина отзывов фермера) — фильтруем на "мои" здесь сами.
+        var result = await reviewService.GetAllAsync();
+        if (!result.IsSuccess) return "Не удалось получить список отзывов";
+
+        var mine = result.Data!.Where(r => r.CustomerId == profile.Id)
+            .Select(r => new { r.Id, r.FarmerId, r.Rating, r.Comment, r.CreatedAt })
+            .ToList();
+        return mine.Count == 0 ? "Вы пока не оставляли отзывов" : JsonSerializer.Serialize(mine);
+    }
+
+    private async Task<string> ExecuteGetMyProfileAsync()
+    {
+        if (currentUser.UserId is null) return "Нет доступа";
+        var profile = await customerProfileRepository.GetByUserIdAsync(currentUser.UserId.Value);
+        if (profile is null) return "Профиль покупателя не найден";
+
+        return JsonSerializer.Serialize(new
+        {
+            CustomerType = profile.CustomerType.ToString(),
+            profile.DefaultAddress,
+            profile.Region,
+            profile.District
+        });
+    }
+
+    private async Task<string> ExecuteGetMyDocumentsAsync()
+    {
+        var result = await farmerDocumentService.GetAllAsync();
+        if (!result.IsSuccess) return "Не удалось получить список документов";
+
+        var list = result.Data!
+            .Select(d => new { DocumentType = d.DocumentType.ToString(), Status = d.Status.ToString(), d.UploadedAt, d.RejectionReason })
+            .ToList();
+        return list.Count == 0 ? "Документы не загружены" : JsonSerializer.Serialize(list);
+    }
+
+    private async Task<string> ExecuteGetVerificationStatusAsync()
+    {
+        if (currentUser.UserId is null) return "Нет доступа";
+        var profile = await farmerProfileRepository.GetByUserIdAsync(currentUser.UserId.Value);
+        if (profile is null) return "Профиль фермера не найден";
+
+        return JsonSerializer.Serialize(new
+        {
+            profile.FarmName,
+            Status = profile.VerificationStatus.ToString(),
+            profile.VerifiedAt
+        });
+    }
+
+    private async Task<string> ExecuteGetMyStaffAsync()
+    {
+        var result = await farmerStaffMemberService.GetAllAsync();
+        if (!result.IsSuccess) return "Не удалось получить список сотрудников";
+
+        var list = result.Data!
+            .Select(s => new { s.Id, s.UserId, Permissions = s.Permissions.ToString(), s.IsActive })
+            .ToList();
+        return list.Count == 0 ? "Сотрудников пока нет" : JsonSerializer.Serialize(list);
+    }
+
+    // === Полный доступ ко всем данным платформы для Admin (2026-08-02) ===
+    // pageSize намеренно ограничен сверху (20) даже если модель попросит больше —
+    // иначе один ответ инструмента может раздуть промпт на тысячи токенов.
+
+    private async Task<string> ExecuteGetAllProductsAsync(JsonNode? args)
+    {
+        var pageNumber = args?["pageNumber"]?.GetValue<int>() ?? 1;
+        var pageSize = Math.Min(args?["pageSize"]?.GetValue<int>() ?? 20, 20);
+
+        var result = await productListingService.GetAllAsync(pageNumber, pageSize);
+        if (!result.IsSuccess) return "Не удалось получить список товаров";
+
+        var items = result.Data!.Items.AsEnumerable();
+        var statusFilter = args?["status"]?.GetValue<string>();
+        if (!string.IsNullOrWhiteSpace(statusFilter) && Enum.TryParse<ListingStatus>(statusFilter, out var status))
+        {
+            items = items.Where(i => i.Status == status);
+        }
+
+        var list = items
+            .Select(i => new { i.Id, i.Title, i.FarmerProfileId, Status = i.Status.ToString(), i.RetailPricePerKg, i.AvailableQuantity, i.Region })
+            .ToList();
+        return list.Count == 0
+            ? "Товаров с такими параметрами нет"
+            : JsonSerializer.Serialize(new { result.Data.TotalCount, Items = list });
+    }
+
+    private async Task<string> ExecuteGetAllOrdersAsync(JsonNode? args)
+    {
+        var pageNumber = args?["pageNumber"]?.GetValue<int>() ?? 1;
+        var pageSize = Math.Min(args?["pageSize"]?.GetValue<int>() ?? 20, 20);
+        OrderStatus? status = null;
+        var statusStr = args?["status"]?.GetValue<string>();
+        if (!string.IsNullOrWhiteSpace(statusStr) && Enum.TryParse<OrderStatus>(statusStr, out var parsedStatus))
+        {
+            status = parsedStatus;
+        }
+
+        var result = await orderService.GetPagedAsync(new PagedRequest { PageNumber = pageNumber, PageSize = pageSize }, status);
+        if (!result.IsSuccess) return "Не удалось получить список заказов";
+
+        var list = result.Data!.Items
+            .Select(o => new { o.OrderNumber, Status = o.Status.ToString(), o.CustomerFullName, o.TotalAmount, o.Region, o.District, o.CreatedAt })
+            .ToList();
+        return list.Count == 0
+            ? "Заказов с такими параметрами нет"
+            : JsonSerializer.Serialize(new { result.Data.TotalCount, Items = list });
+    }
+
+    private async Task<string> ExecuteGetUsersListAsync(JsonNode? args)
+    {
+        var pageNumber = args?["pageNumber"]?.GetValue<int>() ?? 1;
+        var pageSize = Math.Min(args?["pageSize"]?.GetValue<int>() ?? 20, 20);
+        UserRole? role = null;
+        var roleStr = args?["role"]?.GetValue<string>();
+        if (!string.IsNullOrWhiteSpace(roleStr) && Enum.TryParse<UserRole>(roleStr, out var parsedRole))
+        {
+            role = parsedRole;
+        }
+        var isActive = args?["isActive"]?.GetValue<bool>();
+
+        var result = await userService.GetPagedAsync(new PagedRequest { PageNumber = pageNumber, PageSize = pageSize }, role, isActive);
+        if (!result.IsSuccess) return "Не удалось получить список пользователей";
+
+        var list = result.Data!.Items
+            .Select(u => new { u.Id, u.FullName, u.Email, Role = u.Role.ToString(), u.IsActive, u.CreatedAt })
+            .ToList();
+        return list.Count == 0
+            ? "Пользователей с такими параметрами нет"
+            : JsonSerializer.Serialize(new { result.Data.TotalCount, Items = list });
+    }
+
+    private async Task<string> ExecuteGetCouriersAsync()
+    {
+        var result = await courierProfileService.GetAllAsync();
+        if (!result.IsSuccess) return "Не удалось получить список курьеров";
+
+        var list = result.Data!
+            .Select(c => new { c.Id, c.TransportType, c.VehicleNumber, c.Region, c.District, c.IsAvailable, c.IsActive })
+            .ToList();
+        return list.Count == 0 ? "Курьеров пока нет" : JsonSerializer.Serialize(list);
+    }
+
+    private async Task<string> ExecuteGetCommissionsAsync()
+    {
+        var result = await commissionService.GetAllAsync();
+        if (!result.IsSuccess) return "Не удалось получить список комиссий";
+
+        var list = result.Data!
+            .Select(c => new { c.Id, c.CategoryId, c.Percentage, c.EffectiveFrom, c.EffectiveTo })
+            .ToList();
+        return list.Count == 0 ? "Комиссии не настроены" : JsonSerializer.Serialize(list);
+    }
+
+    private async Task<string> ExecuteGetAllDeliveryZonesAsync()
+    {
+        var zones = await deliveryZoneRepository.GetAllAsync();
+        var list = zones
+            .Select(z => new { z.Id, z.Region, z.District, z.BasePrice, z.PricePerKm, z.IsActive })
+            .ToList();
+        return list.Count == 0 ? "Зоны доставки не настроены" : JsonSerializer.Serialize(list);
     }
 
     // === propose_* — формируют AssistantActionDto напрямую, без второго round-trip ===
