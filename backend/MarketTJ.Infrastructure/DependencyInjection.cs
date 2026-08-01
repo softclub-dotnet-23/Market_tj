@@ -13,7 +13,7 @@ namespace MarketTJ.Infrastructure;
 
 public static class DependencyInjection
 {
-    public static IServiceCollection AddInfrastructureServices(this IServiceCollection services, IConfiguration configuration)
+    public static IServiceCollection AddInfrastructureServices(this IServiceCollection services, IConfiguration configuration, bool isDevelopment)
     {
         var connectionString = configuration.GetConnectionString("DefaultConnection");
 
@@ -60,7 +60,24 @@ public static class DependencyInjection
         services.AddScoped<IDailySalesSnapshotRepository, DailySalesSnapshotRepository>();
         services.AddScoped<IAnalyticsRepository, AnalyticsRepository>();
         services.AddScoped<IEmailVerificationCodeRepository, EmailVerificationCodeRepository>();
-        services.AddScoped<IEmailSender, SmtpEmailSender>();
+
+        // Railway блокирует исходящий SMTP (порт 587) — прямой SmtpClient до
+        // smtp.gmail.com с прода никогда не подключается (таймаут, не ошибка
+        // конфигурации). Локально SMTP работает нормально, поэтому в Development
+        // оставлен SmtpEmailSender как есть; в остальных окружениях (Production
+        // на Railway) — Resend через HTTPS API, egress-блокировка на него не
+        // распространяется.
+        if (isDevelopment)
+        {
+            services.AddScoped<IEmailSender, SmtpEmailSender>();
+        }
+        else
+        {
+            services.AddHttpClient<IEmailSender, ResendEmailSender>(client =>
+            {
+                client.Timeout = TimeSpan.FromSeconds(15);
+            });
+        }
 
         return services;
     }

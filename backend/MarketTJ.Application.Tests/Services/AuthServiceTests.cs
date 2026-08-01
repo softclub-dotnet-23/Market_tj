@@ -6,6 +6,7 @@ using MarketTJ.Application.Results;
 using MarketTJ.Application.Services;
 using MarketTJ.Domain.Entities;
 using MarketTJ.Domain.Enums;
+using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Logging;
 using Moq;
 
@@ -17,12 +18,13 @@ public class AuthServiceTests
     private readonly Mock<IRefreshTokenRepository> _refreshTokenRepository = new();
     private readonly Mock<ITokenService> _tokenService = new();
     private readonly Mock<IEmailVerificationService> _emailVerificationService = new();
+    private readonly Mock<IConfiguration> _configuration = new();
     private readonly Mock<ILogger<AuthService>> _logger = new();
     private readonly AuthService _service;
 
     public AuthServiceTests()
     {
-        _service = new AuthService(_userRepository.Object, _refreshTokenRepository.Object, _tokenService.Object, _emailVerificationService.Object, _logger.Object);
+        _service = new AuthService(_userRepository.Object, _refreshTokenRepository.Object, _tokenService.Object, _emailVerificationService.Object, _configuration.Object, _logger.Object);
         _tokenService.Setup(t => t.GenerateToken(It.IsAny<User>())).Returns("access-token");
         _tokenService.Setup(t => t.GenerateRefreshToken()).Returns("refresh-token");
         _tokenService.Setup(t => t.AccessTokenExpiryMinutes).Returns(60);
@@ -80,6 +82,21 @@ public class AuthServiceTests
         Assert.False(result.IsSuccess);
         Assert.Equal(ErrorType.Validation, result.ErrorType);
         _userRepository.Verify(r => r.AddAsync(It.IsAny<User>()), Times.Never);
+    }
+
+    [Fact]
+    public async Task RegisterAsync_VerificationNotRequired_SkipsCheckAndRegisters()
+    {
+        _configuration.Setup(c => c["EmailVerification:RequireVerification"]).Returns("false");
+        _userRepository.Setup(r => r.GetByEmailAsync(It.IsAny<string>())).ReturnsAsync((User?)null);
+        _userRepository.Setup(r => r.AddAsync(It.IsAny<User>())).Callback<User>(u => u.Id = 42).Returns(Task.CompletedTask);
+        _emailVerificationService.Setup(e => e.IsEmailVerifiedAsync(It.IsAny<string>())).ReturnsAsync(false);
+
+        var result = await _service.RegisterAsync(ValidRegisterDto());
+
+        Assert.True(result.IsSuccess);
+        _userRepository.Verify(r => r.AddAsync(It.IsAny<User>()), Times.Once);
+        _emailVerificationService.Verify(e => e.IsEmailVerifiedAsync(It.IsAny<string>()), Times.Never);
     }
 
     [Fact]
