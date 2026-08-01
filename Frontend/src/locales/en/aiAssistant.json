@@ -1,0 +1,23 @@
+{
+  "open": "Open",
+  "close": "Close AI assistant",
+  "title": "AI Assistant",
+  "subtitle": "Helps you find products",
+  "subtitleFarmer": "Your products, orders and revenue",
+  "subtitleAdmin": "Platform analytics and moderation",
+  "greeting": "Hi! Tell me what you're looking for — e.g. \"fresh tomatoes\" or \"my order\" — and I'll help you find it.",
+  "greetingFarmer": "Hi! Ask me things like \"how many active orders do I have\" or \"show my low-stock listings\" — I can also change a listing's price or status for you, on request.",
+  "greetingAdmin": "Hi! Ask me things like \"how many farmers are awaiting verification\" or \"any new reports\" — I can also resolve a report for you, on request.",
+  "placeholder": "Ask something…",
+  "send": "Send",
+  "thinking": "Searching…",
+  "error": "The AI assistant is temporarily unavailable. Please try again later.",
+  "viewCategory": "View catalog section",
+  "viewCart": "Go to checkout",
+  "viewOrders": "My orders",
+  "confirm": "Confirm",
+  "cancel": "Cancel",
+  "executing": "Working…",
+  "actionCancelled": "Cancelled",
+  "actionDone": "Done"
+}

@@ -156,41 +156,22 @@
     "rejectSuccess": "Деҳқон рад карда шуд",
     "actionError": "Ҳолат тағйир дода нашуд"
   },
-  "farmerDocuments": {
-    "errorTitle": "Ҳуҷҷатҳо бор нашуданд",
-    "errorDescription": "Пайвастшавии худро ба сервер санҷед ва аз нав кӯшиш кунед.",
-    "emptyTitle": "Ҳанӯз ҳуҷҷат нест",
-    "emptyDescription": "Дар ин ҷо ҳуҷҷатҳои аз тарафи деҳқонон боркардашуда барои тафтиш пайдо мешаванд.",
-    "columns": {
-      "farmer": "Деҳқон",
-      "type": "Навъи ҳуҷҷат",
-      "status": "Ҳолат",
-      "rejectionReason": "Сабаби рад кардан",
-      "uploadedAt": "Санаи боркунӣ",
-      "actions": "Амалҳо"
-    },
-    "farmerLabel": "Деҳқон #{{id}}",
-    "type": {
-      "passport": "Шиноснома",
-      "landDeed": "Ҳуҷҷати замин",
-      "other": "Дигар"
-    },
-    "status": {
-      "pending": "Дар тафтиш",
-      "approved": "Тасдиқшуда",
-      "rejected": "Рад шуда"
-    },
-    "viewAction": "Кушодани файл",
-    "approveAction": "Тасдиқ кардан",
-    "rejectAction": "Рад кардан",
-    "approveSuccess": "Ҳуҷҷат тасдиқ карда шуд",
-    "rejectSuccess": "Ҳуҷҷат рад карда шуд",
-    "actionError": "Ҳолати ҳуҷҷат тағйир дода нашуд",
-    "rejectModalTitle": "Сабаби рад кардан",
-    "form": {
-      "reason": "Сабаби рад кардан",
-      "reasonRequired": "Сабабро нишон диҳед",
-      "cancel": "Бекор кардан"
+  "farmerDetail": {
+    "back": "Бозгашт ба рӯйхати деҳқонон",
+    "registeredAt": "Сабт шудааст {{date}}",
+    "ownerName": "Соҳиб: {{name}}",
+    "documentsTitle": "Ҳуҷҷатҳо",
+    "productsTitle": "Маҳсулот",
+    "soldCount": "{{count}} {{unit}} фурӯхта шуд",
+    "stats": {
+      "totalProducts": "Ҳамаи маҳсулот",
+      "activeProducts": "Маҳсулоти фаъол",
+      "totalOrders": "Фармоишҳои гирифташуда",
+      "ordersThisMonth": "Фармоишҳо дар ин моҳ",
+      "totalRevenue": "Даромад дар тамоми давра",
+      "revenueThisMonth": "Даромад дар ин моҳ",
+      "rating": "Баҳои миёна",
+      "documents": "Ҳуҷҷатҳо"
     }
   },
   "catalog": {

@@ -98,4 +98,45 @@ public class AnalyticsServiceTests
         Assert.False(result.IsSuccess);
         Assert.Equal(ErrorType.InternalServerError, result.ErrorType);
     }
+
+    // ---------- GetFarmerDashboardByProfileIdAsync (админская карточка фермера) ----------
+    // В отличие от метода выше, id профиля приходит напрямую (из маршрута), а
+    // не резолвится по UserId — доступ ограничен ролью Admin на контроллере.
+
+    [Fact]
+    public async Task GetFarmerDashboardByProfileIdAsync_ProfileExists_ReturnsDashboard()
+    {
+        var profile = CreateFarmerProfile(id: 3, userId: 10);
+        _farmerProfileRepository.Setup(r => r.GetByIdAsync(3)).ReturnsAsync(profile);
+        _analyticsRepository.Setup(r => r.GetFarmerDashboardAsync(3)).ReturnsAsync(new FarmerDashboardDto { TotalOwnProducts = 7 });
+
+        var result = await _service.GetFarmerDashboardByProfileIdAsync(3);
+
+        Assert.True(result.IsSuccess);
+        Assert.Equal(7, result.Data!.TotalOwnProducts);
+        _analyticsRepository.Verify(r => r.GetFarmerDashboardAsync(3), Times.Once);
+    }
+
+    [Fact]
+    public async Task GetFarmerDashboardByProfileIdAsync_ProfileMissing_ReturnsNotFound()
+    {
+        _farmerProfileRepository.Setup(r => r.GetByIdAsync(It.IsAny<int>())).ReturnsAsync((FarmerProfile?)null);
+
+        var result = await _service.GetFarmerDashboardByProfileIdAsync(99);
+
+        Assert.False(result.IsSuccess);
+        Assert.Equal(ErrorType.NotFound, result.ErrorType);
+        _analyticsRepository.Verify(r => r.GetFarmerDashboardAsync(It.IsAny<int>()), Times.Never);
+    }
+
+    [Fact]
+    public async Task GetFarmerDashboardByProfileIdAsync_RepositoryThrows_ReturnsInternalServerError()
+    {
+        _farmerProfileRepository.Setup(r => r.GetByIdAsync(It.IsAny<int>())).ThrowsAsync(new Exception("db error"));
+
+        var result = await _service.GetFarmerDashboardByProfileIdAsync(3);
+
+        Assert.False(result.IsSuccess);
+        Assert.Equal(ErrorType.InternalServerError, result.ErrorType);
+    }
 }

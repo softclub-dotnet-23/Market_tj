@@ -13,7 +13,7 @@
     "DefaultConnection": "Host=localhost;Port=5432;Database=markettj;Username=postgres;Password=CHANGE_ME_LOCALLY",
     "RedisCache": "localhost:6379"
   },
-  "Anthropic": {
+  "Gemini": {
     "ApiKey": ""
   },
 

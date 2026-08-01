@@ -150,41 +150,22 @@
     "rejectSuccess": "Farmer rejected",
     "actionError": "Failed to change status"
   },
-  "farmerDocuments": {
-    "errorTitle": "Failed to load documents",
-    "errorDescription": "Check your connection to the server and try again.",
-    "emptyTitle": "No documents yet",
-    "emptyDescription": "Documents uploaded by farmers for review will appear here.",
-    "columns": {
-      "farmer": "Farmer",
-      "type": "Document type",
-      "status": "Status",
-      "rejectionReason": "Rejection reason",
-      "uploadedAt": "Upload date",
-      "actions": "Actions"
-    },
-    "farmerLabel": "Farmer #{{id}}",
-    "type": {
-      "passport": "Passport",
-      "landDeed": "Land deed",
-      "other": "Other"
-    },
-    "status": {
-      "pending": "Under review",
-      "approved": "Approved",
-      "rejected": "Rejected"
-    },
-    "viewAction": "Open file",
-    "approveAction": "Approve",
-    "rejectAction": "Reject",
-    "approveSuccess": "Document approved",
-    "rejectSuccess": "Document rejected",
-    "actionError": "Failed to change document status",
-    "rejectModalTitle": "Rejection reason",
-    "form": {
-      "reason": "Rejection reason",
-      "reasonRequired": "Enter a rejection reason",
-      "cancel": "Cancel"
+  "farmerDetail": {
+    "back": "Back to farmers list",
+    "registeredAt": "Registered {{date}}",
+    "ownerName": "Owner: {{name}}",
+    "documentsTitle": "Documents",
+    "productsTitle": "Products",
+    "soldCount": "{{count}} {{unit}} sold",
+    "stats": {
+      "totalProducts": "Total products",
+      "activeProducts": "Active products",
+      "totalOrders": "Orders received",
+      "ordersThisMonth": "Orders this month",
+      "totalRevenue": "Total revenue",
+      "revenueThisMonth": "Revenue this month",
+      "rating": "Average rating",
+      "documents": "Documents"
     }
   },
   "catalog": {

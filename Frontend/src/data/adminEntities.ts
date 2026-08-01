@@ -73,6 +73,7 @@ export interface AdminFarmerDto {
   village: string;
   address: string;
   description: string | null;
+  avatarUrl: string | null;
   verificationStatus: number;
   verifiedAt: string | null;
   verifiedByAdminId: number | null;
@@ -290,6 +291,17 @@ export function useAdminFarmers(refreshKey = 0) {
   return { farmers: data, loading, error };
 }
 
+// Карточка одного фермера в админке (/admin/farmers/:id) — прямой запрос по
+// id, а не поиск внутри уже загрученного useAdminFarmers(), т.к. страницу
+// можно открыть напрямую по ссылке, минуя список.
+export function useAdminFarmerById(farmerProfileId: number | null, refreshKey = 0) {
+  const { data, loading, error } = useAsync(
+    () => (farmerProfileId ? apiGet<AdminFarmerDto>(`/farmer-profiles/${farmerProfileId}`) : Promise.resolve(null as never)),
+    [farmerProfileId, refreshKey],
+  );
+  return { farmer: data, loading, error };
+}
+
 // Справочник категорий и базовых товаров (/api/categories, /api/products) —
 // из него фермер выбирает при создании объявления (см. useProductCatalog в
 // data/farmer.ts). Управляется только Admin.
@@ -411,6 +423,43 @@ export function reviewFarmerDocument(id: number, status: number, rejectionReason
 export function useAdminAnalytics() {
   const { data, loading, error } = useAsync(() => apiGet<AdminAnalyticsDto>("/analytics/admin/dashboard"), []);
   return { analytics: data, loading, error };
+}
+
+// Аналитика по КОНКРЕТНОМУ фермеру для его карточки в админке (сколько
+// продал, сколько получил). Отдельный Admin-only эндпоинт — /analytics/farmer/dashboard
+// умышленно берёт фермера только из JWT и админу не подходит (раздел 16 ТЗ).
+export interface AdminFarmerDashboardDto {
+  totalOwnProducts: number;
+  activeProducts: number;
+  totalOrdersReceived: number;
+  ordersThisMonth: number;
+  totalRevenue: number;
+  revenueThisMonth: number;
+  topSellingOwnProducts: TopSellingProductDto[];
+  revenueByMonth: MonthlyRevenueDto[];
+  averageRating: number | null;
+}
+
+export function useAdminFarmerDashboard(farmerProfileId: number | null, refreshKey = 0) {
+  const { data, loading, error } = useAsync(
+    () =>
+      farmerProfileId
+        ? apiGet<AdminFarmerDashboardDto>(`/analytics/admin/farmers/${farmerProfileId}/dashboard`)
+        : Promise.resolve(null as never),
+    [farmerProfileId, refreshKey],
+  );
+  return { dashboard: data, loading, error };
+}
+
+// Учётные данные фермера (email/телефон) — их нет в FarmerProfile, они лежат
+// в связанном User. Тот же Admin-only GET /api/users/{id}, что и для своей
+// учётки админа (см. useAdminOwnUser ниже) — ограничения "свой/чужой" там нет.
+export function useAdminUserById(userId: number | null, refreshKey = 0) {
+  const { data, loading, error } = useAsync(
+    () => (userId ? apiGet<AdminUserDto>(`/users/${userId}`) : Promise.resolve(null as never)),
+    [userId, refreshKey],
+  );
+  return { account: data, loading, error };
 }
 
 // --- Мутации (раздел 19 ТЗ — стандартный CRUD, уже готовый на бэкенде) ---

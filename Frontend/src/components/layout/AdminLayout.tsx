@@ -13,7 +13,6 @@ import {
   LogOut,
   Menu,
   MessageSquare,
-  Package,
   Search,
   Settings,
   ShoppingCart,
@@ -57,7 +56,6 @@ export function useAdminSearch(): string {
 const NAV_ITEMS: AdminNavItem[] = [
   { labelKey: "overview", path: "/admin", icon: LayoutDashboard, section: "overview" },
   { labelKey: "orders", path: "/admin/orders", icon: ShoppingCart, section: "management" },
-  { labelKey: "products", path: "/admin/products", icon: Package, section: "management" },
   { labelKey: "catalog", path: "/admin/catalog", icon: Tags, section: "management" },
   { labelKey: "farmers", path: "/admin/farmers", icon: Sprout, section: "management" },
   { labelKey: "farmerDocuments", path: "/admin/farmer-documents", icon: FileText, section: "management" },
