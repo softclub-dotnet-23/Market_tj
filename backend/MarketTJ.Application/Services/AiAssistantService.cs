@@ -34,6 +34,9 @@ public class AiAssistantService(
     IFarmerProfileService farmerProfileService,
     IReportedListingService reportedListingService,
     IAnalyticsService analyticsService,
+    IOrderRepository orderRepository,
+    ICustomerProfileRepository customerProfileRepository,
+    IDeliveryZoneRepository deliveryZoneRepository,
     ICurrentUserService currentUser,
     IConfiguration configuration,
     ILogger<AiAssistantService> logger) : IAiAssistantService
@@ -43,37 +46,76 @@ public class AiAssistantService(
     private const string Model = "llama-3.3-70b-versatile";
     private const string ApiUrl = "https://api.groq.com/openai/v1/chat/completions";
 
+    // Общие для всех трёх ролей требования к тону ответа (2026-08-01, по явному
+    // запросу пользователя) — без этого модель иногда отвечала однословно
+    // ("помидоры") и не на языке вопроса. Placeholder {0} — специфика роли.
+    private const string ResponseStyleInstruction =
+        "ЯЗЫК ОТВЕТА: всегда отвечай на том же языке, на котором задан вопрос пользователя " +
+        "(русский/таджикский/английский или другой) — определяй язык по тексту самого вопроса, " +
+        "а не по каким-либо настройкам аккаунта. Поле message должно быть полностью на этом " +
+        "языке. ПОЛНОТА ОТВЕТА: message — это полное развёрнутое предложение (или несколько), " +
+        "которое реально отвечает на вопрос. Никогда не отвечай одним словом или обрывком фразы " +
+        "(плохо: \"помидоры\"; хорошо: \"Да, у нас есть свежие помидоры от нескольких фермеров — " +
+        "вот что нашлось: ...\"). Если вызывал инструмент — перескажи полученные данные своими " +
+        "словами понятно и по-человечески, а не просто перечисли сырые цифры.";
+
     private const string CustomerSystemPrompt =
-        "Ты ассистент маркетплейса Market.tj. Определи что ищет пользователь, " +
-        "вызови search_products с ключевым словом, и верни СТРОГО JSON без markdown: " +
-        "{\"intent\":\"product|category|cart|orders|none\",\"productId\":null,\"categoryId\":null,\"message\":\"\"}. " +
-        "product — один явный товар. category — несколько товаров одной категории. " +
-        "cart/orders — если просит корзину/заказы. none — если не понял, message должен объяснить.";
+        "Ты AI-ассистент маркетплейса Market.tj — платформы, где фермеры продают свежую " +
+        "продукцию напрямую покупателям. Общайся дружелюбно и по делу.\n\n" +
+        ResponseStyleInstruction + "\n\n" +
+        "Инструменты (вызывай, когда вопрос требует конкретных данных):\n" +
+        "- search_products(query) — ищет товары в каталоге по ключевому слову.\n" +
+        "- get_order_status(orderNumber) — статус конкретного заказа текущего покупателя по " +
+        "номеру заказа (доступно только авторизованным покупателям).\n" +
+        "- get_delivery_info() — список зон доставки с базовой ценой и ценой за километр.\n\n" +
+        "Без инструментов, своими словами, ты также должен уметь объяснять:\n" +
+        "- Как оформить заказ: добавить нужные товары в корзину на странице товара или каталога, " +
+        "перейти в оформление заказа (Checkout), указать адрес доставки и подтвердить.\n" +
+        "- Где посмотреть свои заказы: в личном кабинете покупателя, раздел «Мои заказы» — " +
+        "используй intent=\"orders\", чтобы показать кнопку перехода туда.\n" +
+        "- Как работает доставка: курьер забирает товар у фермера и привозит по адресу " +
+        "покупателя; стоимость зависит от региона/района — если пользователь спрашивает про " +
+        "конкретную стоимость или зоны, вызови get_delivery_info.\n" +
+        "- Как стать фермером: зарегистрироваться на платформе с ролью «Фермер» на странице " +
+        "регистрации, заполнить профиль хозяйства (название, регион, район, адрес), после чего " +
+        "аккаунт проходит проверку администратором — до подтверждения объявления публиковать " +
+        "нельзя.\n\n" +
+        "Верни СТРОГО JSON без markdown: {\"intent\":\"product|category|cart|orders|none\"," +
+        "\"productId\":null,\"categoryId\":null,\"message\":\"\"}. product — когда речь про " +
+        "один явный товар (после search_products, если нашёлся единственный явный кандидат — " +
+        "заполни productId). category — несколько товаров одной категории. cart — если просит " +
+        "перейти в корзину/оформить заказ. orders — если просит показать свои заказы или " +
+        "спрашивает про статус заказа. none — для всех остальных вопросов (доставка, " +
+        "регистрация фермера, общие вопросы о платформе) — message должен содержать полный " +
+        "ответ.";
 
     private const string FarmerSystemPrompt =
-        "Ты ассистент маркетплейса Market.tj для ФЕРМЕРА (продавца), уже авторизованного " +
-        "в системе. Инструменты: get_dashboard — сводка по моим товарам/заказам/выручке; " +
+        "Ты AI-ассистент маркетплейса Market.tj для ФЕРМЕРА (продавца), уже авторизованного " +
+        "в системе. Общайся дружелюбно и по делу.\n\n" +
+        ResponseStyleInstruction + "\n\n" +
+        "Инструменты: get_dashboard — сводка по моим товарам/заказам/выручке; " +
         "get_my_listings — список МОИХ объявлений (можно фильтровать по статусу); " +
         "propose_update_listing — предложить изменить цену или статус ОДНОГО из МОИХ " +
         "объявлений (сам ничего не меняет — только предлагает фермеру подтвердить, " +
         "используй его как только фермер просит что-то изменить). Всегда вызывай " +
-        "подходящий инструмент, если вопрос требует данных. После ответа get_dashboard " +
-        "или get_my_listings верни СТРОГО JSON без markdown: {\"intent\":\"info\",\"message\":" +
-        "\"<краткий ответ на языке пользователя по полученным данным>\"}. Если инструмент не " +
-        "нужен — тоже верни {\"intent\":\"info\",\"message\":\"...\"}.";
+        "подходящий инструмент, если вопрос требует данных.\n\n" +
+        "Верни СТРОГО JSON без markdown: {\"intent\":\"info\",\"message\":\"<полный развёрнутый " +
+        "ответ на языке пользователя по полученным данным>\"}. Если инструмент не нужен — " +
+        "тоже верни {\"intent\":\"info\",\"message\":\"...\"}.";
 
     private const string AdminSystemPrompt =
-        "Ты ассистент маркетплейса Market.tj для АДМИНИСТРАТОРА, уже авторизованного " +
-        "в системе. Инструменты: get_dashboard — сводка по всей платформе (заказы, " +
-        "выручка, пользователи); get_pending_verifications — фермеры, ожидающие проверки; " +
+        "Ты AI-ассистент маркетплейса Market.tj для АДМИНИСТРАТОРА, уже авторизованного " +
+        "в системе. Общайся дружелюбно и по делу.\n\n" +
+        ResponseStyleInstruction + "\n\n" +
+        "Инструменты: get_dashboard — сводка по всей платформе (заказы, выручка, " +
+        "пользователи); get_pending_verifications — фермеры, ожидающие проверки; " +
         "get_pending_reports — жалобы на объявления, ожидающие рассмотрения; " +
         "propose_resolve_report — предложить рассмотреть жалобу (Reviewed) или отклонить " +
         "(Dismissed) — сам ничего не меняет, только предлагает админу подтвердить. Всегда " +
-        "вызывай подходящий инструмент, если вопрос требует данных. После ответа " +
-        "get_dashboard/get_pending_verifications/get_pending_reports верни СТРОГО JSON без " +
-        "markdown: {\"intent\":\"info\",\"message\":\"<краткий ответ на языке пользователя по " +
-        "полученным данным>\"}. Если инструмент не нужен — тоже верни {\"intent\":\"info\"," +
-        "\"message\":\"...\"}.";
+        "вызывай подходящий инструмент, если вопрос требует данных.\n\n" +
+        "Верни СТРОГО JSON без markdown: {\"intent\":\"info\",\"message\":\"<полный развёрнутый " +
+        "ответ на языке пользователя по полученным данным>\"}. Если инструмент не нужен — " +
+        "тоже верни {\"intent\":\"info\",\"message\":\"...\"}.";
 
     public async Task<Result<AssistantResponseDto>> AskAsync(string message)
     {
@@ -227,8 +269,16 @@ public class AiAssistantService(
             return (AdminSystemPrompt, tools);
         }
 
-        // Покупатель, курьер или гость (без токена) — тот же customer-flow, что и раньше.
-        return (CustomerSystemPrompt, new JsonArray { customerTool });
+        // Покупатель, курьер или гость (без токена) — тот же customer-flow, что и раньше,
+        // плюс статус заказа и информация о доставке (2026-08-01).
+        var customerTools = new JsonArray
+        {
+            customerTool,
+            BuildFunctionDeclaration("get_order_status", "Статус конкретного заказа текущего покупателя по номеру заказа",
+                ("orderNumber", "string", null, true)),
+            BuildFunctionDeclaration("get_delivery_info", "Список зон доставки с базовой ценой и ценой за километр"),
+        };
+        return (CustomerSystemPrompt, customerTools);
     }
 
     // Формат Groq/OpenAI: {"type":"function","function":{name,description,parameters}} —
@@ -272,6 +322,8 @@ public class AiAssistantService(
         => functionName switch
         {
             "search_products" => await ExecuteSearchProductsAsync(args),
+            "get_order_status" => await ExecuteGetOrderStatusAsync(args),
+            "get_delivery_info" => await ExecuteGetDeliveryInfoAsync(),
             "get_dashboard" => await ExecuteGetDashboardAsync(),
             "get_my_listings" => await ExecuteGetMyListingsAsync(args),
             "get_pending_verifications" => await ExecuteGetPendingVerificationsAsync(),
@@ -286,6 +338,38 @@ public class AiAssistantService(
         return found.Count == 0
             ? "Ничего не найдено"
             : JsonSerializer.Serialize(found.Select(p => new { p.Id, p.Title, p.RetailPricePerKg }));
+    }
+
+    private async Task<string> ExecuteGetOrderStatusAsync(JsonNode? args)
+    {
+        if (currentUser.UserId is null) return "Нет доступа";
+        var profile = await customerProfileRepository.GetByUserIdAsync(currentUser.UserId.Value);
+        if (profile is null) return "Профиль покупателя не найден";
+
+        var orderNumber = args?["orderNumber"]?.GetValue<string>()?.Trim();
+        if (string.IsNullOrWhiteSpace(orderNumber)) return "Не указан номер заказа";
+
+        var all = await orderRepository.GetAllAsync();
+        var order = all.FirstOrDefault(o => o.CustomerId == profile.Id && string.Equals(o.OrderNumber, orderNumber, StringComparison.OrdinalIgnoreCase));
+        if (order is null) return "Заказ с таким номером не найден среди ваших заказов";
+
+        return JsonSerializer.Serialize(new
+        {
+            order.OrderNumber,
+            Status = order.Status.ToString(),
+            order.TotalAmount,
+            order.DeliveryAddress,
+            order.CreatedAt
+        });
+    }
+
+    private async Task<string> ExecuteGetDeliveryInfoAsync()
+    {
+        var zones = await deliveryZoneRepository.GetAllAsync();
+        var active = zones.Where(z => z.IsActive)
+            .Select(z => new { z.Region, z.District, z.BasePrice, z.PricePerKm })
+            .ToList();
+        return active.Count == 0 ? "Информация о зонах доставки пока не настроена" : JsonSerializer.Serialize(active);
     }
 
     private async Task<string> ExecuteGetDashboardAsync()

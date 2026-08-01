@@ -25,6 +25,9 @@ public class AiAssistantServiceTests
     private readonly Mock<IFarmerProfileService> _farmerProfileService = new();
     private readonly Mock<IReportedListingService> _reportedListingService = new();
     private readonly Mock<IAnalyticsService> _analyticsService = new();
+    private readonly Mock<IOrderRepository> _orderRepository = new();
+    private readonly Mock<ICustomerProfileRepository> _customerProfileRepository = new();
+    private readonly Mock<IDeliveryZoneRepository> _deliveryZoneRepository = new();
     private readonly Mock<ICurrentUserService> _currentUser = new();
     private readonly Mock<IConfiguration> _configuration = new();
     private readonly Mock<ILogger<AiAssistantService>> _logger = new();
@@ -62,6 +65,9 @@ public class AiAssistantServiceTests
             _farmerProfileService.Object,
             _reportedListingService.Object,
             _analyticsService.Object,
+            _orderRepository.Object,
+            _customerProfileRepository.Object,
+            _deliveryZoneRepository.Object,
             _currentUser.Object,
             _configuration.Object,
             _logger.Object);
@@ -230,6 +236,49 @@ public class AiAssistantServiceTests
         Assert.NotNull(secondMessages[2]!["tool_calls"]);
         Assert.Equal("tool", secondMessages[3]!["role"]!.GetValue<string>());
         Assert.Equal("call_abc", secondMessages[3]!["tool_call_id"]!.GetValue<string>());
+    }
+
+    [Fact]
+    public async Task AskAsync_CustomerGetOrderStatus_FiltersByOwnCustomerProfileAndOrderNumber()
+    {
+        _currentUser.Setup(c => c.UserId).Returns(42);
+        _customerProfileRepository.Setup(r => r.GetByUserIdAsync(42)).ReturnsAsync(new CustomerProfile { Id = 7, UserId = 42 });
+        _orderRepository.Setup(r => r.GetAllAsync()).ReturnsAsync(
+        [
+            new Order { Id = 1, OrderNumber = "ORD-001", CustomerId = 7, Status = Domain.Enums.OrderStatus.InDelivery, TotalAmount = 150, DeliveryAddress = "ул. Рудаки 1" },
+            new Order { Id = 2, OrderNumber = "ORD-002", CustomerId = 999, Status = Domain.Enums.OrderStatus.Completed, TotalAmount = 50, DeliveryAddress = "elsewhere" }
+        ]);
+
+        var first = GroqToolCallResponse("call_4", "get_order_status", "{\"orderNumber\":\"ORD-001\"}");
+        var second = GroqTextResponse("{\"intent\":\"orders\",\"message\":\"Ваш заказ ORD-001 в пути\"}");
+        var handler = MockHandlerSequence((HttpStatusCode.OK, first), (HttpStatusCode.OK, second));
+        var service = CreateService(handler);
+
+        var result = await service.AskAsync("где мой заказ ORD-001?");
+
+        Assert.True(result.IsSuccess);
+        Assert.Equal("orders", result.Data!.Intent);
+        _orderRepository.Verify(r => r.GetAllAsync(), Times.Once);
+    }
+
+    [Fact]
+    public async Task AskAsync_CustomerGetDeliveryInfo_ReturnsOnlyActiveZones()
+    {
+        _deliveryZoneRepository.Setup(r => r.GetAllAsync()).ReturnsAsync(
+        [
+            new DeliveryZone { Id = 1, Region = "Душанбе", District = "Сино", BasePrice = 20, PricePerKm = 2, IsActive = true },
+            new DeliveryZone { Id = 2, Region = "Хатлон", District = "Бохтар", BasePrice = 15, PricePerKm = 1.5m, IsActive = false }
+        ]);
+
+        var first = GroqToolCallResponse("call_5", "get_delivery_info", "{}");
+        var second = GroqTextResponse("{\"intent\":\"none\",\"message\":\"Доставка по Душанбе стоит от 20 сомони\"}");
+        var handler = MockHandlerSequence((HttpStatusCode.OK, first), (HttpStatusCode.OK, second));
+        var service = CreateService(handler);
+
+        var result = await service.AskAsync("сколько стоит доставка?");
+
+        Assert.True(result.IsSuccess);
+        _deliveryZoneRepository.Verify(r => r.GetAllAsync(), Times.Once);
     }
 
     [Fact]
