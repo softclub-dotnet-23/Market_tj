@@ -16,11 +16,19 @@ export interface AssistantResponseDto {
   action: AssistantActionDto | null;
 }
 
+export interface AssistantHistoryMessageDto {
+  role: "user" | "assistant";
+  text: string;
+}
+
 // POST /api/ai-assistant/ask (раздел 38 ТЗ) — доступен и без авторизации
 // (гость получает только поиск по каталогу); фермер/админ получают
-// дополнительные инструменты по своей роли, если токен передан.
-export function askAssistant(message: string) {
-  return apiPost<AssistantResponseDto>("/ai-assistant/ask", { message });
+// дополнительные инструменты по своей роли, если токен передан. history —
+// предыдущие реплики ЭТОГО диалога (без нового вопроса) — без неё каждый
+// запрос был изолирован, и ассистент не понимал уточняющих вопросов вроде
+// "а когда?" после "статус заказа ORD-123" (см. AiAssistantWidget.tsx).
+export function askAssistant(message: string, history?: AssistantHistoryMessageDto[]) {
+  return apiPost<AssistantResponseDto>("/ai-assistant/ask", { message, history });
 }
 
 // POST /api/ai-assistant/execute-action — требует авторизации. Выполняет

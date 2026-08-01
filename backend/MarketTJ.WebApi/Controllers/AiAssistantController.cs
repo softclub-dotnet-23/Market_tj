@@ -16,7 +16,7 @@ public class AiAssistantController(IAiAssistantService aiAssistantService) : Api
     // сервиса и приведение Result<T> к единому формату ответа (раздел 20).
     [HttpPost("ask")]
     public async Task<IActionResult> Ask([FromBody] AskAssistantDto dto)
-        => HandleResult(await aiAssistantService.AskAsync(dto.Message));
+        => HandleResult(await aiAssistantService.AskAsync(dto.Message, dto.History));
 
     // В отличие от Ask() — требует авторизации: здесь выполняется реальная
     // мутация (изменение цены/статуса объявления, решение по жалобе),

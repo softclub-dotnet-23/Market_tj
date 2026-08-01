@@ -119,7 +119,7 @@ public class AiAssistantServiceTests
         var handler = MockHandler(HttpStatusCode.OK, "{}");
         var service = CreateService(handler, apiKey: null);
 
-        var result = await service.AskAsync("hello");
+        var result = await service.AskAsync("hello", null);
 
         Assert.False(result.IsSuccess);
         Assert.Equal(ErrorType.InternalServerError, result.ErrorType);
@@ -133,7 +133,7 @@ public class AiAssistantServiceTests
         var handler = MockHandler(HttpStatusCode.OK, body);
         var service = CreateService(handler);
 
-        var result = await service.AskAsync("what?");
+        var result = await service.AskAsync("what?", null);
 
         Assert.True(result.IsSuccess);
         Assert.Equal("none", result.Data!.Intent);
@@ -147,7 +147,7 @@ public class AiAssistantServiceTests
         var handler = MockHandler(HttpStatusCode.OK, body);
         var service = CreateService(handler);
 
-        var result = await service.AskAsync("what?");
+        var result = await service.AskAsync("what?", null);
 
         Assert.True(result.IsSuccess);
         Assert.Equal("ok", result.Data!.Message);
@@ -170,16 +170,80 @@ public class AiAssistantServiceTests
             .ReturnsAsync(new HttpResponseMessage { StatusCode = HttpStatusCode.OK, Content = new StringContent(GroqTextResponse("{\"intent\":\"none\",\"message\":\"ok\"}")) });
         var service = CreateService(handler, apiKey: "secret-groq-key");
 
-        await service.AskAsync("tomatoes");
+        await service.AskAsync("tomatoes", null);
 
         Assert.Equal("https://api.groq.com/openai/v1/chat/completions", captured!.RequestUri!.ToString());
         Assert.Equal("Bearer", captured.Headers.Authorization!.Scheme);
         Assert.Equal("secret-groq-key", captured.Headers.Authorization!.Parameter);
         Assert.Equal("llama-3.3-70b-versatile", capturedBody!["model"]!.GetValue<string>());
+        Assert.Equal(0.3, capturedBody["temperature"]!.GetValue<double>());
         var messages = capturedBody["messages"]!.AsArray();
         Assert.Equal("system", messages[0]!["role"]!.GetValue<string>());
         Assert.Equal("user", messages[1]!["role"]!.GetValue<string>());
         Assert.Equal("tomatoes", messages[1]!["content"]!.GetValue<string>());
+    }
+
+    [Fact]
+    public async Task AskAsync_WithHistory_IncludesPriorTurnsBeforeCurrentMessage()
+    {
+        JsonObject? capturedBody = null;
+        var handler = new Mock<HttpMessageHandler>();
+        handler.Protected()
+            .Setup<Task<HttpResponseMessage>>("SendAsync", ItExpr.IsAny<HttpRequestMessage>(), ItExpr.IsAny<CancellationToken>())
+            .Callback<HttpRequestMessage, CancellationToken>((req, _) =>
+            {
+                var text = req.Content!.ReadAsStringAsync().GetAwaiter().GetResult();
+                capturedBody = JsonNode.Parse(text)!.AsObject();
+            })
+            .ReturnsAsync(new HttpResponseMessage { StatusCode = HttpStatusCode.OK, Content = new StringContent(GroqTextResponse("{\"intent\":\"none\",\"message\":\"ok\"}")) });
+        var service = CreateService(handler);
+
+        var history = new List<AssistantHistoryMessageDto>
+        {
+            new() { Role = "user", Text = "статус заказа ORD-001?" },
+            new() { Role = "assistant", Text = "Заказ ORD-001 в пути." }
+        };
+
+        await service.AskAsync("а когда придёт?", history);
+
+        var messages = capturedBody!["messages"]!.AsArray();
+        // system, history[0], history[1], current user message
+        Assert.Equal(4, messages.Count);
+        Assert.Equal("user", messages[1]!["role"]!.GetValue<string>());
+        Assert.Equal("статус заказа ORD-001?", messages[1]!["content"]!.GetValue<string>());
+        Assert.Equal("assistant", messages[2]!["role"]!.GetValue<string>());
+        Assert.Equal("Заказ ORD-001 в пути.", messages[2]!["content"]!.GetValue<string>());
+        Assert.Equal("user", messages[3]!["role"]!.GetValue<string>());
+        Assert.Equal("а когда придёт?", messages[3]!["content"]!.GetValue<string>());
+    }
+
+    [Fact]
+    public async Task AskAsync_WithLongHistory_TruncatesToLastTenMessages()
+    {
+        JsonObject? capturedBody = null;
+        var handler = new Mock<HttpMessageHandler>();
+        handler.Protected()
+            .Setup<Task<HttpResponseMessage>>("SendAsync", ItExpr.IsAny<HttpRequestMessage>(), ItExpr.IsAny<CancellationToken>())
+            .Callback<HttpRequestMessage, CancellationToken>((req, _) =>
+            {
+                var text = req.Content!.ReadAsStringAsync().GetAwaiter().GetResult();
+                capturedBody = JsonNode.Parse(text)!.AsObject();
+            })
+            .ReturnsAsync(new HttpResponseMessage { StatusCode = HttpStatusCode.OK, Content = new StringContent(GroqTextResponse("{\"intent\":\"none\",\"message\":\"ok\"}")) });
+        var service = CreateService(handler);
+
+        var history = Enumerable.Range(1, 20)
+            .Select(i => new AssistantHistoryMessageDto { Role = i % 2 == 0 ? "assistant" : "user", Text = $"msg{i}" })
+            .ToList();
+
+        await service.AskAsync("current", history);
+
+        var messages = capturedBody!["messages"]!.AsArray();
+        // system + last 10 history messages + current
+        Assert.Equal(12, messages.Count);
+        Assert.Equal("msg11", messages[1]!["content"]!.GetValue<string>());
+        Assert.Equal("msg20", messages[10]!["content"]!.GetValue<string>());
+        Assert.Equal("current", messages[11]!["content"]!.GetValue<string>());
     }
 
     [Fact]
@@ -195,7 +259,7 @@ public class AiAssistantServiceTests
         var handler = MockHandlerSequence((HttpStatusCode.OK, first), (HttpStatusCode.OK, second));
         var service = CreateService(handler);
 
-        var result = await service.AskAsync("tomatoes?");
+        var result = await service.AskAsync("tomatoes?", null);
 
         Assert.True(result.IsSuccess);
         Assert.Equal("product", result.Data!.Intent);
@@ -226,7 +290,7 @@ public class AiAssistantServiceTests
             });
         var service = CreateService(handler);
 
-        await service.AskAsync("tomatoes?");
+        await service.AskAsync("tomatoes?", null);
 
         Assert.Equal(2, capturedBodies.Count);
         var secondMessages = capturedBodies[1]["messages"]!.AsArray();
@@ -254,7 +318,7 @@ public class AiAssistantServiceTests
         var handler = MockHandlerSequence((HttpStatusCode.OK, first), (HttpStatusCode.OK, second));
         var service = CreateService(handler);
 
-        var result = await service.AskAsync("где мой заказ ORD-001?");
+        var result = await service.AskAsync("где мой заказ ORD-001?", null);
 
         Assert.True(result.IsSuccess);
         Assert.Equal("orders", result.Data!.Intent);
@@ -275,7 +339,7 @@ public class AiAssistantServiceTests
         var handler = MockHandlerSequence((HttpStatusCode.OK, first), (HttpStatusCode.OK, second));
         var service = CreateService(handler);
 
-        var result = await service.AskAsync("сколько стоит доставка?");
+        var result = await service.AskAsync("сколько стоит доставка?", null);
 
         Assert.True(result.IsSuccess);
         _deliveryZoneRepository.Verify(r => r.GetAllAsync(), Times.Once);
@@ -291,7 +355,7 @@ public class AiAssistantServiceTests
         var handler = MockHandler(HttpStatusCode.OK, body);
         var service = CreateService(handler);
 
-        var result = await service.AskAsync("подними цену на картофель до 20");
+        var result = await service.AskAsync("подними цену на картофель до 20", null);
 
         Assert.True(result.IsSuccess);
         Assert.Equal("action_pending", result.Data!.Intent);
@@ -310,7 +374,7 @@ public class AiAssistantServiceTests
         var handler = MockHandler(HttpStatusCode.OK, body);
         var service = CreateService(handler);
 
-        var result = await service.AskAsync("отклони жалобу 9");
+        var result = await service.AskAsync("отклони жалобу 9", null);
 
         Assert.True(result.IsSuccess);
         Assert.Equal("action_pending", result.Data!.Intent);
@@ -324,7 +388,7 @@ public class AiAssistantServiceTests
         var handler = MockHandler(HttpStatusCode.TooManyRequests, "{\"error\":{\"message\":\"rate limited\"}}");
         var service = CreateService(handler);
 
-        var result = await service.AskAsync("tomatoes?");
+        var result = await service.AskAsync("tomatoes?", null);
 
         Assert.False(result.IsSuccess);
         Assert.Equal(ErrorType.InternalServerError, result.ErrorType);
@@ -336,7 +400,7 @@ public class AiAssistantServiceTests
         var handler = MockHandler(HttpStatusCode.OK, """{"choices":[{"message":{"role":"assistant","content":null}}]}""");
         var service = CreateService(handler);
 
-        var result = await service.AskAsync("tomatoes?");
+        var result = await service.AskAsync("tomatoes?", null);
 
         Assert.False(result.IsSuccess);
         Assert.Equal(ErrorType.InternalServerError, result.ErrorType);
@@ -350,7 +414,7 @@ public class AiAssistantServiceTests
         var handler = MockHandlerSequence((HttpStatusCode.BadRequest, toolUseFailedBody), (HttpStatusCode.OK, successBody));
         var service = CreateService(handler);
 
-        var result = await service.AskAsync("tomatoes?");
+        var result = await service.AskAsync("tomatoes?", null);
 
         Assert.True(result.IsSuccess);
         Assert.Equal("ok after retry", result.Data!.Message);
@@ -368,7 +432,7 @@ public class AiAssistantServiceTests
         var handler = MockHandler(HttpStatusCode.BadRequest, failedGenerationBody);
         var service = CreateService(handler);
 
-        var result = await service.AskAsync("tomatoes?");
+        var result = await service.AskAsync("tomatoes?", null);
 
         Assert.True(result.IsSuccess);
         Assert.Equal("category", result.Data!.Intent);
@@ -387,7 +451,7 @@ public class AiAssistantServiceTests
             (HttpStatusCode.OK, fallbackBody));
         var service = CreateService(handler);
 
-        var result = await service.AskAsync("tomatoes?");
+        var result = await service.AskAsync("tomatoes?", null);
 
         Assert.True(result.IsSuccess);
         Assert.Equal("answered without tools", result.Data!.Message);
@@ -404,7 +468,7 @@ public class AiAssistantServiceTests
             (HttpStatusCode.BadRequest, toolUseFailedBody));
         var service = CreateService(handler);
 
-        var result = await service.AskAsync("tomatoes?");
+        var result = await service.AskAsync("tomatoes?", null);
 
         Assert.False(result.IsSuccess);
         Assert.Equal(ErrorType.InternalServerError, result.ErrorType);
@@ -418,7 +482,7 @@ public class AiAssistantServiceTests
         var handler = MockHandler(HttpStatusCode.BadRequest, otherErrorBody);
         var service = CreateService(handler);
 
-        var result = await service.AskAsync("tomatoes?");
+        var result = await service.AskAsync("tomatoes?", null);
 
         Assert.False(result.IsSuccess);
         handler.Protected().Verify("SendAsync", Times.Once(), ItExpr.IsAny<HttpRequestMessage>(), ItExpr.IsAny<CancellationToken>());

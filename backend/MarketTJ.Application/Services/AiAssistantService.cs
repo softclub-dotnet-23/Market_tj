@@ -59,10 +59,41 @@ public class AiAssistantService(
         "вот что нашлось: ...\"). Если вызывал инструмент — перескажи полученные данные своими " +
         "словами понятно и по-человечески, а не просто перечисли сырые цифры.";
 
+    // Добавлено 2026-08-02 по явному запросу пользователя — ассистент иногда
+    // отвечал не по смыслу вопроса, если тот был сформулирован нестандартно.
+    private const string IntentUnderstandingInstruction =
+        "ПОНИМАНИЕ ВОПРОСА: прежде чем отвечать или вызывать инструмент, определи истинную " +
+        "цель (намерение) вопроса пользователя по смыслу, а не по буквальному совпадению слов. " +
+        "Один и тот же запрос пользователь может сформулировать совершенно по-разному: другой " +
+        "порядок слов, сокращения, опечатки, разговорный стиль, неполная фраза. Ориентируйся на " +
+        "смысл, а не на точный текст. НЕДОСТАЮЩИЕ ДАННЫЕ: если для ответа не хватает конкретной " +
+        "детали (например, спрашивают статус заказа, но не назвали номер) — НЕ угадывай и НЕ " +
+        "вызывай инструмент с придуманным значением. Вместо этого верни ответ с intent, " +
+        "подходящим для обычного информационного сообщения (для покупателя — \"none\", для " +
+        "фермера/админа — \"info\"), и вежливо попроси именно эту недостающую деталь на языке " +
+        "вопроса.";
+
+    // Разные формулировки одного и того же намерения "статус заказа" — по
+    // явному запросу пользователя (2026-08-02), т.к. это самый частый случай,
+    // где ассистент отвечал невпопад на нестандартную фразировку.
+    private const string CustomerFewShotExamples =
+        "ПРИМЕРЫ (разные формулировки одного и того же намерения — во всех случаях реакция " +
+        "должна быть одинаковой):\n" +
+        "- \"где заказ ORD-123\", \"статус заказа ORD-123\", \"когда придёт мой заказ ORD-123\", " +
+        "\"ORD-123 где\", \"track ORD-123\", \"фармоиши ORD-123 дар кучост\" — во всех случаях " +
+        "вызови get_order_status(orderNumber=\"ORD-123\").\n" +
+        "- \"статус заказа\" (без номера), \"где мой заказ\" (без номера) — номера нет, НЕ " +
+        "вызывай инструмент, спроси номер заказа.\n" +
+        "- \"есть помидоры\", \"нужны помидоры\", \"ищу помидоры\", \"продаёте ли вы помидоры\", " +
+        "\"do you have tomatoes\" — во всех случаях вызови search_products(query=\"помидоры\"/" +
+        "\"tomatoes\").\n\n";
+
     private const string CustomerSystemPrompt =
         "Ты AI-ассистент маркетплейса Market.tj — платформы, где фермеры продают свежую " +
         "продукцию напрямую покупателям. Общайся дружелюбно и по делу.\n\n" +
         ResponseStyleInstruction + "\n\n" +
+        IntentUnderstandingInstruction + "\n\n" +
+        CustomerFewShotExamples +
         "Инструменты (вызывай, когда вопрос требует конкретных данных):\n" +
         "- search_products(query) — ищет товары в каталоге по ключевому слову.\n" +
         "- get_order_status(orderNumber) — статус конкретного заказа текущего покупателя по " +
@@ -89,10 +120,23 @@ public class AiAssistantService(
         "регистрация фермера, общие вопросы о платформе) — message должен содержать полный " +
         "ответ.";
 
+    private const string FarmerFewShotExamples =
+        "ПРИМЕРЫ (разные формулировки одного и того же намерения — во всех случаях реакция " +
+        "должна быть одинаковой):\n" +
+        "- \"покажи мои товары\", \"какие у меня объявления\", \"мои листинги\", \"что я " +
+        "продаю\" — во всех случаях вызови get_my_listings.\n" +
+        "- \"как дела с продажами\", \"сколько я заработал\", \"сводка\", \"дашборд\" — во всех " +
+        "случаях вызови get_dashboard.\n" +
+        "- \"подними цену на картошку\" без указания, на сколько и на какое именно объявление — " +
+        "не вызывай propose_update_listing с придуманными данными, сначала уточни, на какое " +
+        "объявление и до какой цены.\n\n";
+
     private const string FarmerSystemPrompt =
         "Ты AI-ассистент маркетплейса Market.tj для ФЕРМЕРА (продавца), уже авторизованного " +
         "в системе. Общайся дружелюбно и по делу.\n\n" +
         ResponseStyleInstruction + "\n\n" +
+        IntentUnderstandingInstruction + "\n\n" +
+        FarmerFewShotExamples +
         "Инструменты: get_dashboard — сводка по моим товарам/заказам/выручке; " +
         "get_my_listings — список МОИХ объявлений (можно фильтровать по статусу); " +
         "propose_update_listing — предложить изменить цену или статус ОДНОГО из МОИХ " +
@@ -103,10 +147,22 @@ public class AiAssistantService(
         "ответ на языке пользователя по полученным данным>\"}. Если инструмент не нужен — " +
         "тоже верни {\"intent\":\"info\",\"message\":\"...\"}.";
 
+    private const string AdminFewShotExamples =
+        "ПРИМЕРЫ (разные формулировки одного и того же намерения — во всех случаях реакция " +
+        "должна быть одинаковой):\n" +
+        "- \"жалобы\", \"есть жалобы?\", \"покажи жалобы на модерацию\", \"что на рассмотрении\" " +
+        "— во всех случаях вызови get_pending_reports.\n" +
+        "- \"кто ждёт проверки\", \"новые фермеры\", \"верификации\" — во всех случаях вызови " +
+        "get_pending_verifications.\n" +
+        "- \"отклони жалобу\" без номера жалобы — не вызывай propose_resolve_report с " +
+        "придуманным reportId, сначала уточни, какую именно жалобу.\n\n";
+
     private const string AdminSystemPrompt =
         "Ты AI-ассистент маркетплейса Market.tj для АДМИНИСТРАТОРА, уже авторизованного " +
         "в системе. Общайся дружелюбно и по делу.\n\n" +
         ResponseStyleInstruction + "\n\n" +
+        IntentUnderstandingInstruction + "\n\n" +
+        AdminFewShotExamples +
         "Инструменты: get_dashboard — сводка по всей платформе (заказы, выручка, " +
         "пользователи); get_pending_verifications — фермеры, ожидающие проверки; " +
         "get_pending_reports — жалобы на объявления, ожидающие рассмотрения; " +
@@ -117,7 +173,12 @@ public class AiAssistantService(
         "ответ на языке пользователя по полученным данным>\"}. Если инструмент не нужен — " +
         "тоже верни {\"intent\":\"info\",\"message\":\"...\"}.";
 
-    public async Task<Result<AssistantResponseDto>> AskAsync(string message)
+    // Сколько последних реплик истории учитывать (не считая текущего вопроса) —
+    // ограничение и на размер запроса к Groq, и на то, чтобы старый контекст
+    // не перевешивал сам текущий вопрос. 10 реплик = 5 пар вопрос/ответ.
+    private const int MaxHistoryMessages = 10;
+
+    public async Task<Result<AssistantResponseDto>> AskAsync(string message, List<AssistantHistoryMessageDto>? history)
     {
         try
         {
@@ -133,9 +194,22 @@ public class AiAssistantService(
 
             var messages = new JsonArray
             {
-                new JsonObject { ["role"] = "system", ["content"] = systemPrompt },
-                new JsonObject { ["role"] = "user", ["content"] = message }
+                new JsonObject { ["role"] = "system", ["content"] = systemPrompt }
             };
+
+            // История добавлена 2026-08-02 — раньше каждый запрос был изолирован,
+            // и ассистент "не помнил" предыдущий вопрос в этом же диалоге (см.
+            // AiAssistantWidget.tsx — фронтенд теперь передаёт её сюда).
+            if (history is not null)
+            {
+                foreach (var h in history.TakeLast(MaxHistoryMessages))
+                {
+                    var historyRole = h.Role == "assistant" ? "assistant" : "user";
+                    messages.Add(new JsonObject { ["role"] = historyRole, ["content"] = h.Text });
+                }
+            }
+
+            messages.Add(new JsonObject { ["role"] = "user", ["content"] = message });
 
             var response = await SendToGroqAsync(apiKey, tools, messages);
             var responseMessage = GetFirstChoiceMessage(response);
@@ -670,7 +744,11 @@ public class AiAssistantService(
         var requestBody = new JsonObject
         {
             ["model"] = Model,
-            ["messages"] = messages.DeepClone()
+            ["messages"] = messages.DeepClone(),
+            // Ниже дефолта (1.0) — предсказуемые, точные ответы важнее
+            // "творческих" формулировок для справочного ассистента маркетплейса
+            // (2026-08-02, по явному запросу пользователя).
+            ["temperature"] = 0.3
         };
         if (tools is not null)
         {
