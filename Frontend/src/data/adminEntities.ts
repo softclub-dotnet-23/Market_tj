@@ -132,6 +132,37 @@ export interface AdminSettingDto {
   updatedAt: string;
 }
 
+export interface AdminCommissionDto {
+  id: number;
+  categoryId: number | null;
+  percentage: number;
+  effectiveFrom: string;
+  effectiveTo: string | null;
+  createdAt: string;
+}
+
+export interface AdminCourierDto {
+  id: number;
+  userId: number;
+  transportType: string;
+  vehicleNumber: string;
+  region: string;
+  district: string;
+  isAvailable: boolean;
+  isActive: boolean;
+  createdAt: string;
+}
+
+export interface AdminDeliveryZoneDto {
+  id: number;
+  region: string;
+  district: string;
+  basePrice: number;
+  pricePerKm: number | null;
+  isActive: boolean;
+  createdAt: string;
+}
+
 export interface TopSellingProductDto {
   productName: string;
   quantitySold: number;
@@ -349,6 +380,21 @@ export function useAdminReviews(refreshKey = 0) {
   return { reviews: data, loading, error };
 }
 
+export function useAdminCommissions(refreshKey = 0) {
+  const { data, loading, error } = useAsync(() => apiGet<AdminCommissionDto[]>("/commissions"), [refreshKey]);
+  return { commissions: data, loading, error };
+}
+
+export function useAdminCouriers(refreshKey = 0) {
+  const { data, loading, error } = useAsync(() => apiGet<AdminCourierDto[]>("/courier-profiles"), [refreshKey]);
+  return { couriers: data, loading, error };
+}
+
+export function useAdminDeliveryZones(refreshKey = 0) {
+  const { data, loading, error } = useAsync(() => apiGet<AdminDeliveryZoneDto[]>("/delivery-zones"), [refreshKey]);
+  return { zones: data, loading, error };
+}
+
 export function useAdminSettings(refreshKey = 0) {
   const { data, loading, error } = useAsync(() => apiGet<AdminSettingDto[]>("/app-settings"), [refreshKey]);
   return { settings: data, loading, error };
@@ -483,6 +529,25 @@ export function updateFarmerVerification(farmer: AdminFarmerDto, verificationSta
   });
 }
 
+export interface CommissionFormDto {
+  categoryId: number | null;
+  percentage: number;
+  effectiveFrom: string;
+  effectiveTo: string | null;
+}
+
+export function createCommission(dto: CommissionFormDto) {
+  return apiPost<string>("/commissions", dto);
+}
+
+export function updateCommission(id: number, dto: CommissionFormDto) {
+  return apiPut<string>(`/commissions/${id}`, { id, ...dto });
+}
+
+export function deleteCommission(id: number) {
+  return apiDelete<string>(`/commissions/${id}`);
+}
+
 // Дополнено по явному запросу пользователя — раньше документ можно было
 // загрузить (см. FarmerDocuments.tsx), но проверить его в админке было
 // негде, хотя backend (UpdateAsync) уже полностью это поддерживал.
@@ -568,6 +633,41 @@ export function deleteReview(id: number) {
 
 export function deleteAdminProductListing(id: number) {
   return apiDelete<string>(`/product-listings/${id}`);
+}
+
+// UpdateCourierProfileDto требует полный набор полей — переносим текущие
+// значения и меняем только isActive/isAvailable (быстрые действия в таблице).
+export function updateCourierStatus(courier: AdminCourierDto, changes: { isActive?: boolean; isAvailable?: boolean }) {
+  return apiPut<string>(`/courier-profiles/${courier.id}`, {
+    id: courier.id,
+    userId: courier.userId,
+    transportType: courier.transportType,
+    vehicleNumber: courier.vehicleNumber,
+    region: courier.region,
+    district: courier.district,
+    isAvailable: changes.isAvailable ?? courier.isAvailable,
+    isActive: changes.isActive ?? courier.isActive,
+  });
+}
+
+export interface DeliveryZoneFormDto {
+  region: string;
+  district: string;
+  basePrice: number;
+  pricePerKm: number | null;
+  isActive: boolean;
+}
+
+export function createDeliveryZone(dto: DeliveryZoneFormDto) {
+  return apiPost<string>("/delivery-zones", dto);
+}
+
+export function updateDeliveryZone(id: number, dto: DeliveryZoneFormDto) {
+  return apiPut<string>(`/delivery-zones/${id}`, { id, ...dto });
+}
+
+export function deleteDeliveryZone(id: number) {
+  return apiDelete<string>(`/delivery-zones/${id}`);
 }
 
 export interface CategoryFormDto {

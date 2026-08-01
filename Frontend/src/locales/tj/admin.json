@@ -43,6 +43,8 @@
       "orders": "Фармоишҳо",
       "farmers": "Деҳқонони фаъол"
     },
+    "thisMonth": "Ин моҳ",
+    "allTime": "Дар тамоми давра",
     "vsLastMonth": "нисбат ба моҳи гузашта {{value}}",
     "newMetric": "Нав",
     "salesByRegion": "Фурӯш аз рӯи минтақаҳо",
