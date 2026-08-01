@@ -570,6 +570,40 @@ public class AiAssistantService(
 
     private async Task<JsonObject> SendToGroqAsync(string apiKey, JsonArray tools, JsonArray messages)
     {
+        var (body, statusCode, rawBody) = await PostToGroqAsync(apiKey, tools, messages);
+        if (body is not null) return body;
+
+        // llama-3.3-70b-versatile на Groq изредка формирует вызов инструмента
+        // текстом (<function=name{...}>) вместо структурированного tool_calls —
+        // Groq в ответ отдаёт 400 с code="tool_use_failed". Это плавающая
+        // особенность генерации у самой модели, не постоянная ошибка запроса:
+        // повтор того же запроса почти всегда проходит нормально, поэтому
+        // пробуем один раз, прежде чем реально считать это ошибкой.
+        if (IsToolUseFailed(rawBody))
+        {
+            logger.LogWarning("Groq вернул tool_use_failed, повторяю запрос один раз");
+            (body, statusCode, rawBody) = await PostToGroqAsync(apiKey, tools, messages);
+            if (body is not null) return body;
+        }
+
+        logger.LogError("Groq API вернул {StatusCode}: {Body}", statusCode, rawBody);
+        throw new InvalidOperationException($"Groq API error {statusCode}");
+    }
+
+    private static bool IsToolUseFailed(string responseBody)
+    {
+        try
+        {
+            return JsonNode.Parse(responseBody)?["error"]?["code"]?.GetValue<string>() == "tool_use_failed";
+        }
+        catch
+        {
+            return false;
+        }
+    }
+
+    private async Task<(JsonObject? Body, System.Net.HttpStatusCode StatusCode, string RawBody)> PostToGroqAsync(string apiKey, JsonArray tools, JsonArray messages)
+    {
         var requestBody = new JsonObject
         {
             ["model"] = Model,
@@ -589,10 +623,9 @@ public class AiAssistantService(
 
         if (!response.IsSuccessStatusCode)
         {
-            logger.LogError("Groq API вернул {StatusCode}: {Body}", response.StatusCode, responseBody);
-            throw new InvalidOperationException($"Groq API error {response.StatusCode}");
+            return (null, response.StatusCode, responseBody);
         }
 
-        return JsonNode.Parse(responseBody)!.AsObject();
+        return (JsonNode.Parse(responseBody)!.AsObject(), response.StatusCode, responseBody);
     }
 }

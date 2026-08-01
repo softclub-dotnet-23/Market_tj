@@ -343,6 +343,48 @@ public class AiAssistantServiceTests
     }
 
     [Fact]
+    public async Task AskAsync_ToolUseFailed_RetriesOnceAndSucceeds()
+    {
+        var toolUseFailedBody = """{"error":{"message":"Failed to call a function.","type":"invalid_request_error","code":"tool_use_failed"}}""";
+        var successBody = GroqTextResponse("{\"intent\":\"none\",\"message\":\"ok after retry\"}");
+        var handler = MockHandlerSequence((HttpStatusCode.BadRequest, toolUseFailedBody), (HttpStatusCode.OK, successBody));
+        var service = CreateService(handler);
+
+        var result = await service.AskAsync("tomatoes?");
+
+        Assert.True(result.IsSuccess);
+        Assert.Equal("ok after retry", result.Data!.Message);
+        handler.Protected().Verify("SendAsync", Times.Exactly(2), ItExpr.IsAny<HttpRequestMessage>(), ItExpr.IsAny<CancellationToken>());
+    }
+
+    [Fact]
+    public async Task AskAsync_ToolUseFailedTwice_ReturnsGenericFailureWithoutThirdCall()
+    {
+        var toolUseFailedBody = """{"error":{"message":"Failed to call a function.","type":"invalid_request_error","code":"tool_use_failed"}}""";
+        var handler = MockHandlerSequence((HttpStatusCode.BadRequest, toolUseFailedBody), (HttpStatusCode.BadRequest, toolUseFailedBody));
+        var service = CreateService(handler);
+
+        var result = await service.AskAsync("tomatoes?");
+
+        Assert.False(result.IsSuccess);
+        Assert.Equal(ErrorType.InternalServerError, result.ErrorType);
+        handler.Protected().Verify("SendAsync", Times.Exactly(2), ItExpr.IsAny<HttpRequestMessage>(), ItExpr.IsAny<CancellationToken>());
+    }
+
+    [Fact]
+    public async Task AskAsync_NonToolUseFailedBadRequest_DoesNotRetry()
+    {
+        var otherErrorBody = """{"error":{"message":"invalid model","type":"invalid_request_error","code":"model_not_found"}}""";
+        var handler = MockHandler(HttpStatusCode.BadRequest, otherErrorBody);
+        var service = CreateService(handler);
+
+        var result = await service.AskAsync("tomatoes?");
+
+        Assert.False(result.IsSuccess);
+        handler.Protected().Verify("SendAsync", Times.Once(), ItExpr.IsAny<HttpRequestMessage>(), ItExpr.IsAny<CancellationToken>());
+    }
+
+    [Fact]
     public async Task ExecuteActionAsync_ResolveReport_NonAdmin_ReturnsForbidden()
     {
         _currentUser.Setup(c => c.Role).Returns("Customer");
