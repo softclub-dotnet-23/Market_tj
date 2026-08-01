@@ -31,6 +31,7 @@ const AdminFarmerDetail = lazy(() => import("@/pages/AdminFarmerDetail").then((m
 const AdminCatalog = lazy(() => import("@/pages/AdminCatalog").then((m) => ({ default: m.AdminCatalog })));
 const AdminFarmerDocuments = lazy(() => import("@/pages/AdminFarmerDocuments").then((m) => ({ default: m.AdminFarmerDocuments })));
 const AdminUsers = lazy(() => import("@/pages/AdminUsers").then((m) => ({ default: m.AdminUsers })));
+const AdminCustomerDetail = lazy(() => import("@/pages/AdminCustomerDetail").then((m) => ({ default: m.AdminCustomerDetail })));
 const AdminReviews = lazy(() => import("@/pages/AdminReviews").then((m) => ({ default: m.AdminReviews })));
 const AdminSettings = lazy(() => import("@/pages/AdminSettings").then((m) => ({ default: m.AdminSettings })));
 const AdminProfile = lazy(() => import("@/pages/AdminProfile").then((m) => ({ default: m.AdminProfile })));
@@ -73,6 +74,7 @@ function App() {
                       <Route path="farmers/:id" element={<AdminFarmerDetail />} />
                       <Route path="farmer-documents" element={<AdminFarmerDocuments />} />
                       <Route path="users" element={<AdminUsers />} />
+                      <Route path="users/:id" element={<AdminCustomerDetail />} />
                       <Route path="reviews" element={<AdminReviews />} />
                       <Route path="support" element={<AdminSupport />} />
                       <Route path="notifications" element={<AdminNotifications />} />

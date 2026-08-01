@@ -321,6 +321,27 @@ export function useAdminCustomers(refreshKey = 0) {
   return { customers, loading, error };
 }
 
+// CustomerProfile — регион/район/тип покупателя (розница/опт), не хранится в
+// User. Order.CustomerId и Review.CustomerId ссылаются именно на
+// CustomerProfile.Id, а не на User.Id (та же нестыковка, что и у Farmer, см.
+// notifyCustomerAboutOrderStatus ниже) — карточке покупателя в админке нужны
+// оба id: User.Id (из маршрута /admin/users/:id) и связанный CustomerProfile.Id
+// (чтобы отфильтровать его заказы/отзывы).
+export interface AdminCustomerProfileDto {
+  id: number;
+  userId: number;
+  customerType: number;
+  defaultAddress: string | null;
+  region: string;
+  district: string;
+  createdAt: string;
+}
+
+export function useAdminCustomerProfiles(refreshKey = 0) {
+  const { data, loading, error } = useAsync(() => apiGet<AdminCustomerProfileDto[]>("/customer-profiles"), [refreshKey]);
+  return { profiles: data, loading, error };
+}
+
 // Форма покупателя в админке (Покупатели → добавить/редактировать) — переиспользует
 // общий Admin-only CRUD /api/users (UserController), уже готовый на бэкенде для
 // любой роли; здесь роль всегда фиксируется как Customer.

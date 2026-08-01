@@ -276,6 +276,22 @@
       "saveChanges": "Save changes"
     }
   },
+  "customerDetail": {
+    "back": "Back to customers list",
+    "registeredAt": "Registered {{date}}",
+    "type": {
+      "retail": "Retail",
+      "wholesale": "Wholesale"
+    },
+    "stats": {
+      "totalOrders": "Total orders",
+      "ordersThisMonth": "Orders this month",
+      "totalSpent": "Total spent",
+      "reviewsWritten": "Reviews written"
+    },
+    "ordersTitle": "Orders",
+    "reviewsTitle": "Reviews"
+  },
   "commissions": {
     "errorTitle": "Failed to load commissions",
     "errorDescription": "Check your connection to the server and try again.",

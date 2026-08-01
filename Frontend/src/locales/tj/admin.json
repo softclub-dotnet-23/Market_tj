@@ -282,6 +282,22 @@
       "saveChanges": "Нигоҳ доштан"
     }
   },
+  "customerDetail": {
+    "back": "Бозгашт ба рӯйхати харидорон",
+    "registeredAt": "Сабт шудааст {{date}}",
+    "type": {
+      "retail": "Чакана",
+      "wholesale": "Яклухт"
+    },
+    "stats": {
+      "totalOrders": "Ҳамаи фармоишҳо",
+      "ordersThisMonth": "Фармоишҳо дар ин моҳ",
+      "totalSpent": "Хароҷоти умумӣ",
+      "reviewsWritten": "Шарҳҳои гузошташуда"
+    },
+    "ordersTitle": "Фармоишҳо",
+    "reviewsTitle": "Шарҳҳо"
+  },
   "commissions": {
     "errorTitle": "Комиссияҳо бор нашуданд",
     "errorDescription": "Пайвастшавии худро ба сервер санҷед ва аз нав кӯшиш кунед.",

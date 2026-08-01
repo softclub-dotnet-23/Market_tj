@@ -282,6 +282,22 @@
       "saveChanges": "Сохранить"
     }
   },
+  "customerDetail": {
+    "back": "Назад к списку покупателей",
+    "registeredAt": "Зарегистрирован {{date}}",
+    "type": {
+      "retail": "Розница",
+      "wholesale": "Опт"
+    },
+    "stats": {
+      "totalOrders": "Всего заказов",
+      "ordersThisMonth": "Заказов в этом месяце",
+      "totalSpent": "Потрачено всего",
+      "reviewsWritten": "Отзывов оставлено"
+    },
+    "ordersTitle": "Заказы",
+    "reviewsTitle": "Отзывы"
+  },
   "commissions": {
     "errorTitle": "Не удалось загрузить комиссии",
     "errorDescription": "Проверьте подключение к серверу и попробуйте снова.",

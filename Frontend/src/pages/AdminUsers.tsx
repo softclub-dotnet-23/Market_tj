@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import { useNavigate } from "react-router-dom";
 import { useForm } from "react-hook-form";
 import { useTranslation } from "react-i18next";
 import { toast } from "sonner";
@@ -126,6 +127,7 @@ function CustomerFormModal({
 
 export function AdminUsers() {
   const { t } = useTranslation("admin");
+  const navigate = useNavigate();
   const searchQuery = useAdminSearch();
   const [page, setPage] = useState(1);
   const [viewMode, setViewMode] = useState<OrdersViewMode>("table");
@@ -188,7 +190,10 @@ export function AdminUsers() {
   const renderCard = (customer: AdminUserDto) => (
     <div
       key={customer.id}
-      className="flex flex-col gap-4 rounded-2xl border border-stone-100 bg-white p-5 shadow-sm transition hover:shadow-md dark:border-stone-800 dark:bg-stone-900"
+      onClick={() => navigate(`/admin/users/${customer.id}`)}
+      role="button"
+      tabIndex={0}
+      className="flex cursor-pointer flex-col gap-4 rounded-2xl border border-stone-100 bg-white p-5 shadow-sm transition hover:shadow-md dark:border-stone-800 dark:bg-stone-900"
     >
       <div className="flex items-start gap-3">
         <Avatar name={customer.fullName} size={44} />
@@ -218,14 +223,20 @@ export function AdminUsers() {
       </div>
       <div className="flex items-center justify-end gap-1.5 border-t border-stone-50 pt-3 dark:border-stone-800/60">
         <button
-          onClick={() => openEdit(customer)}
+          onClick={(e) => {
+            e.stopPropagation();
+            openEdit(customer);
+          }}
           aria-label={t("users.editAction")}
           className="flex h-8 w-8 items-center justify-center rounded-lg text-stone-400 transition hover:bg-stone-100 hover:text-grove-700 dark:text-stone-500 dark:hover:bg-stone-800 dark:hover:text-grove-400"
         >
           <Pencil size={15} />
         </button>
         <button
-          onClick={() => setDeletingCustomer(customer)}
+          onClick={(e) => {
+            e.stopPropagation();
+            setDeletingCustomer(customer);
+          }}
           aria-label={t("users.deleteAction")}
           className="flex h-8 w-8 items-center justify-center rounded-lg text-stone-400 transition hover:bg-rose-50 hover:text-rose-600 dark:text-stone-500 dark:hover:bg-rose-950 dark:hover:text-rose-400"
         >
@@ -267,7 +278,11 @@ export function AdminUsers() {
               </thead>
               <tbody>
                 {pageItems.map((customer) => (
-                  <tr key={customer.id} className="border-b border-stone-50 last:border-0 dark:border-stone-800/60">
+                  <tr
+                    key={customer.id}
+                    onClick={() => navigate(`/admin/users/${customer.id}`)}
+                    className="cursor-pointer border-b border-stone-50 transition-colors last:border-0 hover:bg-stone-50/70 dark:border-stone-800/60 dark:hover:bg-stone-800/40"
+                  >
                     <td className="px-6 py-4 font-medium text-stone-800 dark:text-stone-100">{customer.fullName}</td>
                     <td className="px-6 py-4 text-stone-600 dark:text-stone-300">{customer.email}</td>
                     <td className="px-6 py-4 text-stone-500 dark:text-stone-400">{customer.phoneNumber}</td>
@@ -286,14 +301,20 @@ export function AdminUsers() {
                     <td className="px-6 py-4">
                       <div className="flex items-center justify-end gap-1.5">
                         <button
-                          onClick={() => openEdit(customer)}
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            openEdit(customer);
+                          }}
                           aria-label={t("users.editAction")}
                           className="flex h-8 w-8 items-center justify-center rounded-lg text-stone-400 transition hover:bg-stone-100 hover:text-grove-700 dark:text-stone-500 dark:hover:bg-stone-800 dark:hover:text-grove-400"
                         >
                           <Pencil size={15} />
                         </button>
                         <button
-                          onClick={() => setDeletingCustomer(customer)}
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            setDeletingCustomer(customer);
+                          }}
                           aria-label={t("users.deleteAction")}
                           className="flex h-8 w-8 items-center justify-center rounded-lg text-stone-400 transition hover:bg-rose-50 hover:text-rose-600 dark:text-stone-500 dark:hover:bg-rose-950 dark:hover:text-rose-400"
                         >
