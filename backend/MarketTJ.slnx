@@ -3,5 +3,6 @@
   <Project Path="MarketTJ.Application/MarketTJ.Application.csproj" />
   <Project Path="MarketTJ.Domain/MarketTJ.Domain.csproj" />
   <Project Path="MarketTJ.Infrastructure/MarketTJ.Infrastructure.csproj" />
+  <Project Path="MarketTJ.Infrastructure.Tests/MarketTJ.Infrastructure.Tests.csproj" />
   <Project Path="MarketTJ.WebApi/MarketTJ.WebApi.csproj" />
 </Solution>

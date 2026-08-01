@@ -4,6 +4,7 @@ using MarketTJ.Application.Interfaces.Repositories;
 using MarketTJ.Application.Interfaces.Services;
 using MarketTJ.Application.Results;
 using MarketTJ.Domain.Entities;
+using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Logging;
 
 namespace MarketTJ.Application.Services;
@@ -15,12 +16,22 @@ namespace MarketTJ.Application.Services;
 public class EmailVerificationService(
     IEmailVerificationCodeRepository repository,
     IEmailSender emailSender,
+    IConfiguration configuration,
     ILogger<EmailVerificationService> logger) : IEmailVerificationService
 {
     private const int CodeLength = 6;
     private const int CodeExpiryMinutes = 10;
     private const int ResendCooldownSeconds = 60;
     private const int MaxAttempts = 5;
+
+    // Тот же переключатель, что и в AuthService — пока нет верифицированного
+    // домена для Resend/SMTP (2026-08-01). Когда false: письмо реально не
+    // отправляется (SendCodeAsync логирует код вместо письма, чтобы им можно
+    // было воспользоваться вручную при желании), а VerifyCodeAsync принимает
+    // любой код. Вернуть обязательную верификацию — убрать переменную
+    // EmailVerification__RequireVerification или поставить её в "true".
+    private bool RequireEmailVerification =>
+        !bool.TryParse(configuration["EmailVerification:RequireVerification"], out var value) || value;
 
     // Сколько времени подтверждённый email считается "свежим" для того,
     // чтобы завершить оставшиеся шаги регистрации (ввод пароля/адреса) —
@@ -42,11 +53,20 @@ public class EmailVerificationService(
 
             var code = GenerateCode();
 
-            // Письмо отправляется ДО записи в БД — иначе при сбое SMTP запись
-            // всё равно создавалась, и следующая попытка натыкалась на
-            // "подождите N сек" (ResendCooldownSeconds выше), хотя письмо
-            // ни разу не ушло.
-            await emailSender.SendAsync(normalizedEmail, "Код подтверждения Market.tj", BuildEmailBody(code));
+            if (RequireEmailVerification)
+            {
+                // Письмо отправляется ДО записи в БД — иначе при сбое SMTP/Resend
+                // запись всё равно создавалась, и следующая попытка натыкалась на
+                // "подождите N сек" (ResendCooldownSeconds выше), хотя письмо
+                // ни разу не ушло.
+                await emailSender.SendAsync(normalizedEmail, "Код подтверждения Market.tj", BuildEmailBody(code));
+            }
+            else
+            {
+                logger.LogInformation(
+                    "EmailVerification:RequireVerification=false — письмо на {Email} не отправлено, код: {Code}",
+                    normalizedEmail, code);
+            }
 
             var entity = new EmailVerificationCode
             {
@@ -73,6 +93,12 @@ public class EmailVerificationService(
         try
         {
             var normalizedEmail = email.Trim().ToLowerInvariant();
+
+            // Тестовый период без реальной отправки писем (см. RequireEmailVerification) —
+            // код не проверяется, любой ввод на шаге 2/3 фронтенда проходит.
+            if (!RequireEmailVerification)
+                return Result<string>.Ok("Email подтверждён");
+
             var latest = await repository.GetLatestByEmailAsync(normalizedEmail);
             if (latest is null)
                 return Result<string>.Fail("Код для этого email не запрашивался", ErrorType.Validation);

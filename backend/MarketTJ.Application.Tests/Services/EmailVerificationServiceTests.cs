@@ -3,6 +3,7 @@ using MarketTJ.Application.Interfaces.Repositories;
 using MarketTJ.Application.Interfaces.Services;
 using MarketTJ.Application.Services;
 using MarketTJ.Domain.Entities;
+using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Logging;
 using Moq;
 
@@ -12,12 +13,13 @@ public class EmailVerificationServiceTests
 {
     private readonly Mock<IEmailVerificationCodeRepository> _repository = new();
     private readonly Mock<IEmailSender> _emailSender = new();
+    private readonly Mock<IConfiguration> _configuration = new();
     private readonly Mock<ILogger<EmailVerificationService>> _logger = new();
     private readonly EmailVerificationService _service;
 
     public EmailVerificationServiceTests()
     {
-        _service = new EmailVerificationService(_repository.Object, _emailSender.Object, _logger.Object);
+        _service = new EmailVerificationService(_repository.Object, _emailSender.Object, _configuration.Object, _logger.Object);
         _repository.Setup(r => r.GetLatestByEmailAsync(It.IsAny<string>())).ReturnsAsync((EmailVerificationCode?)null);
     }
 
@@ -86,6 +88,18 @@ public class EmailVerificationServiceTests
         _repository.Verify(r => r.AddAsync(It.IsAny<EmailVerificationCode>()), Times.Never);
     }
 
+    [Fact]
+    public async Task SendCodeAsync_VerificationNotRequired_DoesNotCallEmailSenderButStillStoresCode()
+    {
+        _configuration.Setup(c => c["EmailVerification:RequireVerification"]).Returns("false");
+
+        var result = await _service.SendCodeAsync("user@example.com");
+
+        Assert.True(result.IsSuccess);
+        _emailSender.Verify(e => e.SendAsync(It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>()), Times.Never);
+        _repository.Verify(r => r.AddAsync(It.IsAny<EmailVerificationCode>()), Times.Once);
+    }
+
     // ---------- VerifyCodeAsync ----------
 
     private static EmailVerificationCode ValidCode(string email = "user@example.com", string code = "123456", int attempts = 0, bool isUsed = false, DateTime? expiresAt = null) => new()
@@ -98,6 +112,17 @@ public class EmailVerificationServiceTests
         ExpiresAt = expiresAt ?? DateTime.UtcNow.AddMinutes(10),
         CreatedAt = DateTime.UtcNow
     };
+
+    [Fact]
+    public async Task VerifyCodeAsync_VerificationNotRequired_AcceptsAnyCodeWithoutTouchingRepository()
+    {
+        _configuration.Setup(c => c["EmailVerification:RequireVerification"]).Returns("false");
+
+        var result = await _service.VerifyCodeAsync("user@example.com", "000000");
+
+        Assert.True(result.IsSuccess);
+        _repository.Verify(r => r.GetLatestByEmailAsync(It.IsAny<string>()), Times.Never);
+    }
 
     [Fact]
     public async Task VerifyCodeAsync_CorrectCode_MarksUsedAndReturnsOk()
