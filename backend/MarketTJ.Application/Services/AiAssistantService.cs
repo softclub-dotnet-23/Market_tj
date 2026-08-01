@@ -568,26 +568,47 @@ public class AiAssistantService(
     private static JsonObject? GetFirstChoiceMessage(JsonObject response)
         => response["choices"]?.AsArray().FirstOrDefault()?["message"]?.AsObject();
 
+    // llama-3.3-70b-versatile на Groq изредка формирует вызов инструмента текстом
+    // (<function=name{...}>) вместо структурированного tool_calls — Groq в ответ
+    // отдаёт 400 с code="tool_use_failed". Наблюдалось на живой проверке
+    // 2026-08-01: не постоянная ошибка запроса, а плавающая особенность
+    // генерации у самой модели. Три уровня восстановления, от дешёвого к
+    // дорогому: 1) модель иногда успевает сгенерировать вслед за неудачным
+    // вызовом и корректный финальный JSON-ответ — если он есть в
+    // failed_generation, используем его без лишнего запроса; 2) иначе — один
+    // повтор того же запроса (обычно проходит); 3) если и это не помогло —
+    // финальная попытка вообще без инструментов (tool_choice="none"), чтобы
+    // гарантированно получить хоть какой-то текстовый ответ, а не отдать
+    // пользователю "AI-ассистент недоступен".
     private async Task<JsonObject> SendToGroqAsync(string apiKey, JsonArray tools, JsonArray messages)
     {
-        var (body, statusCode, rawBody) = await PostToGroqAsync(apiKey, tools, messages);
-        if (body is not null) return body;
-
-        // llama-3.3-70b-versatile на Groq изредка формирует вызов инструмента
-        // текстом (<function=name{...}>) вместо структурированного tool_calls —
-        // Groq в ответ отдаёт 400 с code="tool_use_failed". Это плавающая
-        // особенность генерации у самой модели, не постоянная ошибка запроса:
-        // повтор того же запроса почти всегда проходит нормально, поэтому
-        // пробуем один раз, прежде чем реально считать это ошибкой.
-        if (IsToolUseFailed(rawBody))
+        for (var attempt = 1; attempt <= 2; attempt++)
         {
-            logger.LogWarning("Groq вернул tool_use_failed, повторяю запрос один раз");
-            (body, statusCode, rawBody) = await PostToGroqAsync(apiKey, tools, messages);
+            var (body, statusCode, rawBody) = await PostToGroqAsync(apiKey, tools, messages, toolChoice: "auto");
             if (body is not null) return body;
+
+            if (!IsToolUseFailed(rawBody))
+            {
+                logger.LogError("Groq API вернул {StatusCode}: {Body}", statusCode, rawBody);
+                throw new InvalidOperationException($"Groq API error {statusCode}");
+            }
+
+            var salvaged = ExtractTrailingJsonAnswer(rawBody);
+            if (salvaged is not null)
+            {
+                logger.LogWarning("Groq вернул tool_use_failed, использую ответ, найденный в failed_generation (попытка {Attempt})", attempt);
+                return WrapAsAssistantTextResponse(salvaged);
+            }
+
+            logger.LogWarning("Groq вернул tool_use_failed без пригодного ответа (попытка {Attempt})", attempt);
         }
 
-        logger.LogError("Groq API вернул {StatusCode}: {Body}", statusCode, rawBody);
-        throw new InvalidOperationException($"Groq API error {statusCode}");
+        logger.LogWarning("Groq дважды вернул tool_use_failed, финальная попытка без инструментов");
+        var (finalBody, finalStatus, finalRaw) = await PostToGroqAsync(apiKey, tools: null, messages, toolChoice: null);
+        if (finalBody is not null) return finalBody;
+
+        logger.LogError("Groq API вернул {StatusCode}: {Body}", finalStatus, finalRaw);
+        throw new InvalidOperationException($"Groq API error {finalStatus}");
     }
 
     private static bool IsToolUseFailed(string responseBody)
@@ -602,15 +623,63 @@ public class AiAssistantService(
         }
     }
 
-    private async Task<(JsonObject? Body, System.Net.HttpStatusCode StatusCode, string RawBody)> PostToGroqAsync(string apiKey, JsonArray tools, JsonArray messages)
+    // Ищет последний JSON-объект вида {"intent":...} внутри error.failed_generation —
+    // модель иногда пишет туда и неудавшийся текстовый вызов функции, и
+    // корректный финальный ответ следом за ним, одним куском текста.
+    private static string? ExtractTrailingJsonAnswer(string responseBody)
+    {
+        try
+        {
+            var failedGeneration = JsonNode.Parse(responseBody)?["error"]?["failed_generation"]?.GetValue<string>();
+            if (string.IsNullOrWhiteSpace(failedGeneration)) return null;
+
+            var start = failedGeneration.LastIndexOf("{\"intent\"", StringComparison.Ordinal);
+            if (start < 0) return null;
+
+            var depth = 0;
+            for (var i = start; i < failedGeneration.Length; i++)
+            {
+                if (failedGeneration[i] == '{') depth++;
+                else if (failedGeneration[i] == '}' && --depth == 0)
+                {
+                    var candidate = failedGeneration[start..(i + 1)];
+                    // Подтверждаем, что это реально валидный AssistantResponseDto,
+                    // а не просто похожий на JSON фрагмент.
+                    var parsed = JsonSerializer.Deserialize<AssistantResponseDto>(candidate, new JsonSerializerOptions { PropertyNameCaseInsensitive = true });
+                    return string.IsNullOrWhiteSpace(parsed?.Message) ? null : candidate;
+                }
+            }
+            return null;
+        }
+        catch
+        {
+            return null;
+        }
+    }
+
+    private static JsonObject WrapAsAssistantTextResponse(string content) => new JsonObject
+    {
+        ["choices"] = new JsonArray
+        {
+            new JsonObject { ["message"] = new JsonObject { ["role"] = "assistant", ["content"] = content } }
+        }
+    };
+
+    private async Task<(JsonObject? Body, System.Net.HttpStatusCode StatusCode, string RawBody)> PostToGroqAsync(string apiKey, JsonArray? tools, JsonArray messages, string? toolChoice)
     {
         var requestBody = new JsonObject
         {
             ["model"] = Model,
-            ["messages"] = messages.DeepClone(),
-            ["tools"] = tools.DeepClone(),
-            ["tool_choice"] = "auto"
+            ["messages"] = messages.DeepClone()
         };
+        if (tools is not null)
+        {
+            requestBody["tools"] = tools.DeepClone();
+        }
+        if (toolChoice is not null)
+        {
+            requestBody["tool_choice"] = toolChoice;
+        }
 
         using var request = new HttpRequestMessage(HttpMethod.Post, ApiUrl)
         {

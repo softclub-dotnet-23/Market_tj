@@ -358,17 +358,57 @@ public class AiAssistantServiceTests
     }
 
     [Fact]
-    public async Task AskAsync_ToolUseFailedTwice_ReturnsGenericFailureWithoutThirdCall()
+    public async Task AskAsync_ToolUseFailedWithAnswerInFailedGeneration_SalvagesWithoutRetrying()
+    {
+        // Модель иногда пишет в failed_generation и неудавшийся текстовый
+        // вызов функции, и корректный финальный JSON следом за ним одним куском.
+        var failedGenerationBody = """
+            {"error":{"message":"Failed to call a function.","type":"invalid_request_error","code":"tool_use_failed","failed_generation":"<function=search_products>{\"query\": \"tomato\"}\n\n{\"intent\": \"category\", \"productId\": null, \"categoryId\": null, \"message\": \"Yes, we have fresh tomatoes from several farmers.\"}"}}
+            """;
+        var handler = MockHandler(HttpStatusCode.BadRequest, failedGenerationBody);
+        var service = CreateService(handler);
+
+        var result = await service.AskAsync("tomatoes?");
+
+        Assert.True(result.IsSuccess);
+        Assert.Equal("category", result.Data!.Intent);
+        Assert.Equal("Yes, we have fresh tomatoes from several farmers.", result.Data.Message);
+        handler.Protected().Verify("SendAsync", Times.Once(), ItExpr.IsAny<HttpRequestMessage>(), ItExpr.IsAny<CancellationToken>());
+    }
+
+    [Fact]
+    public async Task AskAsync_ToolUseFailedTwiceWithNoSalvage_FallsBackToNoToolsRequest()
     {
         var toolUseFailedBody = """{"error":{"message":"Failed to call a function.","type":"invalid_request_error","code":"tool_use_failed"}}""";
-        var handler = MockHandlerSequence((HttpStatusCode.BadRequest, toolUseFailedBody), (HttpStatusCode.BadRequest, toolUseFailedBody));
+        var fallbackBody = GroqTextResponse("{\"intent\":\"none\",\"message\":\"answered without tools\"}");
+        var handler = MockHandlerSequence(
+            (HttpStatusCode.BadRequest, toolUseFailedBody),
+            (HttpStatusCode.BadRequest, toolUseFailedBody),
+            (HttpStatusCode.OK, fallbackBody));
+        var service = CreateService(handler);
+
+        var result = await service.AskAsync("tomatoes?");
+
+        Assert.True(result.IsSuccess);
+        Assert.Equal("answered without tools", result.Data!.Message);
+        handler.Protected().Verify("SendAsync", Times.Exactly(3), ItExpr.IsAny<HttpRequestMessage>(), ItExpr.IsAny<CancellationToken>());
+    }
+
+    [Fact]
+    public async Task AskAsync_ToolUseFailedThreeTimes_ReturnsGenericFailure()
+    {
+        var toolUseFailedBody = """{"error":{"message":"Failed to call a function.","type":"invalid_request_error","code":"tool_use_failed"}}""";
+        var handler = MockHandlerSequence(
+            (HttpStatusCode.BadRequest, toolUseFailedBody),
+            (HttpStatusCode.BadRequest, toolUseFailedBody),
+            (HttpStatusCode.BadRequest, toolUseFailedBody));
         var service = CreateService(handler);
 
         var result = await service.AskAsync("tomatoes?");
 
         Assert.False(result.IsSuccess);
         Assert.Equal(ErrorType.InternalServerError, result.ErrorType);
-        handler.Protected().Verify("SendAsync", Times.Exactly(2), ItExpr.IsAny<HttpRequestMessage>(), ItExpr.IsAny<CancellationToken>());
+        handler.Protected().Verify("SendAsync", Times.Exactly(3), ItExpr.IsAny<HttpRequestMessage>(), ItExpr.IsAny<CancellationToken>());
     }
 
     [Fact]
