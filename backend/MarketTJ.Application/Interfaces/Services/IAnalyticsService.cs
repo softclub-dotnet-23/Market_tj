@@ -9,4 +9,8 @@ public interface IAnalyticsService
     // Раздел 16 ТЗ: farmerId больше не принимается от клиента — параметр это
     // UserId авторизованного фермера (из JWT-claims), профиль резолвится внутри.
     Task<Result<FarmerDashboardDto>> GetFarmerDashboardAsync(int userId);
+
+    // Тот же дашборд по конкретному профилю фермера — только для админки
+    // (см. AnalyticsService, там же объяснено, почему это отдельный метод).
+    Task<Result<FarmerDashboardDto>> GetFarmerDashboardByProfileIdAsync(int farmerProfileId);
 }

@@ -156,41 +156,22 @@
     "rejectSuccess": "Фермер отклонён",
     "actionError": "Не удалось изменить статус"
   },
-  "farmerDocuments": {
-    "errorTitle": "Не удалось загрузить документы",
-    "errorDescription": "Проверьте подключение к серверу и попробуйте снова.",
-    "emptyTitle": "Пока нет документов",
-    "emptyDescription": "Здесь появятся документы, загруженные фермерами для проверки.",
-    "columns": {
-      "farmer": "Фермер",
-      "type": "Тип документа",
-      "status": "Статус",
-      "rejectionReason": "Причина отклонения",
-      "uploadedAt": "Дата загрузки",
-      "actions": "Действия"
-    },
-    "farmerLabel": "Фермер #{{id}}",
-    "type": {
-      "passport": "Паспорт",
-      "landDeed": "Документ на землю",
-      "other": "Другое"
-    },
-    "status": {
-      "pending": "На проверке",
-      "approved": "Подтверждён",
-      "rejected": "Отклонён"
-    },
-    "viewAction": "Открыть файл",
-    "approveAction": "Подтвердить",
-    "rejectAction": "Отклонить",
-    "approveSuccess": "Документ подтверждён",
-    "rejectSuccess": "Документ отклонён",
-    "actionError": "Не удалось изменить статус документа",
-    "rejectModalTitle": "Причина отклонения",
-    "form": {
-      "reason": "Причина отклонения",
-      "reasonRequired": "Укажите причину отклонения",
-      "cancel": "Отмена"
+  "farmerDetail": {
+    "back": "Назад к списку фермеров",
+    "registeredAt": "Зарегистрирован {{date}}",
+    "ownerName": "Владелец: {{name}}",
+    "documentsTitle": "Документы",
+    "productsTitle": "Товары",
+    "soldCount": "продано {{count}} {{unit}}",
+    "stats": {
+      "totalProducts": "Всего товаров",
+      "activeProducts": "Активные товары",
+      "totalOrders": "Заказов получено",
+      "ordersThisMonth": "Заказов в этом месяце",
+      "totalRevenue": "Выручка всего",
+      "revenueThisMonth": "Выручка в этом месяце",
+      "rating": "Средний рейтинг",
+      "documents": "Документов"
     }
   },
   "catalog": {

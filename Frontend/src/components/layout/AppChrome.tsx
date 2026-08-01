@@ -2,6 +2,7 @@ import { useEffect } from "react";
 import { Outlet, useLocation, useNavigationType } from "react-router-dom";
 import { Toaster } from "sonner";
 import { SmoothScroll } from "@/components/layout/SmoothScroll";
+import { AiAssistantWidget } from "@/components/assistant/AiAssistantWidget";
 import { useTheme } from "@/context/ThemeContext";
 
 function ScrollToTop() {
@@ -24,8 +25,12 @@ export function AppChrome() {
       <ScrollToTop />
       <SmoothScroll />
       <Outlet />
+      <AiAssistantWidget />
       <Toaster
         position="bottom-right"
+        // Смещение от нижнего края — иначе тосты накладывались бы на плавающую
+        // кнопку AI-ассистента (тоже bottom-right, см. AiAssistantWidget).
+        offset={{ bottom: "6.5rem" }}
         theme={theme}
         toastOptions={{
           classNames: {

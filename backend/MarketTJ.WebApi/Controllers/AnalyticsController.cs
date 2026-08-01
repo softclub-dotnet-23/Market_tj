@@ -22,4 +22,11 @@ public class AnalyticsController(IAnalyticsService analyticsService, ICurrentUse
     [HttpGet("farmer/dashboard")]
     public async Task<IActionResult> GetFarmerDashboard()
         => HandleResult(await analyticsService.GetFarmerDashboardAsync(currentUser.UserId!.Value));
+
+    // Карточка фермера в админке: та же аналитика, но по конкретному профилю.
+    // Здесь id в маршруте безопасен — доступ ограничен ролью Admin.
+    [Authorize(Roles = "Admin")]
+    [HttpGet("admin/farmers/{farmerProfileId:int}/dashboard")]
+    public async Task<IActionResult> GetFarmerDashboardForAdmin(int farmerProfileId)
+        => HandleResult(await analyticsService.GetFarmerDashboardByProfileIdAsync(farmerProfileId));
 }

@@ -5,7 +5,10 @@ using Microsoft.AspNetCore.Mvc;
 
 namespace MarketTJ.WebApi.Controllers;
 
-[Authorize]
+// Без [Authorize] на уровне класса — гости тоже должны иметь возможность
+// спросить ассистента (явный запрос пользователя), не только авторизованные
+// покупатели. Ask() сам решает по роли из токена (если он есть), какие
+// инструменты доступны — гостю/покупателю только поиск по каталогу.
 [Route("api/ai-assistant")]
 public class AiAssistantController(IAiAssistantService aiAssistantService) : ApiControllerBase
 {
@@ -14,4 +17,12 @@ public class AiAssistantController(IAiAssistantService aiAssistantService) : Api
     [HttpPost("ask")]
     public async Task<IActionResult> Ask([FromBody] AskAssistantDto dto)
         => HandleResult(await aiAssistantService.AskAsync(dto.Message));
+
+    // В отличие от Ask() — требует авторизации: здесь выполняется реальная
+    // мутация (изменение цены/статуса объявления, решение по жалобе),
+    // предложенная ассистентом и подтверждённая пользователем на фронтенде.
+    [Authorize]
+    [HttpPost("execute-action")]
+    public async Task<IActionResult> ExecuteAction([FromBody] ExecuteAssistantActionDto dto)
+        => HandleResult(await aiAssistantService.ExecuteActionAsync(dto));
 }

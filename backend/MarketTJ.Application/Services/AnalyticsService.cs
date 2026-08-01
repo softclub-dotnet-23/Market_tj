@@ -43,4 +43,28 @@ public class AnalyticsService(
             return Result<FarmerDashboardDto>.Fail("Не удалось получить данные аналитики фермера", ErrorType.InternalServerError);
         }
     }
+
+    // Тот же дашборд, но по конкретному профилю фермера — для админки
+    // (карточка фермера: сколько продал, сколько получил). Отдельный метод, а
+    // не параметр к GetFarmerDashboardAsync выше: тот сознательно принимает
+    // ТОЛЬКО userId из JWT (раздел 16 ТЗ — фермер не должен иметь возможности
+    // подставить чужой id), а здесь id приходит из маршрута, и защита — это
+    // [Authorize(Roles = "Admin")] на контроллере.
+    public async Task<Result<FarmerDashboardDto>> GetFarmerDashboardByProfileIdAsync(int farmerProfileId)
+    {
+        try
+        {
+            var farmerProfile = await farmerProfileRepository.GetByIdAsync(farmerProfileId);
+            if (farmerProfile is null)
+                return Result<FarmerDashboardDto>.Fail("Профиль фермера не найден", ErrorType.NotFound);
+
+            var dashboard = await analyticsRepository.GetFarmerDashboardAsync(farmerProfile.Id);
+            return Result<FarmerDashboardDto>.Ok(dashboard);
+        }
+        catch (Exception ex)
+        {
+            logger.LogError(ex, "Ошибка при получении дашборда аналитики фермера (farmerProfileId={FarmerProfileId})", farmerProfileId);
+            return Result<FarmerDashboardDto>.Fail("Не удалось получить данные аналитики фермера", ErrorType.InternalServerError);
+        }
+    }
 }

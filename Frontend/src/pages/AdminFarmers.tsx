@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import { useNavigate } from "react-router-dom";
 import { useTranslation } from "react-i18next";
 import { toast } from "sonner";
 import { Check, MapPin, Search, Sprout, X } from "lucide-react";
@@ -31,6 +32,7 @@ const STATUS_KEYS: Record<number, string> = {
 export function AdminFarmers() {
   const { t } = useTranslation("admin");
   const { user } = useAuth();
+  const navigate = useNavigate();
   const searchQuery = useAdminSearch();
   const [page, setPage] = useState(1);
   const [viewMode, setViewMode] = useState<OrdersViewMode>("table");
@@ -83,11 +85,17 @@ export function AdminFarmers() {
     }
   };
 
+  // stopPropagation — карточка/строка теперь целиком кликабельна (переход на
+  // карточку фермера), кнопки подтверждения/отклонения внутри должны
+  // отрабатывать сами, не запуская заодно и переход.
   const actionButtons = (farmer: AdminFarmerDto) => (
     <>
       {farmer.verificationStatus !== FarmerVerificationStatus.Verified && (
         <button
-          onClick={() => handleSetStatus(farmer, FarmerVerificationStatus.Verified)}
+          onClick={(e) => {
+            e.stopPropagation();
+            handleSetStatus(farmer, FarmerVerificationStatus.Verified);
+          }}
           disabled={busyId === farmer.id}
           aria-label={t("farmers.verifyAction")}
           className="flex h-8 w-8 items-center justify-center rounded-lg text-stone-400 transition hover:bg-grove-50 hover:text-grove-700 disabled:opacity-50 dark:text-stone-500 dark:hover:bg-grove-950 dark:hover:text-grove-400"
@@ -97,7 +105,10 @@ export function AdminFarmers() {
       )}
       {farmer.verificationStatus !== FarmerVerificationStatus.Rejected && (
         <button
-          onClick={() => handleSetStatus(farmer, FarmerVerificationStatus.Rejected)}
+          onClick={(e) => {
+            e.stopPropagation();
+            handleSetStatus(farmer, FarmerVerificationStatus.Rejected);
+          }}
           disabled={busyId === farmer.id}
           aria-label={t("farmers.rejectAction")}
           className="flex h-8 w-8 items-center justify-center rounded-lg text-stone-400 transition hover:bg-rose-50 hover:text-rose-600 disabled:opacity-50 dark:text-stone-500 dark:hover:bg-rose-950 dark:hover:text-rose-400"
@@ -111,7 +122,10 @@ export function AdminFarmers() {
   const renderCard = (farmer: AdminFarmerDto) => (
     <div
       key={farmer.id}
-      className="flex flex-col gap-4 rounded-2xl border border-stone-100 bg-white p-5 shadow-sm transition hover:shadow-md dark:border-stone-800 dark:bg-stone-900"
+      onClick={() => navigate(`/admin/farmers/${farmer.id}`)}
+      role="button"
+      tabIndex={0}
+      className="flex cursor-pointer flex-col gap-4 rounded-2xl border border-stone-100 bg-white p-5 shadow-sm transition hover:shadow-md dark:border-stone-800 dark:bg-stone-900"
     >
       <div className="flex items-start gap-3">
         <Avatar name={farmer.farmName} size={44} />
@@ -154,7 +168,11 @@ export function AdminFarmers() {
           </thead>
           <tbody>
             {pageItems.map((farmer) => (
-              <tr key={farmer.id} className="border-b border-stone-50 last:border-0 dark:border-stone-800/60">
+              <tr
+                key={farmer.id}
+                onClick={() => navigate(`/admin/farmers/${farmer.id}`)}
+                className="cursor-pointer border-b border-stone-50 transition-colors last:border-0 hover:bg-stone-50/70 dark:border-stone-800/60 dark:hover:bg-stone-800/40"
+              >
                 <td className="max-w-64 truncate px-6 py-4 font-medium text-stone-800 dark:text-stone-100">{farmer.farmName}</td>
                 <td className="px-6 py-4 text-stone-500 dark:text-stone-400">
                   {farmer.region}, {farmer.district}

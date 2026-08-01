@@ -26,8 +26,8 @@ const Forbidden = lazy(() => import("@/pages/Forbidden").then((m) => ({ default:
 const NotFound = lazy(() => import("@/pages/NotFound").then((m) => ({ default: m.NotFound })));
 const AdminDashboard = lazy(() => import("@/pages/AdminDashboard").then((m) => ({ default: m.AdminDashboard })));
 const AdminOrders = lazy(() => import("@/pages/AdminOrders").then((m) => ({ default: m.AdminOrders })));
-const AdminProducts = lazy(() => import("@/pages/AdminProducts").then((m) => ({ default: m.AdminProducts })));
 const AdminFarmers = lazy(() => import("@/pages/AdminFarmers").then((m) => ({ default: m.AdminFarmers })));
+const AdminFarmerDetail = lazy(() => import("@/pages/AdminFarmerDetail").then((m) => ({ default: m.AdminFarmerDetail })));
 const AdminCatalog = lazy(() => import("@/pages/AdminCatalog").then((m) => ({ default: m.AdminCatalog })));
 const AdminFarmerDocuments = lazy(() => import("@/pages/AdminFarmerDocuments").then((m) => ({ default: m.AdminFarmerDocuments })));
 const AdminUsers = lazy(() => import("@/pages/AdminUsers").then((m) => ({ default: m.AdminUsers })));
@@ -68,9 +68,9 @@ function App() {
                     <Route path="admin" element={<AdminLayout />}>
                       <Route index element={<AdminDashboard />} />
                       <Route path="orders" element={<AdminOrders />} />
-                      <Route path="products" element={<AdminProducts />} />
                       <Route path="catalog" element={<AdminCatalog />} />
                       <Route path="farmers" element={<AdminFarmers />} />
+                      <Route path="farmers/:id" element={<AdminFarmerDetail />} />
                       <Route path="farmer-documents" element={<AdminFarmerDocuments />} />
                       <Route path="users" element={<AdminUsers />} />
                       <Route path="reviews" element={<AdminReviews />} />
