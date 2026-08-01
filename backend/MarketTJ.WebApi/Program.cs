@@ -54,7 +54,7 @@ if (!string.IsNullOrWhiteSpace(databaseUrl))
 }
 
 builder.Services.AddApplicationServices();
-builder.Services.AddInfrastructureServices(builder.Configuration);
+builder.Services.AddInfrastructureServices(builder.Configuration, builder.Environment.IsDevelopment());
 
 builder.Services.AddControllers();
 

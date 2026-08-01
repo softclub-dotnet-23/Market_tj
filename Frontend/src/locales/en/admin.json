@@ -43,6 +43,8 @@
       "orders": "Orders",
       "farmers": "Active farmers"
     },
+    "thisMonth": "This month",
+    "allTime": "All time",
     "vsLastMonth": "vs last month {{value}}",
     "newMetric": "New",
     "salesByRegion": "Sales by region",

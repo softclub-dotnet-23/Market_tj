@@ -5,6 +5,6 @@ namespace MarketTJ.Application.Interfaces.Services;
 
 public interface IAiAssistantService
 {
-    Task<Result<AssistantResponseDto>> AskAsync(string message);
+    Task<Result<AssistantResponseDto>> AskAsync(string message, List<AssistantHistoryMessageDto>? history);
     Task<Result<string>> ExecuteActionAsync(ExecuteAssistantActionDto dto);
 }

@@ -5,6 +5,7 @@ using MarketTJ.Application.Interfaces.Services;
 using MarketTJ.Application.Results;
 using MarketTJ.Application.Validators;
 using MarketTJ.Domain.Entities;
+using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Logging;
 
 namespace MarketTJ.Application.Services;
@@ -14,8 +15,18 @@ public class AuthService(
     IRefreshTokenRepository refreshTokenRepository,
     ITokenService tokenService,
     IEmailVerificationService emailVerificationService,
+    IConfiguration configuration,
     ILogger<AuthService> logger) : IAuthService
 {
+    // Временный переключатель на период, пока нет верифицированного домена
+    // для Resend/SMTP (2026-08-01) — по умолчанию true (безопасное
+    // поведение), явно поставить "false" через EmailVerification__RequireVerification
+    // в Railway Variables, чтобы пропускать проверку кода. Вернуть
+    // обязательную верификацию — просто убрать переменную или поставить "true".
+    private bool RequireEmailVerification =>
+        !bool.TryParse(configuration["EmailVerification:RequireVerification"], out var value) || value;
+
+
     public async Task<Result<AuthResponseDto>> RegisterAsync(RegisterRequestDto dto)
     {
         try
@@ -31,7 +42,8 @@ public class AuthService(
             // Дополнено по явному запросу пользователя (раздел 23 ТЗ) — без
             // пройденного кода подтверждения регистрация невозможна, даже
             // если кто-то вызовет /api/auth/register напрямую, минуя форму.
-            if (!await emailVerificationService.IsEmailVerifiedAsync(dto.Email))
+            // Пропускается целиком, если RequireEmailVerification=false (см. выше).
+            if (RequireEmailVerification && !await emailVerificationService.IsEmailVerifiedAsync(dto.Email))
                 return Result<AuthResponseDto>.Fail("Email не подтверждён — сначала введите код из письма", ErrorType.Validation);
 
             var user = new User

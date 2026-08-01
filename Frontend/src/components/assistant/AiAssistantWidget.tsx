@@ -61,10 +61,13 @@ export function AiAssistantWidget() {
     const text = draft.trim();
     if (!text || sending) return;
     setDraft("");
+    // История берётся ДО того, как в messages добавится текущий вопрос —
+    // бэкенд сам добавляет message последним (см. AiAssistantService.AskAsync).
+    const history = messages.map((m) => ({ role: m.role, text: m.text }));
     pushMessage({ role: "user", text });
     setSending(true);
     try {
-      const res = await askAssistant(text);
+      const res = await askAssistant(text, history);
       pushMessage({
         role: "assistant",
         text: res.message,

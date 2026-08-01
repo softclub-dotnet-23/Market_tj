@@ -1,7 +1,8 @@
 import type { ReactNode } from "react";
 import { useNavigate } from "react-router-dom";
 import { useTranslation } from "react-i18next";
-import { ArrowDownRight, ArrowUpRight, Bike, Minus, Package, ShoppingBag, Sprout, Star, Users, Wallet } from "lucide-react";
+import { ArrowDownRight, ArrowUpRight, Bike, Minus, Package, ShoppingBag, Sprout, Star, UserCheck, Users, Wallet } from "lucide-react";
+import type { LucideIcon } from "lucide-react";
 import {
   Area,
   AreaChart,
@@ -22,7 +23,6 @@ import { useCountUp } from "@/lib/useCountUp";
 import { Avatar } from "@/components/ui/Avatar";
 import { PageLoader } from "@/components/layout/PageLoader";
 import { EmptyState } from "@/components/ui/EmptyState";
-import { StatCard as SimpleStatCard } from "@/components/ui/StatCard";
 import { resolveMediaUrl } from "@/lib/api";
 import { cn, formatNumber, formatSomoni, timeAgo } from "@/lib/utils";
 import { ORDER_STATUS_CLASSES, ORDER_STATUS_ICONS, ORDER_STATUS_KEYS } from "@/lib/orderStatus";
@@ -46,22 +46,26 @@ import {
   type TopFarmerRow,
 } from "@/data/admin";
 
-// Разделы "Аналитика" (/admin/statistics) больше нет — по просьбе
-// пользователя всё, чего не хватало на Обзоре, перенесено сюда одним
-// разделом вместо двух почти одинаковых страниц (см. также ТЗ 13.19/14.3,
-// где они изначально разведены — пользователь явно попросил объединить).
-const STATUS_KEYS: Record<number, string> = {
-  [OrderStatus.Pending]: "pending",
-  [OrderStatus.Accepted]: "accepted",
-  [OrderStatus.Rejected]: "rejected",
-  [OrderStatus.Preparing]: "preparing",
-  [OrderStatus.ReadyForPickup]: "readyForPickup",
-  [OrderStatus.CourierAssigned]: "courierAssigned",
-  [OrderStatus.PickedUp]: "pickedUp",
-  [OrderStatus.InDelivery]: "inDelivery",
-  [OrderStatus.Delivered]: "delivered",
-  [OrderStatus.Completed]: "completed",
-  [OrderStatus.Cancelled]: "cancelled",
+// Раздел "Аналитика" (/admin/statistics) больше нет — весь его контент
+// (8 карточек, revenue-график, топ-продажи, заказы по статусам) перенесён
+// сюда одним разделом вместо двух почти одинаковых страниц.
+//
+// Заливка прогресс-бара в OrdersByStatusCard — та же цветовая семья, что и
+// у бейджей ORDER_STATUS_CLASSES (lib/orderStatus.ts), только сплошным
+// тоном вместо -100/-700 пары, т.к. бейджи созданы под текст на светлой
+// подложке, а тут заливка на весь бар.
+const ORDER_STATUS_BAR_CLASSES: Record<number, string> = {
+  [OrderStatus.Pending]: "bg-stone-400 dark:bg-stone-500",
+  [OrderStatus.Accepted]: "bg-blue-500",
+  [OrderStatus.Rejected]: "bg-rose-500",
+  [OrderStatus.Preparing]: "bg-harvest-500",
+  [OrderStatus.ReadyForPickup]: "bg-harvest-500",
+  [OrderStatus.CourierAssigned]: "bg-blue-500",
+  [OrderStatus.PickedUp]: "bg-blue-500",
+  [OrderStatus.InDelivery]: "bg-blue-500",
+  [OrderStatus.Delivered]: "bg-grove-500",
+  [OrderStatus.Completed]: "bg-grove-600",
+  [OrderStatus.Cancelled]: "bg-rose-500",
 };
 
 const EMPTY_ANALYTICS: AdminAnalyticsDto = {
@@ -507,6 +511,59 @@ function TopSellingProductsCard({ analytics }: { analytics: AdminAnalyticsDto })
   );
 }
 
+// Единая карточка "за всё время" вместо 4 одинаковых боксов (как раньше на
+// AdminStatistics) — один блок с разделителями читается как цельная сводка,
+// а не как повторяющийся шаблон карточки на карточке. totalCustomers здесь —
+// единственная метрика, которой не было ни в одном из двух прежних
+// вариантов Dashboard/Statistics по отдельности (Dashboard считал только
+// "новых покупателей за месяц", Statistics — только их общее число).
+function PlatformTotalsCard({ analytics }: { analytics: AdminAnalyticsDto }) {
+  const { t } = useTranslation("admin");
+  const totalUsers = Math.round(useCountUp(analytics.totalUsers));
+  const totalCustomers = Math.round(useCountUp(analytics.totalCustomers));
+  const totalCouriers = Math.round(useCountUp(analytics.totalCouriers));
+  const activeListings = Math.round(useCountUp(analytics.activeProductListings));
+  const totalRevenue = Math.round(useCountUp(analytics.totalRevenue));
+
+  const items: { key: string; icon: LucideIcon; accent: keyof typeof ACCENT_CLASSES; value: string; label: string }[] = [
+    { key: "totalUsers", icon: Users, accent: "blue", value: formatNumber(totalUsers), label: t("statistics.stats.totalUsers") },
+    { key: "totalCustomers", icon: UserCheck, accent: "grove", value: formatNumber(totalCustomers), label: t("statistics.stats.totalCustomers") },
+    { key: "totalCouriers", icon: Bike, accent: "rose", value: formatNumber(totalCouriers), label: t("statistics.stats.totalCouriers") },
+    { key: "activeProductListings", icon: Package, accent: "orange", value: formatNumber(activeListings), label: t("statistics.stats.activeProductListings") },
+    {
+      key: "totalRevenue",
+      icon: Wallet,
+      accent: "grove",
+      value: `${formatSomoni(totalRevenue)} ${t("common.somoni")}`,
+      label: t("statistics.stats.totalRevenue"),
+    },
+  ];
+
+  return (
+    <div className="overflow-hidden rounded-3xl border border-stone-100 bg-white dark:border-stone-800 dark:bg-stone-900">
+      <div className="grid grid-cols-2 sm:grid-cols-3 xl:grid-cols-5">
+        {items.map((item, i) => (
+          <div
+            key={item.key}
+            className={cn(
+              "flex items-center gap-3 p-5",
+              i > 0 && "border-t border-stone-100 dark:border-stone-800 sm:border-t-0 sm:border-l",
+            )}
+          >
+            <span className={cn("flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl", ACCENT_CLASSES[item.accent].icon)}>
+              <item.icon size={19} />
+            </span>
+            <div className="min-w-0">
+              <p className="truncate font-display text-xl text-stone-900 dark:text-stone-50">{item.value}</p>
+              <p className="truncate text-xs text-stone-500 dark:text-stone-400">{item.label}</p>
+            </div>
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+}
+
 function OrdersByStatusCard({ analytics }: { analytics: AdminAnalyticsDto }) {
   const { t } = useTranslation("admin");
   const maxStatusCount = Math.max(1, ...analytics.ordersByStatus.map((s) => s.count));
@@ -517,19 +574,28 @@ function OrdersByStatusCard({ analytics }: { analytics: AdminAnalyticsDto }) {
         <p className="mt-4 text-sm text-stone-400 dark:text-stone-500">{t("statistics.noOrdersYet")}</p>
       ) : (
         <ul className="mt-5 flex flex-col gap-4">
-          {analytics.ordersByStatus.map((s) => (
-            <li key={s.status} className="flex items-center gap-3">
-              <div className="min-w-0 flex-1">
-                <p className="truncate text-sm text-stone-700 dark:text-stone-200">
-                  {t(`orders.status.${STATUS_KEYS[s.status] ?? "pending"}`)}
-                </p>
-                <div className="mt-1.5 h-1.5 w-full overflow-hidden rounded-full bg-stone-100 dark:bg-stone-800">
-                  <div className="h-full rounded-full bg-grove-600" style={{ width: `${(s.count / maxStatusCount) * 100}%` }} />
+          {analytics.ordersByStatus.map((s) => {
+            const StatusIcon = ORDER_STATUS_ICONS[s.status];
+            return (
+              <li key={s.status} className="flex items-center gap-3">
+                <span className={cn("flex h-8 w-8 shrink-0 items-center justify-center rounded-lg", ORDER_STATUS_CLASSES[s.status])}>
+                  {StatusIcon && <StatusIcon size={14} />}
+                </span>
+                <div className="min-w-0 flex-1">
+                  <p className="truncate text-sm text-stone-700 dark:text-stone-200">
+                    {t(`orders.status.${ORDER_STATUS_KEYS[s.status] ?? "pending"}`)}
+                  </p>
+                  <div className="mt-1.5 h-1.5 w-full overflow-hidden rounded-full bg-stone-100 dark:bg-stone-800">
+                    <div
+                      className={cn("h-full rounded-full", ORDER_STATUS_BAR_CLASSES[s.status] ?? "bg-grove-600")}
+                      style={{ width: `${(s.count / maxStatusCount) * 100}%` }}
+                    />
+                  </div>
                 </div>
-              </div>
-              <span className="shrink-0 text-sm font-semibold tabular-nums text-stone-800 dark:text-stone-100">{formatNumber(s.count)}</span>
-            </li>
-          ))}
+                <span className="shrink-0 text-sm font-semibold tabular-nums text-stone-800 dark:text-stone-100">{formatNumber(s.count)}</span>
+              </li>
+            );
+          })}
         </ul>
       )}
     </Card>
@@ -551,14 +617,6 @@ export function AdminDashboard() {
   const stats = useAdminStats(analytics ?? EMPTY_ANALYTICS, orders ?? [], customers ?? [], farmers);
   const visits = useOrdersByMonth(orders ?? []);
 
-  // Второй ряд карточек (перенесённых со старой "Аналитики") тоже должен
-  // считаться вверх, как и первый — по прямому запросу пользователя.
-  const safeAnalytics = analytics ?? EMPTY_ANALYTICS;
-  const animatedTotalUsers = Math.round(useCountUp(safeAnalytics.totalUsers));
-  const animatedTotalCouriers = Math.round(useCountUp(safeAnalytics.totalCouriers));
-  const animatedActiveListings = Math.round(useCountUp(safeAnalytics.activeProductListings));
-  const animatedTotalRevenue = Math.round(useCountUp(safeAnalytics.totalRevenue));
-
   if (analyticsLoading || ordersLoading || customersLoading || !catalogLoaded) return <PageLoader />;
 
   const error = analyticsError ?? ordersError ?? customersError;
@@ -572,27 +630,19 @@ export function AdminDashboard() {
   const popularCategories = computePopularCategories(categories);
 
   return (
-    <div className="flex flex-col gap-6">
-      <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-4">
-        {stats.map((stat) => (
-          <StatCard key={stat.key} stat={stat} />
-        ))}
+    <div className="flex flex-col gap-8">
+      <div className="flex flex-col gap-3">
+        <p className="text-xs font-semibold uppercase tracking-wide text-stone-400 dark:text-stone-500">{t("dashboard.thisMonth")}</p>
+        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-4">
+          {stats.map((stat) => (
+            <StatCard key={stat.key} stat={stat} />
+          ))}
+        </div>
       </div>
 
-      {/* Раньше жили на отдельной странице "Аналитика" (/admin/statistics) —
-          по просьбе пользователя объединили в один "Обзор", убрав дубли
-          (totalFarmers/ordersThisMonth/revenueThisMonth уже покрыты 4
-          карточками с трендом выше). */}
-      <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-4">
-        <SimpleStatCard icon={Users} accent="blue" label={t("statistics.stats.totalUsers")} value={formatNumber(animatedTotalUsers)} />
-        <SimpleStatCard icon={Bike} accent="rose" label={t("statistics.stats.totalCouriers")} value={formatNumber(animatedTotalCouriers)} />
-        <SimpleStatCard icon={Package} accent="orange" label={t("statistics.stats.activeProductListings")} value={formatNumber(animatedActiveListings)} />
-        <SimpleStatCard
-          icon={Wallet}
-          accent="grove"
-          label={t("statistics.stats.totalRevenue")}
-          value={`${formatSomoni(animatedTotalRevenue)} ${t("common.somoni")}`}
-        />
+      <div className="flex flex-col gap-3">
+        <p className="text-xs font-semibold uppercase tracking-wide text-stone-400 dark:text-stone-500">{t("dashboard.allTime")}</p>
+        <PlatformTotalsCard analytics={analytics} />
       </div>
 
       <div className="grid grid-cols-1 gap-6 xl:grid-cols-[1fr_1.3fr]">
