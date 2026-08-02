@@ -1,4 +1,5 @@
 using MarketTJ.Application.Common;
+using MarketTJ.Application.Dto.NotificationDto;
 using MarketTJ.Application.Dto.ReviewDto;
 using MarketTJ.Application.Interfaces.Repositories;
 using MarketTJ.Application.Interfaces.Services;
@@ -15,14 +16,17 @@ public class ReviewServiceTests
     private readonly Mock<IReviewRepository> _reviewRepository = new();
     private readonly Mock<IOrderRepository> _orderRepository = new();
     private readonly Mock<ICustomerProfileRepository> _customerProfileRepository = new();
+    private readonly Mock<IFarmerProfileRepository> _farmerProfileRepository = new();
     private readonly Mock<IUserRepository> _userRepository = new();
     private readonly Mock<ICurrentUserService> _currentUser = new();
+    private readonly Mock<IReviewAutoReplyService> _reviewAutoReplyService = new();
+    private readonly Mock<INotificationService> _notificationService = new();
     private readonly Mock<ILogger<ReviewService>> _logger = new();
     private readonly ReviewService _service;
 
     public ReviewServiceTests()
     {
-        _service = new ReviewService(_reviewRepository.Object, _orderRepository.Object, _customerProfileRepository.Object, _userRepository.Object, _currentUser.Object, _logger.Object);
+        _service = new ReviewService(_reviewRepository.Object, _orderRepository.Object, _customerProfileRepository.Object, _farmerProfileRepository.Object, _userRepository.Object, _currentUser.Object, _reviewAutoReplyService.Object, _notificationService.Object, _logger.Object);
         // Дефолтный Order/Review — CustomerId=1/FarmerId=1; залогинены как
         // покупатель, чей CustomerProfile.Id=1.
         _currentUser.Setup(c => c.UserId).Returns(10);
@@ -39,6 +43,9 @@ public class ReviewServiceTests
             DeliveryAddress = "A", Region = "Хатлон", District = "Бохтар", Subtotal = 100, DeliveryPrice = 10, TotalAmount = 110
         });
         _reviewRepository.Setup(r => r.GetAllAsync()).ReturnsAsync([]);
+        // По умолчанию у фермера нет профиля/автоответ выключен — CreateAsync
+        // тесты не задевают TryAutoReplyAsync, если явно не настроят иначе.
+        _farmerProfileRepository.Setup(r => r.GetByIdAsync(It.IsAny<int>())).ReturnsAsync((FarmerProfile?)null);
     }
 
     private static Review CreateReview(int id = 1, int orderId = 1) => new()
@@ -106,6 +113,37 @@ public class ReviewServiceTests
     }
 
     [Fact]
+    public async Task GetAllAsync_FarmerIdProvided_ReturnsOnlyThatFarmersReviews()
+    {
+        var forFarmer1 = CreateReview(1);
+        forFarmer1.FarmerId = 1;
+        var forFarmer2 = CreateReview(2);
+        forFarmer2.FarmerId = 2;
+        _reviewRepository.Setup(r => r.GetAllAsync()).ReturnsAsync([forFarmer1, forFarmer2]);
+
+        var result = await _service.GetAllAsync(farmerId: 1);
+
+        Assert.True(result.IsSuccess);
+        var dto = Assert.Single(result.Data!);
+        Assert.Equal(1, dto.Id);
+    }
+
+    [Fact]
+    public async Task GetAllAsync_FarmerIdOmitted_ReturnsAllReviews()
+    {
+        var forFarmer1 = CreateReview(1);
+        forFarmer1.FarmerId = 1;
+        var forFarmer2 = CreateReview(2);
+        forFarmer2.FarmerId = 2;
+        _reviewRepository.Setup(r => r.GetAllAsync()).ReturnsAsync([forFarmer1, forFarmer2]);
+
+        var result = await _service.GetAllAsync();
+
+        Assert.True(result.IsSuccess);
+        Assert.Equal(2, result.Data!.Count());
+    }
+
+    [Fact]
     public async Task GetAllAsync_RepositoryThrows_ReturnsInternalServerError()
     {
         _reviewRepository.Setup(r => r.GetAllAsync()).ThrowsAsync(new Exception("db error"));
@@ -162,6 +200,77 @@ public class ReviewServiceTests
 
         Assert.True(result.IsSuccess);
         _reviewRepository.Verify(r => r.AddAsync(It.IsAny<Review>()), Times.Once);
+    }
+
+    // ---------- CreateAsync — автоответ AI (FarmerProfile.AutoReplyToReviewsEnabled) ----------
+
+    [Fact]
+    public async Task CreateAsync_FarmerHasAutoReplyEnabled_GeneratesAndSavesReply()
+    {
+        _farmerProfileRepository.Setup(r => r.GetByIdAsync(1)).ReturnsAsync(new FarmerProfile
+        {
+            Id = 1, UserId = 2, FarmName = "Farm", Region = "Хатлон", District = "Бохтар",
+            Village = "V", Address = "A", VerificationStatus = FarmerVerificationStatus.Verified,
+            AutoReplyToReviewsEnabled = true,
+        });
+        _reviewAutoReplyService.Setup(s => s.GenerateReplyAsync(5, It.IsAny<string?>())).ReturnsAsync("Спасибо за отзыв!");
+
+        var result = await _service.CreateAsync(ValidCreateDto());
+
+        Assert.True(result.IsSuccess);
+        _reviewRepository.Verify(r => r.UpdateAsync(It.Is<Review>(rv => rv.FarmerReply == "Спасибо за отзыв!" && rv.FarmerRepliedAt != null)), Times.Once);
+    }
+
+    [Fact]
+    public async Task CreateAsync_AutoReplyGenerated_NotifiesCustomer()
+    {
+        _farmerProfileRepository.Setup(r => r.GetByIdAsync(1)).ReturnsAsync(new FarmerProfile
+        {
+            Id = 1, UserId = 2, FarmName = "Farm", Region = "Хатлон", District = "Бохтар",
+            Village = "V", Address = "A", VerificationStatus = FarmerVerificationStatus.Verified,
+            AutoReplyToReviewsEnabled = true,
+        });
+        _reviewAutoReplyService.Setup(s => s.GenerateReplyAsync(5, It.IsAny<string?>())).ReturnsAsync("Спасибо за отзыв!");
+        _customerProfileRepository.Setup(r => r.GetByIdAsync(1)).ReturnsAsync(new CustomerProfile { Id = 1, UserId = 99, CustomerType = CustomerType.Retail, Region = "Хатлон", District = "Бохтар" });
+
+        await _service.CreateAsync(ValidCreateDto());
+
+        _notificationService.Verify(n => n.CreateAsync(It.Is<CreateNotificationDto>(d => d.UserId == 99 && d.Message.Contains("Спасибо за отзыв!"))), Times.Once);
+    }
+
+    [Fact]
+    public async Task CreateAsync_FarmerHasAutoReplyDisabled_DoesNotGenerateReply()
+    {
+        _farmerProfileRepository.Setup(r => r.GetByIdAsync(1)).ReturnsAsync(new FarmerProfile
+        {
+            Id = 1, UserId = 2, FarmName = "Farm", Region = "Хатлон", District = "Бохтар",
+            Village = "V", Address = "A", VerificationStatus = FarmerVerificationStatus.Verified,
+            AutoReplyToReviewsEnabled = false,
+        });
+
+        var result = await _service.CreateAsync(ValidCreateDto());
+
+        Assert.True(result.IsSuccess);
+        _reviewAutoReplyService.Verify(s => s.GenerateReplyAsync(It.IsAny<int>(), It.IsAny<string?>()), Times.Never);
+        _reviewRepository.Verify(r => r.UpdateAsync(It.IsAny<Review>()), Times.Never);
+    }
+
+    [Fact]
+    public async Task CreateAsync_AutoReplyEnabledButGenerationFails_StillCreatesReview()
+    {
+        _farmerProfileRepository.Setup(r => r.GetByIdAsync(1)).ReturnsAsync(new FarmerProfile
+        {
+            Id = 1, UserId = 2, FarmName = "Farm", Region = "Хатлон", District = "Бохтар",
+            Village = "V", Address = "A", VerificationStatus = FarmerVerificationStatus.Verified,
+            AutoReplyToReviewsEnabled = true,
+        });
+        _reviewAutoReplyService.Setup(s => s.GenerateReplyAsync(It.IsAny<int>(), It.IsAny<string?>())).ReturnsAsync((string?)null);
+
+        var result = await _service.CreateAsync(ValidCreateDto());
+
+        Assert.True(result.IsSuccess);
+        _reviewRepository.Verify(r => r.AddAsync(It.IsAny<Review>()), Times.Once);
+        _reviewRepository.Verify(r => r.UpdateAsync(It.IsAny<Review>()), Times.Never);
     }
 
     [Fact]
@@ -444,6 +553,123 @@ public class ReviewServiceTests
         _reviewRepository.Setup(r => r.GetByIdAsync(It.IsAny<int>())).ThrowsAsync(new Exception("db error"));
 
         var result = await _service.DeleteAsync(1);
+
+        Assert.False(result.IsSuccess);
+        Assert.Equal(ErrorType.InternalServerError, result.ErrorType);
+    }
+
+    // ---------- ReplyAsync ----------
+    // Отвечает фермер, которому адресован отзыв (FarmerId=1 у CreateReview) —
+    // переключаем залогиненного пользователя с покупателя (дефолт в
+    // конструкторе) на фермера с FarmerProfile.Id=1.
+
+    private void LoginAsFarmerOwningReview()
+    {
+        // IsAdmin() — extension method (CurrentUserAuthorizationExtensions),
+        // Moq не умеет мокать их напрямую — мокаем Role, IsAdmin() сама
+        // прочитает его через реальную (немокнутую) реализацию.
+        _currentUser.Setup(c => c.UserId).Returns(20);
+        _currentUser.Setup(c => c.Role).Returns(nameof(UserRole.Farmer));
+        _farmerProfileRepository.Setup(r => r.GetByUserIdAsync(20)).ReturnsAsync(new FarmerProfile
+        {
+            Id = 1, UserId = 20, FarmName = "Farm", Region = "Хатлон", District = "Бохтар",
+            Village = "V", Address = "A", VerificationStatus = FarmerVerificationStatus.Verified
+        });
+    }
+
+    [Fact]
+    public async Task ReplyAsync_FarmerOwnsReview_UpdatesAndReturnsOk()
+    {
+        LoginAsFarmerOwningReview();
+        var review = CreateReview(1);
+        _reviewRepository.Setup(r => r.GetByIdAsync(1)).ReturnsAsync(review);
+
+        var result = await _service.ReplyAsync(1, new ReplyToReviewDto { Reply = "Спасибо за отзыв! Ждём вас снова." });
+
+        Assert.True(result.IsSuccess);
+        Assert.Equal("Спасибо за отзыв! Ждём вас снова.", review.FarmerReply);
+        Assert.NotNull(review.FarmerRepliedAt);
+        _reviewRepository.Verify(r => r.UpdateAsync(review), Times.Once);
+    }
+
+    [Fact]
+    public async Task ReplyAsync_FarmerOwnsReview_NotifiesCustomer()
+    {
+        LoginAsFarmerOwningReview();
+        var review = CreateReview(1);
+        _reviewRepository.Setup(r => r.GetByIdAsync(1)).ReturnsAsync(review);
+        _customerProfileRepository.Setup(r => r.GetByIdAsync(1)).ReturnsAsync(new CustomerProfile { Id = 1, UserId = 99, CustomerType = CustomerType.Retail, Region = "Хатлон", District = "Бохтар" });
+
+        await _service.ReplyAsync(1, new ReplyToReviewDto { Reply = "Спасибо за отзыв!" });
+
+        _notificationService.Verify(n => n.CreateAsync(It.Is<CreateNotificationDto>(d => d.UserId == 99 && d.Message.Contains("Спасибо за отзыв!"))), Times.Once);
+    }
+
+    [Fact]
+    public async Task ReplyAsync_ReviewNotFound_ReturnsNotFound()
+    {
+        LoginAsFarmerOwningReview();
+        _reviewRepository.Setup(r => r.GetByIdAsync(It.IsAny<int>())).ReturnsAsync((Review?)null);
+
+        var result = await _service.ReplyAsync(999, new ReplyToReviewDto { Reply = "Спасибо!" });
+
+        Assert.False(result.IsSuccess);
+        Assert.Equal(ErrorType.NotFound, result.ErrorType);
+    }
+
+    [Fact]
+    public async Task ReplyAsync_EmptyReply_ReturnsValidationError()
+    {
+        LoginAsFarmerOwningReview();
+
+        var result = await _service.ReplyAsync(1, new ReplyToReviewDto { Reply = "" });
+
+        Assert.False(result.IsSuccess);
+        Assert.Equal(ErrorType.Validation, result.ErrorType);
+        _reviewRepository.Verify(r => r.GetByIdAsync(It.IsAny<int>()), Times.Never);
+    }
+
+    [Fact]
+    public async Task ReplyAsync_FarmerDoesNotOwnReview_ReturnsForbidden()
+    {
+        // FarmerProfile.Id=2 — отзыв (FarmerId=1) адресован другому фермеру.
+        _currentUser.Setup(c => c.UserId).Returns(21);
+        _currentUser.Setup(c => c.Role).Returns(nameof(UserRole.Farmer));
+        _farmerProfileRepository.Setup(r => r.GetByUserIdAsync(21)).ReturnsAsync(new FarmerProfile
+        {
+            Id = 2, UserId = 21, FarmName = "Other Farm", Region = "Хатлон", District = "Бохтар",
+            Village = "V", Address = "A", VerificationStatus = FarmerVerificationStatus.Verified
+        });
+        var review = CreateReview(1);
+        _reviewRepository.Setup(r => r.GetByIdAsync(1)).ReturnsAsync(review);
+
+        var result = await _service.ReplyAsync(1, new ReplyToReviewDto { Reply = "Спасибо!" });
+
+        Assert.False(result.IsSuccess);
+        Assert.Equal(ErrorType.Forbidden, result.ErrorType);
+        _reviewRepository.Verify(r => r.UpdateAsync(It.IsAny<Review>()), Times.Never);
+    }
+
+    [Fact]
+    public async Task ReplyAsync_Admin_CanReplyToAnyReview()
+    {
+        _currentUser.Setup(c => c.Role).Returns(nameof(UserRole.Admin));
+        var review = CreateReview(1);
+        _reviewRepository.Setup(r => r.GetByIdAsync(1)).ReturnsAsync(review);
+
+        var result = await _service.ReplyAsync(1, new ReplyToReviewDto { Reply = "Спасибо от администрации!" });
+
+        Assert.True(result.IsSuccess);
+        _reviewRepository.Verify(r => r.UpdateAsync(review), Times.Once);
+    }
+
+    [Fact]
+    public async Task ReplyAsync_RepositoryThrows_ReturnsInternalServerError()
+    {
+        LoginAsFarmerOwningReview();
+        _reviewRepository.Setup(r => r.GetByIdAsync(It.IsAny<int>())).ThrowsAsync(new Exception("db error"));
+
+        var result = await _service.ReplyAsync(1, new ReplyToReviewDto { Reply = "Спасибо!" });
 
         Assert.False(result.IsSuccess);
         Assert.Equal(ErrorType.InternalServerError, result.ErrorType);

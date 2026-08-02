@@ -34,6 +34,7 @@ const AdminCouriers = lazy(() => import("@/pages/AdminCouriers").then((m) => ({ 
 const AdminDeliveryZones = lazy(() => import("@/pages/AdminDeliveryZones").then((m) => ({ default: m.AdminDeliveryZones })));
 const AdminCommissions = lazy(() => import("@/pages/AdminCommissions").then((m) => ({ default: m.AdminCommissions })));
 const AdminUsers = lazy(() => import("@/pages/AdminUsers").then((m) => ({ default: m.AdminUsers })));
+const AdminCustomerDetail = lazy(() => import("@/pages/AdminCustomerDetail").then((m) => ({ default: m.AdminCustomerDetail })));
 const AdminReviews = lazy(() => import("@/pages/AdminReviews").then((m) => ({ default: m.AdminReviews })));
 const AdminSettings = lazy(() => import("@/pages/AdminSettings").then((m) => ({ default: m.AdminSettings })));
 const AdminProfile = lazy(() => import("@/pages/AdminProfile").then((m) => ({ default: m.AdminProfile })));
@@ -46,7 +47,6 @@ const FarmerOrders = lazy(() => import("@/pages/FarmerOrders").then((m) => ({ de
 const FarmerMessages = lazy(() => import("@/pages/FarmerMessages").then((m) => ({ default: m.FarmerMessages })));
 const FarmerReviews = lazy(() => import("@/pages/FarmerReviews").then((m) => ({ default: m.FarmerReviews })));
 const FarmerDocuments = lazy(() => import("@/pages/FarmerDocuments").then((m) => ({ default: m.FarmerDocuments })));
-const FarmerStaff = lazy(() => import("@/pages/FarmerStaff").then((m) => ({ default: m.FarmerStaff })));
 const FarmerNotifications = lazy(() => import("@/pages/FarmerNotifications").then((m) => ({ default: m.FarmerNotifications })));
 const CustomerDashboard = lazy(() => import("@/pages/CustomerDashboard").then((m) => ({ default: m.CustomerDashboard })));
 const CustomerOrders = lazy(() => import("@/pages/CustomerOrders").then((m) => ({ default: m.CustomerOrders })));
@@ -78,6 +78,7 @@ function App() {
                       <Route path="couriers" element={<AdminCouriers />} />
                       <Route path="delivery-zones" element={<AdminDeliveryZones />} />
                       <Route path="users" element={<AdminUsers />} />
+                      <Route path="users/:id" element={<AdminCustomerDetail />} />
                       <Route path="reviews" element={<AdminReviews />} />
                       <Route path="commissions" element={<AdminCommissions />} />
                       <Route path="support" element={<AdminSupport />} />
@@ -97,7 +98,6 @@ function App() {
                       <Route path="reviews" element={<FarmerReviews />} />
                       <Route path="profile" element={<FarmerProfile />} />
                       <Route path="documents" element={<FarmerDocuments />} />
-                      <Route path="staff" element={<FarmerStaff />} />
                       <Route path="notifications" element={<FarmerNotifications />} />
                       <Route path="*" element={<Navigate to="/farmer" replace />} />
                     </Route>

@@ -7,10 +7,10 @@ namespace MarketTJ.Infrastructure.Persistence.Repositories;
 public class AuditLogRepository(AppDbContext context) : IAuditLogRepository
 {
     public async Task<List<AuditLog>> GetAllAsync()
-        => await context.AuditLogs.ToListAsync();
+        => await context.AuditLogs.AsNoTracking().ToListAsync();
 
     public async Task<AuditLog?> GetByIdAsync(int id)
-        => await context.AuditLogs.FindAsync(id);
+        => await context.AuditLogs.AsNoTracking().FirstOrDefaultAsync(x => x.Id == id);
 
     public async Task AddAsync(AuditLog auditLog)
     {

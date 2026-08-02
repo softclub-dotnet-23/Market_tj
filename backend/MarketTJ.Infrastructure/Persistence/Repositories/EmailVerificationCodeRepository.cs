@@ -8,6 +8,7 @@ public class EmailVerificationCodeRepository(AppDbContext context) : IEmailVerif
 {
     public async Task<EmailVerificationCode?> GetLatestByEmailAsync(string email)
         => await context.EmailVerificationCodes
+            .AsNoTracking()
             .Where(x => x.Email == email)
             .OrderByDescending(x => x.CreatedAt)
             .FirstOrDefaultAsync();

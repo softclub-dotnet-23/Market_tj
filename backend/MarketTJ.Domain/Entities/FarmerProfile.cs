@@ -15,6 +15,14 @@ public class FarmerProfile
     public FarmerVerificationStatus VerificationStatus { get; set; }
     public DateTime? VerifiedAt { get; set; }
     public int? VerifiedByAdminId { get; set; }
+
+    // По прямому запросу пользователя (2026-08-02): переключатель "отвечать
+    // на отзывы автоматически" — если включён, ReviewService.CreateAsync сам
+    // просит AI сочинить и сразу сохранить ответ сразу при создании отзыва,
+    // без участия фермера. Если выключен (по умолчанию) — фермер пишет
+    // ответы вручную (см. Review.FarmerReply/ReviewService.ReplyAsync).
+    public bool AutoReplyToReviewsEnabled { get; set; }
+
     public DateTime CreatedAt { get; set; }
     public DateTime UpdatedAt { get; set; }
 

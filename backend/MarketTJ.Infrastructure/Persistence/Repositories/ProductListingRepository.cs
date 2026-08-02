@@ -23,19 +23,20 @@ public class ProductListingRepository(AppDbContext context, ICacheService cache)
             return cached;
         }
 
-        var listings = await context.ProductListings.ToListAsync();
+        var listings = await context.ProductListings.AsNoTracking().ToListAsync();
         await cache.SetAsync(AllListingsCacheKey, listings, TimeSpan.FromMinutes(10));
         return listings;
     }
 
     public async Task<ProductListing?> GetByIdAsync(int id)
-        => await context.ProductListings.FindAsync(id);
+        => await context.ProductListings.AsNoTracking().FirstOrDefaultAsync(x => x.Id == id);
 
     // p.Product теперь необязателен (см. ProductListing.ProductId) — новые
     // объявления его не заполняют, поэтому проверка на null обязательна,
     // иначе ILike(p.Product.Name, ...) уронит запрос на NullReferenceException.
     public async Task<List<ProductListing>> SearchAsync(string query)
         => await context.ProductListings
+            .AsNoTracking()
             .Where(p => EF.Functions.ILike(p.Title, $"%{query}%")
                      || (p.Description != null && EF.Functions.ILike(p.Description, $"%{query}%"))
                      || (p.Product != null && EF.Functions.ILike(p.Product.Name, $"%{query}%")))
@@ -55,6 +56,7 @@ public class ProductListingRepository(AppDbContext context, ICacheService cache)
         // эндпоинтом): показываем только объявления подтверждённых фермеров —
         // иначе покупатель увидел бы товар продавца, ещё не прошедшего проверку.
         var query = context.ProductListings
+            .AsNoTracking()
             .Where(x => x.Status == ListingStatus.Active
                      && x.AvailableQuantity > 0
                      && x.FarmerProfile.VerificationStatus == FarmerVerificationStatus.Verified);
@@ -112,6 +114,7 @@ public class ProductListingRepository(AppDbContext context, ICacheService cache)
 
     public async Task<List<string>> GetDistinctActiveRegionsAsync()
         => await context.ProductListings
+            .AsNoTracking()
             .Where(x => x.Status == ListingStatus.Active
                      && x.AvailableQuantity > 0
                      && x.FarmerProfile.VerificationStatus == FarmerVerificationStatus.Verified)
@@ -119,6 +122,49 @@ public class ProductListingRepository(AppDbContext context, ICacheService cache)
             .Distinct()
             .OrderBy(r => r)
             .ToListAsync();
+
+    public async Task<Dictionary<int, int>> GetOrderCountsByListingIdsAsync(List<int> listingIds)
+        => await context.OrderItems
+            .AsNoTracking()
+            .Where(oi => listingIds.Contains(oi.ProductListingId))
+            .GroupBy(oi => oi.ProductListingId)
+            .Select(g => new { ListingId = g.Key, Count = g.Count() })
+            .ToDictionaryAsync(x => x.ListingId, x => x.Count);
+
+    public async Task<Dictionary<int, double>> GetRatingsByFarmerIdsAsync(List<int> farmerIds)
+        => await context.Reviews
+            .AsNoTracking()
+            .Where(r => farmerIds.Contains(r.FarmerId))
+            .GroupBy(r => r.FarmerId)
+            .Select(g => new { FarmerId = g.Key, Rating = g.Average(r => (double)r.Rating) })
+            .ToDictionaryAsync(x => x.FarmerId, x => Math.Round(x.Rating, 1));
+
+    public async Task<Dictionary<int, int>> GetActiveListingCountsByCategoryAsync()
+        => await context.ProductListings
+            .AsNoTracking()
+            .Where(x => x.Status == ListingStatus.Active
+                     && x.AvailableQuantity > 0
+                     && x.FarmerProfile.VerificationStatus == FarmerVerificationStatus.Verified)
+            .GroupBy(x => x.CategoryId)
+            .Select(g => new { CategoryId = g.Key, Count = g.Count() })
+            .ToDictionaryAsync(x => x.CategoryId, x => x.Count);
+
+    public async Task<Dictionary<int, (int Count, List<int> CategoryIds)>> GetActiveListingStatsByFarmerIdsAsync(List<int> farmerIds)
+    {
+        var rows = await context.ProductListings
+            .AsNoTracking()
+            .Where(x => x.Status == ListingStatus.Active
+                     && x.AvailableQuantity > 0
+                     && farmerIds.Contains(x.FarmerProfileId))
+            .Select(x => new { x.FarmerProfileId, x.CategoryId })
+            .ToListAsync();
+
+        return rows
+            .GroupBy(x => x.FarmerProfileId)
+            .ToDictionary(
+                g => g.Key,
+                g => (g.Count(), g.Select(x => x.CategoryId).Distinct().ToList()));
+    }
 
     public async Task AddAsync(ProductListing productListing)
     {

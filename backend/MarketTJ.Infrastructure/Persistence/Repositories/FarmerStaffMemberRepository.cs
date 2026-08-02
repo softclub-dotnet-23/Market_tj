@@ -7,10 +7,10 @@ namespace MarketTJ.Infrastructure.Persistence.Repositories;
 public class FarmerStaffMemberRepository(AppDbContext context) : IFarmerStaffMemberRepository
 {
     public async Task<List<FarmerStaffMember>> GetAllAsync()
-        => await context.FarmerStaffMembers.ToListAsync();
+        => await context.FarmerStaffMembers.AsNoTracking().ToListAsync();
 
     public async Task<FarmerStaffMember?> GetByIdAsync(int id)
-        => await context.FarmerStaffMembers.FindAsync(id);
+        => await context.FarmerStaffMembers.AsNoTracking().FirstOrDefaultAsync(x => x.Id == id);
 
     public async Task AddAsync(FarmerStaffMember farmerStaffMember)
     {

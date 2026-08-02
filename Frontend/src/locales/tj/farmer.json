@@ -7,7 +7,6 @@
     "reviews": "Шарҳҳо",
     "profile": "Профили хоҷагӣ",
     "documents": "Ҳуҷҷатҳо",
-    "staff": "Кормандон",
     "notifications": "Огоҳиномаҳо"
   },
   "navSections": {
@@ -231,7 +230,20 @@
       "createdAt": "Сана"
     },
     "orderLabel": "Фармоиш #{{id}}",
-    "customerLabel": "Харидор #{{id}}"
+    "customerLabel": "Харидор #{{id}}",
+    "yourReply": "Ҷавоби шумо",
+    "replyAction": "Ҷавоб додан",
+    "editReplyAction": "Тағйир додани ҷавоб",
+    "replyPlaceholder": "Ҷавоби худро ба шарҳ нависед...",
+    "replySubmit": "Фиристодани ҷавоб",
+    "replyCancel": "Бекор кардан",
+    "replySuccess": "Ҷавоб фиристода шуд",
+    "replyError": "Ҷавоб фиристода нашуд",
+    "autoReplyLabel": "Ба шарҳҳо худкор ҷавоб додан (AI)",
+    "autoReplyHint": "Шарҳҳои нав фавран аз AI ҷавоб мегиранд, бе иштироки шумо",
+    "autoReplyOnSuccess": "Ҷавоби худкор фаъол шуд",
+    "autoReplyOffSuccess": "Ҷавоби худкор хомӯш шуд",
+    "autoReplyError": "Танзими ҷавоби худкор тағйир дода нашуд"
   },
   "notificationsPage": {
     "errorTitle": "Огоҳиномаҳо бор нашуданд",
@@ -279,46 +291,6 @@
       "fileTooLarge": "Ҳаҷми максималии файл — 10 МБ",
       "cancel": "Бекор кардан",
       "submit": "Бор кардан"
-    }
-  },
-  "staff": {
-    "errorTitle": "Кормандон бор нашуданд",
-    "errorDescription": "Пайвастшавии худро ба сервер санҷед ва аз нав кӯшиш кунед.",
-    "emptyTitle": "Ҳанӯз корманд нест",
-    "emptyDescription": "Дар ин ҷо кормандони ба хоҷагии шумо иловашуда пайдо мешаванд.",
-    "columns": {
-      "user": "Корманд",
-      "permissions": "Ҳуқуқҳо",
-      "status": "Ҳолат",
-      "createdAt": "Санаи илова",
-      "actions": "Амалҳо"
-    },
-    "userLabel": "Корманд #{{id}}",
-    "permissions": {
-      "manageProducts": "Идораи маҳсулот",
-      "manageStock": "Идораи боқимонда",
-      "none": "Бе ҳуқуқ"
-    },
-    "status": {
-      "active": "Фаъол",
-      "inactive": "Хомӯш"
-    },
-    "addButton": "Илова кардани корманд",
-    "addModalTitle": "Корманди нав",
-    "addSuccess": "Корманд илова шуд, ба почтаи ӯ хат фиристода шуд",
-    "addError": "Корманд илова нашуд — email-ро санҷед",
-    "deleteAction": "Нест кардан",
-    "deleteSuccess": "Корманд нест карда шуд",
-    "deleteError": "Корманд нест карда натавонист",
-    "deleteConfirmTitle": "Корманд нест кунам?",
-    "deleteConfirmDescription": "Ин амалро бекор кардан мумкин нест.",
-    "form": {
-      "email": "Email-и корманд",
-      "emailHint": "Корманд бояд аллакай дар Market.tj ҳисоб дошта бошад",
-      "required": "Майдони ҳатмӣ",
-      "permissions": "Ҳуқуқҳо",
-      "cancel": "Бекор кардан",
-      "submit": "Илова кардан"
     }
   },
   "chat": {

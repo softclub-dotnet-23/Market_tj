@@ -7,7 +7,6 @@
     "reviews": "Отзывы",
     "profile": "Профиль хозяйства",
     "documents": "Документы",
-    "staff": "Сотрудники",
     "notifications": "Уведомления"
   },
   "navSections": {
@@ -231,7 +230,20 @@
       "createdAt": "Дата"
     },
     "orderLabel": "Заказ #{{id}}",
-    "customerLabel": "Клиент #{{id}}"
+    "customerLabel": "Клиент #{{id}}",
+    "yourReply": "Ваш ответ",
+    "replyAction": "Ответить",
+    "editReplyAction": "Изменить ответ",
+    "replyPlaceholder": "Напишите ответ на отзыв...",
+    "replySubmit": "Отправить ответ",
+    "replyCancel": "Отмена",
+    "replySuccess": "Ответ отправлен",
+    "replyError": "Не удалось отправить ответ",
+    "autoReplyLabel": "Отвечать на отзывы автоматически (AI)",
+    "autoReplyHint": "Новые отзывы будут сразу получать ответ от AI без вашего участия",
+    "autoReplyOnSuccess": "Автоответ включён",
+    "autoReplyOffSuccess": "Автоответ выключен",
+    "autoReplyError": "Не удалось изменить настройку автоответа"
   },
   "notificationsPage": {
     "errorTitle": "Не удалось загрузить уведомления",
@@ -279,46 +291,6 @@
       "fileTooLarge": "Максимальный размер файла — 10 МБ",
       "cancel": "Отмена",
       "submit": "Загрузить"
-    }
-  },
-  "staff": {
-    "errorTitle": "Не удалось загрузить сотрудников",
-    "errorDescription": "Проверьте подключение к серверу и попробуйте снова.",
-    "emptyTitle": "Пока нет сотрудников",
-    "emptyDescription": "Здесь появятся сотрудники, добавленные к вашему хозяйству.",
-    "columns": {
-      "user": "Сотрудник",
-      "permissions": "Права доступа",
-      "status": "Статус",
-      "createdAt": "Дата добавления",
-      "actions": "Действия"
-    },
-    "userLabel": "Сотрудник #{{id}}",
-    "permissions": {
-      "manageProducts": "Управление товарами",
-      "manageStock": "Управление остатками",
-      "none": "Без прав"
-    },
-    "status": {
-      "active": "Активен",
-      "inactive": "Отключён"
-    },
-    "addButton": "Добавить сотрудника",
-    "addModalTitle": "Новый сотрудник",
-    "addSuccess": "Сотрудник добавлен, ему отправлено письмо на почту",
-    "addError": "Не удалось добавить сотрудника — проверьте email",
-    "deleteAction": "Удалить",
-    "deleteSuccess": "Сотрудник удалён",
-    "deleteError": "Не удалось удалить сотрудника",
-    "deleteConfirmTitle": "Удалить сотрудника?",
-    "deleteConfirmDescription": "Это действие нельзя отменить.",
-    "form": {
-      "email": "Email сотрудника",
-      "emailHint": "Сотрудник должен уже иметь аккаунт на Market.tj",
-      "required": "Обязательное поле",
-      "permissions": "Права доступа",
-      "cancel": "Отмена",
-      "submit": "Добавить"
     }
   },
   "chat": {

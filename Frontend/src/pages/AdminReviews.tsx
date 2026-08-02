@@ -7,7 +7,7 @@ import { EmptyState } from "@/components/ui/EmptyState";
 import { Pagination } from "@/components/ui/Pagination";
 import { ConfirmDialog } from "@/components/ui/ConfirmDialog";
 import { formatDate } from "@/lib/utils";
-import { deleteReview, useAdminReviews, type AdminReviewDto } from "@/data/adminEntities";
+import { deleteReview, useAdminFarmers, useAdminReviews, type AdminReviewDto } from "@/data/adminEntities";
 
 const PAGE_SIZE = 10;
 
@@ -31,6 +31,11 @@ export function AdminReviews() {
   const [refreshKey, setRefreshKey] = useState(0);
   const [deleting, setDeleting] = useState<AdminReviewDto | null>(null);
   const { reviews, loading, error } = useAdminReviews(refreshKey);
+  const { farmers } = useAdminFarmers();
+
+  // По прямому запросу пользователя — имя фермера, а не "Фермер #N" (тот же
+  // приём, что и в AdminOrders.tsx).
+  const farmNameById = new Map((farmers ?? []).map((f) => [f.id, f.farmName]));
 
   if (loading) return <PageLoader />;
 
@@ -63,7 +68,8 @@ export function AdminReviews() {
         <div className="min-w-0">
           <p className="truncate text-sm font-medium text-stone-800 dark:text-stone-100">{t("reviews.orderLabel", { id: review.orderId })}</p>
           <p className="truncate text-xs text-stone-400 dark:text-stone-500">
-            {review.customerFullName ?? t("reviews.customerLabel", { id: review.customerId })} · {t("reviews.farmerLabel", { id: review.farmerId })}
+            {review.customerFullName ?? t("reviews.customerLabel", { id: review.customerId })} ·{" "}
+            {farmNameById.get(review.farmerId) ?? t("reviews.farmerLabel", { id: review.farmerId })}
           </p>
         </div>
         <button
@@ -102,7 +108,9 @@ export function AdminReviews() {
               <tr key={review.id} className="border-b border-stone-50 last:border-0 dark:border-stone-800/60">
                 <td className="px-6 py-4 text-stone-600 dark:text-stone-300">{t("reviews.orderLabel", { id: review.orderId })}</td>
                 <td className="px-6 py-4 text-stone-600 dark:text-stone-300">{review.customerFullName ?? t("reviews.customerLabel", { id: review.customerId })}</td>
-                <td className="px-6 py-4 text-stone-600 dark:text-stone-300">{t("reviews.farmerLabel", { id: review.farmerId })}</td>
+                <td className="px-6 py-4 text-stone-600 dark:text-stone-300">
+                  {farmNameById.get(review.farmerId) ?? t("reviews.farmerLabel", { id: review.farmerId })}
+                </td>
                 <td className="px-6 py-4">
                   <RatingStars rating={review.rating} />
                 </td>

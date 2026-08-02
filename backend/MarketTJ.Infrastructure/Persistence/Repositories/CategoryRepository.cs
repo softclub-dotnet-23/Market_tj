@@ -17,13 +17,13 @@ public class CategoryRepository(AppDbContext context, ICacheService cache) : ICa
             return cached;
         }
 
-        var categories = await context.Categories.ToListAsync();
+        var categories = await context.Categories.AsNoTracking().ToListAsync();
         await cache.SetAsync(AllCategoriesCacheKey, categories, TimeSpan.FromMinutes(30));
         return categories;
     }
 
     public async Task<Category?> GetByIdAsync(int id)
-        => await context.Categories.FindAsync(id);
+        => await context.Categories.AsNoTracking().FirstOrDefaultAsync(x => x.Id == id);
 
     public async Task AddAsync(Category category)
     {

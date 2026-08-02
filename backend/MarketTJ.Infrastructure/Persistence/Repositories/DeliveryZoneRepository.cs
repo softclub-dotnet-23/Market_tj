@@ -7,10 +7,10 @@ namespace MarketTJ.Infrastructure.Persistence.Repositories;
 public class DeliveryZoneRepository(AppDbContext context) : IDeliveryZoneRepository
 {
     public async Task<List<DeliveryZone>> GetAllAsync()
-        => await context.DeliveryZones.ToListAsync();
+        => await context.DeliveryZones.AsNoTracking().ToListAsync();
 
     public async Task<DeliveryZone?> GetByIdAsync(int id)
-        => await context.DeliveryZones.FindAsync(id);
+        => await context.DeliveryZones.AsNoTracking().FirstOrDefaultAsync(x => x.Id == id);
 
     public async Task AddAsync(DeliveryZone deliveryZone)
     {

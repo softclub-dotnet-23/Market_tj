@@ -7,10 +7,10 @@ namespace MarketTJ.Infrastructure.Persistence.Repositories;
 public class ChatMessageRepository(AppDbContext context) : IChatMessageRepository
 {
     public async Task<List<ChatMessage>> GetAllAsync()
-        => await context.ChatMessages.ToListAsync();
+        => await context.ChatMessages.AsNoTracking().ToListAsync();
 
     public async Task<ChatMessage?> GetByIdAsync(int id)
-        => await context.ChatMessages.FindAsync(id);
+        => await context.ChatMessages.AsNoTracking().FirstOrDefaultAsync(x => x.Id == id);
 
     public async Task AddAsync(ChatMessage chatMessage)
     {

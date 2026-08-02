@@ -11,13 +11,15 @@ namespace MarketTJ.Application.Tests.Services;
 public class CategoryServiceTests
 {
     private readonly Mock<ICategoryRepository> _categoryRepository = new();
+    private readonly Mock<IProductListingRepository> _productListingRepository = new();
     private readonly Mock<ILogger<CategoryService>> _logger = new();
     private readonly CategoryService _service;
 
     public CategoryServiceTests()
     {
-        _service = new CategoryService(_categoryRepository.Object, _logger.Object);
+        _service = new CategoryService(_categoryRepository.Object, _productListingRepository.Object, _logger.Object);
         _categoryRepository.Setup(r => r.GetAllAsync()).ReturnsAsync([]);
+        _productListingRepository.Setup(r => r.GetActiveListingCountsByCategoryAsync()).ReturnsAsync(new Dictionary<int, int>());
     }
 
     private static Category CreateCategory(int id = 1, string name = "Овощи") => new()

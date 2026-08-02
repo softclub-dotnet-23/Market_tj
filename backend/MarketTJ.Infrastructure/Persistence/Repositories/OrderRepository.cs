@@ -7,10 +7,10 @@ namespace MarketTJ.Infrastructure.Persistence.Repositories;
 public class OrderRepository(AppDbContext context) : IOrderRepository
 {
     public async Task<List<Order>> GetAllAsync()
-        => await context.Orders.ToListAsync();
+        => await context.Orders.AsNoTracking().ToListAsync();
 
     public async Task<Order?> GetByIdAsync(int id)
-        => await context.Orders.FindAsync(id);
+        => await context.Orders.AsNoTracking().FirstOrDefaultAsync(x => x.Id == id);
 
     public async Task AddAsync(Order order)
     {

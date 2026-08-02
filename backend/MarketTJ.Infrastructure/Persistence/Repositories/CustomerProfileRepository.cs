@@ -7,13 +7,13 @@ namespace MarketTJ.Infrastructure.Persistence.Repositories;
 public class CustomerProfileRepository(AppDbContext context) : ICustomerProfileRepository
 {
     public async Task<List<CustomerProfile>> GetAllAsync()
-        => await context.CustomerProfiles.ToListAsync();
+        => await context.CustomerProfiles.AsNoTracking().ToListAsync();
 
     public async Task<CustomerProfile?> GetByIdAsync(int id)
-        => await context.CustomerProfiles.FindAsync(id);
+        => await context.CustomerProfiles.AsNoTracking().FirstOrDefaultAsync(x => x.Id == id);
 
     public async Task<CustomerProfile?> GetByUserIdAsync(int userId)
-        => await context.CustomerProfiles.FirstOrDefaultAsync(x => x.UserId == userId);
+        => await context.CustomerProfiles.AsNoTracking().FirstOrDefaultAsync(x => x.UserId == userId);
 
     public async Task AddAsync(CustomerProfile customerProfile)
     {

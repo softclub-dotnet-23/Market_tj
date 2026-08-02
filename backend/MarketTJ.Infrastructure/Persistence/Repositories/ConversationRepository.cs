@@ -7,10 +7,10 @@ namespace MarketTJ.Infrastructure.Persistence.Repositories;
 public class ConversationRepository(AppDbContext context) : IConversationRepository
 {
     public async Task<List<Conversation>> GetAllAsync()
-        => await context.Conversations.ToListAsync();
+        => await context.Conversations.AsNoTracking().ToListAsync();
 
     public async Task<Conversation?> GetByIdAsync(int id)
-        => await context.Conversations.FindAsync(id);
+        => await context.Conversations.AsNoTracking().FirstOrDefaultAsync(x => x.Id == id);
 
     public async Task AddAsync(Conversation conversation)
     {

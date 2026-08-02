@@ -7,10 +7,10 @@ namespace MarketTJ.Infrastructure.Persistence.Repositories;
 public class DailySalesSnapshotRepository(AppDbContext context) : IDailySalesSnapshotRepository
 {
     public async Task<List<DailySalesSnapshot>> GetAllAsync()
-        => await context.DailySalesSnapshots.ToListAsync();
+        => await context.DailySalesSnapshots.AsNoTracking().ToListAsync();
 
     public async Task<DailySalesSnapshot?> GetByIdAsync(int id)
-        => await context.DailySalesSnapshots.FindAsync(id);
+        => await context.DailySalesSnapshots.AsNoTracking().FirstOrDefaultAsync(x => x.Id == id);
 
     public async Task AddAsync(DailySalesSnapshot dailySalesSnapshot)
     {

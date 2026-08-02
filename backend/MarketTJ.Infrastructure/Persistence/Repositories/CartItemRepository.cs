@@ -7,10 +7,10 @@ namespace MarketTJ.Infrastructure.Persistence.Repositories;
 public class CartItemRepository(AppDbContext context) : ICartItemRepository
 {
     public async Task<List<CartItem>> GetAllAsync()
-        => await context.CartItems.ToListAsync();
+        => await context.CartItems.AsNoTracking().ToListAsync();
 
     public async Task<CartItem?> GetByIdAsync(int id)
-        => await context.CartItems.FindAsync(id);
+        => await context.CartItems.AsNoTracking().FirstOrDefaultAsync(x => x.Id == id);
 
     public async Task AddAsync(CartItem cartItem)
     {

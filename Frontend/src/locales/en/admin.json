@@ -80,6 +80,7 @@
     },
     "customerLabel": "Customer #{{id}}",
     "farmerLabel": "Farmer #{{id}}",
+    "orderLabel": "Order #{{id}}",
     "notReceivedYet": "Not received yet",
     "status": {
       "pending": "Pending",
@@ -277,6 +278,22 @@
       "submit": "Add",
       "saveChanges": "Save changes"
     }
+  },
+  "customerDetail": {
+    "back": "Back to customers list",
+    "registeredAt": "Registered {{date}}",
+    "type": {
+      "retail": "Retail",
+      "wholesale": "Wholesale"
+    },
+    "stats": {
+      "totalOrders": "Total orders",
+      "ordersThisMonth": "Orders this month",
+      "totalSpent": "Total spent",
+      "reviewsWritten": "Reviews written"
+    },
+    "ordersTitle": "Orders",
+    "reviewsTitle": "Reviews"
   },
   "commissions": {
     "errorTitle": "Failed to load commissions",

@@ -15,13 +15,20 @@ public class ProductListingServiceTests
     private readonly Mock<IProductListingRepository> _productListingRepository = new();
     private readonly Mock<IFarmerProfileRepository> _farmerProfileRepository = new();
     private readonly Mock<ICategoryRepository> _categoryRepository = new();
+    private readonly Mock<IProductImageRepository> _productImageRepository = new();
     private readonly Mock<ICurrentUserService> _currentUser = new();
     private readonly Mock<ILogger<ProductListingService>> _logger = new();
     private readonly ProductListingService _service;
 
     public ProductListingServiceTests()
     {
-        _service = new ProductListingService(_productListingRepository.Object, _farmerProfileRepository.Object, _categoryRepository.Object, _currentUser.Object, _logger.Object);
+        _service = new ProductListingService(_productListingRepository.Object, _farmerProfileRepository.Object, _categoryRepository.Object, _productImageRepository.Object, _currentUser.Object, _logger.Object);
+        // Обогащение (images/rating/orderCount) по умолчанию пустое — иначе Moq
+        // вернёт null для незамоканных Task<Dictionary<...>> и EnrichAsync упадёт
+        // с NullReferenceException в тестах, которые его не касаются напрямую.
+        _productImageRepository.Setup(r => r.GetByListingIdsAsync(It.IsAny<List<int>>())).ReturnsAsync([]);
+        _productListingRepository.Setup(r => r.GetOrderCountsByListingIdsAsync(It.IsAny<List<int>>())).ReturnsAsync(new Dictionary<int, int>());
+        _productListingRepository.Setup(r => r.GetRatingsByFarmerIdsAsync(It.IsAny<List<int>>())).ReturnsAsync(new Dictionary<int, double>());
         // Дефолтный листинг — FarmerProfileId=1 (UserId=1); залогинены как этот фермер.
         _currentUser.Setup(c => c.UserId).Returns(1);
         _currentUser.Setup(c => c.Role).Returns(nameof(UserRole.Farmer));
@@ -287,6 +294,26 @@ public class ProductListingServiceTests
         Assert.True(result.IsSuccess);
         Assert.Equal(listing.Id, result.Data!.Id);
         Assert.Equal(listing.Title, result.Data!.Title);
+    }
+
+    [Fact]
+    public async Task GetByIdAsync_ExistingId_EnrichesWithImagesRatingAndOrderCount()
+    {
+        var listing = CreateListing(5, farmerProfileId: 7);
+        _productListingRepository.Setup(r => r.GetByIdAsync(5)).ReturnsAsync(listing);
+        _productImageRepository.Setup(r => r.GetByListingIdsAsync(It.Is<List<int>>(ids => ids.Contains(5))))
+            .ReturnsAsync([new ProductImage { Id = 1, ProductListingId = 5, ImageUrl = "/uploads/listings/a.jpg", IsMain = true }]);
+        _productListingRepository.Setup(r => r.GetRatingsByFarmerIdsAsync(It.Is<List<int>>(ids => ids.Contains(7))))
+            .ReturnsAsync(new Dictionary<int, double> { [7] = 4.2 });
+        _productListingRepository.Setup(r => r.GetOrderCountsByListingIdsAsync(It.Is<List<int>>(ids => ids.Contains(5))))
+            .ReturnsAsync(new Dictionary<int, int> { [5] = 6 });
+
+        var result = await _service.GetByIdAsync(5);
+
+        Assert.True(result.IsSuccess);
+        Assert.Equal(["/uploads/listings/a.jpg"], result.Data!.ImageUrls);
+        Assert.Equal(4.2, result.Data!.Rating);
+        Assert.Equal(6, result.Data!.OrderCount);
     }
 
     [Fact]

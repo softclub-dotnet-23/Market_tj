@@ -7,10 +7,10 @@ namespace MarketTJ.Infrastructure.Persistence.Repositories;
 public class CommissionRepository(AppDbContext context) : ICommissionRepository
 {
     public async Task<List<Commission>> GetAllAsync()
-        => await context.Commissions.ToListAsync();
+        => await context.Commissions.AsNoTracking().ToListAsync();
 
     public async Task<Commission?> GetByIdAsync(int id)
-        => await context.Commissions.FindAsync(id);
+        => await context.Commissions.AsNoTracking().FirstOrDefaultAsync(x => x.Id == id);
 
     public async Task AddAsync(Commission commission)
     {

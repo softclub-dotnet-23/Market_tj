@@ -13,6 +13,9 @@ namespace MarketTJ.Application.Services;
 public class FarmerProfileService(
     IFarmerProfileRepository farmerProfileRepository,
     IUserRepository userRepository,
+    IProductListingRepository productListingRepository,
+    IReviewRepository reviewRepository,
+    ICategoryRepository categoryRepository,
     ICurrentUserService currentUser,
     ILogger<FarmerProfileService> logger) : IFarmerProfileService
 {
@@ -38,6 +41,55 @@ public class FarmerProfileService(
         {
             logger.LogError(ex, "Ошибка при получении списка профилей фермеров");
             return Result<IEnumerable<GetFarmerProfileDto>>.Fail("Не удалось получить список профилей фермеров", ErrorType.InternalServerError);
+        }
+    }
+
+    public async Task<Result<IEnumerable<GetPublicFarmerDto>>> GetPublicCatalogAsync()
+    {
+        try
+        {
+            var allProfiles = await farmerProfileRepository.GetAllAsync();
+            var verified = allProfiles.Where(p => p.VerificationStatus == FarmerVerificationStatus.Verified).ToList();
+            if (verified.Count == 0)
+                return Result<IEnumerable<GetPublicFarmerDto>>.Ok(Enumerable.Empty<GetPublicFarmerDto>());
+
+            var farmerIds = verified.Select(p => p.Id).ToList();
+            var users = await userRepository.GetAllAsync();
+            var avatarByUserId = users.ToDictionary(u => u.Id, u => u.AvatarUrl);
+
+            var ratingStats = await reviewRepository.GetRatingStatsByFarmerIdsAsync(farmerIds);
+            var listingStats = await productListingRepository.GetActiveListingStatsByFarmerIdsAsync(farmerIds);
+            var categories = await categoryRepository.GetAllAsync();
+            var categoryNameById = categories.ToDictionary(c => c.Id, c => c.Name);
+
+            var dtos = verified.Select(p =>
+            {
+                var (rating, reviewCount) = ratingStats.GetValueOrDefault(p.Id, (0, 0));
+                var (productCount, categoryIds) = listingStats.GetValueOrDefault(p.Id, (0, []));
+                return new GetPublicFarmerDto
+                {
+                    Id = p.Id,
+                    UserId = p.UserId,
+                    FarmName = p.FarmName,
+                    Region = p.Region,
+                    District = p.District,
+                    Village = p.Village,
+                    Description = p.Description,
+                    AvatarUrl = avatarByUserId.GetValueOrDefault(p.UserId),
+                    CreatedAt = p.CreatedAt,
+                    Rating = rating,
+                    ReviewCount = reviewCount,
+                    ProductCount = productCount,
+                    Tags = categoryIds.Select(id => categoryNameById.GetValueOrDefault(id)).Where(n => n is not null).Select(n => n!).ToList(),
+                };
+            });
+
+            return Result<IEnumerable<GetPublicFarmerDto>>.Ok(dtos);
+        }
+        catch (Exception ex)
+        {
+            logger.LogError(ex, "Ошибка при получении публичной витрины фермеров");
+            return Result<IEnumerable<GetPublicFarmerDto>>.Fail("Не удалось получить список фермеров", ErrorType.InternalServerError);
         }
     }
 
@@ -185,6 +237,30 @@ public class FarmerProfileService(
         }
     }
 
+    public async Task<Result<string>> SetAutoReplyAsync(int id, bool enabled)
+    {
+        try
+        {
+            var profile = await farmerProfileRepository.GetByIdAsync(id);
+            if (profile is null)
+                return Result<string>.Fail("Профиль фермера не найден", ErrorType.NotFound);
+
+            if (!currentUser.CanAccess(profile.UserId))
+                return Result<string>.Fail("Нет доступа к этому профилю", ErrorType.Forbidden);
+
+            profile.AutoReplyToReviewsEnabled = enabled;
+            profile.UpdatedAt = DateTime.UtcNow;
+
+            await farmerProfileRepository.UpdateAsync(profile);
+            return Result<string>.Ok(enabled ? "Автоответ на отзывы включён" : "Автоответ на отзывы выключен");
+        }
+        catch (Exception ex)
+        {
+            logger.LogError(ex, "Ошибка при изменении автоответа на отзывы для профиля {Id}", id);
+            return Result<string>.Fail("Не удалось изменить настройку автоответа", ErrorType.InternalServerError);
+        }
+    }
+
     private static GetFarmerProfileDto ToGetDto(FarmerProfile profile, string? avatarUrl = null) => new()
     {
         Id = profile.Id,
@@ -199,6 +275,7 @@ public class FarmerProfileService(
         VerificationStatus = profile.VerificationStatus,
         VerifiedAt = profile.VerifiedAt,
         VerifiedByAdminId = profile.VerifiedByAdminId,
+        AutoReplyToReviewsEnabled = profile.AutoReplyToReviewsEnabled,
         CreatedAt = profile.CreatedAt,
         UpdatedAt = profile.UpdatedAt
     };

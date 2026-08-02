@@ -16,6 +16,7 @@ public class GetFarmerProfileDto
     public FarmerVerificationStatus VerificationStatus { get; set; }
     public DateTime? VerifiedAt { get; set; }
     public int? VerifiedByAdminId { get; set; }
+    public bool AutoReplyToReviewsEnabled { get; set; }
     public DateTime CreatedAt { get; set; }
     public DateTime UpdatedAt { get; set; }
 }

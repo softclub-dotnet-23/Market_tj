@@ -7,6 +7,7 @@ using MarketTJ.Application.Interfaces.Services;
 using MarketTJ.WebApi.Middleware;
 using MarketTJ.WebApi.Services;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
+using Microsoft.AspNetCore.ResponseCompression;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.IdentityModel.Tokens;
 using Microsoft.OpenApi;
@@ -178,6 +179,17 @@ builder.Services.AddHttpContextAccessor();
 builder.Services.AddScoped<ICurrentUserService, CurrentUserService>();
 builder.Services.AddScoped<IFileStorageService, LocalFileStorageService>();
 
+// JSON-ответы каталога/списков — самый частый и самый крупный трафик API,
+// Brotli/Gzip сокращают их в несколько раз перед отправкой клиенту (особенно
+// заметно на медленных соединениях). EnableForHttps нужен явно — Railway
+// терминирует TLS перед приложением, но сам ASP.NET Core видит HTTPS-схему.
+builder.Services.AddResponseCompression(options =>
+{
+    options.EnableForHttps = true;
+    options.Providers.Add<BrotliCompressionProvider>();
+    options.Providers.Add<GzipCompressionProvider>();
+});
+
 builder.Services
     .AddHealthChecks()
     .AddDbContextCheck<AppDbContext>();
@@ -235,6 +247,8 @@ using (var scope = app.Services.CreateScope())
 // с нехэшированным паролем, если такие успели попасть в базу до фикса.
 await PlaintextPasswordFixup.RunAsync(app.Services);
 await Seeder.SeedAsync(app.Services);
+
+app.UseResponseCompression();
 
 app.UseMiddleware<ExceptionHandlingMiddleware>();
 app.UseMiddleware<RequestLoggingMiddleware>();

@@ -7,10 +7,10 @@ namespace MarketTJ.Infrastructure.Persistence.Repositories;
 public class RefundRequestRepository(AppDbContext context) : IRefundRequestRepository
 {
     public async Task<List<RefundRequest>> GetAllAsync()
-        => await context.RefundRequests.ToListAsync();
+        => await context.RefundRequests.AsNoTracking().ToListAsync();
 
     public async Task<RefundRequest?> GetByIdAsync(int id)
-        => await context.RefundRequests.FindAsync(id);
+        => await context.RefundRequests.AsNoTracking().FirstOrDefaultAsync(x => x.Id == id);
 
     public async Task AddAsync(RefundRequest refundRequest)
     {

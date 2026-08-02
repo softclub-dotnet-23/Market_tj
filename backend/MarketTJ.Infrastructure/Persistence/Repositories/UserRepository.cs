@@ -7,13 +7,13 @@ namespace MarketTJ.Infrastructure.Persistence.Repositories;
 public class UserRepository(AppDbContext context) : IUserRepository
 {
     public async Task<List<User>> GetAllAsync()
-        => await context.Users.ToListAsync();
+        => await context.Users.AsNoTracking().ToListAsync();
 
     public async Task<User?> GetByIdAsync(int id)
-        => await context.Users.FindAsync(id);
+        => await context.Users.AsNoTracking().FirstOrDefaultAsync(x => x.Id == id);
 
     public async Task<User?> GetByEmailAsync(string email)
-        => await context.Users.FirstOrDefaultAsync(u => u.Email == email);
+        => await context.Users.AsNoTracking().FirstOrDefaultAsync(u => u.Email == email);
 
     public async Task AddAsync(User user)
     {

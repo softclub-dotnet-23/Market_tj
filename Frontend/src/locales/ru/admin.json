@@ -84,6 +84,7 @@
     },
     "customerLabel": "Клиент #{{id}}",
     "farmerLabel": "Фермер #{{id}}",
+    "orderLabel": "Заказ #{{id}}",
     "moreItems": "ещё {{count}}",
     "showLess": "свернуть",
     "notReceivedYet": "Ещё не получен",
@@ -283,6 +284,22 @@
       "submit": "Добавить",
       "saveChanges": "Сохранить"
     }
+  },
+  "customerDetail": {
+    "back": "Назад к списку покупателей",
+    "registeredAt": "Зарегистрирован {{date}}",
+    "type": {
+      "retail": "Розница",
+      "wholesale": "Опт"
+    },
+    "stats": {
+      "totalOrders": "Всего заказов",
+      "ordersThisMonth": "Заказов в этом месяце",
+      "totalSpent": "Потрачено всего",
+      "reviewsWritten": "Отзывов оставлено"
+    },
+    "ordersTitle": "Заказы",
+    "reviewsTitle": "Отзывы"
   },
   "commissions": {
     "errorTitle": "Не удалось загрузить комиссии",
