@@ -90,6 +90,32 @@ public class AiAssistantService(
         "фермера/админа — \"info\"), и вежливо попроси именно эту недостающую деталь на языке " +
         "вопроса.";
 
+    // Добавлено 2026-08-02 по факту живого инцидента: на запрос "pomidor" модель
+    // один раз ответила обычным русским текстом вместо JSON, что уронило парсинг
+    // на бэкенде (JsonException, см. AskAsync). Это правило — самое строгое и
+    // самое позднее в промпте (эффект недавности), с явным примером правильного
+    // и неправильного ответа, а не только описанием формата словами — по факту
+    // именно конкретный пример "как не надо" эффективнее абстрактной инструкции
+    // для небольших моделей вроде llama-3.3-70b-versatile. Дублирует финальную
+    // схему JSON в конце каждого промпта — та объясняет ЧТО вернуть, это правило
+    // объясняет, что НИЧЕГО, кроме этого JSON, в ответе быть не должно.
+    private const string StrictJsonFormatInstruction =
+        "ФОРМАТ ОТВЕТА — САМОЕ ВАЖНОЕ ПРАВИЛО, НАРУШАТЬ НЕЛЬЗЯ НИКОГДА: твой ответ должен " +
+        "состоять ИСКЛЮЧИТЕЛЬНО из одного JSON-объекта — ни одного символа до или после него. " +
+        "Никогда не пиши приветствий, пояснений, извинений, вступительных фраз, повторения " +
+        "вопроса, markdown-разметки (```json и подобного). Это касается ЛЮБОГО ответа, включая " +
+        "простые, короткие вопросы и вопросы, на которые ты знаешь ответ сразу — даже тогда " +
+        "оборачивай ответ в JSON-структуру, указанную в конце этой инструкции. Не отвечай обычным " +
+        "текстом никогда, ни при каких обстоятельствах.\n" +
+        "ПРАВИЛЬНО (весь ответ целиком): {\"intent\":\"none\",\"productId\":null,\"categoryId\":" +
+        "null,\"message\":\"Да, у нас есть свежие помидоры от нескольких фермеров.\"}\n" +
+        "НЕПРАВИЛЬНО — обычный текст без JSON (никогда так не делай): Да, у нас есть свежие " +
+        "помидоры от нескольких фермеров.\n" +
+        "НЕПРАВИЛЬНО — текст до JSON (никогда так не делай): Конечно! Вот ответ: {\"intent\":" +
+        "\"none\",\"message\":\"...\"}\n" +
+        "НЕПРАВИЛЬНО — markdown-обёртка (никогда так не делай): ```json\n{\"intent\":\"none\"," +
+        "\"message\":\"...\"}\n```";
+
     // Разные формулировки одного и того же намерения "статус заказа" — по
     // явному запросу пользователя (2026-08-02), т.к. это самый частый случай,
     // где ассистент отвечал невпопад на нестандартную фразировку.
@@ -141,6 +167,7 @@ public class AiAssistantService(
         "регистрации, заполнить профиль хозяйства (название, регион, район, адрес), после чего " +
         "аккаунт проходит проверку администратором — до подтверждения объявления публиковать " +
         "нельзя.\n\n" +
+        StrictJsonFormatInstruction + "\n\n" +
         "Верни СТРОГО JSON без markdown: {\"intent\":\"product|category|cart|orders|none\"," +
         "\"productId\":null,\"categoryId\":null,\"message\":\"\"}. product — когда речь про " +
         "один явный товар (после search_products, если нашёлся единственный явный кандидат — " +
@@ -201,6 +228,7 @@ public class AiAssistantService(
         "комментария — благодари за хороший отзыв, вежливо реагируй на критику), фермер только " +
         "подтверждает готовый текст, не спрашивай его самого придумывать формулировку. Всегда " +
         "вызывай подходящий инструмент, если вопрос требует данных.\n\n" +
+        StrictJsonFormatInstruction + "\n\n" +
         "Верни СТРОГО JSON без markdown: {\"intent\":\"info\",\"message\":\"<полный развёрнутый " +
         "ответ на языке пользователя по полученным данным>\"}. Если инструмент не нужен — " +
         "тоже верни {\"intent\":\"info\",\"message\":\"...\"}.";
@@ -249,6 +277,7 @@ public class AiAssistantService(
         "propose_resolve_report — предложить рассмотреть жалобу (Reviewed) или отклонить " +
         "(Dismissed) — сам ничего не меняет, только предлагает админу подтвердить. Всегда " +
         "вызывай подходящий инструмент, если вопрос требует данных.\n\n" +
+        StrictJsonFormatInstruction + "\n\n" +
         "Верни СТРОГО JSON без markdown: {\"intent\":\"info\",\"message\":\"<полный развёрнутый " +
         "ответ на языке пользователя по полученным данным>\"}. Если инструмент не нужен — " +
         "тоже верни {\"intent\":\"info\",\"message\":\"...\"}.";
@@ -385,6 +414,25 @@ public class AiAssistantService(
 
             if (parsed is null)
             {
+                // Raw-text fallback (2026-08-02, по факту живого инцидента с "pomidor"):
+                // даже после усиления промпта (см. StrictJsonFormatInstruction) и
+                // проверки response_format у Groq (несовместим с tool calling, которым
+                // пользуется почти каждый запрос — см. PostToGroqAsync) модель иногда
+                // всё равно отвечает связным текстом вместо JSON. Раньше это считалось
+                // ошибкой и показывало пользователю "не удалось разобрать ответ" — но
+                // по сути модель РЕАЛЬНО ответила по существу вопроса, просто не в той
+                // обёртке. Показывать техническую ошибку вместо настоящего ответа хуже,
+                // чем принять текст как есть, поэтому заворачиваем его сами.
+                // "Разумная длина" — минимальный порог, отсекающий вырожденные случаи
+                // (одиночный символ, обрывок незакрытой JSON-структуры) от настоящего
+                // связного ответа.
+                var rawText = textContent.Trim();
+                if (rawText.Length >= 3)
+                {
+                    logger.LogWarning("Ответ ассистента не в формате JSON, использую raw-text fallback: {Text}", rawText);
+                    return Result<AssistantResponseDto>.Ok(new AssistantResponseDto { Intent = "text", Message = rawText });
+                }
+
                 logger.LogError("Не удалось распарсить JSON от ассистента: {Json}", json);
                 return Result<AssistantResponseDto>.Fail("Не удалось разобрать ответ ассистента, попробуйте переформулировать вопрос", ErrorType.InternalServerError);
             }
@@ -1134,7 +1182,7 @@ public class AiAssistantService(
         }
 
         logger.LogWarning("Groq дважды вернул tool_use_failed, финальная попытка без инструментов");
-        var (finalBody, finalStatus, finalRaw, finalRetryAfter) = await PostToGroqAsync(apiKey, tools: null, messages, toolChoice: null);
+        var (finalBody, finalStatus, finalRaw, finalRetryAfter) = await PostToGroqAsync(apiKey, tools: null, messages, toolChoice: null, useJsonMode: true);
         if (finalBody is not null) return finalBody;
 
         if (finalStatus == HttpStatusCode.TooManyRequests)
@@ -1201,7 +1249,21 @@ public class AiAssistantService(
         }
     };
 
-    private async Task<(JsonObject? Body, HttpStatusCode StatusCode, string RawBody, TimeSpan? RetryAfter)> PostToGroqAsync(string apiKey, JsonArray? tools, JsonArray messages, string? toolChoice)
+    // useJsonMode добавляет response_format:{"type":"json_object"} — Groq
+    // гарантирует синтаксически валидный JSON в content (но НЕ соответствие
+    // конкретной схеме — это по-прежнему только промпт, см.
+    // StrictJsonFormatInstruction). Проверено эмпирически прямым запросом к
+    // Groq API (2026-08-02): это несовместимо с tool calling — Groq отвечает
+    // 400 "json mode cannot be combined with tool/function calling", если
+    // одновременно переданы response_format и tools. Поэтому здесь жёсткая
+    // защита: параметр реально применяется, только если tools is null —
+    // единственный существующий вызов с tools:null это финальная попытка без
+    // инструментов в SendToGroqAsync (после двух tool_use_failed). На
+    // основной цикл (tools почти всегда присутствует, т.к. модель может
+    // захотеть вызвать инструмент повторно) response_format принципиально
+    // не распространяется — вместо этого используется raw-text fallback в
+    // AskAsync, который не требует лишнего сетевого запроса.
+    private async Task<(JsonObject? Body, HttpStatusCode StatusCode, string RawBody, TimeSpan? RetryAfter)> PostToGroqAsync(string apiKey, JsonArray? tools, JsonArray messages, string? toolChoice, bool useJsonMode = false)
     {
         var requestBody = new JsonObject
         {
@@ -1219,6 +1281,10 @@ public class AiAssistantService(
         if (toolChoice is not null)
         {
             requestBody["tool_choice"] = toolChoice;
+        }
+        if (useJsonMode && tools is null)
+        {
+            requestBody["response_format"] = new JsonObject { ["type"] = "json_object" };
         }
 
         using var request = new HttpRequestMessage(HttpMethod.Post, ApiUrl)

@@ -1,6 +1,10 @@
 import { apiPost } from "@/lib/api";
 
-export type AssistantIntent = "product" | "category" | "cart" | "orders" | "none" | "info" | "action_pending";
+// "text" (2026-08-02) — выставляет сам бэкенд, когда ответ модели не
+// распарсился как JSON, но выглядит как настоящий связный ответ (raw-text
+// fallback, см. AiAssistantService.AskAsync) — на фронтенде рендерится как
+// обычный текстовый пузырь, как "none"/"info", без специальных кнопок.
+export type AssistantIntent = "product" | "category" | "cart" | "orders" | "none" | "info" | "action_pending" | "text";
 
 export interface AssistantActionDto {
   type: string;

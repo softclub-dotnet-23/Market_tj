@@ -6,7 +6,11 @@ namespace MarketTJ.Application.Dto.AiAssistantDto;
 // расширение 2026-08-01): "info" (ответ на вопрос по своим данным, только
 // Message) | "action_pending" (предлагает действие — заполнен Action,
 // выполняется только через POST /ai-assistant/execute-action после
-// подтверждения пользователем).
+// подтверждения пользователем). "text" (2026-08-02) — служебный intent,
+// который выставляет сам бэкенд (не модель), когда ответ Groq не удалось
+// разобрать как JSON, но он похож на настоящий связный ответ — см.
+// AiAssistantService.AskAsync, raw-text fallback. На фронтенде ведёт себя
+// как "none"/"info": просто текстовый пузырь без специальных кнопок.
 public class AssistantResponseDto
 {
     public string Intent { get; set; } = null!;

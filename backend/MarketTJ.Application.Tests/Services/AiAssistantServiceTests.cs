@@ -863,14 +863,15 @@ public class AiAssistantServiceTests
         Assert.Equal(ErrorType.InternalServerError, result.ErrorType);
     }
 
-    // Модель иногда не следует инструкции "верни строго JSON" и отвечает
-    // обычным текстом (наблюдалось на живой проверке 2026-08-02: ответ
-    // начинался с обычного русского текста, не с "{", что раньше приводило к
-    // необработанному JsonException и падению в общий catch с непонятным
-    // "Ошибка AI-ассистента"). Теперь это тот же понятный путь, что и когда
-    // Deserialize возвращает null.
+    // Raw-text fallback (2026-08-02, по факту живого инцидента с "pomidor"):
+    // модель иногда не следует инструкции "верни строго JSON" и отвечает
+    // обычным текстом (ответ начинался с обычного русского текста, не с "{",
+    // что раньше приводило к необработанному JsonException и падению в общий
+    // catch с непонятным "Ошибка AI-ассистента"). Теперь вместо ошибки
+    // пользователь получает реальный ответ модели как есть, завёрнутый в
+    // intent="text" — не идеально по формату, но не ошибка.
     [Fact]
-    public async Task AskAsync_ModelReturnsPlainTextInsteadOfJson_ReturnsClearParseFailureNotGenericError()
+    public async Task AskAsync_ModelReturnsPlainTextInsteadOfJson_WrapsAsTextIntentInsteadOfFailing()
     {
         var body = GroqTextResponse("Извините, я не совсем понял ваш вопрос про помидоры.");
         var handler = MockHandler(HttpStatusCode.OK, body);
@@ -878,9 +879,63 @@ public class AiAssistantServiceTests
 
         var result = await service.AskAsync("pomidor", null);
 
+        Assert.True(result.IsSuccess);
+        Assert.Equal("text", result.Data!.Intent);
+        Assert.Equal("Извините, я не совсем понял ваш вопрос про помидоры.", result.Data.Message);
+    }
+
+    // Вырожденный случай — обрывок в пару символов не считается "разумной
+    // длиной" настоящего ответа (см. AskAsync, порог >= 3 символов) и всё
+    // ещё должен давать понятную ошибку, а не молча показать мусор пользователю.
+    [Fact]
+    public async Task AskAsync_ModelReturnsDegenerateShortNonJsonText_StillReturnsParseFailure()
+    {
+        var body = GroqTextResponse("{x");
+        var handler = MockHandler(HttpStatusCode.OK, body);
+        var service = CreateService(handler);
+
+        var result = await service.AskAsync("test", null);
+
         Assert.False(result.IsSuccess);
         Assert.Equal(ErrorType.InternalServerError, result.ErrorType);
         Assert.Contains("разобрать", result.Error, StringComparison.OrdinalIgnoreCase);
+    }
+
+    // Финальная попытка без инструментов (после двух tool_use_failed) должна
+    // запрашивать у Groq response_format:json_object — эмпирически подтверждено
+    // (2026-08-02, прямой запрос к Groq API), что это совместимо только когда
+    // tools отсутствуют, и именно этот единственный вызов в кодовой базе их не
+    // передаёт (см. PostToGroqAsync/SendToGroqAsync).
+    [Fact]
+    public async Task AskAsync_TwoToolUseFailedThenFinalNoToolsAttempt_RequestsJsonObjectResponseFormat()
+    {
+        var toolUseFailedBody = """{"error":{"code":"tool_use_failed","message":"failed","failed_generation":"not json"}}""";
+        var finalBody = GroqTextResponse("{\"intent\":\"none\",\"message\":\"ok\"}");
+        var requestCount = 0;
+        string? capturedFinalRequestBody = null;
+
+        var handler = new Mock<HttpMessageHandler>();
+        handler.Protected()
+            .Setup<Task<HttpResponseMessage>>("SendAsync", ItExpr.IsAny<HttpRequestMessage>(), ItExpr.IsAny<CancellationToken>())
+            .Returns<HttpRequestMessage, CancellationToken>(async (req, _) =>
+            {
+                requestCount++;
+                if (requestCount <= 2)
+                {
+                    return new HttpResponseMessage { StatusCode = HttpStatusCode.BadRequest, Content = new StringContent(toolUseFailedBody) };
+                }
+                capturedFinalRequestBody = req.Content is not null ? await req.Content.ReadAsStringAsync() : null;
+                return new HttpResponseMessage { StatusCode = HttpStatusCode.OK, Content = new StringContent(finalBody) };
+            });
+        var service = CreateService(handler);
+
+        var result = await service.AskAsync("search for tomatoes", null);
+
+        Assert.True(result.IsSuccess);
+        Assert.NotNull(capturedFinalRequestBody);
+        Assert.Contains("\"response_format\"", capturedFinalRequestBody);
+        Assert.Contains("\"json_object\"", capturedFinalRequestBody);
+        Assert.DoesNotContain("\"tools\"", capturedFinalRequestBody);
     }
 
     [Fact]
