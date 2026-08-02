@@ -17,6 +17,7 @@ import {
   ShoppingCart,
   Store,
   User as UserIcon,
+  Wallet as WalletIcon,
 } from "lucide-react";
 import type { LucideIcon } from "lucide-react";
 import { Avatar } from "@/components/ui/Avatar";
@@ -52,6 +53,7 @@ const NAV_ITEMS: CustomerNavItem[] = [
   { labelKey: "cart", path: "/checkout", icon: ShoppingBag, section: "management" },
   { labelKey: "orders", path: "/customer/orders", icon: ShoppingCart, section: "management" },
   { labelKey: "messages", path: "/customer/messages", icon: MessageCircle, section: "management" },
+  { labelKey: "wallet", path: "/customer/wallet", icon: WalletIcon, section: "account" },
   { labelKey: "notifications", path: "/customer/notifications", icon: Bell, section: "account" },
   { labelKey: "profile", path: "/customer/profile", icon: UserIcon, section: "account" },
 ];

@@ -4,22 +4,94 @@ import { Controller, useForm } from "react-hook-form";
 import { motion } from "framer-motion";
 import { toast } from "sonner";
 import { useTranslation } from "react-i18next";
-import { CheckCircle2, Info, LogIn, MapPin, Minus, Plus, ShoppingBag, Sprout, Trash2, User } from "lucide-react";
+import { AlertTriangle, CheckCircle2, Info, LogIn, MapPin, Minus, Plus, ShoppingBag, Sprout, Trash2, User, Wallet as WalletIcon } from "lucide-react";
 import { Breadcrumbs } from "@/components/ui/Breadcrumbs";
 import { Input, Textarea } from "@/components/ui/Field";
 import { Autocomplete } from "@/components/ui/Autocomplete";
 import { PhoneInput } from "@/components/ui/PhoneInput";
 import { Button } from "@/components/ui/Button";
 import { PhotoTile } from "@/components/ui/PhotoTile";
+import { Skeleton } from "@/components/ui/Skeleton";
 import { PageLoader } from "@/components/layout/PageLoader";
 import { useCart } from "@/context/CartContext";
 import { useAuth } from "@/context/AuthContext";
 import { useProducts } from "@/data/products";
 import { useFarmers } from "@/data/farmers";
 import { useCustomerProfile, submitCustomerOrder } from "@/data/customer";
+import { useMyWallet } from "@/data/wallet";
 import { TAJIKISTAN_REGION_SUGGESTIONS, getDistrictsForRegion } from "@/data/tajikistanGeo";
 import { ApiError } from "@/lib/api";
 import { formatSomoni, getUnitPrice } from "@/lib/utils";
+
+// Показывает баланс кошелька рядом с суммой заказа и явно предупреждает,
+// если средств не хватит на оформление — но не блокирует кнопку "Оформить":
+// сам отказ (если средств правда не хватит) приходит от бэкенда
+// (WalletService.DebitForOrderAsync) с понятным сообщением, это — заранее
+// показанная подсказка, а не единственная линия защиты.
+function WalletBalancePanel({ totalPrice }: { totalPrice: number }) {
+  const { t } = useTranslation(["pages", "wallet", "common"]);
+  const { data: wallet, loading } = useMyWallet();
+
+  if (loading) {
+    return <Skeleton className="h-12 w-full" />;
+  }
+
+  if (!wallet) {
+    return (
+      <div className="flex flex-col gap-2 rounded-2xl border border-harvest-200 bg-harvest-50 p-3.5 text-sm dark:border-harvest-900 dark:bg-harvest-950/40">
+        <p className="flex items-center gap-2 font-medium text-harvest-800 dark:text-harvest-300">
+          <WalletIcon size={15} />
+          {t("wallet:checkout.noWalletTitle")}
+        </p>
+        <p className="text-xs text-harvest-700 dark:text-harvest-400">{t("wallet:checkout.noWalletDescription")}</p>
+        <Link to="/customer/wallet">
+          <Button type="button" variant="outline" size="sm" className="mt-1 w-full">
+            {t("wallet:checkout.createWalletButton")}
+          </Button>
+        </Link>
+      </div>
+    );
+  }
+
+  const sufficient = wallet.balance >= totalPrice;
+
+  if (!sufficient) {
+    const shortfall = totalPrice - wallet.balance;
+    return (
+      <div className="flex flex-col gap-2 rounded-2xl border border-clay-200 bg-clay-50 p-3.5 text-sm dark:border-clay-600/40 dark:bg-clay-500/10">
+        <div className="flex items-center justify-between">
+          <span className="flex items-center gap-2 font-medium text-clay-600 dark:text-clay-400">
+            <AlertTriangle size={15} />
+            {t("wallet:checkout.insufficientTitle")}
+          </span>
+          <span className="text-stone-500 dark:text-stone-400">
+            {formatSomoni(wallet.balance)} {t("common:currencySomoni")}
+          </span>
+        </div>
+        <p className="text-xs text-clay-600 dark:text-clay-400">
+          {t("wallet:checkout.insufficientDescription", { amount: formatSomoni(shortfall) })}
+        </p>
+        <Link to="/customer/wallet">
+          <Button type="button" variant="outline" size="sm" className="mt-1 w-full">
+            {t("wallet:checkout.topUpButton")}
+          </Button>
+        </Link>
+      </div>
+    );
+  }
+
+  return (
+    <div className="flex items-center justify-between rounded-2xl border border-grove-100 bg-grove-50 px-3.5 py-3 text-sm dark:border-grove-900 dark:bg-grove-950/40">
+      <span className="flex items-center gap-2 font-medium text-grove-700 dark:text-grove-400">
+        <WalletIcon size={15} />
+        {t("wallet:checkout.balanceLabel")}
+      </span>
+      <span className="font-display text-stone-900 dark:text-stone-50">
+        {formatSomoni(wallet.balance)} {t("common:currencySomoni")}
+      </span>
+    </div>
+  );
+}
 
 interface CheckoutForm {
   fullName: string;
@@ -370,6 +442,8 @@ export function Checkout() {
               {formatSomoni(totalPrice)} {t("common:currencySomoni")}
             </span>
           </div>
+
+          <WalletBalancePanel totalPrice={totalPrice} />
 
           <p className="flex items-start gap-1.5 text-xs text-stone-400 dark:text-stone-500">
             <Info size={13} className="mt-0.5 shrink-0" />

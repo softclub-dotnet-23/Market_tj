@@ -3,28 +3,65 @@ import { Link, useNavigate, useParams } from "react-router-dom";
 import { useTranslation } from "react-i18next";
 import { motion } from "framer-motion";
 import { toast } from "sonner";
-import { BadgeCheck, CalendarDays, MapPin, MessageCircle, Package, Sprout } from "lucide-react";
+import { BadgeCheck, CalendarDays, MapPin, MessageCircle, Package, Sprout, Wallet as WalletIcon } from "lucide-react";
 import { Breadcrumbs } from "@/components/ui/Breadcrumbs";
 import { Avatar } from "@/components/ui/Avatar";
 import { Badge } from "@/components/ui/Badge";
 import { Button } from "@/components/ui/Button";
 import { EmptyState } from "@/components/ui/EmptyState";
 import { RatingStars } from "@/components/ui/RatingStars";
+import { Skeleton } from "@/components/ui/Skeleton";
 import { PageLoader } from "@/components/layout/PageLoader";
 import { ReviewsSection } from "@/components/product/ReviewsSection";
 import { ChatModal } from "@/components/chat/ChatModal";
+import { CARD_GRADIENTS, CardBrandMark } from "@/components/customer/WalletCard";
 import { useFarmers } from "@/data/farmers";
 import { useCatalogLoaded } from "@/data/products";
 import { getCatalogReviewsByFarmerId } from "@/data/catalogStore";
+import { CardType, useFarmerPaymentCard } from "@/data/wallet";
 import { useAuth } from "@/context/AuthContext";
 import { resolveMediaUrl } from "@/lib/api";
-import { formatDate } from "@/lib/utils";
+import { formatDate, cn } from "@/lib/utils";
 
 function StatBlock({ label, value }: { label: string; value: string }) {
   return (
     <div className="rounded-2xl border border-stone-100 bg-white p-4 dark:border-stone-800 dark:bg-stone-900">
       <p className="font-display text-xl text-stone-900 dark:text-stone-50">{value}</p>
       <p className="mt-0.5 text-xs text-stone-400 dark:text-stone-500">{label}</p>
+    </div>
+  );
+}
+
+// Компактная витрина "способ оплаты фермера" — только тип карты и последние
+// 4 цифры (см. GetFarmerPaymentCardDto на бэкенде — намеренно не отдаёт ни
+// имя держателя, ни баланс). Переиспользует тот же градиент/логотип, что и
+// полноразмерная карта в личном кошельке (WalletCard), просто в свёрнутом виде.
+function FarmerPaymentCardSection({ farmerUserId }: { farmerUserId: number }) {
+  const { t } = useTranslation(["pages", "wallet"]);
+  const { data: card, loading } = useFarmerPaymentCard(farmerUserId);
+
+  return (
+    <div className="mt-6 rounded-3xl border border-stone-100 bg-white p-6 dark:border-stone-800 dark:bg-stone-900">
+      <h2 className="flex items-center gap-2 font-display text-lg text-stone-900 dark:text-stone-50">
+        <WalletIcon size={17} className="text-grove-600 dark:text-grove-400" />
+        {t("wallet:paymentCard.title")}
+      </h2>
+
+      {loading ? (
+        <Skeleton className="mt-4 h-16 w-full max-w-xs" />
+      ) : !card ? (
+        <p className="mt-3 text-sm text-stone-500 dark:text-stone-400">{t("wallet:paymentCard.empty")}</p>
+      ) : (
+        <div
+          className={cn(
+            "mt-4 flex max-w-xs items-center justify-between rounded-2xl bg-linear-to-br p-4 text-white shadow-(--shadow-soft)",
+            CARD_GRADIENTS[card.cardType] ?? CARD_GRADIENTS[CardType.Visa],
+          )}
+        >
+          <span className="font-mono text-sm tracking-[0.15em] text-white/95">•••• {card.cardNumberLast4}</span>
+          <CardBrandMark cardType={card.cardType} />
+        </div>
+      )}
     </div>
   );
 }
@@ -141,6 +178,8 @@ export function FarmerPublicProfile() {
           {farmer.bio || t("pages:farmerProfile.noDescription")}
         </p>
       </div>
+
+      <FarmerPaymentCardSection farmerUserId={farmer.userId} />
 
       <div className="mt-10">
         <h2 className="mb-5 font-display text-xl text-stone-900 dark:text-stone-50">{t("pages:farmerProfile.reviewsTitle")}</h2>

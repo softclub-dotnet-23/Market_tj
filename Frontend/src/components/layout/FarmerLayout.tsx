@@ -17,6 +17,7 @@ import {
   Search,
   ShoppingCart,
   UserRound,
+  Wallet as WalletIcon,
 } from "lucide-react";
 import type { LucideIcon } from "lucide-react";
 import { Avatar } from "@/components/ui/Avatar";
@@ -43,6 +44,7 @@ const NAV_ITEMS: FarmerNavItem[] = [
   { labelKey: "messages", path: "/farmer/messages", icon: MessageCircle, section: "management" },
   { labelKey: "reviews", path: "/farmer/reviews", icon: MessageSquare, section: "management" },
   { labelKey: "documents", path: "/farmer/documents", icon: FileText, section: "management" },
+  { labelKey: "wallet", path: "/farmer/wallet", icon: WalletIcon, section: "account" },
   { labelKey: "notifications", path: "/farmer/notifications", icon: Bell, section: "account" },
   { labelKey: "profile", path: "/farmer/profile", icon: UserRound, section: "account" },
 ];

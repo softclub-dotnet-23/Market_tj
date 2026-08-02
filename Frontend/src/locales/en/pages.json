@@ -195,7 +195,7 @@
     "summaryTitle": "Your order",
     "itemsCount": "{{count}} item(s)",
     "subtotal": "Subtotal",
-    "paymentNote": "Payment on delivery. The farmer will contact you to confirm details and delivery cost.",
+    "paymentNote": "The order total is deducted from your Market.tj wallet balance as soon as you place the order.",
     "submit": "Confirm order",
     "toastTitle": "Order placed!",
     "toastDescription": "Order number {{orderNumber}}",

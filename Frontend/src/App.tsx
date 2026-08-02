@@ -53,6 +53,7 @@ const CustomerOrders = lazy(() => import("@/pages/CustomerOrders").then((m) => (
 const CustomerMessages = lazy(() => import("@/pages/CustomerMessages").then((m) => ({ default: m.CustomerMessages })));
 const CustomerProfile = lazy(() => import("@/pages/CustomerProfile").then((m) => ({ default: m.CustomerProfile })));
 const CustomerNotifications = lazy(() => import("@/pages/CustomerNotifications").then((m) => ({ default: m.CustomerNotifications })));
+const Wallet = lazy(() => import("@/pages/Wallet").then((m) => ({ default: m.Wallet })));
 
 function App() {
   return (
@@ -98,6 +99,7 @@ function App() {
                       <Route path="reviews" element={<FarmerReviews />} />
                       <Route path="profile" element={<FarmerProfile />} />
                       <Route path="documents" element={<FarmerDocuments />} />
+                      <Route path="wallet" element={<Wallet />} />
                       <Route path="notifications" element={<FarmerNotifications />} />
                       <Route path="*" element={<Navigate to="/farmer" replace />} />
                     </Route>
@@ -108,6 +110,7 @@ function App() {
                       <Route index element={<CustomerDashboard />} />
                       <Route path="orders" element={<CustomerOrders />} />
                       <Route path="messages" element={<CustomerMessages />} />
+                      <Route path="wallet" element={<Wallet />} />
                       <Route path="notifications" element={<CustomerNotifications />} />
                       <Route path="profile" element={<CustomerProfile />} />
                       <Route path="*" element={<Navigate to="/customer" replace />} />

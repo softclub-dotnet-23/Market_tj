@@ -6,14 +6,17 @@ import { cn } from "@/lib/utils";
 // Три разных, но родственных градиента — все в тёмный stone-900, к своему
 // акцентному цвету из палитры Market.tj (см. index.css), чтобы карта
 // выглядела частью общего дизайна, а не вставкой из чужого стиля, и при
-// этом три типа карт визуально легко различались.
-const GRADIENTS: Record<number, string> = {
+// этом три типа карт визуально легко различались. Экспортируется — тот же
+// градиент переиспользует компактная карточка "Способ оплаты фермера" на
+// публичном профиле (см. FarmerPublicProfile.tsx), чтобы не разъезжаться
+// визуально с личным кошельком.
+export const CARD_GRADIENTS: Record<number, string> = {
   [CardType.Visa]: "from-stone-900 via-grove-900 to-grove-700",
   [CardType.Mastercard]: "from-stone-900 via-clay-600 to-clay-500",
   [CardType.UnionPay]: "from-stone-900 via-harvest-700 to-harvest-500",
 };
 
-function BrandMark({ cardType }: { cardType: number }) {
+export function CardBrandMark({ cardType }: { cardType: number }) {
   if (cardType === CardType.Mastercard) {
     return (
       <div className="flex items-center" aria-hidden>
@@ -55,7 +58,7 @@ export function WalletCard({ cardType, firstName, lastName, last4, createdAt, cl
       transition={{ duration: 0.4 }}
       className={cn(
         "bg-noise relative aspect-[1.586/1] w-full max-w-sm overflow-hidden rounded-3xl bg-linear-to-br p-6 text-white shadow-(--shadow-lifted) sm:p-7",
-        GRADIENTS[cardType] ?? GRADIENTS[CardType.Visa],
+        CARD_GRADIENTS[cardType] ?? CARD_GRADIENTS[CardType.Visa],
         className,
       )}
     >
@@ -88,7 +91,7 @@ export function WalletCard({ cardType, firstName, lastName, last4, createdAt, cl
               {t("card.validFrom")} {openedLabel}
             </p>
           </div>
-          <BrandMark cardType={cardType} />
+          <CardBrandMark cardType={cardType} />
         </div>
       </div>
     </motion.div>
