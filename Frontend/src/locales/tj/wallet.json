@@ -1,0 +1,69 @@
+{
+  "title": "Ҳамён",
+  "loadError": {
+    "title": "Ҳамёнро бор карда нашуд",
+    "description": "Пайвастшавӣ ба сервер санҷед ва бори дигар кӯшиш кунед."
+  },
+  "createCard": {
+    "title": "Кортии виртуалӣ созед",
+    "description": "Ҳамёни дохилии Market.tj — барои пардохти фармоишҳо ва гирифтани маблағи фурӯш.",
+    "firstNameLabel": "Номи соҳиби корт",
+    "lastNameLabel": "Насаби соҳиби корт",
+    "firstNamePlaceholder": "Масалан, Алишер",
+    "lastNamePlaceholder": "Масалан, Каримов",
+    "firstNameRequired": "Номро ворид кунед",
+    "lastNameRequired": "Насабро ворид кунед",
+    "cardTypeLabel": "Навъи корт",
+    "submit": "Кортро созед",
+    "success": "Корт сохта шуд",
+    "error": "Кортро сохтан нашуд"
+  },
+  "card": {
+    "holderFallback": "Соҳиби корт",
+    "validFrom": "КУШОДА ШУД"
+  },
+  "balance": {
+    "title": "Тавозуни ҷорӣ",
+    "topUp": "Пур кардан"
+  },
+  "topUpForm": {
+    "title": "Тавозунро пур кунед",
+    "amountLabel": "Маблағи пуркунӣ",
+    "amountPlaceholder": "0.00",
+    "quickAmountsLabel": "Пуркунии зуд",
+    "submit": "Пур кардан",
+    "cancel": "Бекор кардан",
+    "amountRequired": "Маблағро ворид кунед",
+    "amountPositive": "Маблағ бояд аз сифр зиёд бошад",
+    "amountDecimals": "На бештар аз ду рақами баъди вергул",
+    "amountMax": "Ҳадди аксар {{max}} сомонӣ дар як амалиёт",
+    "success": "Тавозун ба {{amount}} сомонӣ пур карда шуд",
+    "error": "Тавозунро пур кардан нашуд"
+  },
+  "history": {
+    "title": "Таърихи амалиётҳо",
+    "empty": "Ҳанӯз амалиёт нест — барои оғоз тавозунро пур кунед",
+    "types": {
+      "topUp": "Пуркунӣ",
+      "purchase": "Пардохти фармоиш",
+      "refund": "Баргардонидани маблағ",
+      "farmerCredit": "Маблағи фурӯш"
+    },
+    "orderLabel": "Фармоиши #{{id}}"
+  },
+  "paymentCard": {
+    "title": "Тарзи пардохти фермер",
+    "empty": "Фермер то ҳол кортии пардохт пайваст накардааст",
+    "loading": "Боргирӣ..."
+  },
+  "checkout": {
+    "balanceLabel": "Тавозуни ҳамён",
+    "insufficientTitle": "Тавозун нокифоя аст",
+    "insufficientDescription": "{{amount}} сомонӣ намерасад — барои фармоиш тавозунро пур кунед.",
+    "noWalletTitle": "Кортии Market.tj лозим аст",
+    "noWalletDescription": "Барои пардохти фармоиш аввал дар бахши «Ҳамён» кортии виртуалӣ созед.",
+    "topUpButton": "Тавозунро пур кунед",
+    "createWalletButton": "Кортро созед",
+    "sufficientNote": "Пас аз расмиёти фармоиш маблағ аз тавозуни ҳамён гирифта мешавад."
+  }
+}

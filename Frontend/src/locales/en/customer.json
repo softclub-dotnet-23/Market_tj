@@ -7,7 +7,8 @@
     "orders": "My orders",
     "messages": "Messages",
     "notifications": "Notifications",
-    "profile": "Profile"
+    "profile": "Profile",
+    "wallet": "Wallet"
   },
   "navSections": {
     "overview": "Overview",

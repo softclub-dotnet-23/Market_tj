@@ -57,6 +57,7 @@ public static class DependencyInjection
         services.AddScoped<IDailySalesSnapshotService, DailySalesSnapshotService>();
         services.AddScoped<IAnalyticsService, AnalyticsService>();
         services.AddScoped<IEmailVerificationService, EmailVerificationService>();
+        services.AddScoped<IWalletService, WalletService>();
 
         return services;
     }

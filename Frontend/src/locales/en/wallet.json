@@ -1,0 +1,69 @@
+{
+  "title": "Wallet",
+  "loadError": {
+    "title": "Couldn't load your wallet",
+    "description": "Check your connection and try again."
+  },
+  "createCard": {
+    "title": "Create your virtual card",
+    "description": "Market.tj's internal wallet — for paying for orders and receiving sales payouts.",
+    "firstNameLabel": "Cardholder first name",
+    "lastNameLabel": "Cardholder last name",
+    "firstNamePlaceholder": "e.g. Alisher",
+    "lastNamePlaceholder": "e.g. Karimov",
+    "firstNameRequired": "First name is required",
+    "lastNameRequired": "Last name is required",
+    "cardTypeLabel": "Card type",
+    "submit": "Create card",
+    "success": "Card created",
+    "error": "Couldn't create the card"
+  },
+  "card": {
+    "holderFallback": "Cardholder",
+    "validFrom": "OPENED"
+  },
+  "balance": {
+    "title": "Current balance",
+    "topUp": "Top up"
+  },
+  "topUpForm": {
+    "title": "Top up balance",
+    "amountLabel": "Top-up amount",
+    "amountPlaceholder": "0.00",
+    "quickAmountsLabel": "Quick top-up",
+    "submit": "Top up",
+    "cancel": "Cancel",
+    "amountRequired": "Enter an amount",
+    "amountPositive": "Amount must be greater than zero",
+    "amountDecimals": "No more than two decimal places",
+    "amountMax": "Maximum {{max}} somoni per operation",
+    "success": "Balance topped up by {{amount}} somoni",
+    "error": "Couldn't top up the balance"
+  },
+  "history": {
+    "title": "Transaction history",
+    "empty": "No transactions yet — top up your balance to get started",
+    "types": {
+      "topUp": "Top-up",
+      "purchase": "Order payment",
+      "refund": "Refund",
+      "farmerCredit": "Sale payout"
+    },
+    "orderLabel": "Order #{{id}}"
+  },
+  "paymentCard": {
+    "title": "Farmer's payment method",
+    "empty": "The farmer hasn't linked a payment card yet",
+    "loading": "Loading..."
+  },
+  "checkout": {
+    "balanceLabel": "Wallet balance",
+    "insufficientTitle": "Insufficient balance",
+    "insufficientDescription": "You're short {{amount}} som — top up your balance to place this order.",
+    "noWalletTitle": "You need a Market.tj card",
+    "noWalletDescription": "Create a virtual card in the Wallet section before you can pay for orders.",
+    "topUpButton": "Top up balance",
+    "createWalletButton": "Create card",
+    "sufficientNote": "Funds will be deducted from your wallet balance once the order is placed."
+  }
+}

@@ -2,6 +2,7 @@ using MarketTJ.Application.Common;
 using MarketTJ.Application.Dto.OrderDto;
 using MarketTJ.Application.Interfaces.Repositories;
 using MarketTJ.Application.Interfaces.Services;
+using MarketTJ.Application.Results;
 using MarketTJ.Application.Services;
 using MarketTJ.Domain.Entities;
 using MarketTJ.Domain.Enums;
@@ -19,13 +20,21 @@ public class OrderServiceTests
     private readonly Mock<IFarmerProfileRepository> _farmerProfileRepository = new();
     private readonly Mock<IUserRepository> _userRepository = new();
     private readonly Mock<IAuditLogService> _auditLogService = new();
+    private readonly Mock<IWalletService> _walletService = new();
     private readonly Mock<ICurrentUserService> _currentUser = new();
     private readonly Mock<ILogger<OrderService>> _logger = new();
     private readonly OrderService _service;
 
     public OrderServiceTests()
     {
-        _service = new OrderService(_orderRepository.Object, _orderItemRepository.Object, _productListingRepository.Object, _customerProfileRepository.Object, _farmerProfileRepository.Object, _userRepository.Object, _auditLogService.Object, _currentUser.Object, _logger.Object);
+        _service = new OrderService(_orderRepository.Object, _orderItemRepository.Object, _productListingRepository.Object, _customerProfileRepository.Object, _farmerProfileRepository.Object, _userRepository.Object, _auditLogService.Object, _walletService.Object, _currentUser.Object, _logger.Object);
+        // По умолчанию кошелёк "молча успешен" — большинству существующих
+        // тестов заказов сама оплата не важна, важно, что заказ создаётся/
+        // меняет статус. Тесты именно на списание/начисление/возврат
+        // переопределяют эти заглушки под себя (см. ниже).
+        _walletService.Setup(w => w.DebitForOrderAsync(It.IsAny<int>(), It.IsAny<decimal>(), It.IsAny<int>())).ReturnsAsync(Result<string>.Ok("Списано"));
+        _walletService.Setup(w => w.CreditFarmerForOrderAsync(It.IsAny<int>(), It.IsAny<decimal>(), It.IsAny<int>())).ReturnsAsync(Result<string>.Ok("Начислено"));
+        _walletService.Setup(w => w.RefundForOrderAsync(It.IsAny<int>(), It.IsAny<decimal>(), It.IsAny<int>())).ReturnsAsync(Result<string>.Ok("Возврат выполнен"));
         // По умолчанию — Customer с UserId=10, чей CustomerProfile.Id=1 (совпадает
         // с CustomerId=1 во всех фабриках Order/DTO ниже) — владелец по умолчанию.
         _currentUser.Setup(c => c.UserId).Returns(10);

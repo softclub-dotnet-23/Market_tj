@@ -3,6 +3,7 @@ using System;
 using MarketTJ.Infrastructure.Persistence;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 
@@ -11,9 +12,11 @@ using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 namespace MarketTJ.Infrastructure.Migrations
 {
     [DbContext(typeof(AppDbContext))]
-    partial class AppDbContextModelSnapshot : ModelSnapshot
+    [Migration("20260801195411_AddWallet")]
+    partial class AddWallet
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
@@ -57,7 +60,7 @@ namespace MarketTJ.Infrastructure.Migrations
 
                     b.HasIndex("UpdatedByAdminId");
 
-                    b.ToTable("AppSettings", (string)null);
+                    b.ToTable("AppSettings");
                 });
 
             modelBuilder.Entity("MarketTJ.Domain.Entities.AuditLog", b =>
@@ -93,7 +96,7 @@ namespace MarketTJ.Infrastructure.Migrations
 
                     b.HasIndex("AdminId");
 
-                    b.ToTable("AuditLogs", (string)null);
+                    b.ToTable("AuditLogs");
                 });
 
             modelBuilder.Entity("MarketTJ.Domain.Entities.CartItem", b =>
@@ -127,7 +130,7 @@ namespace MarketTJ.Infrastructure.Migrations
                     b.HasIndex("CustomerId", "ProductListingId")
                         .IsUnique();
 
-                    b.ToTable("CartItems", (string)null);
+                    b.ToTable("CartItems");
                 });
 
             modelBuilder.Entity("MarketTJ.Domain.Entities.Category", b =>
@@ -168,7 +171,7 @@ namespace MarketTJ.Infrastructure.Migrations
                     b.HasIndex("Name")
                         .IsUnique();
 
-                    b.ToTable("Categories", (string)null);
+                    b.ToTable("Categories");
                 });
 
             modelBuilder.Entity("MarketTJ.Domain.Entities.ChatMessage", b =>
@@ -204,7 +207,7 @@ namespace MarketTJ.Infrastructure.Migrations
 
                     b.HasIndex("SenderId");
 
-                    b.ToTable("ChatMessages", (string)null);
+                    b.ToTable("ChatMessages");
                 });
 
             modelBuilder.Entity("MarketTJ.Domain.Entities.Commission", b =>
@@ -235,7 +238,7 @@ namespace MarketTJ.Infrastructure.Migrations
 
                     b.HasIndex("CategoryId");
 
-                    b.ToTable("Commissions", (string)null);
+                    b.ToTable("Commissions");
                 });
 
             modelBuilder.Entity("MarketTJ.Domain.Entities.Conversation", b =>
@@ -273,7 +276,7 @@ namespace MarketTJ.Infrastructure.Migrations
                     b.HasIndex("OrderId")
                         .IsUnique();
 
-                    b.ToTable("Conversations", (string)null);
+                    b.ToTable("Conversations");
                 });
 
             modelBuilder.Entity("MarketTJ.Domain.Entities.CourierProfile", b =>
@@ -320,7 +323,7 @@ namespace MarketTJ.Infrastructure.Migrations
                     b.HasIndex("UserId")
                         .IsUnique();
 
-                    b.ToTable("CourierProfiles", (string)null);
+                    b.ToTable("CourierProfiles");
                 });
 
             modelBuilder.Entity("MarketTJ.Domain.Entities.CustomerProfile", b =>
@@ -359,7 +362,7 @@ namespace MarketTJ.Infrastructure.Migrations
                     b.HasIndex("UserId")
                         .IsUnique();
 
-                    b.ToTable("CustomerProfiles", (string)null);
+                    b.ToTable("CustomerProfiles");
                 });
 
             modelBuilder.Entity("MarketTJ.Domain.Entities.DailySalesSnapshot", b =>
@@ -401,7 +404,7 @@ namespace MarketTJ.Infrastructure.Migrations
                     b.HasIndex("Date")
                         .IsUnique();
 
-                    b.ToTable("DailySalesSnapshots", (string)null);
+                    b.ToTable("DailySalesSnapshots");
                 });
 
             modelBuilder.Entity("MarketTJ.Domain.Entities.Delivery", b =>
@@ -455,7 +458,7 @@ namespace MarketTJ.Infrastructure.Migrations
                     b.HasIndex("OrderId")
                         .IsUnique();
 
-                    b.ToTable("Deliveries", (string)null);
+                    b.ToTable("Deliveries");
                 });
 
             modelBuilder.Entity("MarketTJ.Domain.Entities.DeliverySlot", b =>
@@ -488,7 +491,7 @@ namespace MarketTJ.Infrastructure.Migrations
                     b.HasIndex("OrderId")
                         .IsUnique();
 
-                    b.ToTable("DeliverySlots", (string)null);
+                    b.ToTable("DeliverySlots");
                 });
 
             modelBuilder.Entity("MarketTJ.Domain.Entities.DeliveryZone", b =>
@@ -526,7 +529,7 @@ namespace MarketTJ.Infrastructure.Migrations
 
                     b.HasKey("Id");
 
-                    b.ToTable("DeliveryZones", (string)null);
+                    b.ToTable("DeliveryZones");
                 });
 
             modelBuilder.Entity("MarketTJ.Domain.Entities.EmailVerificationCode", b =>
@@ -561,7 +564,7 @@ namespace MarketTJ.Infrastructure.Migrations
 
                     b.HasIndex("Email");
 
-                    b.ToTable("EmailVerificationCodes", (string)null);
+                    b.ToTable("EmailVerificationCodes");
                 });
 
             modelBuilder.Entity("MarketTJ.Domain.Entities.FarmerDocument", b =>
@@ -603,7 +606,7 @@ namespace MarketTJ.Infrastructure.Migrations
 
                     b.HasIndex("ReviewedByAdminId");
 
-                    b.ToTable("FarmerDocuments", (string)null);
+                    b.ToTable("FarmerDocuments");
                 });
 
             modelBuilder.Entity("MarketTJ.Domain.Entities.FarmerProfile", b =>
@@ -617,9 +620,6 @@ namespace MarketTJ.Infrastructure.Migrations
                     b.Property<string>("Address")
                         .IsRequired()
                         .HasColumnType("text");
-
-                    b.Property<bool>("AutoReplyToReviewsEnabled")
-                        .HasColumnType("boolean");
 
                     b.Property<DateTime>("CreatedAt")
                         .HasColumnType("timestamp with time zone");
@@ -665,7 +665,7 @@ namespace MarketTJ.Infrastructure.Migrations
 
                     b.HasIndex("VerifiedByAdminId");
 
-                    b.ToTable("FarmerProfiles", (string)null);
+                    b.ToTable("FarmerProfiles");
                 });
 
             modelBuilder.Entity("MarketTJ.Domain.Entities.FarmerStaffMember", b =>
@@ -701,7 +701,7 @@ namespace MarketTJ.Infrastructure.Migrations
                     b.HasIndex("UserId")
                         .IsUnique();
 
-                    b.ToTable("FarmerStaffMembers", (string)null);
+                    b.ToTable("FarmerStaffMembers");
                 });
 
             modelBuilder.Entity("MarketTJ.Domain.Entities.Favorite", b =>
@@ -728,7 +728,7 @@ namespace MarketTJ.Infrastructure.Migrations
                     b.HasIndex("CustomerId", "ProductListingId")
                         .IsUnique();
 
-                    b.ToTable("Favorites", (string)null);
+                    b.ToTable("Favorites");
                 });
 
             modelBuilder.Entity("MarketTJ.Domain.Entities.Notification", b =>
@@ -760,7 +760,7 @@ namespace MarketTJ.Infrastructure.Migrations
 
                     b.HasIndex("UserId");
 
-                    b.ToTable("Notifications", (string)null);
+                    b.ToTable("Notifications");
                 });
 
             modelBuilder.Entity("MarketTJ.Domain.Entities.Order", b =>
@@ -838,7 +838,7 @@ namespace MarketTJ.Infrastructure.Migrations
                     b.HasIndex("OrderNumber")
                         .IsUnique();
 
-                    b.ToTable("Orders", (string)null);
+                    b.ToTable("Orders");
                 });
 
             modelBuilder.Entity("MarketTJ.Domain.Entities.OrderItem", b =>
@@ -880,7 +880,7 @@ namespace MarketTJ.Infrastructure.Migrations
 
                     b.HasIndex("ProductListingId");
 
-                    b.ToTable("OrderItems", (string)null);
+                    b.ToTable("OrderItems");
                 });
 
             modelBuilder.Entity("MarketTJ.Domain.Entities.Payment", b =>
@@ -917,7 +917,7 @@ namespace MarketTJ.Infrastructure.Migrations
 
                     b.HasIndex("OrderId");
 
-                    b.ToTable("Payments", (string)null);
+                    b.ToTable("Payments");
                 });
 
             modelBuilder.Entity("MarketTJ.Domain.Entities.Product", b =>
@@ -955,7 +955,7 @@ namespace MarketTJ.Infrastructure.Migrations
 
                     b.HasIndex("CategoryId");
 
-                    b.ToTable("Products", (string)null);
+                    b.ToTable("Products");
                 });
 
             modelBuilder.Entity("MarketTJ.Domain.Entities.ProductImage", b =>
@@ -983,7 +983,7 @@ namespace MarketTJ.Infrastructure.Migrations
 
                     b.HasIndex("ProductListingId");
 
-                    b.ToTable("ProductImages", (string)null);
+                    b.ToTable("ProductImages");
                 });
 
             modelBuilder.Entity("MarketTJ.Domain.Entities.ProductListing", b =>
@@ -1079,7 +1079,7 @@ namespace MarketTJ.Infrastructure.Migrations
 
                     b.HasIndex("ProductId");
 
-                    b.ToTable("ProductListings", (string)null);
+                    b.ToTable("ProductListings");
                 });
 
             modelBuilder.Entity("MarketTJ.Domain.Entities.RefreshToken", b =>
@@ -1113,7 +1113,7 @@ namespace MarketTJ.Infrastructure.Migrations
 
                     b.HasIndex("UserId");
 
-                    b.ToTable("RefreshTokens", (string)null);
+                    b.ToTable("RefreshTokens");
                 });
 
             modelBuilder.Entity("MarketTJ.Domain.Entities.RefundRequest", b =>
@@ -1160,7 +1160,7 @@ namespace MarketTJ.Infrastructure.Migrations
 
                     b.HasIndex("ProcessedByAdminId");
 
-                    b.ToTable("RefundRequests", (string)null);
+                    b.ToTable("RefundRequests");
                 });
 
             modelBuilder.Entity("MarketTJ.Domain.Entities.ReportedListing", b =>
@@ -1203,7 +1203,7 @@ namespace MarketTJ.Infrastructure.Migrations
 
                     b.HasIndex("ReviewedByAdminId");
 
-                    b.ToTable("ReportedListings", (string)null);
+                    b.ToTable("ReportedListings");
                 });
 
             modelBuilder.Entity("MarketTJ.Domain.Entities.Review", b =>
@@ -1226,12 +1226,6 @@ namespace MarketTJ.Infrastructure.Migrations
                     b.Property<int>("FarmerId")
                         .HasColumnType("integer");
 
-                    b.Property<DateTime?>("FarmerRepliedAt")
-                        .HasColumnType("timestamp with time zone");
-
-                    b.Property<string>("FarmerReply")
-                        .HasColumnType("text");
-
                     b.Property<int>("OrderId")
                         .HasColumnType("integer");
 
@@ -1247,7 +1241,7 @@ namespace MarketTJ.Infrastructure.Migrations
                     b.HasIndex("OrderId")
                         .IsUnique();
 
-                    b.ToTable("Reviews", (string)null);
+                    b.ToTable("Reviews");
                 });
 
             modelBuilder.Entity("MarketTJ.Domain.Entities.SupportMessage", b =>
@@ -1277,7 +1271,7 @@ namespace MarketTJ.Infrastructure.Migrations
 
                     b.HasIndex("SupportTicketId");
 
-                    b.ToTable("SupportMessages", (string)null);
+                    b.ToTable("SupportMessages");
                 });
 
             modelBuilder.Entity("MarketTJ.Domain.Entities.SupportTicket", b =>
@@ -1322,7 +1316,7 @@ namespace MarketTJ.Infrastructure.Migrations
 
                     b.HasIndex("UserId");
 
-                    b.ToTable("SupportTickets", (string)null);
+                    b.ToTable("SupportTickets");
                 });
 
             modelBuilder.Entity("MarketTJ.Domain.Entities.User", b =>
@@ -1380,7 +1374,7 @@ namespace MarketTJ.Infrastructure.Migrations
                         .IsUnique()
                         .HasFilter("\"IsDeleted\" = false");
 
-                    b.ToTable("Users", (string)null);
+                    b.ToTable("Users");
                 });
 
             modelBuilder.Entity("MarketTJ.Domain.Entities.Wallet", b =>

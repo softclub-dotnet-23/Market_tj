@@ -19,6 +19,7 @@ public class OrderService(
     IFarmerProfileRepository farmerProfileRepository,
     IUserRepository userRepository,
     IAuditLogService auditLogService,
+    IWalletService walletService,
     ICurrentUserService currentUser,
     ILogger<OrderService> logger) : IOrderService
 {
@@ -157,6 +158,21 @@ public class OrderService(
             };
 
             await orderRepository.AddAsync(order);
+
+            // Списание при оформлении заказа (не при более позднем этапе
+            // жизненного цикла) — покупатель платит сразу, как только заказ
+            // создан, а не когда фермер его примет. Если средств не хватает
+            // (или у покупателя вовсе нет карты), только что созданная
+            // запись удаляется полностью (не soft-delete — платежа не было,
+            // заказа как бы не было вовсе), а не остаётся висеть в базе
+            // неоплаченной.
+            var debitResult = await walletService.DebitForOrderAsync(customerProfile.UserId, order.TotalAmount, order.Id);
+            if (!debitResult.IsSuccess)
+            {
+                await orderRepository.DeleteAsync(order);
+                return Result<string>.Fail(debitResult.Error ?? "Недостаточно средств для оплаты заказа", debitResult.ErrorType ?? ErrorType.Validation);
+            }
+
             return Result<string>.Ok("Заказ создан");
         }
         catch (Exception ex)
@@ -227,6 +243,8 @@ public class OrderService(
 
             if (becameRejectedOrCancelled)
                 await RestoreStockForOrderAsync(id);
+
+            await ApplyWalletEffectsForStatusChangeAsync(order, previousStatus, dto.Status);
 
             return Result<string>.Ok("Заказ обновлён");
         }
@@ -318,6 +336,8 @@ public class OrderService(
 
             await orderRepository.UpdateAsync(order);
 
+            await ApplyWalletEffectsForStatusChangeAsync(order, previousStatus, status);
+
             await auditLogService.CreateAsync(new CreateAuditLogDto
             {
                 AdminId = adminId,
@@ -333,6 +353,40 @@ public class OrderService(
         {
             logger.LogError(ex, "Ошибка при изменении статуса заказа {Id}", id);
             return Result<string>.Fail("Не удалось изменить статус заказа", ErrorType.InternalServerError);
+        }
+    }
+
+    // Единая точка для обоих мест, где меняется статус заказа (ChangeStatusAsync
+    // и UpdateAsync) — начисление фермеру при завершении заказа, возврат
+    // покупателю при отклонении/отмене. Списание при этом происходит один
+    // раз, при СОЗДАНИИ заказа (см. CreateAsync) — Completed достигается
+    // только из состояний до него, поэтому фермер начисляется ровно один
+    // раз за заказ, а Cancelled/Rejected после Completed невозможны (см.
+    // проверку "завершённый заказ нельзя редактировать" выше) — двойного
+    // начисления/возврата за один и тот же заказ произойти не может.
+    // Ошибка кошелька здесь намеренно не проваливает саму смену статуса
+    // (заказ уже физически выполнен/отменён) — только логируется, как и
+    // сбой уведомления на фронтенде при оформлении заказа.
+    private async Task ApplyWalletEffectsForStatusChangeAsync(Order order, OrderStatus previousStatus, OrderStatus newStatus)
+    {
+        if (newStatus == OrderStatus.Completed && previousStatus != OrderStatus.Completed)
+        {
+            var farmerProfile = await farmerProfileRepository.GetByIdAsync(order.FarmerId);
+            if (farmerProfile is null) return;
+
+            var creditResult = await walletService.CreditFarmerForOrderAsync(farmerProfile.UserId, order.Subtotal, order.Id);
+            if (!creditResult.IsSuccess)
+                logger.LogError("Не удалось начислить фермеру за заказ {OrderId}: {Error}", order.Id, creditResult.Error);
+        }
+        else if ((newStatus == OrderStatus.Rejected || newStatus == OrderStatus.Cancelled) &&
+                 previousStatus != OrderStatus.Rejected && previousStatus != OrderStatus.Cancelled)
+        {
+            var customerProfile = await customerProfileRepository.GetByIdAsync(order.CustomerId);
+            if (customerProfile is null) return;
+
+            var refundResult = await walletService.RefundForOrderAsync(customerProfile.UserId, order.TotalAmount, order.Id);
+            if (!refundResult.IsSuccess)
+                logger.LogError("Не удалось вернуть средства покупателю за заказ {OrderId}: {Error}", order.Id, refundResult.Error);
         }
     }
 

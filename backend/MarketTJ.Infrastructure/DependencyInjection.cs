@@ -60,6 +60,7 @@ public static class DependencyInjection
         services.AddScoped<IDailySalesSnapshotRepository, DailySalesSnapshotRepository>();
         services.AddScoped<IAnalyticsRepository, AnalyticsRepository>();
         services.AddScoped<IEmailVerificationCodeRepository, EmailVerificationCodeRepository>();
+        services.AddScoped<IWalletRepository, WalletRepository>();
 
         // Railway блокирует исходящий SMTP (порт 587) — прямой SmtpClient до
         // smtp.gmail.com с прода никогда не подключается (таймаут, не ошибка

@@ -7,7 +7,8 @@
     "orders": "Мои заказы",
     "messages": "Сообщения",
     "notifications": "Уведомления",
-    "profile": "Профиль"
+    "profile": "Профиль",
+    "wallet": "Кошелёк"
   },
   "navSections": {
     "overview": "Обзор",

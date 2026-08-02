@@ -1,0 +1,69 @@
+{
+  "title": "Кошелёк",
+  "loadError": {
+    "title": "Не удалось загрузить кошелёк",
+    "description": "Проверьте подключение к серверу и попробуйте снова."
+  },
+  "createCard": {
+    "title": "Создайте виртуальную карту",
+    "description": "Внутренний кошелёк Market.tj — для оплаты заказов и получения выплат за продажи.",
+    "firstNameLabel": "Имя держателя карты",
+    "lastNameLabel": "Фамилия держателя карты",
+    "firstNamePlaceholder": "Например, Алишер",
+    "lastNamePlaceholder": "Например, Каримов",
+    "firstNameRequired": "Укажите имя",
+    "lastNameRequired": "Укажите фамилию",
+    "cardTypeLabel": "Тип карты",
+    "submit": "Создать карту",
+    "success": "Карта создана",
+    "error": "Не удалось создать карту"
+  },
+  "card": {
+    "holderFallback": "Держатель карты",
+    "validFrom": "ОТКРЫТА"
+  },
+  "balance": {
+    "title": "Текущий баланс",
+    "topUp": "Пополнить"
+  },
+  "topUpForm": {
+    "title": "Пополнить баланс",
+    "amountLabel": "Сумма пополнения",
+    "amountPlaceholder": "0.00",
+    "quickAmountsLabel": "Быстрое пополнение",
+    "submit": "Пополнить",
+    "cancel": "Отмена",
+    "amountRequired": "Введите сумму",
+    "amountPositive": "Сумма должна быть больше нуля",
+    "amountDecimals": "Не более двух знаков после запятой",
+    "amountMax": "Максимум {{max}} сомони за одну операцию",
+    "success": "Баланс пополнен на {{amount}} сомони",
+    "error": "Не удалось пополнить баланс"
+  },
+  "history": {
+    "title": "История операций",
+    "empty": "Операций пока нет — пополните баланс, чтобы начать",
+    "types": {
+      "topUp": "Пополнение",
+      "purchase": "Оплата заказа",
+      "refund": "Возврат средств",
+      "farmerCredit": "Начисление за продажу"
+    },
+    "orderLabel": "Заказ #{{id}}"
+  },
+  "paymentCard": {
+    "title": "Способ оплаты фермера",
+    "empty": "Фермер ещё не подключил карту оплаты",
+    "loading": "Загрузка..."
+  },
+  "checkout": {
+    "balanceLabel": "Баланс кошелька",
+    "insufficientTitle": "Недостаточно средств на балансе",
+    "insufficientDescription": "Не хватает {{amount}} с. — пополните баланс, чтобы оформить заказ.",
+    "noWalletTitle": "Нужна карта Market.tj",
+    "noWalletDescription": "Чтобы оплатить заказ, сначала создайте виртуальную карту в разделе «Кошелёк».",
+    "topUpButton": "Пополнить баланс",
+    "createWalletButton": "Создать карту",
+    "sufficientNote": "Средства спишутся с баланса кошелька после оформления заказа."
+  }
+}
