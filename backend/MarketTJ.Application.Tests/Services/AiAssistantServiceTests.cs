@@ -804,8 +804,14 @@ public class AiAssistantServiceTests
         handler.Protected().Verify("SendAsync", Times.Once(), ItExpr.IsAny<HttpRequestMessage>(), ItExpr.IsAny<CancellationToken>());
     }
 
+    // Groq вернул 429 (дневная/минутная квота бесплатного тарифа исчерпана) —
+    // отдельный ErrorType.TooManyRequests (→ HTTP 429 на фронтенд), а не общий
+    // InternalServerError, чтобы виджет мог показать конкретную причину и
+    // предложить подождать, а не общий "AI-ассистент недоступен" (найдено
+    // на живой проверке 2026-08-02: запрос "pomidor" падал с непонятным
+    // "Ошибка AI-ассистента" без объяснения причины).
     [Fact]
-    public async Task AskAsync_GroqApiError_ReturnsGenericFailure()
+    public async Task AskAsync_GroqRateLimited_ReturnsTooManyRequestsWithInformativeMessage()
     {
         var handler = MockHandler(HttpStatusCode.TooManyRequests, "{\"error\":{\"message\":\"rate limited\"}}");
         var service = CreateService(handler);
@@ -813,7 +819,68 @@ public class AiAssistantServiceTests
         var result = await service.AskAsync("tomatoes?", null);
 
         Assert.False(result.IsSuccess);
+        Assert.Equal(ErrorType.TooManyRequests, result.ErrorType);
+        Assert.Contains("квот", result.Error, StringComparison.OrdinalIgnoreCase);
+    }
+
+    [Fact]
+    public async Task AskAsync_GroqRateLimited_WithRetryAfterHeader_IncludesWaitTimeInMessage()
+    {
+        var handler = new Mock<HttpMessageHandler>();
+        handler.Protected()
+            .Setup<Task<HttpResponseMessage>>("SendAsync", ItExpr.IsAny<HttpRequestMessage>(), ItExpr.IsAny<CancellationToken>())
+            .ReturnsAsync(() =>
+            {
+                var response = new HttpResponseMessage
+                {
+                    StatusCode = HttpStatusCode.TooManyRequests,
+                    Content = new StringContent("{\"error\":{\"message\":\"rate limited\"}}")
+                };
+                response.Headers.RetryAfter = new RetryConditionHeaderValue(TimeSpan.FromSeconds(90));
+                return response;
+            });
+        var service = CreateService(handler);
+
+        var result = await service.AskAsync("tomatoes?", null);
+
+        Assert.False(result.IsSuccess);
+        Assert.Equal(ErrorType.TooManyRequests, result.ErrorType);
+        // 90 секунд округляется вверх до 2 минут (см. AiAssistantService.FormatRetryDelay).
+        Assert.Contains("2 мин", result.Error);
+    }
+
+    // Отличается от rate-limit случая выше — обычная ошибка Groq (не 429)
+    // по-прежнему должна давать общий InternalServerError, а не TooManyRequests.
+    [Fact]
+    public async Task AskAsync_GroqServerError_ReturnsGenericInternalServerError()
+    {
+        var handler = MockHandler(HttpStatusCode.InternalServerError, "{\"error\":{\"message\":\"server error\"}}");
+        var service = CreateService(handler);
+
+        var result = await service.AskAsync("tomatoes?", null);
+
+        Assert.False(result.IsSuccess);
         Assert.Equal(ErrorType.InternalServerError, result.ErrorType);
+    }
+
+    // Модель иногда не следует инструкции "верни строго JSON" и отвечает
+    // обычным текстом (наблюдалось на живой проверке 2026-08-02: ответ
+    // начинался с обычного русского текста, не с "{", что раньше приводило к
+    // необработанному JsonException и падению в общий catch с непонятным
+    // "Ошибка AI-ассистента"). Теперь это тот же понятный путь, что и когда
+    // Deserialize возвращает null.
+    [Fact]
+    public async Task AskAsync_ModelReturnsPlainTextInsteadOfJson_ReturnsClearParseFailureNotGenericError()
+    {
+        var body = GroqTextResponse("Извините, я не совсем понял ваш вопрос про помидоры.");
+        var handler = MockHandler(HttpStatusCode.OK, body);
+        var service = CreateService(handler);
+
+        var result = await service.AskAsync("pomidor", null);
+
+        Assert.False(result.IsSuccess);
+        Assert.Equal(ErrorType.InternalServerError, result.ErrorType);
+        Assert.Contains("разобрать", result.Error, StringComparison.OrdinalIgnoreCase);
     }
 
     [Fact]

@@ -13,5 +13,9 @@ public enum ErrorType
     Forbidden,
     Unknown,
     BadRequest,
-    InternalServerError
+    InternalServerError,
+    // Внешний провайдер (например, Groq) вернул 429 — отдельно от обычной
+    // Validation/Conflict 4xx, чтобы фронтенд мог показать "попробуйте позже"
+    // вместо трактовки как ошибки ввода пользователя (2026-08-02, AI-ассистент).
+    TooManyRequests
 }

@@ -1,3 +1,4 @@
+using System.Net;
 using System.Net.Http.Headers;
 using System.Text;
 using System.Text.Json;
@@ -363,24 +364,54 @@ public class AiAssistantService(
                 json = json[4..].Trim();
             }
 
-            var parsed = JsonSerializer.Deserialize<AssistantResponseDto>(json, new JsonSerializerOptions
+            AssistantResponseDto? parsed;
+            try
             {
-                PropertyNameCaseInsensitive = true
-            });
+                parsed = JsonSerializer.Deserialize<AssistantResponseDto>(json, new JsonSerializerOptions
+                {
+                    PropertyNameCaseInsensitive = true
+                });
+            }
+            catch (JsonException)
+            {
+                // Модель иногда не следует инструкции "верни строго JSON" и отвечает
+                // обычным текстом (наблюдалось на живой проверке 2026-08-02, запрос
+                // "pomidor" — ответ начинался с обычного русского текста, не с "{").
+                // Это тот же случай, что и parsed is null ниже — тот же понятный
+                // ответ пользователю, а не общий "Ошибка AI-ассистента" из catch
+                // снаружи, который не объясняет причину.
+                parsed = null;
+            }
 
             if (parsed is null)
             {
                 logger.LogError("Не удалось распарсить JSON от ассистента: {Json}", json);
-                return Result<AssistantResponseDto>.Fail("Не удалось разобрать ответ ассистента", ErrorType.InternalServerError);
+                return Result<AssistantResponseDto>.Fail("Не удалось разобрать ответ ассистента, попробуйте переформулировать вопрос", ErrorType.InternalServerError);
             }
 
             return Result<AssistantResponseDto>.Ok(parsed);
         }
+        catch (GroqRateLimitedException ex)
+        {
+            var retryHint = ex.RetryAfter is { } delta
+                ? $"через {FormatRetryDelay(delta)}"
+                : "через несколько минут";
+            logger.LogWarning("AI-ассистент недоступен из-за лимита запросов Groq, повтор {RetryHint}", retryHint);
+            return Result<AssistantResponseDto>.Fail(
+                $"AI-ассистент временно перегружен (превышена квота бесплатного тарифа) — попробуйте {retryHint}",
+                ErrorType.TooManyRequests);
+        }
         catch (Exception ex)
         {
             logger.LogError(ex, "Ошибка при обращении к AI-ассистенту");
-            return Result<AssistantResponseDto>.Fail("Ошибка AI-ассистента", ErrorType.InternalServerError);
+            return Result<AssistantResponseDto>.Fail("Ошибка AI-ассистента, попробуйте ещё раз через некоторое время", ErrorType.InternalServerError);
         }
+    }
+
+    private static string FormatRetryDelay(TimeSpan delta)
+    {
+        if (delta.TotalMinutes >= 1) return $"{Math.Ceiling(delta.TotalMinutes)} мин.";
+        return $"{Math.Max(1, (int)delta.TotalSeconds)} сек.";
     }
 
     public async Task<Result<string>> ExecuteActionAsync(ExecuteAssistantActionDto dto)
@@ -1073,8 +1104,18 @@ public class AiAssistantService(
     {
         for (var attempt = 1; attempt <= 2; attempt++)
         {
-            var (body, statusCode, rawBody) = await PostToGroqAsync(apiKey, tools, messages, toolChoice: "auto");
+            var (body, statusCode, rawBody, retryAfter) = await PostToGroqAsync(apiKey, tools, messages, toolChoice: "auto");
             if (body is not null) return body;
+
+            // 429 — дневная/минутная квота бесплатного тарифа Groq исчерпана, а не
+            // "плавающая" особенность генерации модели (в отличие от tool_use_failed
+            // ниже) — ретраить тем же запросом бессмысленно, нужен отдельный,
+            // информативный ответ пользователю (см. AskAsync, catch GroqRateLimitedException).
+            if (statusCode == HttpStatusCode.TooManyRequests)
+            {
+                logger.LogWarning("Groq API вернул 429 (квота исчерпана): {Body}", rawBody);
+                throw new GroqRateLimitedException(retryAfter);
+            }
 
             if (!IsToolUseFailed(rawBody))
             {
@@ -1093,8 +1134,14 @@ public class AiAssistantService(
         }
 
         logger.LogWarning("Groq дважды вернул tool_use_failed, финальная попытка без инструментов");
-        var (finalBody, finalStatus, finalRaw) = await PostToGroqAsync(apiKey, tools: null, messages, toolChoice: null);
+        var (finalBody, finalStatus, finalRaw, finalRetryAfter) = await PostToGroqAsync(apiKey, tools: null, messages, toolChoice: null);
         if (finalBody is not null) return finalBody;
+
+        if (finalStatus == HttpStatusCode.TooManyRequests)
+        {
+            logger.LogWarning("Groq API вернул 429 (квота исчерпана): {Body}", finalRaw);
+            throw new GroqRateLimitedException(finalRetryAfter);
+        }
 
         logger.LogError("Groq API вернул {StatusCode}: {Body}", finalStatus, finalRaw);
         throw new InvalidOperationException($"Groq API error {finalStatus}");
@@ -1154,7 +1201,7 @@ public class AiAssistantService(
         }
     };
 
-    private async Task<(JsonObject? Body, System.Net.HttpStatusCode StatusCode, string RawBody)> PostToGroqAsync(string apiKey, JsonArray? tools, JsonArray messages, string? toolChoice)
+    private async Task<(JsonObject? Body, HttpStatusCode StatusCode, string RawBody, TimeSpan? RetryAfter)> PostToGroqAsync(string apiKey, JsonArray? tools, JsonArray messages, string? toolChoice)
     {
         var requestBody = new JsonObject
         {
@@ -1185,9 +1232,21 @@ public class AiAssistantService(
 
         if (!response.IsSuccessStatusCode)
         {
-            return (null, response.StatusCode, responseBody);
+            // Groq (как и большинство OpenAI-совместимых API) отдаёт Retry-After
+            // на 429 — используем его, если есть, чтобы сказать пользователю
+            // не просто "попробуйте позже", а когда именно.
+            return (null, response.StatusCode, responseBody, response.Headers.RetryAfter?.Delta);
         }
 
-        return (JsonNode.Parse(responseBody)!.AsObject(), response.StatusCode, responseBody);
+        return (JsonNode.Parse(responseBody)!.AsObject(), response.StatusCode, responseBody, null);
     }
+}
+
+// Groq вернул 429 (превышена квота бесплатного тарифа — по запросу в минуту
+// или в день) — отдельный тип исключения, а не общий InvalidOperationException,
+// чтобы AskAsync мог поймать именно этот случай и ответить пользователю
+// конкретно, а не общим "Ошибка AI-ассистента" (см. AskAsync catch-блок).
+public class GroqRateLimitedException(TimeSpan? retryAfter) : Exception("Groq API rate limit exceeded (429)")
+{
+    public TimeSpan? RetryAfter { get; } = retryAfter;
 }

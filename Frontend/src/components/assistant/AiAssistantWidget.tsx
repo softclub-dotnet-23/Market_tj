@@ -6,7 +6,7 @@ import { Check, Loader2, Send, X } from "lucide-react";
 import { type AssistantActionDto, type AssistantIntent, askAssistant, executeAssistantAction } from "@/data/aiAssistant";
 import { getCatalogProductById } from "@/data/catalogStore";
 import { useAuth } from "@/context/AuthContext";
-import { resolveMediaUrl } from "@/lib/api";
+import { ApiError, resolveMediaUrl } from "@/lib/api";
 import { cn, formatSomoni } from "@/lib/utils";
 import { AssistantMascot } from "@/components/assistant/AssistantMascot";
 
@@ -80,6 +80,19 @@ export function AiAssistantWidget() {
     setMessages((prev) => [...prev, { ...msg, id: ++messageIdCounter }]);
   };
 
+  // Раньше здесь показывался "сырой" err.message — это всегда было сообщение
+  // с бэкенда (ApiError extends Error, поэтому `instanceof Error` истинно
+  // почти для любой ошибки, включая сетевые), то есть не локализованный
+  // фолбэк t("error") практически никогда не срабатывал, а не-русскоязычный
+  // пользователь видел русский текст бэкенда. 429 (см. ErrorType.TooManyRequests
+  // на бэкенде — AiAssistantService.AskAsync, GroqRateLimitedException) —
+  // единственный случай, который стоит показывать отдельно от общего
+  // "недоступен", т.к. у него есть понятная причина и временный характер.
+  const resolveAssistantErrorText = (err: unknown): string => {
+    if (err instanceof ApiError && err.status === 429) return t("rateLimited");
+    return t("error");
+  };
+
   const handleSend = async () => {
     const text = draft.trim();
     if (!text || sending) return;
@@ -101,7 +114,7 @@ export function AiAssistantWidget() {
         actionStatus: res.action ? "idle" : undefined,
       });
     } catch (err) {
-      pushMessage({ role: "assistant", text: err instanceof Error ? err.message : t("error") });
+      pushMessage({ role: "assistant", text: resolveAssistantErrorText(err) });
     } finally {
       setSending(false);
     }
@@ -115,7 +128,7 @@ export function AiAssistantWidget() {
       pushMessage({ role: "assistant", text: resultMessage });
     } catch (err) {
       setMessages((prev) => prev.map((m) => (m.id === messageId ? { ...m, actionStatus: "error" } : m)));
-      pushMessage({ role: "assistant", text: err instanceof Error ? err.message : t("error") });
+      pushMessage({ role: "assistant", text: resolveAssistantErrorText(err) });
     }
   };
 
