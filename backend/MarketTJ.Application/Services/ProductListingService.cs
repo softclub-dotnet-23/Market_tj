@@ -14,6 +14,7 @@ public class ProductListingService(
     IProductListingRepository productListingRepository,
     IFarmerProfileRepository farmerProfileRepository,
     ICategoryRepository categoryRepository,
+    IProductImageRepository productImageRepository,
     ICurrentUserService currentUser,
     ILogger<ProductListingService> logger) : IProductListingService
 {
@@ -46,11 +47,12 @@ public class ProductListingService(
             // что там реально есть (раздел 13.5 ТЗ добавит серверную пагинацию
             // позже, на Этапе 4 раздела 23).
             var all = await productListingRepository.GetAllAsync();
-            var page = all
+            var pageListings = all
                 .Skip((pageNumber - 1) * pageSize)
                 .Take(pageSize)
-                .Select(ToGetDto)
                 .ToList();
+
+            var page = await EnrichAsync(pageListings);
 
             return Result<PagedResult<GetProductListingDto>>.Ok(
                 PagedResult<GetProductListingDto>.Ok(page, all.Count, pageNumber, pageSize));
@@ -62,26 +64,29 @@ public class ProductListingService(
         }
     }
 
-    public async Task<Result<PagedResult<GetCatalogListingDto>>> SearchCatalogAsync(ProductListingSearchFilter filter)
+    public async Task<Result<PagedResult<GetProductListingDto>>> SearchCatalogAsync(ProductListingSearchFilter filter)
     {
         try
         {
             if (filter.PageNumber <= 0)
-                return Result<PagedResult<GetCatalogListingDto>>.Fail("pageNumber должен быть больше 0", ErrorType.Validation);
+                return Result<PagedResult<GetProductListingDto>>.Fail("pageNumber должен быть больше 0", ErrorType.Validation);
 
             if (filter.PageSize <= 0)
-                return Result<PagedResult<GetCatalogListingDto>>.Fail("pageSize должен быть больше 0", ErrorType.Validation);
+                return Result<PagedResult<GetProductListingDto>>.Fail("pageSize должен быть больше 0", ErrorType.Validation);
 
             var (items, totalCount) = await productListingRepository.SearchCatalogAsync(filter);
-            var dtos = items.Select(x => ToGetCatalogDto(x.Listing, x.Rating, x.OrderCount)).ToList();
+            var imagesByListingId = await GetImagesByListingIdAsync(items.Select(x => x.Listing.Id).ToList());
+            var dtos = items
+                .Select(x => ToGetDto(x.Listing, imagesByListingId.GetValueOrDefault(x.Listing.Id, []), x.Rating, x.OrderCount))
+                .ToList();
 
-            return Result<PagedResult<GetCatalogListingDto>>.Ok(
-                PagedResult<GetCatalogListingDto>.Ok(dtos, totalCount, filter.PageNumber, filter.PageSize));
+            return Result<PagedResult<GetProductListingDto>>.Ok(
+                PagedResult<GetProductListingDto>.Ok(dtos, totalCount, filter.PageNumber, filter.PageSize));
         }
         catch (Exception ex)
         {
             logger.LogError(ex, "Ошибка при поиске по каталогу");
-            return Result<PagedResult<GetCatalogListingDto>>.Fail("Не удалось выполнить поиск по каталогу", ErrorType.InternalServerError);
+            return Result<PagedResult<GetProductListingDto>>.Fail("Не удалось выполнить поиск по каталогу", ErrorType.InternalServerError);
         }
     }
 
@@ -107,7 +112,8 @@ public class ProductListingService(
             if (listing is null)
                 return Result<GetProductListingDto?>.Fail("Объявление не найдено", ErrorType.NotFound);
 
-            return Result<GetProductListingDto?>.Ok(ToGetDto(listing));
+            var enriched = await EnrichAsync([listing]);
+            return Result<GetProductListingDto?>.Ok(enriched[0]);
         }
         catch (Exception ex)
         {
@@ -257,7 +263,43 @@ public class ProductListingService(
         }
     }
 
-    private static GetCatalogListingDto ToGetCatalogDto(ProductListing listing, double rating, int orderCount) => new()
+    // Общее обогащение для GetAllAsync/GetByIdAsync — ImageUrls/Rating/OrderCount
+    // только для переданных объявлений, а не для всего каталога (audit
+    // 2026-08-02: раньше это тянул фронт целиком через /product-images и /reviews).
+    private async Task<List<GetProductListingDto>> EnrichAsync(List<ProductListing> listings)
+    {
+        var listingIds = listings.Select(l => l.Id).ToList();
+        var farmerIds = listings.Select(l => l.FarmerProfileId).Distinct().ToList();
+
+        var imagesByListingId = await GetImagesByListingIdAsync(listingIds);
+        var orderCounts = listingIds.Count > 0
+            ? await productListingRepository.GetOrderCountsByListingIdsAsync(listingIds)
+            : [];
+        var ratings = farmerIds.Count > 0
+            ? await productListingRepository.GetRatingsByFarmerIdsAsync(farmerIds)
+            : [];
+
+        return listings
+            .Select(l => ToGetDto(
+                l,
+                imagesByListingId.GetValueOrDefault(l.Id, []),
+                ratings.GetValueOrDefault(l.FarmerProfileId, 0),
+                orderCounts.GetValueOrDefault(l.Id, 0)))
+            .ToList();
+    }
+
+    private async Task<Dictionary<int, List<string>>> GetImagesByListingIdAsync(List<int> listingIds)
+    {
+        if (listingIds.Count == 0)
+            return [];
+
+        var images = await productImageRepository.GetByListingIdsAsync(listingIds);
+        return images
+            .GroupBy(i => i.ProductListingId)
+            .ToDictionary(g => g.Key, g => g.Select(i => i.ImageUrl).ToList());
+    }
+
+    private static GetProductListingDto ToGetDto(ProductListing listing, List<string>? imageUrls = null, double rating = 0, int orderCount = 0) => new()
     {
         Id = listing.Id,
         FarmerProfileId = listing.FarmerProfileId,
@@ -279,31 +321,8 @@ public class ProductListingService(
         Status = listing.Status,
         CreatedAt = listing.CreatedAt,
         UpdatedAt = listing.UpdatedAt,
-        Rating = Math.Round(rating, 1),
+        ImageUrls = imageUrls ?? [],
+        Rating = rating,
         OrderCount = orderCount,
-    };
-
-    private static GetProductListingDto ToGetDto(ProductListing listing) => new()
-    {
-        Id = listing.Id,
-        FarmerProfileId = listing.FarmerProfileId,
-        CategoryId = listing.CategoryId,
-        Unit = listing.Unit,
-        Title = listing.Title,
-        Description = listing.Description,
-        RetailPricePerKg = listing.RetailPricePerKg,
-        WholesalePricePerKg = listing.WholesalePricePerKg,
-        WholesaleMinimumQuantity = listing.WholesaleMinimumQuantity,
-        AvailableQuantity = listing.AvailableQuantity,
-        MinimumOrderQuantity = listing.MinimumOrderQuantity,
-        HarvestDate = listing.HarvestDate,
-        ExpectedHarvestDate = listing.ExpectedHarvestDate,
-        QualityGrade = listing.QualityGrade,
-        Region = listing.Region,
-        District = listing.District,
-        Address = listing.Address,
-        Status = listing.Status,
-        CreatedAt = listing.CreatedAt,
-        UpdatedAt = listing.UpdatedAt
     };
 }

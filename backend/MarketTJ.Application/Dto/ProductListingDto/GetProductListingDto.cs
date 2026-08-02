@@ -24,4 +24,12 @@ public class GetProductListingDto
     public ListingStatus Status { get; set; }
     public DateTime CreatedAt { get; set; }
     public DateTime UpdatedAt { get; set; }
+
+    // Раньше фронт сам тянул /product-images и /reviews целиком и джойнил их
+    // в браузере на каждый список объявлений (см. audit 2026-08-02) — теперь
+    // сервер отдаёт готовые значения на каждом read-эндпоинте объявлений
+    // (GetAll/GetById/SearchCatalog), не только на SearchCatalog, как раньше.
+    public List<string> ImageUrls { get; set; } = new();
+    public double Rating { get; set; }
+    public int OrderCount { get; set; }
 }

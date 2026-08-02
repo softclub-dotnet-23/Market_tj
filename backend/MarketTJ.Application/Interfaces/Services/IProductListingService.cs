@@ -17,7 +17,7 @@ public interface IProductListingService
     // Раздел 13.5 ТЗ: публичный каталог — отдельно от GetAllAsync (тот
     // остаётся generic CRUD-листингом для админки, без ограничения по
     // статусу). Только Active + в наличии, фильтры/сортировка на уровне БД.
-    Task<Result<PagedResult<GetCatalogListingDto>>> SearchCatalogAsync(ProductListingSearchFilter filter);
+    Task<Result<PagedResult<GetProductListingDto>>> SearchCatalogAsync(ProductListingSearchFilter filter);
     Task<Result<List<string>>> GetDistinctActiveRegionsAsync();
     Task<Result<string>> CreateAsync(CreateProductListingDto dto);
     Task<Result<string>> UpdateAsync(int id, UpdateProductListingDto dto);

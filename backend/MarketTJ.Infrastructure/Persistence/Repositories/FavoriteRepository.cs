@@ -7,10 +7,10 @@ namespace MarketTJ.Infrastructure.Persistence.Repositories;
 public class FavoriteRepository(AppDbContext context) : IFavoriteRepository
 {
     public async Task<List<Favorite>> GetAllAsync()
-        => await context.Favorites.ToListAsync();
+        => await context.Favorites.AsNoTracking().ToListAsync();
 
     public async Task<Favorite?> GetByIdAsync(int id)
-        => await context.Favorites.FindAsync(id);
+        => await context.Favorites.AsNoTracking().FirstOrDefaultAsync(x => x.Id == id);
 
     public async Task AddAsync(Favorite favorite)
     {

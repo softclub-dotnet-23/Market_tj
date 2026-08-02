@@ -10,6 +10,12 @@ public class Review
     public string? Comment { get; set; }
     public DateTime CreatedAt { get; set; }
 
+    // По прямому запросу пользователя (2026-08-02): фермер может ответить на
+    // отзыв о себе (вручную или текст предлагает AI-ассистент — см.
+    // AiAssistantService.propose_reply_review). Null, пока ответа нет.
+    public string? FarmerReply { get; set; }
+    public DateTime? FarmerRepliedAt { get; set; }
+
     // Order 1 — 0..1 Review (со стороны Review — обязательная связь).
     public Order Order { get; set; } = null!;
 

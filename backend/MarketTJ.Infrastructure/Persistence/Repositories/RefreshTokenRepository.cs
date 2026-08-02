@@ -7,7 +7,7 @@ namespace MarketTJ.Infrastructure.Persistence.Repositories;
 public class RefreshTokenRepository(AppDbContext context) : IRefreshTokenRepository
 {
     public async Task<RefreshToken?> GetByTokenAsync(string token)
-        => await context.RefreshTokens.FirstOrDefaultAsync(x => x.Token == token);
+        => await context.RefreshTokens.AsNoTracking().FirstOrDefaultAsync(x => x.Token == token);
 
     public async Task AddAsync(RefreshToken refreshToken)
     {

@@ -17,6 +17,15 @@ public class FarmerProfileController(IFarmerProfileService service) : ApiControl
     public async Task<IActionResult> GetAll()
         => HandleResult(await service.GetAllAsync());
 
+    // Публичная витрина каталога — только подтверждённые фермеры с готовыми
+    // агрегатами (рейтинг/отзывы/товары/теги). Отдельный роут, а не фильтр
+    // параметром на GetAll выше — тот отдаёт GetFarmerProfileDto (админский
+    // шейп), этот — GetPublicFarmerDto (публичный шейп с агрегатами).
+    [AllowAnonymous]
+    [HttpGet("public")]
+    public async Task<IActionResult> GetPublicCatalog()
+        => HandleResult(await service.GetPublicCatalogAsync());
+
     [AllowAnonymous]
     [HttpGet("{id:int}")]
     public async Task<IActionResult> GetById(int id)
@@ -33,4 +42,10 @@ public class FarmerProfileController(IFarmerProfileService service) : ApiControl
     [HttpDelete("{id:int}")]
     public async Task<IActionResult> Delete(int id)
         => HandleResult(await service.DeleteAsync(id));
+
+    // Переключатель "отвечать на отзывы автоматически через AI" — владение
+    // проверяется внутри FarmerProfileService.SetAutoReplyAsync.
+    [HttpPatch("{id:int}/auto-reply")]
+    public async Task<IActionResult> SetAutoReply(int id, [FromBody] SetAutoReplyDto dto)
+        => HandleResult(await service.SetAutoReplyAsync(id, dto.Enabled));
 }

@@ -1,4 +1,5 @@
 using MarketTJ.Application.Common;
+using MarketTJ.Application.Dto.NotificationDto;
 using MarketTJ.Application.Dto.ReviewDto;
 using MarketTJ.Application.Interfaces.Repositories;
 using MarketTJ.Application.Interfaces.Services;
@@ -14,8 +15,11 @@ public class ReviewService(
     IReviewRepository reviewRepository,
     IOrderRepository orderRepository,
     ICustomerProfileRepository customerProfileRepository,
+    IFarmerProfileRepository farmerProfileRepository,
     IUserRepository userRepository,
     ICurrentUserService currentUser,
+    IReviewAutoReplyService reviewAutoReplyService,
+    INotificationService notificationService,
     ILogger<ReviewService> logger) : IReviewService
 {
     // Audit 2026-07-28, находка 2.2 (IDOR): только автор отзыва (Customer) или
@@ -35,11 +39,14 @@ public class ReviewService(
     // GetAll/GetById сознательно ОСТАЮТСЯ публичными — отзывы показываются
     // на карточке фермера всем посетителям (см. фронтенд), это не "личный"
     // ресурс. IDOR-guard нужен только на Create/Update/Delete (см. ниже).
-    public async Task<Result<IEnumerable<GetReviewDto>>> GetAllAsync()
+    public async Task<Result<IEnumerable<GetReviewDto>>> GetAllAsync(int? farmerId = null)
     {
         try
         {
             var reviews = await reviewRepository.GetAllAsync();
+            if (farmerId.HasValue)
+                reviews = reviews.Where(r => r.FarmerId == farmerId.Value).ToList();
+
             var nameByCustomerId = await BuildCustomerNameMapAsync();
             return Result<IEnumerable<GetReviewDto>>.Ok(reviews.Select(r => ToGetDto(r, nameByCustomerId.GetValueOrDefault(r.CustomerId))));
         }
@@ -132,6 +139,7 @@ public class ReviewService(
             };
 
             await reviewRepository.AddAsync(review);
+            await TryAutoReplyAsync(review);
             return Result<string>.Ok("Отзыв создан");
         }
         catch (Exception ex)
@@ -139,6 +147,28 @@ public class ReviewService(
             logger.LogError(ex, "Ошибка при создании отзыва");
             return Result<string>.Fail("Не удалось создать отзыв", ErrorType.InternalServerError);
         }
+    }
+
+    // По прямому запросу пользователя (2026-08-02): если у фермера включена
+    // FarmerProfile.AutoReplyToReviewsEnabled — AI сразу сочиняет и сохраняет
+    // ответ на новый отзыв, без участия фермера (в отличие от ручного пути
+    // через ReplyAsync/propose_reply_review, которые требуют подтверждения).
+    // Сбой генерации (нет ключа, Groq недоступен) не должен ронять создание
+    // самого отзыва — только тихо логируется внутри ReviewAutoReplyService.
+    private async Task TryAutoReplyAsync(Review review)
+    {
+        var farmerProfile = await farmerProfileRepository.GetByIdAsync(review.FarmerId);
+        if (farmerProfile is null || !farmerProfile.AutoReplyToReviewsEnabled)
+            return;
+
+        var reply = await reviewAutoReplyService.GenerateReplyAsync(review.Rating, review.Comment);
+        if (string.IsNullOrWhiteSpace(reply))
+            return;
+
+        review.FarmerReply = reply;
+        review.FarmerRepliedAt = DateTime.UtcNow;
+        await reviewRepository.UpdateAsync(review);
+        await NotifyCustomerAboutReplyAsync(review);
     }
 
     public async Task<Result<string>> UpdateAsync(int id, UpdateReviewDto dto)
@@ -207,6 +237,75 @@ public class ReviewService(
         }
     }
 
+    public async Task<Result<string>> ReplyAsync(int id, ReplyToReviewDto dto)
+    {
+        try
+        {
+            var validation = ReviewValidator.ValidateReply(dto);
+            if (validation is not null)
+                return validation;
+
+            var review = await reviewRepository.GetByIdAsync(id);
+            if (review is null)
+                return Result<string>.Fail("Отзыв не найден", ErrorType.NotFound);
+
+            // Ответить может только фермер, которому адресован отзыв, или Admin —
+            // тот же принцип, что и OwnsAsync в ProductListingService (audit
+            // 2026-07-28, находка 2.2): сверяем с РЕАЛЬНЫМ текущим пользователем,
+            // а не доверяем FarmerId из вызова.
+            if (!currentUser.IsAdmin())
+            {
+                if (currentUser.UserId is null)
+                    return Result<string>.Fail("Требуется авторизация", ErrorType.Unauthorized);
+
+                var myFarmerProfile = await farmerProfileRepository.GetByUserIdAsync(currentUser.UserId.Value);
+                if (myFarmerProfile is null || myFarmerProfile.Id != review.FarmerId)
+                    return Result<string>.Fail("Нет доступа к этому отзыву", ErrorType.Forbidden);
+            }
+
+            review.FarmerReply = dto.Reply;
+            review.FarmerRepliedAt = DateTime.UtcNow;
+
+            await reviewRepository.UpdateAsync(review);
+            await NotifyCustomerAboutReplyAsync(review);
+            return Result<string>.Ok("Ответ добавлен");
+        }
+        catch (Exception ex)
+        {
+            logger.LogError(ex, "Ошибка при добавлении ответа фермера на отзыв {Id}", id);
+            return Result<string>.Fail("Не удалось добавить ответ", ErrorType.InternalServerError);
+        }
+    }
+
+    // По прямому запросу пользователя (2026-08-02): покупатель, оставивший
+    // отзыв, должен узнать, что фермер ответил — и при ручном ответе
+    // (ReplyAsync), и при автоответе AI (TryAutoReplyAsync). Сбой отправки
+    // уведомления не должен ронять сам ответ на отзыв — только логируется.
+    private async Task NotifyCustomerAboutReplyAsync(Review review)
+    {
+        try
+        {
+            var customerProfile = await customerProfileRepository.GetByIdAsync(review.CustomerId);
+            if (customerProfile is null)
+                return;
+
+            var farmerProfile = await farmerProfileRepository.GetByIdAsync(review.FarmerId);
+            var farmName = farmerProfile?.FarmName ?? "Фермер";
+
+            await notificationService.CreateAsync(new CreateNotificationDto
+            {
+                UserId = customerProfile.UserId,
+                Title = "Фермер ответил на ваш отзыв",
+                Message = $"«{farmName}» ответил на ваш отзыв: {review.FarmerReply}",
+                IsRead = false
+            });
+        }
+        catch (Exception ex)
+        {
+            logger.LogError(ex, "Ошибка при отправке уведомления покупателю об ответе на отзыв {Id}", review.Id);
+        }
+    }
+
     private static GetReviewDto ToGetDto(Review review, string? customerFullName = null) => new()
     {
         Id = review.Id,
@@ -216,6 +315,8 @@ public class ReviewService(
         FarmerId = review.FarmerId,
         Rating = review.Rating,
         Comment = review.Comment,
-        CreatedAt = review.CreatedAt
+        CreatedAt = review.CreatedAt,
+        FarmerReply = review.FarmerReply,
+        FarmerRepliedAt = review.FarmerRepliedAt
     };
 }

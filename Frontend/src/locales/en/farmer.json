@@ -7,7 +7,6 @@
     "reviews": "Reviews",
     "profile": "Farm profile",
     "documents": "Documents",
-    "staff": "Staff",
     "notifications": "Notifications"
   },
   "navSections": {
@@ -226,7 +225,20 @@
       "createdAt": "Date"
     },
     "orderLabel": "Order #{{id}}",
-    "customerLabel": "Customer #{{id}}"
+    "customerLabel": "Customer #{{id}}",
+    "yourReply": "Your reply",
+    "replyAction": "Reply",
+    "editReplyAction": "Edit reply",
+    "replyPlaceholder": "Write a reply to this review...",
+    "replySubmit": "Send reply",
+    "replyCancel": "Cancel",
+    "replySuccess": "Reply sent",
+    "replyError": "Failed to send reply",
+    "autoReplyLabel": "Auto-reply to reviews (AI)",
+    "autoReplyHint": "New reviews will get an AI-generated reply right away, without your input",
+    "autoReplyOnSuccess": "Auto-reply enabled",
+    "autoReplyOffSuccess": "Auto-reply disabled",
+    "autoReplyError": "Failed to change auto-reply setting"
   },
   "notificationsPage": {
     "errorTitle": "Failed to load notifications",
@@ -274,46 +286,6 @@
       "fileTooLarge": "Maximum file size is 10 MB",
       "cancel": "Cancel",
       "submit": "Upload"
-    }
-  },
-  "staff": {
-    "errorTitle": "Failed to load staff",
-    "errorDescription": "Check your connection to the server and try again.",
-    "emptyTitle": "No staff yet",
-    "emptyDescription": "Staff members added to your farm will appear here.",
-    "columns": {
-      "user": "Staff member",
-      "permissions": "Permissions",
-      "status": "Status",
-      "createdAt": "Date added",
-      "actions": "Actions"
-    },
-    "userLabel": "Staff member #{{id}}",
-    "permissions": {
-      "manageProducts": "Manage products",
-      "manageStock": "Manage stock",
-      "none": "No permissions"
-    },
-    "status": {
-      "active": "Active",
-      "inactive": "Disabled"
-    },
-    "addButton": "Add staff member",
-    "addModalTitle": "New staff member",
-    "addSuccess": "Staff member added, they've been emailed",
-    "addError": "Failed to add staff member — check the email",
-    "deleteAction": "Delete",
-    "deleteSuccess": "Staff member deleted",
-    "deleteError": "Failed to delete staff member",
-    "deleteConfirmTitle": "Delete this staff member?",
-    "deleteConfirmDescription": "This action cannot be undone.",
-    "form": {
-      "email": "Staff member's email",
-      "emailHint": "The staff member must already have a Market.tj account",
-      "required": "Required field",
-      "permissions": "Permissions",
-      "cancel": "Cancel",
-      "submit": "Add"
     }
   },
   "chat": {

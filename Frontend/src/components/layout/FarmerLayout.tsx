@@ -16,7 +16,6 @@ import {
   Package,
   Search,
   ShoppingCart,
-  Users,
   UserRound,
 } from "lucide-react";
 import type { LucideIcon } from "lucide-react";
@@ -44,7 +43,6 @@ const NAV_ITEMS: FarmerNavItem[] = [
   { labelKey: "messages", path: "/farmer/messages", icon: MessageCircle, section: "management" },
   { labelKey: "reviews", path: "/farmer/reviews", icon: MessageSquare, section: "management" },
   { labelKey: "documents", path: "/farmer/documents", icon: FileText, section: "management" },
-  { labelKey: "staff", path: "/farmer/staff", icon: Users, section: "management" },
   { labelKey: "notifications", path: "/farmer/notifications", icon: Bell, section: "account" },
   { labelKey: "profile", path: "/farmer/profile", icon: UserRound, section: "account" },
 ];

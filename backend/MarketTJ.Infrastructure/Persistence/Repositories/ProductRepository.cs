@@ -7,10 +7,10 @@ namespace MarketTJ.Infrastructure.Persistence.Repositories;
 public class ProductRepository(AppDbContext context) : IProductRepository
 {
     public async Task<List<Product>> GetAllAsync()
-        => await context.Products.ToListAsync();
+        => await context.Products.AsNoTracking().ToListAsync();
 
     public async Task<Product?> GetByIdAsync(int id)
-        => await context.Products.FindAsync(id);
+        => await context.Products.AsNoTracking().FirstOrDefaultAsync(x => x.Id == id);
 
     public async Task AddAsync(Product product)
     {

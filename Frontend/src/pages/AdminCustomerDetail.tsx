@@ -9,7 +9,7 @@ import { StatCard } from "@/components/ui/StatCard";
 import { RatingStars } from "@/components/ui/RatingStars";
 import { formatDate, formatDateTime, formatSomoni } from "@/lib/utils";
 import { ORDER_STATUS_CLASSES, ORDER_STATUS_KEYS, OrderStatus } from "@/lib/orderStatus";
-import { useAdminCustomerProfiles, useAdminOrders, useAdminReviews, useAdminUserById } from "@/data/adminEntities";
+import { useAdminCustomerProfiles, useAdminFarmers, useAdminOrders, useAdminReviews, useAdminUserById } from "@/data/adminEntities";
 
 // Карточка одного покупателя в админке (/admin/users/:id) — по прямому
 // запросу пользователя, тем же принципом, что и AdminFarmerDetail.tsx:
@@ -29,6 +29,12 @@ export function AdminCustomerDetail() {
   const { profiles, loading: profilesLoading } = useAdminCustomerProfiles();
   const { orders, loading: ordersLoading } = useAdminOrders();
   const { reviews, loading: reviewsLoading } = useAdminReviews();
+  const { farmers } = useAdminFarmers();
+
+  // По прямому запросу пользователя — имя фермера, а не "Фермер #N" (то же,
+  // что уже сделано в AdminOrders.tsx: карта id→farmName с фолбэком на
+  // подстановку, на случай удалённого/неизвестного профиля).
+  const farmNameById = new Map((farmers ?? []).map((f) => [f.id, f.farmName]));
 
   const loading = accountLoading || profilesLoading || ordersLoading || reviewsLoading;
 
@@ -149,11 +155,13 @@ export function AdminCustomerDetail() {
                     <tr key={order.id} className="border-b border-stone-50 last:border-0 dark:border-stone-800/60">
                       <td className="py-3 pr-4">
                         <div className="flex flex-col">
-                          <span className="font-medium text-stone-800 dark:text-stone-100">{order.orderNumber}</span>
+                          <span className="font-medium text-stone-800 dark:text-stone-100">{t("orders.orderLabel", { id: order.id })}</span>
                           <span className="text-xs text-stone-400 dark:text-stone-500">{formatDateTime(order.createdAt)}</span>
                         </div>
                       </td>
-                      <td className="py-3 pr-4 text-stone-600 dark:text-stone-300">{t("orders.farmerLabel", { id: order.farmerId })}</td>
+                      <td className="py-3 pr-4 text-stone-600 dark:text-stone-300">
+                        {farmNameById.get(order.farmerId) ?? t("orders.farmerLabel", { id: order.farmerId })}
+                      </td>
                       <td className="py-3 pr-4 font-semibold text-stone-800 dark:text-stone-100">
                         {formatSomoni(order.totalAmount)} {t("common.somoni")}
                       </td>
@@ -185,7 +193,9 @@ export function AdminCustomerDetail() {
               .map((review) => (
                 <div key={review.id} className="flex flex-col gap-1.5 rounded-xl border border-stone-100 p-3 dark:border-stone-800">
                   <div className="flex items-center justify-between gap-3">
-                    <span className="text-sm font-medium text-stone-700 dark:text-stone-200">{t("orders.farmerLabel", { id: review.farmerId })}</span>
+                    <span className="text-sm font-medium text-stone-700 dark:text-stone-200">
+                      {farmNameById.get(review.farmerId) ?? t("orders.farmerLabel", { id: review.farmerId })}
+                    </span>
                     <div className="flex items-center gap-2">
                       <RatingStars rating={review.rating} size={12} />
                       <span className="text-xs text-stone-400 dark:text-stone-500">{formatDate(review.createdAt)}</span>

@@ -14,18 +14,31 @@ public class FarmerProfileServiceTests
 {
     private readonly Mock<IFarmerProfileRepository> _farmerProfileRepository = new();
     private readonly Mock<IUserRepository> _userRepository = new();
+    private readonly Mock<IProductListingRepository> _productListingRepository = new();
+    private readonly Mock<IReviewRepository> _reviewRepository = new();
+    private readonly Mock<ICategoryRepository> _categoryRepository = new();
     private readonly Mock<ICurrentUserService> _currentUser = new();
     private readonly Mock<ILogger<FarmerProfileService>> _logger = new();
     private readonly FarmerProfileService _service;
 
     public FarmerProfileServiceTests()
     {
-        _service = new FarmerProfileService(_farmerProfileRepository.Object, _userRepository.Object, _currentUser.Object, _logger.Object);
+        _service = new FarmerProfileService(
+            _farmerProfileRepository.Object,
+            _userRepository.Object,
+            _productListingRepository.Object,
+            _reviewRepository.Object,
+            _categoryRepository.Object,
+            _currentUser.Object,
+            _logger.Object);
         _currentUser.Setup(c => c.UserId).Returns(1);
         _currentUser.Setup(c => c.Role).Returns(nameof(UserRole.Farmer));
         _userRepository.Setup(r => r.GetByIdAsync(It.IsAny<int>())).ReturnsAsync((int id) => new User { Id = id, Role = UserRole.Farmer, FullName = "Farmer", Email = "f@example.com", PhoneNumber = "+992900000000", PasswordHash = "hash" });
         _userRepository.Setup(r => r.GetAllAsync()).ReturnsAsync([]);
         _farmerProfileRepository.Setup(r => r.GetAllAsync()).ReturnsAsync([]);
+        _reviewRepository.Setup(r => r.GetRatingStatsByFarmerIdsAsync(It.IsAny<List<int>>())).ReturnsAsync(new Dictionary<int, (double, int)>());
+        _productListingRepository.Setup(r => r.GetActiveListingStatsByFarmerIdsAsync(It.IsAny<List<int>>())).ReturnsAsync(new Dictionary<int, (int, List<int>)>());
+        _categoryRepository.Setup(r => r.GetAllAsync()).ReturnsAsync([]);
     }
 
     private static FarmerProfile CreateProfile(int id = 1, int userId = 1) => new()
@@ -95,6 +108,73 @@ public class FarmerProfileServiceTests
         _farmerProfileRepository.Setup(r => r.GetAllAsync()).ThrowsAsync(new Exception("db error"));
 
         var result = await _service.GetAllAsync();
+
+        Assert.False(result.IsSuccess);
+        Assert.Equal(ErrorType.InternalServerError, result.ErrorType);
+    }
+
+    // ---------- GetPublicCatalogAsync ----------
+
+    [Fact]
+    public async Task GetPublicCatalogAsync_MixedVerificationStatuses_ReturnsOnlyVerified()
+    {
+        var verified = CreateProfile(1, 1);
+        verified.VerificationStatus = FarmerVerificationStatus.Verified;
+        var pending = CreateProfile(2, 2);
+        pending.VerificationStatus = FarmerVerificationStatus.Pending;
+        _farmerProfileRepository.Setup(r => r.GetAllAsync()).ReturnsAsync([verified, pending]);
+
+        var result = await _service.GetPublicCatalogAsync();
+
+        Assert.True(result.IsSuccess);
+        var dto = Assert.Single(result.Data!);
+        Assert.Equal(1, dto.Id);
+    }
+
+    [Fact]
+    public async Task GetPublicCatalogAsync_HasStats_ReturnsRatingReviewCountProductCountAndTags()
+    {
+        var verified = CreateProfile(1, 1);
+        verified.VerificationStatus = FarmerVerificationStatus.Verified;
+        _farmerProfileRepository.Setup(r => r.GetAllAsync()).ReturnsAsync([verified]);
+        _reviewRepository.Setup(r => r.GetRatingStatsByFarmerIdsAsync(It.IsAny<List<int>>()))
+            .ReturnsAsync(new Dictionary<int, (double, int)> { [1] = (4.5, 3) });
+        _productListingRepository.Setup(r => r.GetActiveListingStatsByFarmerIdsAsync(It.IsAny<List<int>>()))
+            .ReturnsAsync(new Dictionary<int, (int, List<int>)> { [1] = (2, [10, 20]) });
+        _categoryRepository.Setup(r => r.GetAllAsync()).ReturnsAsync([
+            new Category { Id = 10, Name = "Овощи", IsActive = true },
+            new Category { Id = 20, Name = "Фрукты", IsActive = true },
+        ]);
+
+        var result = await _service.GetPublicCatalogAsync();
+
+        Assert.True(result.IsSuccess);
+        var dto = Assert.Single(result.Data!);
+        Assert.Equal(4.5, dto.Rating);
+        Assert.Equal(3, dto.ReviewCount);
+        Assert.Equal(2, dto.ProductCount);
+        Assert.Equal(["Овощи", "Фрукты"], dto.Tags);
+    }
+
+    [Fact]
+    public async Task GetPublicCatalogAsync_NoVerifiedFarmers_ReturnsEmptyList()
+    {
+        var pending = CreateProfile(1, 1);
+        pending.VerificationStatus = FarmerVerificationStatus.Pending;
+        _farmerProfileRepository.Setup(r => r.GetAllAsync()).ReturnsAsync([pending]);
+
+        var result = await _service.GetPublicCatalogAsync();
+
+        Assert.True(result.IsSuccess);
+        Assert.Empty(result.Data!);
+    }
+
+    [Fact]
+    public async Task GetPublicCatalogAsync_RepositoryThrows_ReturnsInternalServerError()
+    {
+        _farmerProfileRepository.Setup(r => r.GetAllAsync()).ThrowsAsync(new Exception("db error"));
+
+        var result = await _service.GetPublicCatalogAsync();
 
         Assert.False(result.IsSuccess);
         Assert.Equal(ErrorType.InternalServerError, result.ErrorType);
@@ -432,6 +512,69 @@ public class FarmerProfileServiceTests
         _farmerProfileRepository.Setup(r => r.GetByIdAsync(It.IsAny<int>())).ThrowsAsync(new Exception("db error"));
 
         var result = await _service.DeleteAsync(1);
+
+        Assert.False(result.IsSuccess);
+        Assert.Equal(ErrorType.InternalServerError, result.ErrorType);
+    }
+
+    // ---------- SetAutoReplyAsync ----------
+
+    [Fact]
+    public async Task SetAutoReplyAsync_Owner_EnablesAndReturnsOk()
+    {
+        var profile = CreateProfile(1, userId: 1);
+        _farmerProfileRepository.Setup(r => r.GetByIdAsync(1)).ReturnsAsync(profile);
+
+        var result = await _service.SetAutoReplyAsync(1, true);
+
+        Assert.True(result.IsSuccess);
+        Assert.True(profile.AutoReplyToReviewsEnabled);
+        _farmerProfileRepository.Verify(r => r.UpdateAsync(profile), Times.Once);
+    }
+
+    [Fact]
+    public async Task SetAutoReplyAsync_Owner_DisablesAndReturnsOk()
+    {
+        var profile = CreateProfile(1, userId: 1);
+        profile.AutoReplyToReviewsEnabled = true;
+        _farmerProfileRepository.Setup(r => r.GetByIdAsync(1)).ReturnsAsync(profile);
+
+        var result = await _service.SetAutoReplyAsync(1, false);
+
+        Assert.True(result.IsSuccess);
+        Assert.False(profile.AutoReplyToReviewsEnabled);
+    }
+
+    [Fact]
+    public async Task SetAutoReplyAsync_ProfileNotFound_ReturnsNotFound()
+    {
+        _farmerProfileRepository.Setup(r => r.GetByIdAsync(It.IsAny<int>())).ReturnsAsync((FarmerProfile?)null);
+
+        var result = await _service.SetAutoReplyAsync(999, true);
+
+        Assert.False(result.IsSuccess);
+        Assert.Equal(ErrorType.NotFound, result.ErrorType);
+    }
+
+    [Fact]
+    public async Task SetAutoReplyAsync_NotOwner_ReturnsForbidden()
+    {
+        var profile = CreateProfile(1, userId: 2);
+        _farmerProfileRepository.Setup(r => r.GetByIdAsync(1)).ReturnsAsync(profile);
+
+        var result = await _service.SetAutoReplyAsync(1, true);
+
+        Assert.False(result.IsSuccess);
+        Assert.Equal(ErrorType.Forbidden, result.ErrorType);
+        _farmerProfileRepository.Verify(r => r.UpdateAsync(It.IsAny<FarmerProfile>()), Times.Never);
+    }
+
+    [Fact]
+    public async Task SetAutoReplyAsync_RepositoryThrows_ReturnsInternalServerError()
+    {
+        _farmerProfileRepository.Setup(r => r.GetByIdAsync(It.IsAny<int>())).ThrowsAsync(new Exception("db error"));
+
+        var result = await _service.SetAutoReplyAsync(1, true);
 
         Assert.False(result.IsSuccess);
         Assert.Equal(ErrorType.InternalServerError, result.ErrorType);

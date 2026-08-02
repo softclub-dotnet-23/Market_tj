@@ -14,8 +14,8 @@ public class ReviewController(IReviewService service) : ApiControllerBase
 {
     [AllowAnonymous]
     [HttpGet]
-    public async Task<IActionResult> GetAll()
-        => HandleResult(await service.GetAllAsync());
+    public async Task<IActionResult> GetAll([FromQuery] int? farmerId = null)
+        => HandleResult(await service.GetAllAsync(farmerId));
 
     [AllowAnonymous]
     [HttpGet("{id:int}")]
@@ -29,6 +29,13 @@ public class ReviewController(IReviewService service) : ApiControllerBase
     [HttpPut("{id:int}")]
     public async Task<IActionResult> Update(int id, [FromBody] UpdateReviewDto dto)
         => HandleResult(await service.UpdateAsync(id, dto));
+
+    // Ответ фермера на отзыв о себе — доступно фермеру (владение проверяется
+    // внутри ReviewService.ReplyAsync) и Admin.
+    [Authorize(Roles = "Farmer,Admin")]
+    [HttpPatch("{id:int}/reply")]
+    public async Task<IActionResult> Reply(int id, [FromBody] ReplyToReviewDto dto)
+        => HandleResult(await service.ReplyAsync(id, dto));
 
     [HttpDelete("{id:int}")]
     public async Task<IActionResult> Delete(int id)

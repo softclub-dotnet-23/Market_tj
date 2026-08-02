@@ -7,10 +7,10 @@ namespace MarketTJ.Infrastructure.Persistence.Repositories;
 public class CourierProfileRepository(AppDbContext context) : ICourierProfileRepository
 {
     public async Task<List<CourierProfile>> GetAllAsync()
-        => await context.CourierProfiles.ToListAsync();
+        => await context.CourierProfiles.AsNoTracking().ToListAsync();
 
     public async Task<CourierProfile?> GetByIdAsync(int id)
-        => await context.CourierProfiles.FindAsync(id);
+        => await context.CourierProfiles.AsNoTracking().FirstOrDefaultAsync(x => x.Id == id);
 
     public async Task AddAsync(CourierProfile courierProfile)
     {

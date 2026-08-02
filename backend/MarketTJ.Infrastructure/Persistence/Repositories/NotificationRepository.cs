@@ -7,10 +7,10 @@ namespace MarketTJ.Infrastructure.Persistence.Repositories;
 public class NotificationRepository(AppDbContext context) : INotificationRepository
 {
     public async Task<List<Notification>> GetAllAsync()
-        => await context.Notifications.ToListAsync();
+        => await context.Notifications.AsNoTracking().ToListAsync();
 
     public async Task<Notification?> GetByIdAsync(int id)
-        => await context.Notifications.FindAsync(id);
+        => await context.Notifications.AsNoTracking().FirstOrDefaultAsync(x => x.Id == id);
 
     public async Task AddAsync(Notification notification)
     {

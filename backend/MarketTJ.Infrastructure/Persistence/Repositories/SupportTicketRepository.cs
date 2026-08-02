@@ -7,10 +7,10 @@ namespace MarketTJ.Infrastructure.Persistence.Repositories;
 public class SupportTicketRepository(AppDbContext context) : ISupportTicketRepository
 {
     public async Task<List<SupportTicket>> GetAllAsync()
-        => await context.SupportTickets.ToListAsync();
+        => await context.SupportTickets.AsNoTracking().ToListAsync();
 
     public async Task<SupportTicket?> GetByIdAsync(int id)
-        => await context.SupportTickets.FindAsync(id);
+        => await context.SupportTickets.AsNoTracking().FirstOrDefaultAsync(x => x.Id == id);
 
     public async Task AddAsync(SupportTicket supportTicket)
     {

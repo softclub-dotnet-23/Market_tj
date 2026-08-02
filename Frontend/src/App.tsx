@@ -47,7 +47,6 @@ const FarmerOrders = lazy(() => import("@/pages/FarmerOrders").then((m) => ({ de
 const FarmerMessages = lazy(() => import("@/pages/FarmerMessages").then((m) => ({ default: m.FarmerMessages })));
 const FarmerReviews = lazy(() => import("@/pages/FarmerReviews").then((m) => ({ default: m.FarmerReviews })));
 const FarmerDocuments = lazy(() => import("@/pages/FarmerDocuments").then((m) => ({ default: m.FarmerDocuments })));
-const FarmerStaff = lazy(() => import("@/pages/FarmerStaff").then((m) => ({ default: m.FarmerStaff })));
 const FarmerNotifications = lazy(() => import("@/pages/FarmerNotifications").then((m) => ({ default: m.FarmerNotifications })));
 const CustomerDashboard = lazy(() => import("@/pages/CustomerDashboard").then((m) => ({ default: m.CustomerDashboard })));
 const CustomerOrders = lazy(() => import("@/pages/CustomerOrders").then((m) => ({ default: m.CustomerOrders })));
@@ -99,7 +98,6 @@ function App() {
                       <Route path="reviews" element={<FarmerReviews />} />
                       <Route path="profile" element={<FarmerProfile />} />
                       <Route path="documents" element={<FarmerDocuments />} />
-                      <Route path="staff" element={<FarmerStaff />} />
                       <Route path="notifications" element={<FarmerNotifications />} />
                       <Route path="*" element={<Navigate to="/farmer" replace />} />
                     </Route>

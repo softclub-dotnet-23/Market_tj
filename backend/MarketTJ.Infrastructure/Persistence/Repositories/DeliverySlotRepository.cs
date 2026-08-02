@@ -7,10 +7,10 @@ namespace MarketTJ.Infrastructure.Persistence.Repositories;
 public class DeliverySlotRepository(AppDbContext context) : IDeliverySlotRepository
 {
     public async Task<List<DeliverySlot>> GetAllAsync()
-        => await context.DeliverySlots.ToListAsync();
+        => await context.DeliverySlots.AsNoTracking().ToListAsync();
 
     public async Task<DeliverySlot?> GetByIdAsync(int id)
-        => await context.DeliverySlots.FindAsync(id);
+        => await context.DeliverySlots.AsNoTracking().FirstOrDefaultAsync(x => x.Id == id);
 
     public async Task AddAsync(DeliverySlot deliverySlot)
     {

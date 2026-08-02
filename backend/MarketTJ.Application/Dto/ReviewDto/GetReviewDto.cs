@@ -14,4 +14,6 @@ public class GetReviewDto
     public int Rating { get; set; }
     public string? Comment { get; set; }
     public DateTime CreatedAt { get; set; }
+    public string? FarmerReply { get; set; }
+    public DateTime? FarmerRepliedAt { get; set; }
 }

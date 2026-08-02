@@ -11,4 +11,8 @@ public class GetCategoryDto
     public bool IsActive { get; set; }
     public DateTime CreatedAt { get; set; }
     public DateTime UpdatedAt { get; set; }
+
+    // Сколько активных объявлений подтверждённых фермеров в этой категории —
+    // раньше фронт считал сам, стянув себе весь каталог (audit 2026-08-02).
+    public int ActiveListingCount { get; set; }
 }

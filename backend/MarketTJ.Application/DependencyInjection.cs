@@ -18,6 +18,10 @@ public static class DependencyInjection
         {
             client.Timeout = TimeSpan.FromSeconds(15);
         });
+        services.AddHttpClient<IReviewAutoReplyService, ReviewAutoReplyService>(client =>
+        {
+            client.Timeout = TimeSpan.FromSeconds(15);
+        });
 
         services.AddScoped<IAuthService, AuthService>();
         services.AddScoped<IUserService, UserService>();

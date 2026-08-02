@@ -5,6 +5,7 @@ using System.Text.Json.Nodes;
 using MarketTJ.Application.Common;
 using MarketTJ.Application.Dto.AiAssistantDto;
 using MarketTJ.Application.Dto.ProductListingDto;
+using MarketTJ.Application.Dto.ReviewDto;
 using MarketTJ.Application.Interfaces.Repositories;
 using MarketTJ.Application.Interfaces.Services;
 using MarketTJ.Application.Results;
@@ -165,7 +166,14 @@ public class AiAssistantService(
         "- \"проверили меня?\", \"я верифицирован?\", \"статус верификации\", \"когда одобрят " +
         "профиль\" — вызови get_verification_status.\n" +
         "- \"мои сотрудники\", \"кто у меня работает\", \"staff\", \"кому я дал доступ\" — вызови " +
-        "get_my_staff.\n\n";
+        "get_my_staff.\n" +
+        "- \"какие у меня отзывы\", \"что пишут покупатели\", \"отзывы обо мне\", \"мой " +
+        "рейтинг\" — вызови get_reviews_about_me.\n" +
+        "- \"ответь на отзыв от Ивана\", \"напиши ответ на последний отзыв\", \"поблагодари за " +
+        "отзыв\" — сначала вызови get_reviews_about_me (если ещё не знаешь reviewId и текст " +
+        "отзыва), затем сам сочини короткий уместный ответ по содержанию и вызови " +
+        "propose_reply_review(reviewId, reply) — не спрашивай у фермера готовый текст, придумай " +
+        "его сам по смыслу отзыва.\n\n";
 
     private const string FarmerSystemPrompt =
         "Ты AI-ассистент маркетплейса Market.tj для ФЕРМЕРА (продавца), уже авторизованного " +
@@ -182,10 +190,16 @@ public class AiAssistantService(
         "верификации и статус их проверки администратором; get_verification_status — статус " +
         "проверки (верификации) моего профиля фермера в целом; get_my_staff — список моих " +
         "сотрудников (staff), которым я дал доступ к управлению хозяйством; " +
+        "get_reviews_about_me — список отзывов покупателей ОБО МНЕ (рейтинг, комментарий, есть " +
+        "ли уже мой ответ); " +
         "propose_update_listing — предложить изменить цену или статус ОДНОГО из МОИХ " +
         "объявлений (сам ничего не меняет — только предлагает фермеру подтвердить, " +
-        "используй его как только фермер просит что-то изменить). Всегда вызывай " +
-        "подходящий инструмент, если вопрос требует данных.\n\n" +
+        "используй его как только фермер просит что-то изменить); " +
+        "propose_reply_review — предложить ответ на отзыв покупателя обо мне: сам сочини " +
+        "короткий, тёплый, уместный ответ на языке отзыва (учитывай рейтинг и текст " +
+        "комментария — благодари за хороший отзыв, вежливо реагируй на критику), фермер только " +
+        "подтверждает готовый текст, не спрашивай его самого придумывать формулировку. Всегда " +
+        "вызывай подходящий инструмент, если вопрос требует данных.\n\n" +
         "Верни СТРОГО JSON без markdown: {\"intent\":\"info\",\"message\":\"<полный развёрнутый " +
         "ответ на языке пользователя по полученным данным>\"}. Если инструмент не нужен — " +
         "тоже верни {\"intent\":\"info\",\"message\":\"...\"}.";
@@ -315,6 +329,10 @@ public class AiAssistantService(
                 {
                     return await BuildProposeResolveReportResponseAsync(args);
                 }
+                if (functionName == "propose_reply_review")
+                {
+                    return await BuildProposeReplyReviewResponseAsync(args);
+                }
 
                 var toolResultText = await ExecuteReadToolAsync(functionName, args);
 
@@ -373,6 +391,7 @@ public class AiAssistantService(
             {
                 "update_listing" => await ExecuteUpdateListingAsync(dto.Params),
                 "resolve_report" => await ExecuteResolveReportAsync(dto.Params),
+                "reply_review" => await ExecuteReplyReviewAsync(dto.Params),
                 _ => Result<string>.Fail("Неизвестное действие", ErrorType.BadRequest)
             };
         }
@@ -403,10 +422,14 @@ public class AiAssistantService(
                 BuildFunctionDeclaration("get_my_documents", "Мои загруженные документы для верификации и статус их проверки администратором"),
                 BuildFunctionDeclaration("get_verification_status", "Статус проверки (верификации) моего профиля фермера администратором"),
                 BuildFunctionDeclaration("get_my_staff", "Список моих сотрудников (staff), которым я дал доступ к управлению хозяйством"),
+                BuildFunctionDeclaration("get_reviews_about_me", "Список отзывов покупателей ОБО МНЕ (моём хозяйстве) — рейтинг, комментарий, есть ли уже мой ответ"),
                 BuildFunctionDeclaration("propose_update_listing", "Предложить изменить цену или статус одного из моих объявлений",
                     ("listingId", "integer", null, true),
                     ("field", "string", new[] { "price", "status" }, true),
                     ("value", "string", null, true)),
+                BuildFunctionDeclaration("propose_reply_review", "Предложить ответ на отзыв покупателя обо мне — сам сочини короткий, тёплый, уместный ответ по содержанию отзыва (учти рейтинг и текст комментария), фермер только подтвердит",
+                    ("reviewId", "integer", null, true),
+                    ("reply", "string", null, true)),
             };
             return (FarmerSystemPrompt, tools);
         }
@@ -517,6 +540,7 @@ public class AiAssistantService(
             "get_my_documents" => await ExecuteGetMyDocumentsAsync(),
             "get_verification_status" => await ExecuteGetVerificationStatusAsync(),
             "get_my_staff" => await ExecuteGetMyStaffAsync(),
+            "get_reviews_about_me" => await ExecuteGetReviewsAboutMeAsync(),
             "get_all_products" => await ExecuteGetAllProductsAsync(args),
             "get_all_orders" => await ExecuteGetAllOrdersAsync(args),
             "get_users_list" => await ExecuteGetUsersListAsync(args),
@@ -596,6 +620,25 @@ public class AiAssistantService(
 
         var list = mine.Select(l => new { l.Id, l.Title, Status = l.Status.ToString(), l.RetailPricePerKg, l.AvailableQuantity }).ToList();
         return list.Count == 0 ? "Объявлений с такими параметрами нет" : JsonSerializer.Serialize(list);
+    }
+
+    // Отзывы О ЭТОМ фермере (не путать с get_my_reviews у покупателя — те
+    // отзывы, которые покупатель САМ оставил). Отдельное имя инструмента —
+    // ExecuteReadToolAsync один switch на все роли, совпадение имён с
+    // customer-веткой перезаписало бы обработчик.
+    private async Task<string> ExecuteGetReviewsAboutMeAsync()
+    {
+        if (currentUser.UserId is null) return "Нет доступа";
+        var profile = await farmerProfileRepository.GetByUserIdAsync(currentUser.UserId.Value);
+        if (profile is null) return "Профиль фермера не найден";
+
+        var result = await reviewService.GetAllAsync();
+        if (!result.IsSuccess) return "Не удалось получить список отзывов";
+
+        var mine = result.Data!.Where(r => r.FarmerId == profile.Id)
+            .Select(r => new { r.Id, r.CustomerFullName, r.Rating, r.Comment, r.CreatedAt, HasReply = r.FarmerReply != null })
+            .ToList();
+        return mine.Count == 0 ? "Отзывов о вас пока нет" : JsonSerializer.Serialize(mine);
     }
 
     private async Task<string> ExecuteGetPendingVerificationsAsync()
@@ -893,6 +936,32 @@ public class AiAssistantService(
         });
     }
 
+    private async Task<Result<AssistantResponseDto>> BuildProposeReplyReviewResponseAsync(JsonNode? args)
+    {
+        var reviewId = args?["reviewId"]?.GetValue<int>() ?? 0;
+        var reply = args?["reply"]?.GetValue<string>() ?? "";
+
+        var existing = await reviewService.GetByIdAsync(reviewId);
+        if (!existing.IsSuccess || existing.Data is null)
+        {
+            return Result<AssistantResponseDto>.Ok(new AssistantResponseDto { Intent = "info", Message = "Отзыв не найден" });
+        }
+
+        var confirmLabel = $"Ответить на отзыв: «{reply}»?";
+
+        return Result<AssistantResponseDto>.Ok(new AssistantResponseDto
+        {
+            Intent = "action_pending",
+            Message = confirmLabel,
+            Action = new AssistantActionDto
+            {
+                Type = "reply_review",
+                Params = new Dictionary<string, string> { ["reviewId"] = reviewId.ToString(), ["reply"] = reply },
+                ConfirmLabel = confirmLabel
+            }
+        });
+    }
+
     // === Реальное выполнение — только отсюда, после подтверждения на фронтенде ===
 
     private async Task<Result<string>> ExecuteUpdateListingAsync(Dictionary<string, string> p)
@@ -968,6 +1037,19 @@ public class AiAssistantService(
             return Result<string>.Fail("Некорректное решение", ErrorType.Validation);
 
         return await reportedListingService.ResolveAsync(reportId, resolution, currentUser.UserId.Value);
+    }
+
+    private async Task<Result<string>> ExecuteReplyReviewAsync(Dictionary<string, string> p)
+    {
+        if (!p.TryGetValue("reviewId", out var reviewIdStr) || !int.TryParse(reviewIdStr, out var reviewId))
+            return Result<string>.Fail("Некорректный reviewId", ErrorType.Validation);
+        if (!p.TryGetValue("reply", out var reply) || string.IsNullOrWhiteSpace(reply))
+            return Result<string>.Fail("Не передан текст ответа", ErrorType.Validation);
+
+        // Владение отзывом (FarmerId == профиль текущего фермера) проверяется
+        // внутри ReviewService.ReplyAsync — не дублируем здесь, как и у
+        // ExecuteUpdateListingAsync выше.
+        return await reviewService.ReplyAsync(reviewId, new ReplyToReviewDto { Reply = reply });
     }
 
     // === Groq HTTP (OpenAI-совместимый chat completions) ===

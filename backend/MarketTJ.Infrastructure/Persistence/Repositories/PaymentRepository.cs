@@ -7,10 +7,10 @@ namespace MarketTJ.Infrastructure.Persistence.Repositories;
 public class PaymentRepository(AppDbContext context) : IPaymentRepository
 {
     public async Task<List<Payment>> GetAllAsync()
-        => await context.Payments.ToListAsync();
+        => await context.Payments.AsNoTracking().ToListAsync();
 
     public async Task<Payment?> GetByIdAsync(int id)
-        => await context.Payments.FindAsync(id);
+        => await context.Payments.AsNoTracking().FirstOrDefaultAsync(x => x.Id == id);
 
     public async Task AddAsync(Payment payment)
     {

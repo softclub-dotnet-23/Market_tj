@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
-import { apiDelete, apiGet, apiPost, apiPut, apiUpload, resolveMediaUrl } from "@/lib/api";
+import { apiDelete, apiGet, apiPatch, apiPost, apiPut, apiUpload, resolveMediaUrl } from "@/lib/api";
 import { useAuth } from "@/context/AuthContext";
 import { productPhotos } from "@/assets/photos";
 import { FALLBACK_PHOTO_ID_BY_PRODUCT_NAME } from "@/data/productPhotoFallback";
@@ -22,7 +22,6 @@ export const OrderStatus = {
 export const DeliveryStatus = { Pending: 1, Assigned: 2, PickedUp: 3, InDelivery: 4, Delivered: 5, Cancelled: 6 } as const;
 export const FarmerDocumentType = { Passport: 1, LandDeed: 2, Other: 3 } as const;
 export const DocumentReviewStatus = { Pending: 1, Approved: 2, Rejected: 3 } as const;
-export const StaffPermissions = { None: 0, ManageProducts: 1, ManageStock: 2 } as const;
 
 export interface FarmerProfileDto {
   id: number;
@@ -36,8 +35,17 @@ export interface FarmerProfileDto {
   verificationStatus: number;
   verifiedAt: string | null;
   verifiedByAdminId: number | null;
+  autoReplyToReviewsEnabled: boolean;
   createdAt: string;
   updatedAt: string;
+}
+
+// Переключатель "отвечать на отзывы автоматически через AI" — по прямому
+// запросу пользователя (2026-08-02): включено — новый отзыв сразу получает
+// ответ от AI без участия фермера (см. ReviewService.CreateAsync на бэкенде);
+// выключено (по умолчанию) — фермер отвечает вручную (см. replyToReview выше).
+export function setFarmerAutoReply(farmerProfileId: number, enabled: boolean) {
+  return apiPatch<string>(`/farmer-profiles/${farmerProfileId}/auto-reply`, { enabled });
 }
 
 export interface TopSellingProductDto {
@@ -175,6 +183,15 @@ export interface FarmerReviewDto {
   rating: number;
   comment: string | null;
   createdAt: string;
+  farmerReply: string | null;
+  farmerRepliedAt: string | null;
+}
+
+// По прямому запросу пользователя (2026-08-02) — фермер отвечает на отзыв о
+// себе вручную или текстом, который предложил AI-ассистент (см.
+// propose_reply_review в AiAssistantService, тот же PATCH-эндпоинт).
+export function replyToReview(reviewId: number, reply: string) {
+  return apiPatch<string>(`/reviews/${reviewId}/reply`, { reply });
 }
 
 export interface NotificationDto {
@@ -196,15 +213,6 @@ export interface FarmerDocumentDto {
   reviewedAt: string | null;
   reviewedByAdminId: number | null;
   rejectionReason: string | null;
-}
-
-export interface FarmerStaffMemberDto {
-  id: number;
-  farmerProfileId: number;
-  userId: number;
-  permissions: number;
-  isActive: boolean;
-  createdAt: string;
 }
 
 interface AsyncState<T> {
@@ -473,10 +481,10 @@ export function useDeliveriesByOrder() {
 
 // Отзывы оставляют покупатели после заказа — фермер только читает их, не
 // создаёт и не удаляет (модерация — задача Admin).
-export function useFarmerReviews(farmerProfileId: number | null) {
+export function useFarmerReviews(farmerProfileId: number | null, refreshKey = 0) {
   const { data, loading, error } = useAsync(
     () => (farmerProfileId ? apiGet<FarmerReviewDto[]>("/reviews") : Promise.resolve(null as never)),
-    [farmerProfileId],
+    [farmerProfileId, refreshKey],
   );
   const reviews = useMemo(
     () =>
@@ -565,23 +573,3 @@ export function deleteFarmerDocument(id: number) {
   return apiDelete<string>(`/farmer-documents/${id}`);
 }
 
-export function useFarmerStaff(farmerProfileId: number | null, refreshKey = 0) {
-  const { data, loading, error } = useAsync(
-    () => (farmerProfileId ? apiGet<FarmerStaffMemberDto[]>("/farmer-staff-members") : Promise.resolve(null as never)),
-    [farmerProfileId, refreshKey],
-  );
-  const staff = data?.filter((s) => s.farmerProfileId === farmerProfileId) ?? null;
-  return { staff, loading, error };
-}
-
-// Дополнено по явному запросу пользователя — фермер ищет будущего сотрудника
-// по email (нет доступа к общему списку пользователей, это Admin-only), при
-// успехе сотруднику приходит письмо на почту (см. FarmerStaffMemberService.
-// CreateByEmailAsync на бэкенде).
-export function addFarmerStaffByEmail(farmerProfileId: number, email: string, permissions: number) {
-  return apiPost<string>("/farmer-staff-members/add-by-email", { farmerProfileId, email, permissions, isActive: true });
-}
-
-export function deleteFarmerStaffMember(id: number) {
-  return apiDelete<string>(`/farmer-staff-members/${id}`);
-}

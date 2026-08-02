@@ -84,6 +84,7 @@
     },
     "customerLabel": "Харидор #{{id}}",
     "farmerLabel": "Деҳқон #{{id}}",
+    "orderLabel": "Фармоиш #{{id}}",
     "moreItems": "боз {{count}}",
     "showLess": "пинҳон кардан",
     "notReceivedYet": "Ҳанӯз гирифта нашудааст",

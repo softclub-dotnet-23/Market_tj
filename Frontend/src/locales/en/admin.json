@@ -80,6 +80,7 @@
     },
     "customerLabel": "Customer #{{id}}",
     "farmerLabel": "Farmer #{{id}}",
+    "orderLabel": "Order #{{id}}",
     "notReceivedYet": "Not received yet",
     "status": {
       "pending": "Pending",

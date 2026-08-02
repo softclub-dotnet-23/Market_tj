@@ -19,13 +19,13 @@ public class AppSettingRepository(AppDbContext context, ICacheService cache) : I
             return cached;
         }
 
-        var settings = await context.AppSettings.ToListAsync();
+        var settings = await context.AppSettings.AsNoTracking().ToListAsync();
         await cache.SetAsync(AllSettingsCacheKey, settings, TimeSpan.FromMinutes(30));
         return settings;
     }
 
     public async Task<AppSetting?> GetByIdAsync(int id)
-        => await context.AppSettings.FindAsync(id);
+        => await context.AppSettings.AsNoTracking().FirstOrDefaultAsync(x => x.Id == id);
 
     public async Task AddAsync(AppSetting appSetting)
     {

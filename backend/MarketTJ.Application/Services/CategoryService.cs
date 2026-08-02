@@ -9,14 +9,21 @@ using Microsoft.Extensions.Logging;
 
 namespace MarketTJ.Application.Services;
 
-public class CategoryService(ICategoryRepository categoryRepository, ILogger<CategoryService> logger) : ICategoryService
+public class CategoryService(
+    ICategoryRepository categoryRepository,
+    IProductListingRepository productListingRepository,
+    ILogger<CategoryService> logger) : ICategoryService
 {
     public async Task<Result<IEnumerable<GetCategoryDto>>> GetAllAsync()
     {
         try
         {
             var categories = await categoryRepository.GetAllAsync();
-            return Result<IEnumerable<GetCategoryDto>>.Ok(categories.Select(ToGetDto));
+            // Список категорий кэшируется на 30 минут (CategoryRepository), а
+            // счётчик объявлений должен быть свежим — считаем его отдельным
+            // лёгким запросом поверх кэшированного списка, не кэшируя сам счётчик.
+            var counts = await productListingRepository.GetActiveListingCountsByCategoryAsync();
+            return Result<IEnumerable<GetCategoryDto>>.Ok(categories.Select(c => ToGetDto(c, counts.GetValueOrDefault(c.Id, 0))));
         }
         catch (Exception ex)
         {
@@ -33,7 +40,8 @@ public class CategoryService(ICategoryRepository categoryRepository, ILogger<Cat
             if (category is null)
                 return Result<GetCategoryDto?>.Fail("Категория не найдена", ErrorType.NotFound);
 
-            return Result<GetCategoryDto?>.Ok(ToGetDto(category));
+            var counts = await productListingRepository.GetActiveListingCountsByCategoryAsync();
+            return Result<GetCategoryDto?>.Ok(ToGetDto(category, counts.GetValueOrDefault(category.Id, 0)));
         }
         catch (Exception ex)
         {
@@ -129,7 +137,7 @@ public class CategoryService(ICategoryRepository categoryRepository, ILogger<Cat
         }
     }
 
-    private static GetCategoryDto ToGetDto(Category category) => new()
+    private static GetCategoryDto ToGetDto(Category category, int activeListingCount = 0) => new()
     {
         Id = category.Id,
         Name = category.Name,
@@ -139,6 +147,7 @@ public class CategoryService(ICategoryRepository categoryRepository, ILogger<Cat
         ImageUrl = category.ImageUrl,
         IsActive = category.IsActive,
         CreatedAt = category.CreatedAt,
-        UpdatedAt = category.UpdatedAt
+        UpdatedAt = category.UpdatedAt,
+        ActiveListingCount = activeListingCount,
     };
 }

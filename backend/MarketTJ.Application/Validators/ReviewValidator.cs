@@ -12,6 +12,17 @@ public static class ReviewValidator
     public static Result<string>? ValidateUpdate(UpdateReviewDto dto)
         => Validate(dto.OrderId, dto.CustomerId, dto.FarmerId, dto.Rating);
 
+    public static Result<string>? ValidateReply(ReplyToReviewDto dto)
+    {
+        if (string.IsNullOrWhiteSpace(dto.Reply))
+            return Result<string>.Fail("Текст ответа обязателен", ErrorType.Validation);
+
+        if (dto.Reply.Length > 2000)
+            return Result<string>.Fail("Ответ слишком длинный (макс. 2000 символов)", ErrorType.Validation);
+
+        return null;
+    }
+
     private static Result<string>? Validate(int orderId, int customerId, int farmerId, int rating)
     {
         if (orderId <= 0)

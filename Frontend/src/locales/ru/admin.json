@@ -84,6 +84,7 @@
     },
     "customerLabel": "Клиент #{{id}}",
     "farmerLabel": "Фермер #{{id}}",
+    "orderLabel": "Заказ #{{id}}",
     "moreItems": "ещё {{count}}",
     "showLess": "свернуть",
     "notReceivedYet": "Ещё не получен",
