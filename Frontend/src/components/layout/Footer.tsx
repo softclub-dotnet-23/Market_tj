@@ -92,10 +92,10 @@ export function Footer() {
         <div className="mt-14 flex flex-col items-center justify-between gap-3 border-t border-stone-900 pt-6 text-xs text-stone-500 sm:flex-row">
           <p>{t("layout:footer.copyright", { year: new Date().getFullYear() })}</p>
           <div className="flex items-center gap-5">
-            <Link to="/forbidden" className="hover:text-stone-300">
+            <Link to="/terms" className="hover:text-stone-300">
               {t("layout:footer.terms")}
             </Link>
-            <Link to="/forbidden" className="hover:text-stone-300">
+            <Link to="/privacy" className="hover:text-stone-300">
               {t("layout:footer.privacy")}
             </Link>
           </div>

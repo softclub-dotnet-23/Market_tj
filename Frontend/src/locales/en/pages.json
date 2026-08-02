@@ -205,5 +205,141 @@
     "successTotal": "Order total",
     "continueShopping": "Continue shopping",
     "backHome": "Back home"
+  },
+  "terms": {
+    "title": "Terms of Use",
+    "subtitle": "Rules for using the Market.tj platform for customers, farmers, and couriers.",
+    "lastUpdated": "Last updated: August 2, 2026",
+    "contactsTitle": "Still have questions?",
+    "contactsDescription": "Reach out to us any way that's convenient — we're happy to help.",
+    "sections": [
+      {
+        "heading": "1. General provisions",
+        "paragraphs": [
+          "These Terms of Use govern the relationship between Market.tj (the \"Platform\", \"we\") and any person using the market.tj website and related services (the \"User\", \"you\").",
+          "By registering on the Platform or otherwise using it, you confirm that you have read these Terms, understand them, and accept them in full. If you disagree with any provision, please do not use the Platform."
+        ]
+      },
+      {
+        "heading": "2. Registration and account",
+        "paragraphs": [
+          "To place orders, list products for sale, or access certain features of the Platform, you need to register an account with accurate information: full name, phone number, email address, and, where applicable, a delivery address.",
+          "You are responsible for keeping your password secure and for all actions taken under your account. Each person may hold only one account per role (Customer, Farmer, Courier).",
+          "We may suspend or delete an account if we discover false information, attempted fraud, or a violation of these Terms."
+        ]
+      },
+      {
+        "heading": "3. Roles on the platform",
+        "paragraphs": [
+          "Market.tj brings together several user roles: Customer — buys products from the catalog; Farmer — lists their own products for sale; Courier — delivers orders; Administrator — moderates the platform and resolves disputes.",
+          "Each role is responsible for the accuracy of the information it provides within its functions on the Platform."
+        ]
+      },
+      {
+        "heading": "4. Placing orders and payment",
+        "paragraphs": [
+          "By placing an order, the customer offers the farmer a deal on the terms stated in the listing (price, quantity, minimum order amount). The order is considered accepted once the farmer confirms it.",
+          "Farmers set their own prices, and prices may change. The final order total is shown before you confirm the order.",
+          "The Platform may cancel an order or pause its processing if there are signs of fraud, a technical pricing error, or the product is out of stock."
+        ]
+      },
+      {
+        "heading": "5. Farmer obligations and document verification",
+        "paragraphs": [
+          "To list products for sale, a farmer must complete identity verification: upload photos of their passport (front and back) and a selfie confirming that a real person is behind the account. This requirement protects buyers from bad-faith sellers.",
+          "The farmer is fully responsible for the product matching its listing — freshness, quality, weight, and origin. The Platform acts as an intermediary between the farmer and the customer and does not produce or store products itself."
+        ]
+      },
+      {
+        "heading": "6. Reviews and user content",
+        "paragraphs": [
+          "Users may leave reviews about farmers and purchased products. A review must be based on a genuine purchase experience and must not contain insults, false claims, or another person's personal data.",
+          "We reserve the right to remove a review or other user content that violates these Terms without prior notice."
+        ]
+      },
+      {
+        "heading": "7. Intellectual property",
+        "paragraphs": [
+          "The \"Market.tj\" name, logo, site design, and the Platform's source code are intellectual property and may not be used without the written consent of the rights holder. Product photos and descriptions posted by farmers remain their property — the farmer merely grants the Platform the right to display them in the catalog."
+        ]
+      },
+      {
+        "heading": "8. Limitation of liability",
+        "paragraphs": [
+          "The Platform makes reasonable efforts to verify farmers and moderate content, but cannot guarantee the absolute accuracy of every listing. If a product's quality did not match what was listed due to the farmer's fault, the Platform is not directly liable for this but will help resolve the dispute between the parties.",
+          "The Platform is not liable for service interruptions caused by circumstances beyond our reasonable control."
+        ]
+      },
+      {
+        "heading": "9. Changes to these Terms",
+        "paragraphs": [
+          "We may update these Terms from time to time. The current version is always available on this page. Continuing to use the Platform after changes are published means you accept the updated Terms."
+        ]
+      }
+    ]
+  },
+  "privacy": {
+    "title": "Privacy Policy",
+    "subtitle": "How Market.tj collects, uses, and protects your personal data.",
+    "lastUpdated": "Last updated: August 2, 2026",
+    "contactsTitle": "Questions about your data?",
+    "contactsDescription": "Write to us — we'll help sort out anything about your data.",
+    "sections": [
+      {
+        "heading": "1. General provisions",
+        "paragraphs": [
+          "This Privacy Policy describes what personal data Market.tj collects, how we use, store, and protect it. By using the Platform, you agree to the terms of this Policy."
+        ]
+      },
+      {
+        "heading": "2. What data we collect",
+        "paragraphs": [
+          "At registration: first and last name, phone number, email address, password (stored encrypted).",
+          "When placing an order: delivery address, region and district, order history.",
+          "For farmers going through verification: passport photos (front and back) and a selfie — used solely to confirm identity and never published publicly.",
+          "Technical data: IP address, device and browser type, interface language, cookies — needed for the site to work correctly."
+        ]
+      },
+      {
+        "heading": "3. How we use your data",
+        "paragraphs": [
+          "To process and deliver orders, communicate with customers and farmers about their orders, verify farmers' identity before their listings go live, improve the Platform, and comply with the laws of the Republic of Tajikistan.",
+          "We do not use your personal data for purposes unrelated to the Platform without your separate consent."
+        ]
+      },
+      {
+        "heading": "4. Sharing data with third parties",
+        "paragraphs": [
+          "We may share the minimum necessary data with a courier for order delivery (name, phone, address). Documents uploaded by a farmer for identity verification are only accessible to Platform administrators.",
+          "Market.tj does not sell or share personal data with third parties for advertising or marketing purposes."
+        ]
+      },
+      {
+        "heading": "5. Data storage and protection",
+        "paragraphs": [
+          "Passwords are stored encrypted and are not accessible even to Platform staff. Access to personal data and verification documents is restricted to authorized staff only.",
+          "We retain data for as long as necessary for the purposes described in this Policy, or until you request account deletion."
+        ]
+      },
+      {
+        "heading": "6. Cookies",
+        "paragraphs": [
+          "We use cookies to remember your chosen interface language, display theme (light/dark), and sign-in state. You can restrict cookies in your browser settings, though this may affect some site features."
+        ]
+      },
+      {
+        "heading": "7. Your rights",
+        "paragraphs": [
+          "You may request access to your personal data, its correction or deletion, and withdraw your consent to processing by contacting us using the details below.",
+          "Deleting your account will delete the related personal data, except where retention is required by law (for example, a history of completed orders)."
+        ]
+      },
+      {
+        "heading": "8. Changes to this Policy",
+        "paragraphs": [
+          "We may update this Policy from time to time. The current version is always available on this page."
+        ]
+      }
+    ]
   }
 }

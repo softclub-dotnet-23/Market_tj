@@ -12,6 +12,12 @@ public class FarmerDocumentRepository(AppDbContext context) : IFarmerDocumentRep
     public async Task<FarmerDocument?> GetByIdAsync(int id)
         => await context.FarmerDocuments.AsNoTracking().FirstOrDefaultAsync(x => x.Id == id);
 
+    public async Task<List<FarmerDocument>> GetByFarmerProfileIdAsync(int farmerProfileId)
+        => await context.FarmerDocuments
+            .AsNoTracking()
+            .Where(x => x.FarmerProfileId == farmerProfileId)
+            .ToListAsync();
+
     public async Task AddAsync(FarmerDocument farmerDocument)
     {
         await context.FarmerDocuments.AddAsync(farmerDocument);

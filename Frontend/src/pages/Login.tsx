@@ -115,11 +115,11 @@ export function Login() {
           </p>
 
           <div className="mt-8 flex items-center justify-center gap-3 text-xs text-stone-400 dark:text-stone-500">
-            <button onClick={() => navigate("/forbidden")} className="hover:text-stone-600 dark:hover:text-stone-300">
+            <button onClick={() => navigate("/terms")} className="hover:text-stone-600 dark:hover:text-stone-300">
               {t("layout:footer.terms")}
             </button>
             <span>·</span>
-            <button onClick={() => navigate("/forbidden")} className="hover:text-stone-600 dark:hover:text-stone-300">
+            <button onClick={() => navigate("/privacy")} className="hover:text-stone-600 dark:hover:text-stone-300">
               {t("pages:login.privacy")}
             </button>
           </div>

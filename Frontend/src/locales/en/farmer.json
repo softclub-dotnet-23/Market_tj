@@ -83,6 +83,8 @@
       "archived": "Archived"
     },
     "addButton": "Add product",
+    "documentsRequiredBanner": "Before you can add a product, upload your passport (front and back) and a selfie of yourself in the \"Documents\" section — this confirms there's a real person behind the farm profile.",
+    "documentsRequiredAction": "Go to documents",
     "modalTitle": "New product",
     "createSuccess": "Product added",
     "createError": "Failed to create product",
@@ -262,8 +264,19 @@
     "type": {
       "passport": "Passport",
       "landDeed": "Land deed",
-      "other": "Other"
+      "other": "Other",
+      "passportFront": "Passport (front side)",
+      "passportBack": "Passport (back side)",
+      "selfie": "Selfie of yourself"
     },
+    "required": {
+      "title": "Required documents",
+      "description": "You can't add a product to the catalog without these three photos — this is how we confirm there's a real person behind the farm profile.",
+      "uploadAction": "Upload",
+      "replaceAction": "Re-upload",
+      "notUploaded": "Not uploaded"
+    },
+    "otherTitle": "Other documents",
     "status": {
       "pending": "Under review",
       "approved": "Approved",

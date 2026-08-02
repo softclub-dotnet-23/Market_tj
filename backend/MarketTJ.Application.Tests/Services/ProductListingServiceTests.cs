@@ -16,19 +16,27 @@ public class ProductListingServiceTests
     private readonly Mock<IFarmerProfileRepository> _farmerProfileRepository = new();
     private readonly Mock<ICategoryRepository> _categoryRepository = new();
     private readonly Mock<IProductImageRepository> _productImageRepository = new();
+    private readonly Mock<IFarmerDocumentRepository> _farmerDocumentRepository = new();
     private readonly Mock<ICurrentUserService> _currentUser = new();
     private readonly Mock<ILogger<ProductListingService>> _logger = new();
     private readonly ProductListingService _service;
 
     public ProductListingServiceTests()
     {
-        _service = new ProductListingService(_productListingRepository.Object, _farmerProfileRepository.Object, _categoryRepository.Object, _productImageRepository.Object, _currentUser.Object, _logger.Object);
+        _service = new ProductListingService(_productListingRepository.Object, _farmerProfileRepository.Object, _categoryRepository.Object, _productImageRepository.Object, _farmerDocumentRepository.Object, _currentUser.Object, _logger.Object);
         // Обогащение (images/rating/orderCount) по умолчанию пустое — иначе Moq
         // вернёт null для незамоканных Task<Dictionary<...>> и EnrichAsync упадёт
         // с NullReferenceException в тестах, которые его не касаются напрямую.
         _productImageRepository.Setup(r => r.GetByListingIdsAsync(It.IsAny<List<int>>())).ReturnsAsync([]);
         _productListingRepository.Setup(r => r.GetOrderCountsByListingIdsAsync(It.IsAny<List<int>>())).ReturnsAsync(new Dictionary<int, int>());
         _productListingRepository.Setup(r => r.GetRatingsByFarmerIdsAsync(It.IsAny<List<int>>())).ReturnsAsync(new Dictionary<int, double>());
+        // По умолчанию фермер уже отправил обязательные документы — иначе
+        // существующие CreateAsync-тесты (не про сам гейт) начали бы падать.
+        _farmerDocumentRepository.Setup(r => r.GetByFarmerProfileIdAsync(It.IsAny<int>())).ReturnsAsync([
+            new FarmerDocument { Id = 1, FarmerProfileId = 1, DocumentType = FarmerDocumentType.PassportFront, FileUrl = "/a.jpg", Status = DocumentReviewStatus.Pending, UploadedAt = DateTime.UtcNow },
+            new FarmerDocument { Id = 2, FarmerProfileId = 1, DocumentType = FarmerDocumentType.PassportBack, FileUrl = "/b.jpg", Status = DocumentReviewStatus.Pending, UploadedAt = DateTime.UtcNow },
+            new FarmerDocument { Id = 3, FarmerProfileId = 1, DocumentType = FarmerDocumentType.Selfie, FileUrl = "/c.jpg", Status = DocumentReviewStatus.Pending, UploadedAt = DateTime.UtcNow },
+        ]);
         // Дефолтный листинг — FarmerProfileId=1 (UserId=1); залогинены как этот фермер.
         _currentUser.Setup(c => c.UserId).Returns(1);
         _currentUser.Setup(c => c.Role).Returns(nameof(UserRole.Farmer));
@@ -343,6 +351,45 @@ public class ProductListingServiceTests
     [Fact]
     public async Task CreateAsync_ValidData_AddsListingAndReturnsOk()
     {
+        var result = await _service.CreateAsync(ValidCreateDto());
+
+        Assert.True(result.IsSuccess);
+        _productListingRepository.Verify(r => r.AddAsync(It.IsAny<ProductListing>()), Times.Once);
+    }
+
+    [Fact]
+    public async Task CreateAsync_MissingRequiredDocuments_ReturnsValidationError()
+    {
+        _farmerDocumentRepository.Setup(r => r.GetByFarmerProfileIdAsync(It.IsAny<int>())).ReturnsAsync([]);
+
+        var result = await _service.CreateAsync(ValidCreateDto());
+
+        Assert.False(result.IsSuccess);
+        Assert.Equal(ErrorType.Validation, result.ErrorType);
+        _productListingRepository.Verify(r => r.AddAsync(It.IsAny<ProductListing>()), Times.Never);
+    }
+
+    [Fact]
+    public async Task CreateAsync_RequiredDocumentRejected_ReturnsValidationError()
+    {
+        _farmerDocumentRepository.Setup(r => r.GetByFarmerProfileIdAsync(It.IsAny<int>())).ReturnsAsync([
+            new FarmerDocument { Id = 1, FarmerProfileId = 1, DocumentType = FarmerDocumentType.PassportFront, FileUrl = "/a.jpg", Status = DocumentReviewStatus.Rejected, UploadedAt = DateTime.UtcNow },
+            new FarmerDocument { Id = 2, FarmerProfileId = 1, DocumentType = FarmerDocumentType.PassportBack, FileUrl = "/b.jpg", Status = DocumentReviewStatus.Pending, UploadedAt = DateTime.UtcNow },
+            new FarmerDocument { Id = 3, FarmerProfileId = 1, DocumentType = FarmerDocumentType.Selfie, FileUrl = "/c.jpg", Status = DocumentReviewStatus.Pending, UploadedAt = DateTime.UtcNow },
+        ]);
+
+        var result = await _service.CreateAsync(ValidCreateDto());
+
+        Assert.False(result.IsSuccess);
+        Assert.Equal(ErrorType.Validation, result.ErrorType);
+    }
+
+    [Fact]
+    public async Task CreateAsync_AdminWithoutRequiredDocuments_IsAllowed()
+    {
+        _currentUser.Setup(c => c.Role).Returns(nameof(UserRole.Admin));
+        _farmerDocumentRepository.Setup(r => r.GetByFarmerProfileIdAsync(It.IsAny<int>())).ReturnsAsync([]);
+
         var result = await _service.CreateAsync(ValidCreateDto());
 
         Assert.True(result.IsSuccess);

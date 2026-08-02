@@ -20,8 +20,24 @@ export const OrderStatus = {
   Cancelled: 11,
 } as const;
 export const DeliveryStatus = { Pending: 1, Assigned: 2, PickedUp: 3, InDelivery: 4, Delivered: 5, Cancelled: 6 } as const;
-export const FarmerDocumentType = { Passport: 1, LandDeed: 2, Other: 3 } as const;
+export const FarmerDocumentType = { Passport: 1, LandDeed: 2, Other: 3, PassportFront: 4, PassportBack: 5, Selfie: 6 } as const;
 export const DocumentReviewStatus = { Pending: 1, Approved: 2, Rejected: 3 } as const;
+
+// Дополнено по явному запросу пользователя (2026-08-02) — фермер не может
+// добавить товар, пока не отправил паспорт (обе стороны) и селфи. Rejected
+// не считается "отправленным" — тот же критерий, что и на бэкенде
+// (ProductListingService.HasRequiredDocumentsAsync).
+export const REQUIRED_FARMER_DOCUMENT_TYPES = [
+  FarmerDocumentType.PassportFront,
+  FarmerDocumentType.PassportBack,
+  FarmerDocumentType.Selfie,
+] as const;
+
+export function hasRequiredFarmerDocuments(documents: FarmerDocumentDto[] | null): boolean {
+  if (!documents) return false;
+  const submittedTypes = new Set(documents.filter((d) => d.status !== DocumentReviewStatus.Rejected).map((d) => d.documentType));
+  return REQUIRED_FARMER_DOCUMENT_TYPES.every((type) => submittedTypes.has(type));
+}
 
 export interface FarmerProfileDto {
   id: number;
