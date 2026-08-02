@@ -16,6 +16,13 @@
   "Gemini": {
     "ApiKey": ""
   },
+  "R2": {
+    "AccountId": "",
+    "AccessKeyId": "",
+    "SecretAccessKey": "",
+    "BucketName": "",
+    "PublicUrl": ""
+  },
 
   "Jwt": {
     "Issuer": "MarketTJ",

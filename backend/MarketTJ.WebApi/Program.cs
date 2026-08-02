@@ -1,6 +1,9 @@
 using System.Text;
+using Amazon.Runtime;
+using Amazon.S3;
 using MarketTJ.Application;
 using MarketTJ.Infrastructure;
+using MarketTJ.Infrastructure.FileStorage;
 using MarketTJ.Infrastructure.Persistence;
 using MarketTJ.Infrastructure.Persistence.Seed;
 using MarketTJ.Application.Interfaces.Services;
@@ -177,7 +180,43 @@ builder.Services.AddAuthorization();
 
 builder.Services.AddHttpContextAccessor();
 builder.Services.AddScoped<ICurrentUserService, CurrentUserService>();
-builder.Services.AddScoped<IFileStorageService, LocalFileStorageService>();
+
+// Railway не даёт backend'у persistent volume (в отличие от Postgres/Redis) —
+// всё, что LocalFileStorageService пишет в wwwroot/uploads, пропадает при
+// каждом редеплое (новый контейнер стартует с чистой файловой системой).
+// Тот же приём переключения, что и для Resend vs Smtp (см.
+// MarketTJ.Infrastructure/DependencyInjection.cs): в Development — простой
+// локальный диск без внешних зависимостей, в остальных окружениях
+// (Production на Railway) — Cloudflare R2 через S3-совместимый API.
+if (builder.Environment.IsDevelopment())
+{
+    builder.Services.AddScoped<IFileStorageService, LocalFileStorageService>();
+}
+else
+{
+    builder.Services.AddSingleton<IAmazonS3>(_ =>
+    {
+        var accountId = builder.Configuration["R2:AccountId"];
+        var accessKeyId = builder.Configuration["R2:AccessKeyId"];
+        var secretAccessKey = builder.Configuration["R2:SecretAccessKey"];
+
+        if (string.IsNullOrWhiteSpace(accountId) || string.IsNullOrWhiteSpace(accessKeyId) || string.IsNullOrWhiteSpace(secretAccessKey))
+            throw new InvalidOperationException("R2 не настроен (R2:AccountId/R2:AccessKeyId/R2:SecretAccessKey в переменных окружения)");
+
+        var config = new AmazonS3Config
+        {
+            ServiceURL = $"https://{accountId}.r2.cloudflarestorage.com",
+            // R2 требует path-style адресацию (bucket в пути URL, не в
+            // поддомене) и не участвует в обычном регионном резолвинге AWS —
+            // "auto" здесь буквальное значение, которое использует сам R2.
+            ForcePathStyle = true,
+            AuthenticationRegion = "auto"
+        };
+        var credentials = new BasicAWSCredentials(accessKeyId, secretAccessKey);
+        return new AmazonS3Client(credentials, config);
+    });
+    builder.Services.AddScoped<IFileStorageService, R2FileStorageService>();
+}
 
 // JSON-ответы каталога/списков — самый частый и самый крупный трафик API,
 // Brotli/Gzip сокращают их в несколько раз перед отправкой клиенту (особенно
