@@ -6,9 +6,16 @@ server {
     index index.html;
 
     # SPA fallback — react-router работает при прямом заходе на подроут
-    # (например /catalog или /admin) и при обновлении страницы.
+    # (например /catalog или /admin) и при обновлении страницы. index.html
+    # без явного Cache-Control кешировался прокси/edge перед Railway
+    # неопределённо долго — после каждого деплоя новый билд был на сервере,
+    # но реальные пользователи получали старый index.html (со старыми
+    # хэшами assets) до истечения этого стороннего кеша. no-store — сам
+    # index.html лёгкий, не в этом экономия, а в том, что asset-ссылки
+    # внутри него должны обновляться сразу же после деплоя.
     location / {
         try_files $uri $uri/ /index.html;
+        add_header Cache-Control "no-store" always;
     }
 
     location /assets/ {
