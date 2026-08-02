@@ -420,7 +420,10 @@
     "type": {
       "passport": "Passport",
       "landDeed": "Land deed",
-      "other": "Other"
+      "other": "Other",
+      "passportFront": "Passport (front side)",
+      "passportBack": "Passport (back side)",
+      "selfie": "Selfie of yourself"
     },
     "status": {
       "pending": "Pending",

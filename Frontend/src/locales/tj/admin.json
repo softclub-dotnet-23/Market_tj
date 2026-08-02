@@ -426,7 +426,10 @@
     "type": {
       "passport": "Шиноснома",
       "landDeed": "Ҳуҷҷати замин",
-      "other": "Дигар"
+      "other": "Дигар",
+      "passportFront": "Шиноснома (рӯй)",
+      "passportBack": "Шиноснома (пушт)",
+      "selfie": "Селфи бо худатон"
     },
     "status": {
       "pending": "Дар санҷиш",

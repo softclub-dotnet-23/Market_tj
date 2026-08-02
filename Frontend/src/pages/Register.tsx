@@ -425,7 +425,7 @@ export function Register() {
                   label={
                     <span className="text-xs">
                       {t("pages:register.agreePrefix")}{" "}
-                      <Link to="/forbidden" className="font-medium text-grove-700 hover:underline">
+                      <Link to="/terms" className="font-medium text-grove-700 hover:underline">
                         {t("pages:register.agreeTerms")}
                       </Link>{" "}
                       {t("pages:register.agreeSuffix")}

@@ -15,9 +15,28 @@ public class ProductListingService(
     IFarmerProfileRepository farmerProfileRepository,
     ICategoryRepository categoryRepository,
     IProductImageRepository productImageRepository,
+    IFarmerDocumentRepository farmerDocumentRepository,
     ICurrentUserService currentUser,
     ILogger<ProductListingService> logger) : IProductListingService
 {
+    // По прямому запросу пользователя (2026-08-02): фермер не может добавить
+    // товар, пока не отправил паспорт (обе стороны) и селфи — Rejected не
+    // считается "отправленным", нужна новая загрузка. Admin создаёт объявления
+    // от лица фермера (например, помогая на онбординге) — на него гейт не
+    // распространяется.
+    private static readonly FarmerDocumentType[] RequiredDocumentTypes =
+        [FarmerDocumentType.PassportFront, FarmerDocumentType.PassportBack, FarmerDocumentType.Selfie];
+
+    private async Task<bool> HasRequiredDocumentsAsync(int farmerProfileId)
+    {
+        var documents = await farmerDocumentRepository.GetByFarmerProfileIdAsync(farmerProfileId);
+        var submittedTypes = documents
+            .Where(d => d.Status != DocumentReviewStatus.Rejected)
+            .Select(d => d.DocumentType)
+            .ToHashSet();
+
+        return RequiredDocumentTypes.All(submittedTypes.Contains);
+    }
     // GetAll/GetById сознательно ОСТАЮТСЯ публичными — это каталог. IDOR-guard
     // нужен только на Create/Update/Delete (audit 2026-07-28, находка 2.2):
     // Farmer мог редактировать/удалять чужие объявления, зная только их Id.
@@ -136,6 +155,11 @@ public class ProductListingService(
 
             if (!await OwnsAsync(dto.FarmerProfileId))
                 return Result<string>.Fail("Нельзя создать объявление для чужой фермы", ErrorType.Forbidden);
+
+            if (!currentUser.IsAdmin() && !await HasRequiredDocumentsAsync(dto.FarmerProfileId))
+                return Result<string>.Fail(
+                    "Чтобы добавить товар, сначала загрузите паспорт (лицевую и обратную стороны) и селфи в разделе «Документы»",
+                    ErrorType.Validation);
 
             var category = await categoryRepository.GetByIdAsync(dto.CategoryId);
             if (category is null)
