@@ -19,7 +19,11 @@ export const OrderStatus = {
   Completed: 10,
   Cancelled: 11,
 } as const;
-export const DeliveryStatus = { Pending: 1, Assigned: 2, PickedUp: 3, InDelivery: 4, Delivered: 5, Cancelled: 6 } as const;
+// Раньше был отдельный (уже устаревший) набор значений — теперь единственный
+// источник правды вынесен в data/delivery.ts (полная система назначения
+// курьера, audit 2026-08-02), здесь просто реэкспорт для обратной
+// совместимости уже написанного кода на этой странице.
+export { DeliveryStatus } from "@/data/delivery";
 export const FarmerDocumentType = { Passport: 1, LandDeed: 2, Other: 3, PassportFront: 4, PassportBack: 5, Selfie: 6 } as const;
 export const DocumentReviewStatus = { Pending: 1, Approved: 2, Rejected: 3 } as const;
 
@@ -188,6 +192,19 @@ export interface DeliveryDto {
   assignedAt: string | null;
   pickedUpAt: string | null;
   deliveredAt: string | null;
+  // Сервер отдаёт эти поля на каждой доставке (см. DeliveryService.ToGetDtoAsync,
+  // audit 2026-08-02) — раньше их не было, добавлены для карточек курьера
+  // в списках заказов фермера/покупателя без отдельного запроса на каждую строку.
+  estimatedPickupAt?: string | null;
+  estimatedDeliveryAt?: string | null;
+  courierFullName?: string | null;
+  courierPhoneNumber?: string | null;
+  courierAvatarUrl?: string | null;
+  courierTransportType?: string | null;
+  courierVehicleNumber?: string | null;
+  courierRating?: number | null;
+  adminNote?: string | null;
+  confirmationCode?: string | null;
 }
 
 export interface FarmerReviewDto {

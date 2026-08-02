@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { toast } from "sonner";
-import { Search, ShoppingCart } from "lucide-react";
+import { Search, ShoppingCart, Truck } from "lucide-react";
 import { useAdminSearch } from "@/components/layout/AdminLayout";
 import { PageLoader } from "@/components/layout/PageLoader";
 import { EmptyState } from "@/components/ui/EmptyState";
@@ -10,6 +10,9 @@ import { ViewModeToggle, type OrdersViewMode } from "@/components/ui/ViewModeTog
 import { StatusMenu } from "@/components/ui/StatusMenu";
 import { OrderItemsCell } from "@/components/ui/OrderItemsCell";
 import { OrderItemsPhotoList } from "@/components/ui/OrderItemsPhotoList";
+import { DeliveryStatusBadge } from "@/components/delivery/DeliveryStatusBadge";
+import { AssignCourierDrawer } from "@/components/delivery/AssignCourierDrawer";
+import { useDeliveryByOrder } from "@/data/delivery";
 import { formatDateTime, formatSomoni } from "@/lib/utils";
 import { ORDER_STATUS_CLASSES, ORDER_STATUS_ICONS, ORDER_STATUS_KEYS, getAdminNextStatuses, resolveReceivedAt } from "@/lib/orderStatus";
 import {
@@ -58,13 +61,16 @@ export function AdminOrders() {
   const [viewMode, setViewMode] = useState<OrdersViewMode>("table");
   const [refreshKey, setRefreshKey] = useState(0);
   const [busyId, setBusyId] = useState<number | null>(null);
+  const [assigningOrder, setAssigningOrder] = useState<{ order: AdminOrderDto; itemCount: number } | null>(null);
   const { orders, loading, error } = useAdminOrders(refreshKey);
   const { deliveriesByOrderId, loading: deliveriesLoading } = useDeliveriesByOrder();
+  const { delivery: assigningDelivery } = useDeliveryByOrder(assigningOrder?.order.id ?? null, refreshKey);
   const { orderItems } = useAdminOrderItems();
   const { farmers } = useAdminFarmers();
   const products = useProducts();
   const photoByListingId = new Map(products.map((p) => [p.id, p.photoUrl]));
   const farmNameById = new Map((farmers ?? []).map((f) => [f.id, f.farmName]));
+  const farmAddressById = new Map((farmers ?? []).map((f) => [f.id, f.address]));
   const sequenceById = useOrderSequenceMap();
 
   // Всё, что видно на этой странице, считается просмотренным — бейдж
@@ -159,6 +165,23 @@ export function AdminOrders() {
     </div>
   );
 
+  const deliveryCell = (order: AdminOrderDto, itemCount: number) => {
+    const delivery = deliveriesByOrderId.get(order.id);
+    return (
+      <div className="flex flex-col items-start gap-1.5">
+        <DeliveryStatusBadge status={delivery?.status ?? null} />
+        <button
+          type="button"
+          onClick={() => setAssigningOrder({ order, itemCount })}
+          className="flex items-center gap-1 text-xs font-medium text-grove-700 hover:underline dark:text-grove-400"
+        >
+          <Truck size={12} />
+          {delivery ? t("orders.delivery.manageAction") : t("orders.delivery.assignAction")}
+        </button>
+      </div>
+    );
+  };
+
   const renderCard = (order: AdminOrderDto) => {
     const receivedAt = resolveReceivedAt(order.status, order.completedAt, deliveriesByOrderId.get(order.id)?.deliveredAt);
     const items = orderItems?.filter((i) => i.orderId === order.id) ?? [];
@@ -191,7 +214,10 @@ export function AdminOrders() {
             {order.region}, {order.district}
           </span>
         </div>
-        <div className="pt-1">{statusCell(order, receivedAt)}</div>
+        <div className="flex flex-wrap items-center justify-between gap-3 border-t border-stone-900/5 pt-3 dark:border-stone-100/5">
+          {statusCell(order, receivedAt)}
+          {deliveryCell(order, items.length)}
+        </div>
       </div>
     );
   };
@@ -214,6 +240,7 @@ export function AdminOrders() {
               <th className="px-6 py-4 font-medium">{t("orders.columns.region")}</th>
               <th className="px-6 py-4 font-medium">{t("orders.columns.amount")}</th>
               <th className="px-6 py-4 font-medium">{t("orders.columns.status")}</th>
+              <th className="px-6 py-4 font-medium">{t("orders.columns.delivery")}</th>
             </tr>
           </thead>
           <tbody>
@@ -239,6 +266,7 @@ export function AdminOrders() {
                     {formatSomoni(order.totalAmount)} {t("common.somoni")}
                   </td>
                   <td className="px-6 py-4">{statusCell(order, receivedAt)}</td>
+                  <td className="px-6 py-4">{deliveryCell(order, items.length)}</td>
                 </tr>
               );
             })}
@@ -258,6 +286,24 @@ export function AdminOrders() {
         <div className="border-t border-stone-100 p-4 dark:border-stone-800">
           <Pagination page={currentPage} totalPages={totalPages} onPageChange={setPage} />
         </div>
+      )}
+
+      {assigningOrder && (
+        <AssignCourierDrawer
+          open={!!assigningOrder}
+          onClose={() => setAssigningOrder(null)}
+          order={{
+            id: assigningOrder.order.id,
+            orderNumber: assigningOrder.order.orderNumber,
+            farmerName: farmNameById.get(assigningOrder.order.farmerId) ?? t("orders.farmerLabel", { id: assigningOrder.order.farmerId }),
+            customerName: assigningOrder.order.customerFullName ?? t("orders.customerLabel", { id: assigningOrder.order.customerId }),
+            pickupAddress: farmAddressById.get(assigningOrder.order.farmerId) ?? "—",
+            deliveryAddress: assigningOrder.order.deliveryAddress,
+            itemCount: assigningOrder.itemCount,
+          }}
+          existingDelivery={assigningDelivery}
+          onAssigned={() => setRefreshKey((k) => k + 1)}
+        />
       )}
     </div>
   );

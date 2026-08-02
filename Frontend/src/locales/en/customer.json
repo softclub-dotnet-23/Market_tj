@@ -51,7 +51,11 @@
       "status": "Status",
       "createdAt": "Order date & time",
       "receivedAt": "Received date & time",
-      "review": "Review"
+      "review": "Review",
+      "delivery": "Delivery"
+    },
+    "delivery": {
+      "detailsAction": "Details"
     },
     "farmerLabel": "Farmer #{{id}}",
     "notReceivedYet": "Not received yet",

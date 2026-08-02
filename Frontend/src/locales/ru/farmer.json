@@ -187,6 +187,14 @@
       "createdAt": "Дата и время заказа",
       "receivedAt": "Дата и время получения"
     },
+    "delivery": {
+      "waitingForAdmin": "Ожидаем, пока администратор назначит курьера.",
+      "readyAction": "Заказ готов к выдаче",
+      "readySuccess": "Заказ отмечен как готовый к выдаче",
+      "readyError": "Не удалось отметить заказ готовым",
+      "readyConfirmTitle": "Заказ готов к выдаче?",
+      "readyConfirmDescription": "Курьер получит уведомление, что можно забирать заказ."
+    },
     "customerLabel": "Клиент #{{id}}",
     "moreItems": "ещё {{count}}",
     "showLess": "свернуть",

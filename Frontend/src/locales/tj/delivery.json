@@ -1,0 +1,70 @@
+{
+  "status": {
+    "notAssigned": "Таъин нашудааст",
+    "assigned": "Курер таъин шуд",
+    "accepted": "Курер қабул кард",
+    "goingToFarmer": "Ба сӯи деҳқон меравад",
+    "arrivedAtFarmer": "Дар назди деҳқон",
+    "pickedUp": "Молро гирифт",
+    "inTransit": "Дар роҳ",
+    "arrivedAtClient": "Дар назди харидор",
+    "delivered": "Расонида шуд",
+    "cancelled": "Бекор карда шуд"
+  },
+  "timeline": {
+    "orderConfirmed": "Фармоиш тасдиқ шуд",
+    "courierAssigned": "Курер таъин шуд",
+    "goingToFarmer": "Курер ба сӯи деҳқон меравад",
+    "pickedUp": "Мол гирифта шуд",
+    "onTheWay": "Курер дар роҳ",
+    "delivered": "Расонида шуд"
+  },
+  "assign": {
+    "title": "Таъини курер — фармоиши {{orderNumber}}",
+    "farmer": "Деҳқон",
+    "customer": "Харидор",
+    "pickupAddress": "Суроғаи гирифтан",
+    "deliveryAddress": "Суроғаи расонидан",
+    "itemCount": "Маҳсулот",
+    "availableCouriers": "Курерони дастрас",
+    "onlyAvailable": "Танҳо озод",
+    "allRegions": "Ҳамаи минтақаҳо",
+    "allTransportTypes": "Ҳар гуна нақлиёт",
+    "anyRating": "Ҳар рейтинг",
+    "noCouriers": "Курер ёфт нашуд",
+    "noCouriersHint": "Филтрҳоро тағйир диҳед.",
+    "deliveryFee": "Арзиши расонидан, сомонӣ",
+    "estimatedPickup": "Вақти тахминии гирифтан",
+    "estimatedDelivery": "Вақти тахминии расонидан",
+    "adminNote": "Қайд барои курер",
+    "adminNoteHint": "Ихтиёрӣ — курер, деҳқон ва харидор мебинанд",
+    "submit": "Таъини курер",
+    "replaceConfirmTitle": "Курерро иваз кунам?",
+    "replaceConfirmDescription": "Раванди кунунии расонидан бекор мешавад, курери нав аз аввал сар мекунад.",
+    "replaceConfirmAction": "Иваз кардан",
+    "success": "Курер таъин шуд",
+    "error": "Таъини курер имконнопазир шуд",
+    "courierAvailable": "Озод",
+    "courierBusy": "Банд",
+    "activeDeliveries": "{{count}} дар кор",
+    "completedDeliveries": "{{count}} иҷрошуда"
+  },
+  "customer": {
+    "title": "Расонидани фармоиши шумо",
+    "waitingForFarmer": "Курер пас аз тасдиқи фармоиш аз ҷониби деҳқон таъин мешавад.",
+    "courierFallback": "Курер",
+    "callCourier": "Занг задан ба курер",
+    "waitingForCourier": "Мунтазири он ҳастем, ки админ курерро таъин кунад.",
+    "estimatedArrival": "Вақти тахминии расидан",
+    "confirmationCodeHint": "Ин рамзро ҳангоми гирифтани фармоиш ба курер гӯед",
+    "deliveryAddress": "Суроғаи расонидан"
+  },
+  "problem": {
+    "title": "Хабар додан дар бораи мушкилот",
+    "reportAction": "Хабар додан дар бораи мушкилот",
+    "placeholder": "Тасвир кунед, ки чӣ хато шуд",
+    "submit": "Фиристодан",
+    "success": "Хабар ба админ фиристода шуд",
+    "error": "Фиристодани хабар имконнопазир шуд"
+  }
+}

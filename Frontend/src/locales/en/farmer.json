@@ -184,6 +184,14 @@
       "createdAt": "Order date & time",
       "receivedAt": "Received date & time"
     },
+    "delivery": {
+      "waitingForAdmin": "Waiting for the administrator to assign a courier.",
+      "readyAction": "Order ready for pickup",
+      "readySuccess": "Order marked as ready for pickup",
+      "readyError": "Failed to mark the order as ready",
+      "readyConfirmTitle": "Order ready for pickup?",
+      "readyConfirmDescription": "The courier will be notified that the order can be picked up."
+    },
     "customerLabel": "Customer #{{id}}",
     "courierLabel": "Courier #{{id}}",
     "noCourierYet": "No courier assigned",

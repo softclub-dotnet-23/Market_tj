@@ -12,6 +12,9 @@ public class CourierProfileRepository(AppDbContext context) : ICourierProfileRep
     public async Task<CourierProfile?> GetByIdAsync(int id)
         => await context.CourierProfiles.AsNoTracking().FirstOrDefaultAsync(x => x.Id == id);
 
+    public async Task<CourierProfile?> GetByUserIdAsync(int userId)
+        => await context.CourierProfiles.AsNoTracking().FirstOrDefaultAsync(x => x.UserId == userId);
+
     public async Task AddAsync(CourierProfile courierProfile)
     {
         await context.CourierProfiles.AddAsync(courierProfile);

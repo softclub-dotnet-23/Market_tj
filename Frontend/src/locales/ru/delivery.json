@@ -1,0 +1,70 @@
+{
+  "status": {
+    "notAssigned": "Не назначен",
+    "assigned": "Курьер назначен",
+    "accepted": "Курьер принял",
+    "goingToFarmer": "Едет к фермеру",
+    "arrivedAtFarmer": "На месте у фермера",
+    "pickedUp": "Забрал товар",
+    "inTransit": "В пути",
+    "arrivedAtClient": "На месте у покупателя",
+    "delivered": "Доставлено",
+    "cancelled": "Отменено"
+  },
+  "timeline": {
+    "orderConfirmed": "Заказ подтверждён",
+    "courierAssigned": "Курьер назначен",
+    "goingToFarmer": "Курьер едет к фермеру",
+    "pickedUp": "Товар забран",
+    "onTheWay": "Курьер в пути",
+    "delivered": "Доставлено"
+  },
+  "assign": {
+    "title": "Назначение курьера — заказ {{orderNumber}}",
+    "farmer": "Фермер",
+    "customer": "Покупатель",
+    "pickupAddress": "Адрес забора",
+    "deliveryAddress": "Адрес доставки",
+    "itemCount": "Товаров",
+    "availableCouriers": "Доступные курьеры",
+    "onlyAvailable": "Только свободные",
+    "allRegions": "Все регионы",
+    "allTransportTypes": "Любой транспорт",
+    "anyRating": "Любой рейтинг",
+    "noCouriers": "Курьеры не найдены",
+    "noCouriersHint": "Попробуйте изменить фильтры.",
+    "deliveryFee": "Стоимость доставки, сомони",
+    "estimatedPickup": "Ожидаемое время забора",
+    "estimatedDelivery": "Ожидаемое время доставки",
+    "adminNote": "Заметка для курьера",
+    "adminNoteHint": "Необязательно — увидят курьер, фермер и покупатель",
+    "submit": "Назначить курьера",
+    "replaceConfirmTitle": "Заменить курьера?",
+    "replaceConfirmDescription": "Текущий прогресс доставки будет сброшен, новый курьер начнёт с начала.",
+    "replaceConfirmAction": "Заменить",
+    "success": "Курьер назначен",
+    "error": "Не удалось назначить курьера",
+    "courierAvailable": "Свободен",
+    "courierBusy": "Занят",
+    "activeDeliveries": "{{count}} в работе",
+    "completedDeliveries": "{{count}} выполнено"
+  },
+  "customer": {
+    "title": "Доставка вашего заказа",
+    "waitingForFarmer": "Курьер будет назначен после подтверждения заказа фермером.",
+    "courierFallback": "Курьер",
+    "callCourier": "Позвонить курьеру",
+    "waitingForCourier": "Ожидаем, пока администратор назначит курьера.",
+    "estimatedArrival": "Ожидаемое время прибытия",
+    "confirmationCodeHint": "Назовите этот код курьеру при получении",
+    "deliveryAddress": "Адрес доставки"
+  },
+  "problem": {
+    "title": "Сообщить о проблеме",
+    "reportAction": "Сообщить о проблеме",
+    "placeholder": "Опишите, что пошло не так",
+    "submit": "Отправить",
+    "success": "Сообщение отправлено администратору",
+    "error": "Не удалось отправить сообщение"
+  }
+}

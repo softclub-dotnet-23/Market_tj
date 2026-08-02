@@ -171,6 +171,7 @@ public class CourierProfileService(
         District = profile.District,
         IsAvailable = profile.IsAvailable,
         IsActive = profile.IsActive,
+        Rating = profile.Rating,
         CreatedAt = profile.CreatedAt,
         UpdatedAt = profile.UpdatedAt
     };

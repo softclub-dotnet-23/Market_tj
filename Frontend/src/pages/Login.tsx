@@ -35,9 +35,10 @@ export function Login() {
     isSubmittingRef.current = true;
     try {
       const user = await login(data.email, data.password, data.remember);
-      // Courier работает в mini-интерфейсе, отдельной панели нет (раздел 4.5 ТЗ) — идёт на главную.
+      // Courier получил свой mini-интерфейс (раздел 4.5 ТЗ, audit 2026-08-02:
+      // назначение и отслеживание доставок) — теперь тоже редиректится на свой раздел.
       const target =
-        user.role === "Admin" ? "/admin" : user.role === "Farmer" ? "/farmer" : user.role === "Customer" ? "/customer" : "/";
+        user.role === "Admin" ? "/admin" : user.role === "Farmer" ? "/farmer" : user.role === "Customer" ? "/customer" : user.role === "Courier" ? "/courier" : "/";
       // Настоящая перезагрузка страницы (не SPA-переход через react-router) —
       // так браузер надёжно распознаёт "форма отправлена → логин успешен" и
       // предлагает сохранить пароль. С history.pushState многие браузеры

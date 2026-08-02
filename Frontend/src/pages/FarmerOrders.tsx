@@ -1,14 +1,19 @@
 import { useState } from "react";
 import { useTranslation } from "react-i18next";
 import { toast } from "sonner";
-import { ShoppingCart } from "lucide-react";
+import { CheckCircle2, Phone, ShoppingCart, Truck } from "lucide-react";
 import { PageLoader } from "@/components/layout/PageLoader";
 import { EmptyState } from "@/components/ui/EmptyState";
 import { Pagination } from "@/components/ui/Pagination";
+import { Button } from "@/components/ui/Button";
+import { ConfirmDialog } from "@/components/ui/ConfirmDialog";
 import { ViewModeToggle, type OrdersViewMode } from "@/components/ui/ViewModeToggle";
 import { StatusMenu } from "@/components/ui/StatusMenu";
 import { OrderItemsCell } from "@/components/ui/OrderItemsCell";
 import { OrderItemsPhotoList } from "@/components/ui/OrderItemsPhotoList";
+import { DeliveryStatusBadge } from "@/components/delivery/DeliveryStatusBadge";
+import { ApiError } from "@/lib/api";
+import { markReadyForPickup } from "@/data/delivery";
 import { formatDateTime, formatSomoni } from "@/lib/utils";
 import {
   ORDER_STATUS_CLASSES,
@@ -19,7 +24,6 @@ import {
   resolveReceivedAt,
 } from "@/lib/orderStatus";
 import {
-  DeliveryStatus,
   notifyFarmerOrdersChanged,
   updateFarmerOrderStatus,
   useDeliveriesByOrder,
@@ -52,20 +56,12 @@ const ORDER_STATUS_ACCENT: Record<number, string> = {
   [OrderStatus.Cancelled]: "border-l-rose-400 bg-rose-50/60 dark:border-l-rose-600 dark:bg-rose-950/30",
 };
 
-const DELIVERY_STATUS_KEYS: Record<number, string> = {
-  [DeliveryStatus.Pending]: "pending",
-  [DeliveryStatus.Assigned]: "assigned",
-  [DeliveryStatus.PickedUp]: "pickedUp",
-  [DeliveryStatus.InDelivery]: "inDelivery",
-  [DeliveryStatus.Delivered]: "delivered",
-  [DeliveryStatus.Cancelled]: "cancelled",
-};
-
 export function FarmerOrders() {
   const { t } = useTranslation("farmer");
   const [page, setPage] = useState(1);
   const [viewMode, setViewMode] = useState<OrdersViewMode>("table");
   const [busyId, setBusyId] = useState<number | null>(null);
+  const [readyConfirmOrder, setReadyConfirmOrder] = useState<FarmerOrderDto | null>(null);
   const { profile, loading: profileLoading, error: profileError } = useFarmerProfile();
   const { orders, loading: ordersLoading, error: ordersError } = useFarmerOrders(profile?.id ?? null);
   const { deliveriesByOrderId, loading: deliveriesLoading } = useDeliveriesByOrder();
@@ -85,6 +81,18 @@ export function FarmerOrders() {
       toast.error(t("orders.updateError"), { description: err instanceof Error ? err.message : undefined });
     } finally {
       setBusyId(null);
+    }
+  };
+
+  const handleMarkReady = async () => {
+    if (!readyConfirmOrder) return;
+    try {
+      await markReadyForPickup(readyConfirmOrder.id);
+      toast.success(t("orders.delivery.readySuccess"));
+      notifyFarmerOrdersChanged();
+      setReadyConfirmOrder(null);
+    } catch (err) {
+      toast.error(t("orders.delivery.readyError"), { description: err instanceof ApiError ? err.message : undefined });
     }
   };
 
@@ -108,15 +116,40 @@ export function FarmerOrders() {
   const currentPage = Math.min(page, totalPages);
   const pageItems: FarmerOrderDto[] = orders.slice((currentPage - 1) * PAGE_SIZE, currentPage * PAGE_SIZE);
 
-  const deliveryInfo = (delivery: DeliveryDto | undefined) =>
-    delivery ? (
-      <span className="flex flex-col gap-0.5">
-        <span>{delivery.courierId ? t("orders.courierLabel", { id: delivery.courierId }) : t("orders.noCourierYet")}</span>
-        <span className="text-xs text-stone-400 dark:text-stone-500">{t(`orders.deliveryStatus.${DELIVERY_STATUS_KEYS[delivery.status] ?? "pending"}`)}</span>
-      </span>
-    ) : (
-      t("orders.noDeliveryYet")
+  const deliveryInfo = (order: FarmerOrderDto, delivery: DeliveryDto | undefined) => {
+    if (!delivery || !delivery.courierId) {
+      return <p className="text-sm text-stone-400 dark:text-stone-500">{t("orders.delivery.waitingForAdmin")}</p>;
+    }
+
+    const canMarkReady = order.status === OrderStatus.CourierAssigned;
+
+    return (
+      <div className="flex flex-col gap-2 rounded-xl border border-stone-100 bg-stone-25 p-3 text-sm dark:border-stone-800 dark:bg-stone-950/40">
+        <div className="flex items-center justify-between gap-2">
+          <div className="min-w-0">
+            <p className="truncate font-medium text-stone-800 dark:text-stone-100">{delivery.courierFullName ?? t("orders.courierLabel", { id: delivery.courierId })}</p>
+            {delivery.courierPhoneNumber && (
+              <a href={`tel:${delivery.courierPhoneNumber}`} className="flex items-center gap-1 text-xs text-grove-700 hover:underline dark:text-grove-400">
+                <Phone size={11} /> {delivery.courierPhoneNumber}
+              </a>
+            )}
+          </div>
+          <DeliveryStatusBadge status={delivery.status} />
+        </div>
+        {delivery.courierTransportType && (
+          <p className="flex items-center gap-1 text-xs text-stone-500 dark:text-stone-400">
+            <Truck size={11} /> {delivery.courierTransportType} {delivery.courierVehicleNumber}
+          </p>
+        )}
+        {delivery.adminNote && <p className="text-xs text-stone-500 dark:text-stone-400">{delivery.adminNote}</p>}
+        {canMarkReady && (
+          <Button type="button" size="sm" leftIcon={<CheckCircle2 size={14} />} onClick={() => setReadyConfirmOrder(order)}>
+            {t("orders.delivery.readyAction")}
+          </Button>
+        )}
+      </div>
     );
+  };
 
   const statusCell = (order: FarmerOrderDto, receivedAt: string | null) => (
     <div className="flex flex-col items-start gap-1.5">
@@ -173,9 +206,8 @@ export function FarmerOrders() {
           <span className="text-stone-700 dark:text-stone-200">
             {order.region}, {order.district}
           </span>
-          <span className="text-stone-400 dark:text-stone-500">{t("orders.columns.delivery")}</span>
-          <span className="text-stone-700 dark:text-stone-200">{deliveryInfo(delivery)}</span>
         </div>
+        <div className="border-t border-stone-900/5 pt-3 dark:border-stone-100/5">{deliveryInfo(order, delivery)}</div>
         <div className="pt-1">{statusCell(order, receivedAt)}</div>
       </div>
     );
@@ -199,6 +231,7 @@ export function FarmerOrders() {
               <th className="px-6 py-4 font-medium">{t("orders.columns.address")}</th>
               <th className="px-6 py-4 font-medium">{t("orders.columns.amount")}</th>
               <th className="px-6 py-4 font-medium">{t("orders.columns.status")}</th>
+              <th className="px-6 py-4 font-medium">{t("orders.columns.delivery")}</th>
             </tr>
           </thead>
           <tbody>
@@ -230,6 +263,7 @@ export function FarmerOrders() {
                     {formatSomoni(order.totalAmount)} {t("common.somoni")}
                   </td>
                   <td className="px-6 py-4">{statusCell(order, receivedAt)}</td>
+                  <td className="max-w-56 px-6 py-4">{deliveryInfo(order, delivery)}</td>
                 </tr>
               );
             })}
@@ -250,6 +284,16 @@ export function FarmerOrders() {
           <Pagination page={currentPage} totalPages={totalPages} onPageChange={setPage} />
         </div>
       )}
+
+      <ConfirmDialog
+        open={!!readyConfirmOrder}
+        onClose={() => setReadyConfirmOrder(null)}
+        onConfirm={handleMarkReady}
+        danger={false}
+        title={t("orders.delivery.readyConfirmTitle")}
+        description={t("orders.delivery.readyConfirmDescription")}
+        confirmLabel={t("orders.delivery.readyAction")}
+      />
     </div>
   );
 }

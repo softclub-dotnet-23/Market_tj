@@ -1,0 +1,45 @@
+{
+  "nav": {
+    "myDeliveries": "My deliveries"
+  },
+  "logout": "Log out",
+  "notifications": "Notifications",
+  "courierName": "Courier",
+  "errorTitle": "Failed to load deliveries",
+  "errorDescription": "Check your connection to the server and try again.",
+  "emptyTitle": "No deliveries yet",
+  "emptyDescription": "Orders assigned to you by the administrator will appear here.",
+  "activeSection": "Active",
+  "historySection": "Completed",
+  "card": {
+    "pickupFrom": "Pick up from",
+    "deliverTo": "Deliver to",
+    "itemCount": "{{count}} item(s)",
+    "eta": "Expected"
+  },
+  "actions": {
+    "accept": "Accept delivery",
+    "acceptSuccess": "Delivery accepted",
+    "actionSuccess": "Status updated",
+    "actionError": "Failed to perform the action",
+    "goingToFarmer": "Going to farmer",
+    "arrivedAtFarmer": "I'm at the farmer's",
+    "pickedUp": "Products picked up",
+    "inTransit": "On the way to customer",
+    "arrivedAtClient": "I'm at the customer's",
+    "confirmDelivery": "Confirm delivery",
+    "reportProblem": "Report a problem"
+  },
+  "confirmModal": {
+    "title": "Confirm delivery",
+    "description": "Ask the customer for the 4-digit code and enter it here.",
+    "success": "Delivery confirmed",
+    "error": "Incorrect code or too many attempts"
+  },
+  "notificationsPage": {
+    "errorTitle": "Failed to load notifications",
+    "errorDescription": "Check your connection to the server and try again.",
+    "emptyTitle": "No notifications yet",
+    "emptyDescription": "Notifications about new deliveries will appear here."
+  }
+}

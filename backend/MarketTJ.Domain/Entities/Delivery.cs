@@ -11,9 +11,33 @@ public class Delivery
     public string DeliveryAddress { get; set; } = null!;
     public decimal DeliveryPrice { get; set; }
     public DeliveryStatus Status { get; set; }
+
+    public DateTime? EstimatedPickupAt { get; set; }
+    public DateTime? EstimatedDeliveryAt { get; set; }
     public DateTime? AssignedAt { get; set; }
+    public DateTime? AcceptedAt { get; set; }
     public DateTime? PickedUpAt { get; set; }
     public DateTime? DeliveredAt { get; set; }
+    public DateTime? CancelledAt { get; set; }
+
+    public string? FarmerNote { get; set; }
+    public string? ClientNote { get; set; }
+    public string? AdminNote { get; set; }
+    public string? CourierNote { get; set; }
+
+    // По прямому запросу пользователя (2026-08-02) — 4-значный код
+    // подтверждения доставки. ConfirmationCode хранится в открытом виде
+    // ТОЛЬКО чтобы покупатель мог посмотреть его повторно в любой момент —
+    // сервис отдаёт это поле исключительно покупателю (владельцу заказа), не
+    // курьеру/фермеру/админу. Сама сверка при подтверждении идёт по
+    // ConfirmationCodeHash (курьер никогда не получает код напрямую).
+    public string? ConfirmationCode { get; set; }
+    public string? ConfirmationCodeHash { get; set; }
+    public int ConfirmationAttempts { get; set; }
+
+    public string? CancellationReason { get; set; }
+    public string? ProblemDescription { get; set; }
+
     public DateTime CreatedAt { get; set; }
     public DateTime UpdatedAt { get; set; }
 

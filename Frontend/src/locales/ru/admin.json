@@ -79,8 +79,13 @@
       "region": "Регион",
       "amount": "Сумма",
       "status": "Статус",
+      "delivery": "Доставка",
       "createdAt": "Дата и время заказа",
       "receivedAt": "Дата и время получения"
+    },
+    "delivery": {
+      "assignAction": "Назначить курьера",
+      "manageAction": "Управление доставкой"
     },
     "customerLabel": "Клиент #{{id}}",
     "farmerLabel": "Фермер #{{id}}",
