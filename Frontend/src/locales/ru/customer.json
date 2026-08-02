@@ -54,7 +54,11 @@
       "payment": "Оплата",
       "createdAt": "Дата и время заказа",
       "receivedAt": "Дата и время получения",
-      "review": "Отзыв"
+      "review": "Отзыв",
+      "delivery": "Доставка"
+    },
+    "delivery": {
+      "detailsAction": "Подробнее"
     },
     "farmerLabel": "Фермер #{{id}}",
     "notReceivedYet": "Ещё не получен",

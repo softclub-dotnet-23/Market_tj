@@ -10,6 +10,7 @@ public class GetCourierProfileDto
     public string District { get; set; } = null!;
     public bool IsAvailable { get; set; }
     public bool IsActive { get; set; }
+    public decimal Rating { get; set; }
     public DateTime CreatedAt { get; set; }
     public DateTime UpdatedAt { get; set; }
 }

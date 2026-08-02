@@ -79,8 +79,13 @@
       "region": "Минтақа",
       "amount": "Маблағ",
       "status": "Ҳолат",
+      "delivery": "Расонидан",
       "createdAt": "Сана ва вақти фармоиш",
       "receivedAt": "Сана ва вақти гирифтан"
+    },
+    "delivery": {
+      "assignAction": "Таъини курер",
+      "manageAction": "Идоракунии расонидан"
     },
     "customerLabel": "Харидор #{{id}}",
     "farmerLabel": "Деҳқон #{{id}}",

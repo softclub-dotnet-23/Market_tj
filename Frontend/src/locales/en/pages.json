@@ -7,6 +7,23 @@
     "paragraph2": "We believe quality food and a fair price should be the norm, not a privilege. That's why we're building a tool that's equally useful for a small family farm in a mountain village and for a city family that wants to know what they're buying.",
     "valuesEyebrow": "Values",
     "valuesTitle": "What shapes our work",
+    "deliveryEyebrow": "Delivery",
+    "deliveryTitle": "Fresh produce, straight to your door",
+    "deliveryIntro": "No need to look for a taxi or arrange transport yourself. Just place your order in the catalog — Market.tj handles delivery from the farm to your home.",
+    "deliveryFeatures": [
+      {
+        "title": "Vehicles built for food",
+        "description": "Vegetables, fruit, and dairy travel in vehicles suited for carrying food — nothing spoils or loses its quality on the way."
+      },
+      {
+        "title": "Livestock transport",
+        "description": "Cattle and other livestock travel in separate, appropriate vehicles — handled carefully and by the rules."
+      },
+      {
+        "title": "Simple, clear logistics",
+        "description": "Delivery is coordinated by the Market.tj team — no extra dashboards or middlemen. Both the farmer and the customer always see the order status: confirmed, courier assigned, on the way, delivered."
+      }
+    ],
     "journeyEyebrow": "Our journey",
     "journeyTitle": "How it all began",
     "teamEyebrow": "Team",

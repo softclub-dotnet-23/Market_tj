@@ -1,0 +1,45 @@
+{
+  "nav": {
+    "myDeliveries": "Мои доставки"
+  },
+  "logout": "Выйти",
+  "notifications": "Уведомления",
+  "courierName": "Курьер",
+  "errorTitle": "Не удалось загрузить доставки",
+  "errorDescription": "Проверьте подключение к серверу и попробуйте снова.",
+  "emptyTitle": "Пока нет доставок",
+  "emptyDescription": "Здесь появятся заказы, назначенные вам администратором.",
+  "activeSection": "В работе",
+  "historySection": "Завершённые",
+  "card": {
+    "pickupFrom": "Забрать у",
+    "deliverTo": "Доставить",
+    "itemCount": "{{count}} товар(ов)",
+    "eta": "Ожидается"
+  },
+  "actions": {
+    "accept": "Принять доставку",
+    "acceptSuccess": "Доставка принята",
+    "actionSuccess": "Статус обновлён",
+    "actionError": "Не удалось выполнить действие",
+    "goingToFarmer": "Еду к фермеру",
+    "arrivedAtFarmer": "Я на месте у фермера",
+    "pickedUp": "Забрал товар",
+    "inTransit": "В пути к покупателю",
+    "arrivedAtClient": "Я на месте у покупателя",
+    "confirmDelivery": "Подтвердить доставку",
+    "reportProblem": "Сообщить о проблеме"
+  },
+  "confirmModal": {
+    "title": "Подтверждение доставки",
+    "description": "Спросите у покупателя 4-значный код и введите его здесь.",
+    "success": "Доставка подтверждена",
+    "error": "Неверный код или превышено число попыток"
+  },
+  "notificationsPage": {
+    "errorTitle": "Не удалось загрузить уведомления",
+    "errorDescription": "Проверьте подключение к серверу и попробуйте снова.",
+    "emptyTitle": "Пока нет уведомлений",
+    "emptyDescription": "Здесь появятся уведомления о новых доставках."
+  }
+}

@@ -1,0 +1,70 @@
+{
+  "status": {
+    "notAssigned": "Not assigned",
+    "assigned": "Courier assigned",
+    "accepted": "Courier accepted",
+    "goingToFarmer": "Going to farmer",
+    "arrivedAtFarmer": "At the farmer's",
+    "pickedUp": "Picked up",
+    "inTransit": "In transit",
+    "arrivedAtClient": "At the customer's",
+    "delivered": "Delivered",
+    "cancelled": "Cancelled"
+  },
+  "timeline": {
+    "orderConfirmed": "Order confirmed",
+    "courierAssigned": "Courier assigned",
+    "goingToFarmer": "Courier going to farmer",
+    "pickedUp": "Products picked up",
+    "onTheWay": "Courier on the way",
+    "delivered": "Delivered"
+  },
+  "assign": {
+    "title": "Assign courier — order {{orderNumber}}",
+    "farmer": "Farmer",
+    "customer": "Customer",
+    "pickupAddress": "Pickup address",
+    "deliveryAddress": "Delivery address",
+    "itemCount": "Items",
+    "availableCouriers": "Available couriers",
+    "onlyAvailable": "Available only",
+    "allRegions": "All regions",
+    "allTransportTypes": "Any vehicle",
+    "anyRating": "Any rating",
+    "noCouriers": "No couriers found",
+    "noCouriersHint": "Try adjusting the filters.",
+    "deliveryFee": "Delivery fee, somoni",
+    "estimatedPickup": "Estimated pickup time",
+    "estimatedDelivery": "Estimated delivery time",
+    "adminNote": "Note for the courier",
+    "adminNoteHint": "Optional — visible to the courier, farmer, and customer",
+    "submit": "Assign courier",
+    "replaceConfirmTitle": "Replace the courier?",
+    "replaceConfirmDescription": "The current delivery progress will be reset — the new courier will start from the beginning.",
+    "replaceConfirmAction": "Replace",
+    "success": "Courier assigned",
+    "error": "Failed to assign courier",
+    "courierAvailable": "Available",
+    "courierBusy": "Busy",
+    "activeDeliveries": "{{count}} active",
+    "completedDeliveries": "{{count}} completed"
+  },
+  "customer": {
+    "title": "Your order's delivery",
+    "waitingForFarmer": "A courier will be assigned after the farmer confirms your order.",
+    "courierFallback": "Courier",
+    "callCourier": "Call the courier",
+    "waitingForCourier": "Waiting for the administrator to assign a courier.",
+    "estimatedArrival": "Estimated arrival",
+    "confirmationCodeHint": "Give this code to the courier on delivery",
+    "deliveryAddress": "Delivery address"
+  },
+  "problem": {
+    "title": "Report a problem",
+    "reportAction": "Report a problem",
+    "placeholder": "Describe what went wrong",
+    "submit": "Send",
+    "success": "Message sent to the administrator",
+    "error": "Failed to send the message"
+  }
+}

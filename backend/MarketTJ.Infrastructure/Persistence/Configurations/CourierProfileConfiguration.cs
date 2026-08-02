@@ -14,6 +14,7 @@ public class CourierProfileConfiguration : IEntityTypeConfiguration<CourierProfi
         builder.Property(x => x.VehicleNumber).IsRequired();
         builder.Property(x => x.Region).IsRequired();
         builder.Property(x => x.District).IsRequired();
+        builder.Property(x => x.Rating).HasPrecision(3, 2);
 
         builder.HasIndex(x => x.UserId).IsUnique();
 

@@ -75,8 +75,13 @@
       "region": "Region",
       "amount": "Amount",
       "status": "Status",
+      "delivery": "Delivery",
       "createdAt": "Order date & time",
       "receivedAt": "Received date & time"
+    },
+    "delivery": {
+      "assignAction": "Assign courier",
+      "manageAction": "Manage delivery"
     },
     "customerLabel": "Customer #{{id}}",
     "farmerLabel": "Farmer #{{id}}",

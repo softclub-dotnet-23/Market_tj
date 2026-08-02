@@ -2,7 +2,7 @@ import { useState } from "react";
 import { Link } from "react-router-dom";
 import { useTranslation } from "react-i18next";
 import { toast } from "sonner";
-import { ShoppingBag, Star } from "lucide-react";
+import { ShoppingBag, Star, Truck } from "lucide-react";
 import { PageLoader } from "@/components/layout/PageLoader";
 import { EmptyState } from "@/components/ui/EmptyState";
 import { Pagination } from "@/components/ui/Pagination";
@@ -12,6 +12,9 @@ import { PaymentBadge } from "@/components/ui/PaymentBadge";
 import { Button } from "@/components/ui/Button";
 import { OrderItemsPhotoList } from "@/components/ui/OrderItemsPhotoList";
 import { ReviewModal } from "@/components/customer/ReviewModal";
+import { DeliveryStatusBadge } from "@/components/delivery/DeliveryStatusBadge";
+import { CustomerDeliveryModal } from "@/components/delivery/CustomerDeliveryModal";
+import { useDeliveryByOrder } from "@/data/delivery";
 import { formatDateTime, formatSomoni } from "@/lib/utils";
 import { ORDER_STATUS_CLASSES, ORDER_STATUS_ICONS, ORDER_STATUS_KEYS, OrderStatus, resolveReceivedAt } from "@/lib/orderStatus";
 import {
@@ -55,7 +58,9 @@ export function CustomerOrders() {
   const [viewMode, setViewMode] = useState<OrdersViewMode>("table");
   const [reviewRefreshKey, setReviewRefreshKey] = useState(0);
   const [reviewingOrder, setReviewingOrder] = useState<CustomerOrderDto | null>(null);
+  const [deliveryOrder, setDeliveryOrder] = useState<CustomerOrderDto | null>(null);
   const { profile, loading: profileLoading, error: profileError } = useCustomerProfile();
+  const { delivery: viewedDelivery } = useDeliveryByOrder(deliveryOrder?.id ?? null);
   const { orders, loading: ordersLoading, error: ordersError } = useCustomerOrders(profile?.id ?? null);
   const { reviewedOrderIds } = useCustomerReviewedOrderIds(profile?.id ?? null, reviewRefreshKey);
   const { deliveriesByOrderId, loading: deliveriesLoading } = useDeliveriesByOrder();
@@ -138,6 +143,22 @@ export function CustomerOrders() {
     );
   };
 
+  const deliveryButton = (order: CustomerOrderDto) => {
+    const delivery = deliveriesByOrderId.get(order.id);
+    return (
+      <button
+        type="button"
+        onClick={() => setDeliveryOrder(order)}
+        className="flex flex-col items-start gap-1.5"
+      >
+        <DeliveryStatusBadge status={delivery?.status ?? null} />
+        <span className="flex items-center gap-1 text-xs font-medium text-grove-700 hover:underline dark:text-grove-400">
+          <Truck size={11} /> {t("orders.delivery.detailsAction")}
+        </span>
+      </button>
+    );
+  };
+
   const renderCard = (order: CustomerOrderDto) => {
     const receivedAt = resolveReceivedAt(order.status, order.completedAt, deliveriesByOrderId.get(order.id)?.deliveredAt);
     const items = orderItems?.filter((i) => i.orderId === order.id) ?? [];
@@ -180,6 +201,7 @@ export function CustomerOrders() {
           </div>
           {reviewAction(order)}
         </div>
+        <div className="border-t border-stone-900/5 pt-3 dark:border-stone-100/5">{deliveryButton(order)}</div>
       </div>
     );
   };
@@ -202,6 +224,7 @@ export function CustomerOrders() {
               <th className="px-6 py-4 font-medium">{t("orders.columns.amount")}</th>
               <th className="px-6 py-4 font-medium">{t("orders.columns.status")}</th>
               <th className="px-6 py-4 font-medium">{t("orders.columns.payment")}</th>
+              <th className="px-6 py-4 font-medium">{t("orders.columns.delivery")}</th>
               <th className="px-6 py-4 font-medium">{t("orders.columns.review")}</th>
             </tr>
           </thead>
@@ -233,6 +256,7 @@ export function CustomerOrders() {
                   <td className="px-6 py-4">
                     <PaymentBadge paymentMethod={order.paymentMethod} isPaid={order.isPaid} />
                   </td>
+                  <td className="px-6 py-4">{deliveryButton(order)}</td>
                   <td className="px-6 py-4">{reviewAction(order)}</td>
                 </tr>
               );
@@ -260,6 +284,14 @@ export function CustomerOrders() {
         onClose={() => setReviewingOrder(null)}
         orderNumber={reviewingOrder?.orderNumber ?? ""}
         onSubmit={handleReviewSubmit}
+      />
+
+      <CustomerDeliveryModal
+        open={deliveryOrder !== null}
+        onClose={() => setDeliveryOrder(null)}
+        delivery={viewedDelivery}
+        orderConfirmed={!!deliveryOrder && deliveryOrder.status !== OrderStatus.Pending && deliveryOrder.status !== OrderStatus.Rejected}
+        deliveryAddress={deliveryOrder ? `${deliveryOrder.region}, ${deliveryOrder.district}` : ""}
       />
     </div>
   );

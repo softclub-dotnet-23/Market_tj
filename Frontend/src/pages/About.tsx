@@ -6,6 +6,7 @@ import { SectionHeading } from "@/components/ui/SectionHeading";
 import { AnimatedCounter } from "@/components/ui/AnimatedCounter";
 import { PhotoTile } from "@/components/ui/PhotoTile";
 import { CTASection } from "@/components/sections/CTASection";
+import { DeliveryFleet } from "@/components/sections/DeliveryFleet";
 import { useAboutValues, useImpactStats, useTimeline, useTeamValues } from "@/data/about";
 import { useCategories } from "@/data/categories";
 import { categoryPhotos } from "@/assets/photos";
@@ -112,6 +113,8 @@ export function About() {
           })}
         </div>
       </section>
+
+      <DeliveryFleet />
 
       <section className="bg-stone-50/60 py-14 sm:py-20 dark:bg-stone-900/40">
         <div className="container-page">

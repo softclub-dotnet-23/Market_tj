@@ -54,7 +54,11 @@
       "payment": "Пардохт",
       "createdAt": "Сана ва вақти фармоиш",
       "receivedAt": "Сана ва вақти гирифтан",
-      "review": "Шарҳ"
+      "review": "Шарҳ",
+      "delivery": "Расонидан"
+    },
+    "delivery": {
+      "detailsAction": "Тафсилот"
     },
     "farmerLabel": "Деҳқон #{{id}}",
     "notReceivedYet": "Ҳанӯз гирифта нашудааст",

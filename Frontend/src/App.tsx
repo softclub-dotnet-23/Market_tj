@@ -9,6 +9,7 @@ import { AppChrome } from "@/components/layout/AppChrome";
 import { AdminLayout } from "@/components/layout/AdminLayout";
 import { FarmerLayout } from "@/components/layout/FarmerLayout";
 import { CustomerLayout } from "@/components/layout/CustomerLayout";
+import { CourierLayout } from "@/components/layout/CourierLayout";
 import { ProtectedRoute } from "@/components/layout/ProtectedRoute";
 import { PageLoader } from "@/components/layout/PageLoader";
 import { Home } from "@/pages/Home";
@@ -56,6 +57,8 @@ const CustomerMessages = lazy(() => import("@/pages/CustomerMessages").then((m) 
 const CustomerProfile = lazy(() => import("@/pages/CustomerProfile").then((m) => ({ default: m.CustomerProfile })));
 const CustomerNotifications = lazy(() => import("@/pages/CustomerNotifications").then((m) => ({ default: m.CustomerNotifications })));
 const Wallet = lazy(() => import("@/pages/Wallet").then((m) => ({ default: m.Wallet })));
+const CourierDeliveries = lazy(() => import("@/pages/CourierDeliveries").then((m) => ({ default: m.CourierDeliveries })));
+const CourierNotifications = lazy(() => import("@/pages/CourierNotifications").then((m) => ({ default: m.CourierNotifications })));
 
 function App() {
   return (
@@ -116,6 +119,14 @@ function App() {
                       <Route path="notifications" element={<CustomerNotifications />} />
                       <Route path="profile" element={<CustomerProfile />} />
                       <Route path="*" element={<Navigate to="/customer" replace />} />
+                    </Route>
+                  </Route>
+
+                  <Route element={<ProtectedRoute role="Courier" />}>
+                    <Route path="courier" element={<CourierLayout />}>
+                      <Route index element={<CourierDeliveries />} />
+                      <Route path="notifications" element={<CourierNotifications />} />
+                      <Route path="*" element={<Navigate to="/courier" replace />} />
                     </Route>
                   </Route>
 

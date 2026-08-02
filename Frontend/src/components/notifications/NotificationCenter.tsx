@@ -12,7 +12,7 @@ import { markNotificationRead, notifyNotificationsChanged, useFarmerNotification
 // непрочитанное автоматически помечается прочитанным, а бейдж в сайдбаре
 // (другой вызов того же хука в Layout) обновляется сразу через
 // notifyNotificationsChanged(), без перезагрузки страницы.
-export function NotificationCenter({ ns }: { ns: "farmer" | "admin" | "customer" }) {
+export function NotificationCenter({ ns }: { ns: "farmer" | "admin" | "customer" | "courier" }) {
   const { t } = useTranslation(ns);
   const { user } = useAuth();
   const { notifications, loading, error } = useFarmerNotifications(user?.userId ?? null);

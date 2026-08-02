@@ -297,6 +297,10 @@ namespace MarketTJ.Infrastructure.Migrations
                     b.Property<bool>("IsAvailable")
                         .HasColumnType("boolean");
 
+                    b.Property<decimal>("Rating")
+                        .HasPrecision(3, 2)
+                        .HasColumnType("numeric(3,2)");
+
                     b.Property<string>("Region")
                         .IsRequired()
                         .HasColumnType("text");
@@ -412,11 +416,38 @@ namespace MarketTJ.Infrastructure.Migrations
 
                     NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<int>("Id"));
 
+                    b.Property<DateTime?>("AcceptedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<string>("AdminNote")
+                        .HasColumnType("text");
+
                     b.Property<DateTime?>("AssignedAt")
                         .HasColumnType("timestamp with time zone");
 
+                    b.Property<string>("CancellationReason")
+                        .HasColumnType("text");
+
+                    b.Property<DateTime?>("CancelledAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<string>("ClientNote")
+                        .HasColumnType("text");
+
+                    b.Property<int>("ConfirmationAttempts")
+                        .HasColumnType("integer");
+
+                    b.Property<string>("ConfirmationCode")
+                        .HasColumnType("text");
+
+                    b.Property<string>("ConfirmationCodeHash")
+                        .HasColumnType("text");
+
                     b.Property<int?>("CourierId")
                         .HasColumnType("integer");
+
+                    b.Property<string>("CourierNote")
+                        .HasColumnType("text");
 
                     b.Property<DateTime>("CreatedAt")
                         .HasColumnType("timestamp with time zone");
@@ -432,6 +463,15 @@ namespace MarketTJ.Infrastructure.Migrations
                         .HasPrecision(18, 2)
                         .HasColumnType("numeric(18,2)");
 
+                    b.Property<DateTime?>("EstimatedDeliveryAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<DateTime?>("EstimatedPickupAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<string>("FarmerNote")
+                        .HasColumnType("text");
+
                     b.Property<int>("OrderId")
                         .HasColumnType("integer");
 
@@ -440,6 +480,9 @@ namespace MarketTJ.Infrastructure.Migrations
 
                     b.Property<string>("PickupAddress")
                         .IsRequired()
+                        .HasColumnType("text");
+
+                    b.Property<string>("ProblemDescription")
                         .HasColumnType("text");
 
                     b.Property<int>("Status")

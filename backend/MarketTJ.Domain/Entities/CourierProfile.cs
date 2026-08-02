@@ -10,6 +10,12 @@ public class CourierProfile
     public string District { get; set; } = null!;
     public bool IsAvailable { get; set; }
     public bool IsActive { get; set; }
+
+    // Рейтинг курьера — по прямому запросу пользователя (2026-08-02).
+    // Сбора оценок от покупателя пока нет (не запрашивалось отдельно), поле
+    // хранит текущее значение, по умолчанию 5.0 у новых курьеров.
+    public decimal Rating { get; set; } = 5.0m;
+
     public DateTime CreatedAt { get; set; }
     public DateTime UpdatedAt { get; set; }
 
