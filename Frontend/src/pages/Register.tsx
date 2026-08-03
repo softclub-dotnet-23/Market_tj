@@ -4,8 +4,8 @@ import { Controller, useForm } from "react-hook-form";
 import { motion, AnimatePresence } from "framer-motion";
 import { toast } from "sonner";
 import { useTranslation } from "react-i18next";
-import { ArrowLeft, Eye, EyeOff, KeyRound, Lock, Mail, MapPin, Sprout, User, UserRound } from "lucide-react";
-import { Input, Checkbox } from "@/components/ui/Field";
+import { ArrowLeft, Eye, EyeOff, KeyRound, Lock, Mail, MapPin, Sprout, Truck, User, UserRound } from "lucide-react";
+import { Input, Checkbox, Select } from "@/components/ui/Field";
 import { Autocomplete } from "@/components/ui/Autocomplete";
 import { PhoneInput } from "@/components/ui/PhoneInput";
 import { Button } from "@/components/ui/Button";
@@ -13,16 +13,22 @@ import { AuthPanel } from "@/components/layout/AuthPanel";
 import { useAuth, sendVerificationCode, verifyEmailCode } from "@/context/AuthContext";
 import { createFarmerProfile } from "@/data/farmer";
 import { createCustomerProfile } from "@/data/customer";
+import { createCourierProfile } from "@/data/courier";
 import { TAJIKISTAN_REGION_SUGGESTIONS, getDistrictsForRegion } from "@/data/tajikistanGeo";
 import { ApiError } from "@/lib/api";
 import { cn } from "@/lib/utils";
 
-type Role = "customer" | "farmer";
+type Role = "customer" | "farmer" | "courier";
 type Step = "info" | "code" | "details";
 
 // UserRole на бэкенде сериализуется числом (нет JsonStringEnumConverter) —
 // Admin: 1, Farmer: 2, Customer: 3, Courier: 4 (см. data/adminEntities.ts).
-const ROLE_VALUES: Record<Role, number> = { farmer: 2, customer: 3 };
+const ROLE_VALUES: Record<Role, number> = { farmer: 2, customer: 3, courier: 4 };
+
+// Значения хранятся как канонические русские строки независимо от локали
+// интерфейса (та же схема, что qualityGrade в FarmerProducts.tsx) — метка
+// переводится через t(), значение в БД — нет.
+const TRANSPORT_TYPES = ["Автомобиль", "Мотоцикл", "Велосипед", "Пешком"] as const;
 
 const RESEND_COOLDOWN_SECONDS = 60;
 
@@ -35,6 +41,8 @@ interface RegisterForm {
   farmName: string;
   village: string;
   address: string;
+  transportType: string;
+  vehicleNumber: string;
   password: string;
   confirmPassword: string;
   agree: boolean;
@@ -46,6 +54,7 @@ export function Register() {
   const ROLES: { id: Role; title: string; icon: typeof UserRound }[] = [
     { id: "customer", title: t("pages:register.roleCustomerTitle"), icon: UserRound },
     { id: "farmer", title: t("pages:register.roleFarmerTitle"), icon: Sprout },
+    { id: "courier", title: t("pages:register.roleCourierTitle"), icon: Truck },
   ];
 
   const [role, setRole] = useState<Role>("customer");
@@ -146,6 +155,14 @@ export function Register() {
           address: values.address,
           description: null,
         });
+      } else if (role === "courier") {
+        await createCourierProfile({
+          userId: user.userId,
+          transportType: values.transportType,
+          vehicleNumber: values.vehicleNumber,
+          region: values.region,
+          district: values.district,
+        });
       } else {
         await createCustomerProfile({
           userId: user.userId,
@@ -158,7 +175,7 @@ export function Register() {
       // Настоящая перезагрузка страницы — та же причина, что и в Login.tsx:
       // браузер надёжно распознаёт "форма отправлена → успех" и предлагает
       // сохранить пароль только при реальной навигации, не SPA-переходе.
-      window.location.href = role === "farmer" ? "/farmer" : "/customer";
+      window.location.href = role === "farmer" ? "/farmer" : role === "courier" ? "/courier" : "/customer";
     } catch (err) {
       const message = err instanceof ApiError ? err.message : t("pages:register.registerErrorFallback");
       toast.error(message, { id: "register-toast" });
@@ -192,7 +209,7 @@ export function Register() {
           <p className="mt-0.5 text-xs text-stone-500 dark:text-stone-400">{t("pages:register.subtitle")}</p>
 
           {step === "info" && (
-            <div className="mt-3 grid grid-cols-2 gap-1.5 rounded-xl bg-stone-100 p-1 dark:bg-stone-800">
+            <div className="mt-3 grid grid-cols-3 gap-1.5 rounded-xl bg-stone-100 p-1 dark:bg-stone-800">
               {ROLES.map((r) => (
                 <button
                   key={r.id}
@@ -389,6 +406,39 @@ export function Register() {
                   </>
                 )}
 
+                {role === "courier" && (
+                  <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+                    <Controller
+                      name="transportType"
+                      control={control}
+                      rules={{ required: t("pages:register.transportTypeRequired") }}
+                      render={({ field, fieldState }) => (
+                        <Select
+                          label={t("pages:register.transportTypeLabel")}
+                          error={fieldState.error?.message}
+                          {...field}
+                        >
+                          <option value="" disabled>
+                            {t("pages:register.transportTypePlaceholder")}
+                          </option>
+                          {TRANSPORT_TYPES.map((type) => (
+                            <option key={type} value={type}>
+                              {t(`pages:register.transportTypeOptions.${type}`)}
+                            </option>
+                          ))}
+                        </Select>
+                      )}
+                    />
+                    <Input
+                      label={t("pages:register.vehicleNumberLabel")}
+                      placeholder={t("pages:register.vehicleNumberPlaceholder")}
+                      leftIcon={<Truck size={16} />}
+                      error={errors.vehicleNumber?.message}
+                      {...register("vehicleNumber", { required: t("pages:register.vehicleNumberRequired") })}
+                    />
+                  </div>
+                )}
+
                 <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
                   <Input
                     label={t("pages:login.passwordLabel")}
@@ -435,7 +485,11 @@ export function Register() {
                 />
 
                 <Button type="submit" size="md" loading={isSubmitting}>
-                  {role === "farmer" ? t("pages:register.submitFarmer") : t("common:auth.register")}
+                  {role === "farmer"
+                    ? t("pages:register.submitFarmer")
+                    : role === "courier"
+                      ? t("pages:register.submitCourier")
+                      : t("common:auth.register")}
                 </Button>
               </motion.form>
             )}

@@ -90,6 +90,7 @@
     "subtitle": "Join Market.tj in a couple of minutes",
     "roleCustomerTitle": "I'm a buyer",
     "roleFarmerTitle": "I'm a farmer",
+    "roleCourierTitle": "I'm a courier",
     "fullNameLabel": "Full name",
     "fullNamePlaceholder": "Your first and last name",
     "fullNameRequired": "Enter your name",
@@ -124,6 +125,19 @@
     "addressLabel": "Address",
     "addressPlaceholder": "Street, house number",
     "addressRequired": "Enter your address",
+    "transportTypeLabel": "Vehicle type",
+    "transportTypePlaceholder": "Select vehicle type",
+    "transportTypeRequired": "Select your vehicle type",
+    "transportTypeOptions": {
+      "Автомобиль": "Car",
+      "Мотоцикл": "Motorcycle",
+      "Велосипед": "Bicycle",
+      "Пешком": "On foot"
+    },
+    "vehicleNumberLabel": "Vehicle number",
+    "vehicleNumberPlaceholder": "e.g. 01 A 123 AA",
+    "vehicleNumberRequired": "Enter your vehicle number",
+    "submitCourier": "Sign up as a courier",
     "registerErrorFallback": "Couldn't sign up. Please try again."
   },
   "catalog": {

@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { apiGet, apiPut } from "@/lib/api";
+import { apiGet, apiPost, apiPut } from "@/lib/api";
 import { useAuth } from "@/context/AuthContext";
 
 export interface CourierProfileDto {
@@ -46,6 +46,23 @@ function useAsync<T>(fetcher: () => Promise<T>, deps: unknown[]): AsyncState<T> 
   }, deps);
 
   return state;
+}
+
+export interface CreateCourierProfilePayload {
+  userId: number;
+  transportType: string;
+  vehicleNumber: string;
+  region: string;
+  district: string;
+}
+
+// Регистрация курьера (Register.tsx) — тот же приём, что createFarmerProfile/
+// createCustomerProfile: аккаунт уже создан и токен выдан отдельным шагом
+// (POST /auth/register), здесь только заполняем профиль. isAvailable=false —
+// новый курьер по умолчанию не в сети, пока сам не включит в своей панели;
+// isActive=true — профиль сразу рабочий (не заблокирован).
+export function createCourierProfile(payload: CreateCourierProfilePayload) {
+  return apiPost<string>("/courier-profiles", { ...payload, isAvailable: false, isActive: true });
 }
 
 // /courier-profiles (GetAll) уже фильтрует на бэкенде до "только свой профиль"

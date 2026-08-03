@@ -11,7 +11,9 @@ public static partial class AuthValidator
     [GeneratedRegex(@"^[^@\s]+@[^@\s]+\.[^@\s]+$")]
     private static partial Regex EmailRegexPattern();
 
-    // Раздел 23 ТЗ (Этап 2): самостоятельная регистрация — только Customer/Farmer.
+    // Раздел 23 ТЗ (Этап 2): самостоятельная регистрация — Customer/Farmer/Courier
+    // (Courier добавлен по прямому запросу пользователя — форма регистрации
+    // курьера наравне с остальными ролями). Admin создаётся только вручную.
     public static Result<string>? ValidateRegister(RegisterRequestDto dto)
     {
         if (string.IsNullOrWhiteSpace(dto.FullName))
@@ -35,8 +37,8 @@ public static partial class AuthValidator
         if (dto.Password.Length < 6)
             return Result<string>.Fail("Пароль должен быть не короче 6 символов", ErrorType.Validation);
 
-        if (dto.Role is not (UserRole.Customer or UserRole.Farmer))
-            return Result<string>.Fail("Самостоятельная регистрация доступна только для роли Customer или Farmer", ErrorType.Validation);
+        if (dto.Role is not (UserRole.Customer or UserRole.Farmer or UserRole.Courier))
+            return Result<string>.Fail("Самостоятельная регистрация доступна только для роли Customer, Farmer или Courier", ErrorType.Validation);
 
         return null;
     }

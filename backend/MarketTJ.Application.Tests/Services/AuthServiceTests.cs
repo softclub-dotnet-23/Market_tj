@@ -125,6 +125,20 @@ public class AuthServiceTests
     }
 
     [Fact]
+    public async Task RegisterAsync_CourierRole_AddsUserAndIssuesTokens()
+    {
+        var dto = ValidRegisterDto();
+        dto.Role = UserRole.Courier;
+        _userRepository.Setup(r => r.GetByEmailAsync(It.IsAny<string>())).ReturnsAsync((User?)null);
+        _userRepository.Setup(r => r.AddAsync(It.IsAny<User>())).Callback<User>(u => u.Id = 42).Returns(Task.CompletedTask);
+
+        var result = await _service.RegisterAsync(dto);
+
+        Assert.True(result.IsSuccess);
+        _userRepository.Verify(r => r.AddAsync(It.Is<User>(u => u.Role == UserRole.Courier)), Times.Once);
+    }
+
+    [Fact]
     public async Task RegisterAsync_ShortPassword_ReturnsValidationError()
     {
         var dto = ValidRegisterDto();
