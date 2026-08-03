@@ -6,7 +6,7 @@ import { Bot, Check, Loader2, Send, Sparkles, X } from "lucide-react";
 import { type AssistantActionDto, type AssistantIntent, askAssistant, executeAssistantAction } from "@/data/aiAssistant";
 import { getCatalogProductById } from "@/data/catalogStore";
 import { useAuth } from "@/context/AuthContext";
-import { resolveMediaUrl } from "@/lib/api";
+import { ApiError, resolveMediaUrl } from "@/lib/api";
 import { cn, formatSomoni } from "@/lib/utils";
 
 type ActionStatus = "idle" | "loading" | "done" | "cancelled" | "error";
@@ -26,6 +26,60 @@ interface AssistantMessage {
 // админ- и фермер-панелях виджет тоже нужен (роль-осознанные инструменты,
 // раздел 38 ТЗ), поэтому в отличие от первой версии их здесь нет.
 const HIDDEN_PATH_PREFIXES = ["/login", "/register", "/forgot-password"];
+
+// Те же списки, что и в AiAssistantService.cs (GuestNavigationPaths/
+// CustomerNavigationPaths/FarmerNavigationPaths/AdminNavigationPaths) — модель
+// уже сверяется с этим списком на сервере (2026-08-03), но это ВТОРАЯ,
+// независимая проверка на клиенте (defense in depth): бэкенд не выполняет
+// навигацию сам, только предлагает targetPath, а react-router здесь его
+// реально исполнит — доверять строке, прилетевшей из LLM-ответа, без
+// повторной проверки нельзя (ошибка модели или prompt injection через
+// историю диалога так и не приведут к уходу с допустимых для роли страниц).
+const NAVIGATION_PATHS_BY_ROLE: Record<"guest" | "Customer" | "Farmer" | "Admin", string[]> = {
+  guest: ["/", "/catalog", "/about", "/contact"],
+  Customer: [
+    "/catalog",
+    "/customer",
+    "/customer/orders",
+    "/customer/wallet",
+    "/customer/messages",
+    "/customer/notifications",
+    "/customer/profile",
+    "/checkout",
+  ],
+  Farmer: [
+    "/farmer",
+    "/farmer/products",
+    "/farmer/orders",
+    "/farmer/messages",
+    "/farmer/reviews",
+    "/farmer/profile",
+    "/farmer/documents",
+    "/farmer/wallet",
+    "/farmer/notifications",
+  ],
+  Admin: [
+    "/admin",
+    "/admin/orders",
+    "/admin/catalog",
+    "/admin/farmers",
+    "/admin/farmer-documents",
+    "/admin/couriers",
+    "/admin/delivery-zones",
+    "/admin/users",
+    "/admin/reviews",
+    "/admin/commissions",
+    "/admin/support",
+    "/admin/notifications",
+    "/admin/settings",
+    "/admin/profile",
+  ],
+};
+
+// Небольшая задержка перед самим переходом — пользователь должен успеть
+// увидеть подтверждающий текст ассистента ("Открываю каталог...") в чате,
+// прежде чем страница у него под курсором сменится.
+const NAVIGATE_ACTION_DELAY_MS = 700;
 
 let messageIdCounter = 0;
 
@@ -57,6 +111,23 @@ export function AiAssistantWidget() {
     setMessages((prev) => [...prev, { ...msg, id: ++messageIdCounter }]);
   };
 
+  // Раньше здесь показывался "сырой" err.message — это всегда было сообщение
+  // с бэкенда (ApiError extends Error, поэтому `instanceof Error` истинно
+  // почти для любой ошибки, включая сетевые), то есть не локализованный
+  // фолбэк t("error") практически никогда не срабатывал, а не-русскоязычный
+  // пользователь видел русский текст бэкенда. 401/403 — единственный случай,
+  // где текст ApiError ("Требуется авторизация") сам уже локализуемый через
+  // проверку статуса ниже был бы избыточен, но такой сценарий здесь не
+  // ожидается (виджет скрыт для неавторизованных сценариев, где это важно).
+  // 429 (см. ErrorType.TooManyRequests на бэкенде — AiAssistantService.AskAsync,
+  // GroqRateLimitedException) — единственный случай, который стоит показывать
+  // отдельно от общего "недоступен", т.к. у него есть понятная причина и
+  // временный характер.
+  const resolveAssistantErrorText = (err: unknown): string => {
+    if (err instanceof ApiError && err.status === 429) return t("rateLimited");
+    return t("error");
+  };
+
   const handleSend = async () => {
     const text = draft.trim();
     if (!text || sending) return;
@@ -77,8 +148,11 @@ export function AiAssistantWidget() {
         action: res.action,
         actionStatus: res.action ? "idle" : undefined,
       });
+      if (res.intent === "navigate" && res.action?.type === "navigate") {
+        goToNavigateTarget(res.action.params.targetPath);
+      }
     } catch (err) {
-      pushMessage({ role: "assistant", text: err instanceof Error ? err.message : t("error") });
+      pushMessage({ role: "assistant", text: resolveAssistantErrorText(err) });
     } finally {
       setSending(false);
     }
@@ -92,7 +166,7 @@ export function AiAssistantWidget() {
       pushMessage({ role: "assistant", text: resultMessage });
     } catch (err) {
       setMessages((prev) => prev.map((m) => (m.id === messageId ? { ...m, actionStatus: "error" } : m)));
-      pushMessage({ role: "assistant", text: err instanceof Error ? err.message : t("error") });
+      pushMessage({ role: "assistant", text: resolveAssistantErrorText(err) });
     }
   };
 
@@ -120,6 +194,26 @@ export function AiAssistantWidget() {
   const goToOrders = () => {
     setOpen(false);
     navigate("/customer/orders");
+  };
+
+  // Роль "guest" — тот же ключ, что бэкенд использует для гостя/неавторизованного
+  // покупателя при построении списка допустимых путей (см. AiAssistantService.
+  // BuildPromptAndTools — currentUser.UserId is null).
+  const roleKey = user?.role === "Farmer" || user?.role === "Admin" ? user.role : user ? "Customer" : "guest";
+
+  const goToNavigateTarget = (targetPath: string) => {
+    const allowed = NAVIGATION_PATHS_BY_ROLE[roleKey as keyof typeof NAVIGATION_PATHS_BY_ROLE];
+    if (!allowed.includes(targetPath)) {
+      // Модель предложила путь вне списка её роли (ошибка/prompt injection) —
+      // бэкенд уже подстраховывает тем же списком (AiAssistantService.
+      // NavigateTargetPathIsAllowed), но не полагаемся только на него.
+      console.warn(`AI-ассистент предложил недопустимый путь навигации: ${targetPath}`);
+      return;
+    }
+    window.setTimeout(() => {
+      setOpen(false);
+      navigate(targetPath);
+    }, NAVIGATE_ACTION_DELAY_MS);
   };
 
   return (

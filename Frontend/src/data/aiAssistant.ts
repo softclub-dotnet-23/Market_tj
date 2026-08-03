@@ -1,6 +1,6 @@
 import { apiPost } from "@/lib/api";
 
-export type AssistantIntent = "product" | "category" | "cart" | "orders" | "none" | "info" | "action_pending";
+export type AssistantIntent = "product" | "category" | "cart" | "orders" | "none" | "info" | "action_pending" | "navigate";
 
 export interface AssistantActionDto {
   type: string;
