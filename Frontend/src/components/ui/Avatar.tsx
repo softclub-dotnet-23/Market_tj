@@ -1,3 +1,4 @@
+import { useState } from "react";
 import { cn } from "@/lib/utils";
 
 const PALETTES = [
@@ -33,12 +34,22 @@ interface AvatarProps {
 }
 
 export function Avatar({ name, src, size = 44, className, ring = false }: AvatarProps) {
-  if (src) {
+  // Аватары, загруженные ДО переезда с локального диска на Cloudflare R2
+  // (2026-08-02), всё ещё хранят относительный путь на файловую систему
+  // контейнера backend'а — Railway пересоздаёт контейнер при каждом
+  // редеплое, эти файлы физически исчезли. Без этого onError такой src
+  // рендерил бы сломанную иконку картинки НАВСЕГДА, а не аккуратную
+  // плашку с инициалами — найдено при диагностике "аватарка не
+  // отображается" (2026-08-03).
+  const [failed, setFailed] = useState(false);
+
+  if (src && !failed) {
     return (
       <img
         src={src}
         alt={name}
         loading="lazy"
+        onError={() => setFailed(true)}
         className={cn("shrink-0 rounded-full object-cover", ring && "ring-4 ring-white dark:ring-stone-900", className)}
         style={{ width: size, height: size }}
       />
