@@ -1,10 +1,30 @@
 {
   "nav": {
-    "myDeliveries": "My deliveries"
+    "myDeliveries": "My deliveries",
+    "profile": "Profile"
   },
   "logout": "Log out",
   "notifications": "Notifications",
   "courierName": "Courier",
+  "profile": {
+    "errorTitle": "Failed to load profile",
+    "errorDescription": "Check your connection to the server and try again.",
+    "availableOn": "Available for orders",
+    "availableOff": "Unavailable",
+    "availabilityHint": "The admin only assigns deliveries to available couriers",
+    "availableOnSuccess": "You're available for orders again",
+    "availableOffSuccess": "You're now marked unavailable",
+    "availabilityError": "Failed to change availability status",
+    "detailsTitle": "About",
+    "transport": "Transport",
+    "region": "Working area",
+    "stats": {
+      "today": "Deliveries today",
+      "week": "This week",
+      "total": "Total delivered",
+      "active": "Currently active"
+    }
+  },
   "errorTitle": "Failed to load deliveries",
   "errorDescription": "Check your connection to the server and try again.",
   "emptyTitle": "No deliveries yet",

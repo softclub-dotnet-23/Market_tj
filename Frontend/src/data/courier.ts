@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { apiGet } from "@/lib/api";
+import { apiGet, apiPut } from "@/lib/api";
 import { useAuth } from "@/context/AuthContext";
 
 export interface CourierProfileDto {
@@ -56,4 +56,21 @@ export function useCourierProfile(refreshKey = 0) {
   const { data: profiles, loading, error } = useAsync(() => apiGet<CourierProfileDto[]>("/courier-profiles"), [refreshKey]);
   const profile = profiles?.find((p) => p.userId === user?.userId) ?? null;
   return { profile, loading, error };
+}
+
+// PUT /courier-profiles/{id} — общий (админ+курьер) эндпоинт, требует ВЕСЬ
+// объект, а не только изменённое поле. Собираем payload из уже загруженного
+// профиля и меняем только isAvailable — не даём вызывающему коду случайно
+// задеть Region/TransportType/IsActive при переключении доступности.
+export function setCourierAvailability(profile: CourierProfileDto, isAvailable: boolean) {
+  return apiPut<string>(`/courier-profiles/${profile.id}`, {
+    id: profile.id,
+    userId: profile.userId,
+    transportType: profile.transportType,
+    vehicleNumber: profile.vehicleNumber,
+    region: profile.region,
+    district: profile.district,
+    isAvailable,
+    isActive: profile.isActive,
+  });
 }

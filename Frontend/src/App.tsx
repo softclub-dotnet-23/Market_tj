@@ -58,6 +58,7 @@ const CustomerProfile = lazy(() => import("@/pages/CustomerProfile").then((m) =>
 const CustomerNotifications = lazy(() => import("@/pages/CustomerNotifications").then((m) => ({ default: m.CustomerNotifications })));
 const Wallet = lazy(() => import("@/pages/Wallet").then((m) => ({ default: m.Wallet })));
 const CourierDeliveries = lazy(() => import("@/pages/CourierDeliveries").then((m) => ({ default: m.CourierDeliveries })));
+const CourierProfile = lazy(() => import("@/pages/CourierProfile").then((m) => ({ default: m.CourierProfile })));
 const CourierNotifications = lazy(() => import("@/pages/CourierNotifications").then((m) => ({ default: m.CourierNotifications })));
 
 function App() {
@@ -125,6 +126,7 @@ function App() {
                   <Route element={<ProtectedRoute role="Courier" />}>
                     <Route path="courier" element={<CourierLayout />}>
                       <Route index element={<CourierDeliveries />} />
+                      <Route path="profile" element={<CourierProfile />} />
                       <Route path="notifications" element={<CourierNotifications />} />
                       <Route path="*" element={<Navigate to="/courier" replace />} />
                     </Route>

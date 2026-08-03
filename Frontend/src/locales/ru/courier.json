@@ -1,10 +1,30 @@
 {
   "nav": {
-    "myDeliveries": "Мои доставки"
+    "myDeliveries": "Мои доставки",
+    "profile": "Профиль"
   },
   "logout": "Выйти",
   "notifications": "Уведомления",
   "courierName": "Курьер",
+  "profile": {
+    "errorTitle": "Не удалось загрузить профиль",
+    "errorDescription": "Проверьте подключение к серверу и попробуйте снова.",
+    "availableOn": "Доступен для заказов",
+    "availableOff": "Недоступен",
+    "availabilityHint": "Админ назначает доставки только доступным курьерам",
+    "availableOnSuccess": "Вы снова доступны для заказов",
+    "availableOffSuccess": "Вы отмечены как недоступный",
+    "availabilityError": "Не удалось изменить статус доступности",
+    "detailsTitle": "О себе",
+    "transport": "Транспорт",
+    "region": "Регион работы",
+    "stats": {
+      "today": "Доставок сегодня",
+      "week": "За эту неделю",
+      "total": "Всего доставлено",
+      "active": "Сейчас в работе"
+    }
+  },
   "errorTitle": "Не удалось загрузить доставки",
   "errorDescription": "Проверьте подключение к серверу и попробуйте снова.",
   "emptyTitle": "Пока нет доставок",

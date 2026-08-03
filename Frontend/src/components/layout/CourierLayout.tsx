@@ -1,8 +1,10 @@
 import { useEffect, useRef, useState } from "react";
 import { NavLink, Outlet, useLocation, useNavigate } from "react-router-dom";
 import { useTranslation } from "react-i18next";
-import { Bell, ChevronDown, Leaf, LogOut, Menu, Truck } from "lucide-react";
+import { toast } from "sonner";
+import { Bell, ChevronDown, Leaf, LogOut, Menu, Truck, User } from "lucide-react";
 import { Avatar } from "@/components/ui/Avatar";
+import { Switch } from "@/components/ui/Switch";
 import { PanelMobileDrawer } from "@/components/layout/PanelMobileDrawer";
 import { LanguageSwitcher } from "@/components/ui/LanguageSwitcher";
 import { ThemeToggle } from "@/components/ui/ThemeToggle";
@@ -10,6 +12,7 @@ import { useAuth } from "@/context/AuthContext";
 import { resolveMediaUrl } from "@/lib/api";
 import { useFarmerNotifications } from "@/data/farmer";
 import { useMyDeliveries } from "@/data/delivery";
+import { useCourierProfile, setCourierAvailability } from "@/data/courier";
 import { cn } from "@/lib/utils";
 
 // Минимальная курьерская панель — по прямому запросу пользователя (2026-08-02):
@@ -30,6 +33,27 @@ export function CourierLayout() {
   const unreadCount = notifications?.filter((n) => !n.isRead).length ?? 0;
   const { deliveries } = useMyDeliveries();
   const activeDeliveriesCount = deliveries?.filter((d) => d.status !== 9 && d.status !== 10).length ?? 0;
+  const [availabilityRefreshKey, setAvailabilityRefreshKey] = useState(0);
+  const [togglingAvailability, setTogglingAvailability] = useState(false);
+  const { profile } = useCourierProfile(availabilityRefreshKey);
+
+  // Переключатель "доступен для заказов" вынесен прямо в шапку — по
+  // прямому запросу пользователя (2026-08-03): курьеру должно быть заметно
+  // и легко переключать статус, не заходя отдельно в раздел профиля.
+  const handleToggleAvailability = async () => {
+    if (!profile) return;
+    setTogglingAvailability(true);
+    const next = !profile.isAvailable;
+    try {
+      await setCourierAvailability(profile, next);
+      toast.success(next ? t("profile.availableOnSuccess") : t("profile.availableOffSuccess"));
+      setAvailabilityRefreshKey((k) => k + 1);
+    } catch (err) {
+      toast.error(t("profile.availabilityError"), { description: err instanceof Error ? err.message : undefined });
+    } finally {
+      setTogglingAvailability(false);
+    }
+  };
 
   useEffect(() => {
     function onClick(e: MouseEvent) {
@@ -76,6 +100,29 @@ export function CourierLayout() {
               {activeDeliveriesCount}
             </span>
           )}
+        </NavLink>
+      </li>
+      <li>
+        <NavLink
+          to="/courier/profile"
+          className={cn(
+            "group flex items-center gap-3 rounded-2xl px-2.5 py-2 text-sm font-medium transition-all",
+            location.pathname === "/courier/profile"
+              ? "bg-grove-50 text-grove-700 dark:bg-grove-950/70 dark:text-grove-300"
+              : "text-stone-600 hover:bg-stone-50 dark:text-stone-300 dark:hover:bg-stone-800",
+          )}
+        >
+          <span
+            className={cn(
+              "flex h-8 w-8 shrink-0 items-center justify-center rounded-xl transition-all",
+              location.pathname === "/courier/profile"
+                ? "bg-linear-to-br from-grove-500 to-grove-700 text-white shadow-[0_6px_14px_-4px_rgba(59,168,90,0.55)]"
+                : "bg-stone-100 text-stone-500 group-hover:bg-stone-200 group-hover:text-stone-700 dark:bg-stone-800 dark:text-stone-400 dark:group-hover:bg-stone-700 dark:group-hover:text-stone-200",
+            )}
+          >
+            <User size={16} />
+          </span>
+          <span className="flex-1 truncate">{t("nav.profile")}</span>
         </NavLink>
       </li>
     </ul>
@@ -145,6 +192,32 @@ export function CourierLayout() {
           </div>
 
           <div className="flex shrink-0 items-center gap-1 sm:gap-3">
+            {profile && (
+              <div
+                className={cn(
+                  "hidden items-center gap-2 rounded-full border px-3 py-1.5 sm:flex",
+                  profile.isAvailable
+                    ? "border-grove-200 bg-grove-50 dark:border-grove-900 dark:bg-grove-950/40"
+                    : "border-stone-200 bg-stone-50 dark:border-stone-700 dark:bg-stone-800/60",
+                )}
+              >
+                <span
+                  className={cn(
+                    "text-xs font-semibold whitespace-nowrap",
+                    profile.isAvailable ? "text-grove-700 dark:text-grove-400" : "text-stone-500 dark:text-stone-400",
+                  )}
+                >
+                  {profile.isAvailable ? t("profile.availableOn") : t("profile.availableOff")}
+                </span>
+                <Switch
+                  checked={profile.isAvailable}
+                  onChange={handleToggleAvailability}
+                  disabled={togglingAvailability}
+                  size="sm"
+                  aria-label={t("profile.availableOn")}
+                />
+              </div>
+            )}
             <ThemeToggle />
             <LanguageSwitcher />
             <button

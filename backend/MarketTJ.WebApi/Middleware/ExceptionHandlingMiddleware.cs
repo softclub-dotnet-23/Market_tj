@@ -21,6 +21,18 @@ public class ExceptionHandlingMiddleware(
         {
             logger.LogError(ex, "[{TraceId}] Необработанное исключение при обработке {Method} {Path}", context.TraceIdentifier, context.Request.Method, context.Request.Path);
 
+            // Если ответ уже начал отправляться (заголовки ушли, часть тела
+            // записана) — StatusCode/ContentType менять поздно, это бросило
+            // бы второе необработанное исключение поверх первого, оставляя
+            // клиента с оборванным телом ("Unexpected end of JSON input").
+            // В этом случае самое безопасное — не трогать response и просто
+            // залогировать (уже сделано выше), дав соединению закрыться как
+            // есть, а не пытаться дописать JSON поверх частично отправленного.
+            if (context.Response.HasStarted)
+            {
+                return;
+            }
+
             context.Response.ContentType = "application/json";
             context.Response.StatusCode = StatusCodes.Status500InternalServerError;
 
