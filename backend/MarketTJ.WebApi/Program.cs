@@ -287,10 +287,21 @@ using (var scope = app.Services.CreateScope())
 await PlaintextPasswordFixup.RunAsync(app.Services);
 await Seeder.SeedAsync(app.Services);
 
-app.UseResponseCompression();
-
+// ExceptionHandlingMiddleware ДОЛЖЕН быть внешним по отношению к
+// UseResponseCompression, не наоборот (было наоборот — найдено при
+// диагностике "Unexpected end of JSON input" на фронтенде, 2026-08-03).
+// Если исключение происходит уже ПОСЛЕ того, как compression-middleware
+// начал кодировать/отдавать тело ответа, попытка catch-блока переустановить
+// StatusCode и записать новое JSON-тело — either бросает второе
+// (необработанное) исключение, either дописывает чистый JSON поверх уже
+// частично сжатого/отправленного потока — в обоих случаях клиент получает
+// оборванное/невалидное тело, которое `response.json()` не может распарсить.
+// Если ExceptionHandlingMiddleware — самый внешний слой, он перехватывает
+// исключение ДО того, как compression успевает что-либо записать.
 app.UseMiddleware<ExceptionHandlingMiddleware>();
 app.UseMiddleware<RequestLoggingMiddleware>();
+
+app.UseResponseCompression();
 
 // Swagger включён и в Production
 app.UseSwagger();

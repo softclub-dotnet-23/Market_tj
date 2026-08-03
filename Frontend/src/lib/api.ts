@@ -83,7 +83,19 @@ async function request<T>(path: string, init?: RequestInit): Promise<T> {
     throw new ApiError("Требуется авторизация", response.status, []);
   }
 
-  const body = (await response.json()) as ApiResponse<T>;
+  // Тело ответа может оказаться пустым/невалидным JSON не только из-за
+  // 401/403 (тот случай уже отдельно обработан выше) — например, если
+  // соединение оборвалось на середине потока (см. ExceptionHandlingMiddleware
+  // на бэкенде, 2026-08-03: раньше при исключении ПОСЛЕ начала отправки
+  // ответа клиент получал обрезанное тело). Без этого try/catch пользователь
+  // увидел бы сырой текст браузера вроде "Unexpected end of JSON input"
+  // вместо понятного сообщения.
+  let body: ApiResponse<T>;
+  try {
+    body = (await response.json()) as ApiResponse<T>;
+  } catch {
+    throw new ApiError("Сервер вернул пустой или повреждённый ответ, попробуйте ещё раз", response.status, []);
+  }
 
   if (!body.isSuccess) {
     throw new ApiError(body.message, response.status, body.errors);

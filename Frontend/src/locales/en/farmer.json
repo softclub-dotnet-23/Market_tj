@@ -180,6 +180,7 @@
       "address": "Delivery address",
       "amount": "Amount",
       "status": "Status",
+      "payment": "Payment",
       "delivery": "Delivery",
       "createdAt": "Order date & time",
       "receivedAt": "Received date & time"

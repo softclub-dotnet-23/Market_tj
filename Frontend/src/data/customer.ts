@@ -18,6 +18,10 @@ export const OrderStatus = {
   Cancelled: 11,
 } as const;
 
+// Гибридная оплата: оплата картой (Wallet, списание сразу) или наличными
+// курьеру (без списания, IsPaid=false до подтверждения при доставке).
+export const OrderPaymentMethod = { Card: 1, CashOnDelivery: 2 } as const;
+
 export interface CustomerProfileDto {
   id: number;
   userId: number;
@@ -46,6 +50,9 @@ export interface CustomerOrderDto {
   acceptedAt: string | null;
   completedAt: string | null;
   cancelledAt: string | null;
+  paymentMethod: number;
+  isPaid: boolean;
+  walletId: number | null;
 }
 
 interface AsyncState<T> {
@@ -153,6 +160,10 @@ export interface CreateOrderGroupPayload {
   deliveryAddress: string;
   customerComment: string | null;
   items: OrderItemPayload[];
+  // Card требует walletId (конкретная карта, выбранная на чекауте);
+  // CashOnDelivery — null, оплата наличными доступна и без единой карты.
+  paymentMethod: number;
+  walletId: number | null;
 }
 
 // У Order — один FarmerId (раздел 8.11 ТЗ), поэтому если корзина собрала
@@ -177,6 +188,8 @@ export async function submitCustomerOrder(customerProfileId: number, payload: Cr
     acceptedAt: null,
     completedAt: null,
     cancelledAt: null,
+    paymentMethod: payload.paymentMethod,
+    walletId: payload.walletId,
   });
 
   // POST /api/orders не возвращает id созданной записи (та же схема, что и у

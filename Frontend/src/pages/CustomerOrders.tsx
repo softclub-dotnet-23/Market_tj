@@ -8,6 +8,7 @@ import { EmptyState } from "@/components/ui/EmptyState";
 import { Pagination } from "@/components/ui/Pagination";
 import { ViewModeToggle, type OrdersViewMode } from "@/components/ui/ViewModeToggle";
 import { StatusBadge } from "@/components/ui/StatusBadge";
+import { PaymentBadge } from "@/components/ui/PaymentBadge";
 import { Button } from "@/components/ui/Button";
 import { OrderItemsPhotoList } from "@/components/ui/OrderItemsPhotoList";
 import { ReviewModal } from "@/components/customer/ReviewModal";
@@ -194,7 +195,10 @@ export function CustomerOrders() {
           </span>
         </div>
         <div className="flex flex-wrap items-center justify-between gap-3 pt-1">
-          {statusBadge(order)}
+          <div className="flex flex-wrap items-center gap-2">
+            {statusBadge(order)}
+            <PaymentBadge paymentMethod={order.paymentMethod} isPaid={order.isPaid} />
+          </div>
           {reviewAction(order)}
         </div>
         <div className="border-t border-stone-900/5 pt-3 dark:border-stone-100/5">{deliveryButton(order)}</div>
@@ -219,6 +223,7 @@ export function CustomerOrders() {
               <th className="px-6 py-4 font-medium">{t("orders.columns.address")}</th>
               <th className="px-6 py-4 font-medium">{t("orders.columns.amount")}</th>
               <th className="px-6 py-4 font-medium">{t("orders.columns.status")}</th>
+              <th className="px-6 py-4 font-medium">{t("orders.columns.payment")}</th>
               <th className="px-6 py-4 font-medium">{t("orders.columns.delivery")}</th>
               <th className="px-6 py-4 font-medium">{t("orders.columns.review")}</th>
             </tr>
@@ -247,6 +252,9 @@ export function CustomerOrders() {
                         {receivedAt ? formatDateTime(receivedAt) : t("orders.notReceivedYet")}
                       </span>
                     </div>
+                  </td>
+                  <td className="px-6 py-4">
+                    <PaymentBadge paymentMethod={order.paymentMethod} isPaid={order.isPaid} />
                   </td>
                   <td className="px-6 py-4">{deliveryButton(order)}</td>
                   <td className="px-6 py-4">{reviewAction(order)}</td>

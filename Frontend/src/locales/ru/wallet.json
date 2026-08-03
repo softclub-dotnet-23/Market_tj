@@ -5,8 +5,8 @@
     "description": "Проверьте подключение к серверу и попробуйте снова."
   },
   "createCard": {
-    "title": "Создайте виртуальную карту",
-    "description": "Внутренний кошелёк Market.tj — для оплаты заказов и получения выплат за продажи.",
+    "title": "Добавьте карту",
+    "description": "Внутренний кошелёк Market.tj — для оплаты заказов и получения выплат за продажи. До 5 карт на пользователя.",
     "firstNameLabel": "Имя держателя карты",
     "lastNameLabel": "Фамилия держателя карты",
     "firstNamePlaceholder": "Например, Алишер",
@@ -14,17 +14,37 @@
     "firstNameRequired": "Укажите имя",
     "lastNameRequired": "Укажите фамилию",
     "cardTypeLabel": "Тип карты",
+    "cardNumberLabel": "Номер карты",
+    "cardNumberRequired": "Укажите номер карты",
+    "cardNumberLength": "Номер карты должен состоять из 16 цифр",
+    "cardNumberInvalid": "Неверный номер карты",
+    "cardNumberUnsupported": "Поддерживаются только Visa, Mastercard и UnionPay",
+    "expiryLabel": "Срок действия",
+    "expiryFormat": "Формат ММ/ГГ",
+    "expiryPast": "Срок действия карты истёк",
+    "cvvLabel": "CVV",
+    "cvvRequired": "Укажите 3 цифры CVV",
+    "bankNameLabel": "Банк",
+    "bankNamePlaceholder": "Например, Амонатбонк",
+    "bankNameRequired": "Укажите название банка",
+    "cancel": "Отмена",
     "submit": "Создать карту",
     "success": "Карта создана",
     "error": "Не удалось создать карту"
   },
   "card": {
     "holderFallback": "Держатель карты",
-    "validFrom": "ОТКРЫТА"
+    "validFrom": "ОТКРЫТА",
+    "validThru": "ДЕЙСТВИТЕЛЬНА ДО"
   },
   "balance": {
     "title": "Текущий баланс",
-    "topUp": "Пополнить"
+    "topUp": "Пополнить",
+    "currency": "с."
+  },
+  "cardsList": {
+    "addCard": "Добавить карту",
+    "maxReached": "Достигнут лимит — не более {{max}} карт на пользователя"
   },
   "topUpForm": {
     "title": "Пополнить баланс",
@@ -56,12 +76,31 @@
     "empty": "Фермер ещё не подключил карту оплаты",
     "loading": "Загрузка..."
   },
+  "pin": {
+    "setupTitle": "Защитите кошелёк PIN-кодом",
+    "setupDescription": "Придумайте PIN из 4 цифр — он будет запрашиваться при каждом входе в раздел «Кошелёк».",
+    "pinLabel": "PIN (4 цифры)",
+    "confirmPinLabel": "Повторите PIN",
+    "passwordLabel": "Текущий пароль от аккаунта",
+    "passwordPlaceholder": "Введите пароль для подтверждения",
+    "setupSubmit": "Установить PIN",
+    "pinLengthError": "PIN должен состоять ровно из 4 цифр",
+    "pinMismatchError": "PIN-коды не совпадают",
+    "setupSuccess": "PIN установлен",
+    "setupError": "Не удалось установить PIN",
+    "entryTitle": "Введите PIN",
+    "entryDescription": "Раздел «Кошелёк» защищён PIN-кодом",
+    "enterPinLabel": "PIN",
+    "unlock": "Открыть",
+    "wrongPin": "Неверный PIN",
+    "statusError": "Не удалось проверить статус PIN"
+  },
   "checkout": {
     "balanceLabel": "Баланс кошелька",
     "insufficientTitle": "Недостаточно средств на балансе",
     "insufficientDescription": "Не хватает {{amount}} с. — пополните баланс, чтобы оформить заказ.",
     "noWalletTitle": "Нужна карта Market.tj",
-    "noWalletDescription": "Чтобы оплатить заказ, сначала создайте виртуальную карту в разделе «Кошелёк».",
+    "noWalletDescription": "Чтобы оплатить заказ картой, сначала создайте виртуальную карту в разделе «Кошелёк», либо выберите оплату наличными курьеру.",
     "topUpButton": "Пополнить баланс",
     "createWalletButton": "Создать карту",
     "sufficientNote": "Средства спишутся с баланса кошелька после оформления заказа."

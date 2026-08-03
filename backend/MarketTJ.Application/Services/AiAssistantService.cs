@@ -1,3 +1,4 @@
+using System.Net;
 using System.Net.Http.Headers;
 using System.Text;
 using System.Text.Json;
@@ -75,6 +76,43 @@ public class AiAssistantService(
         "вот что нашлось: ...\"). Если вызывал инструмент — перескажи полученные данные своими " +
         "словами понятно и по-человечески, а не просто перечисли сырые цифры.";
 
+    // Добавлено 2026-08-03 по явному запросу пользователя — таджикоязычные
+    // пользователи часто пишут латиницей/смешанным шрифтом (нет таджикской
+    // раскладки под рукой, привычка из мессенджеров), и модель раньше путала
+    // это с просьбой ответить по-русски или отвечала транслитом. Честно
+    // задокументировано в отчёте: Llama 3.3 (используемая модель) заметно
+    // слабее в таджикском, чем в русском/английском — эта инструкция
+    // максимально явная (с конкретными опорными словами и живыми примерами),
+    // но не гарантирует 100% результат на каждой формулировке.
+    private const string TajikLanguageDetectionInstruction =
+        "ОПРЕДЕЛЕНИЕ ТАДЖИКСКОГО ЯЗЫКА ПРИ ЛАТИНИЦЕ/СМЕШАННОМ ШРИФТЕ: пользователи часто пишут " +
+        "таджикские слова ЛАТИНСКИМИ буквами или своей нестандартной транслитерацией вместо " +
+        "кириллического таджикского алфавита (нет таджикской раскладки под рукой — обычное дело " +
+        "в мессенджерах). Определяй язык ПО СМЫСЛУ СЛОВ, а не по алфавиту, которым они набраны " +
+        "— латиница здесь только способ ввода текста, а НЕ просьба ответить по-русски или по-" +
+        "английски. Опорные признаки таджикской речи, даже в латинской транслитерации: " +
+        "местоимения (man/ман — я, mo/мо — мы, tu/ту — ты, shumo/шумо — вы), окончания " +
+        "глаголов (-am/-ам, -ед/-ed, -анд/-and, -шавад/-shavad), частицы и союзы (чӣ/chi — что, " +
+        "ки/ki — что/который, ҳам/ham — тоже), характерные слова (мехоҳам/mexoham — хочу, " +
+        "бояд/boyad — должен, кадом/kadom — какой, чанд/chand — сколько, кай/kai — когда, " +
+        "нарх/narx — цена, фармоиш/farmoish — заказ). Если по смыслу вопрос ТАДЖИКСКИЙ (пусть " +
+        "даже написан латиницей, смешанным шрифтом или с опечатками) — отвечай ТОЛЬКО " +
+        "литературным таджикским КИРИЛЛИЧЕСКИМ алфавитом (message должен быть на кириллице), " +
+        "никогда не отвечай транслитом и не переключайся на русский только из-за латинских букв " +
+        "во входящем сообщении.\n\n" +
+        "ПРИМЕРЫ (таджикский текст латиницей/смешанным шрифтом → ответ на таджикском кириллицей):\n" +
+        "- \"salom, chi khel?\" (\"привет, как дела?\") — ответь по-таджикски кириллицей, " +
+        "например: \"Салом! Хуб, ташаккур. Чӣ гуна метавонам кӯмак кунам?\"\n" +
+        "- \"man mexoham bidonam narxi pomidor chand\" (\"я хочу узнать сколько стоят " +
+        "помидоры\") — это обычный вопрос о цене товара (используй подходящий инструмент " +
+        "поиска, если он у тебя есть), а текст message напиши на таджикском кириллицей.\n" +
+        "- \"fармоиши ман kай merasad\" (\"когда придёт мой заказ\") — определи намерение как " +
+        "обычно (это вопрос про заказ), а message сформулируй на таджикском кириллицей.\n" +
+        "- \"raxmat kalon, hamma chiz ravshan shud\" (\"большое спасибо, всё стало понятно\") — " +
+        "ответь коротким вежливым подтверждением на таджикском кириллицей.\n" +
+        "- \"boyad chi kor kunam baroi ro'yxatnavisi\" (\"что мне нужно сделать для " +
+        "регистрации\") — ответь по-таджикски кириллицей, объяснив шаги регистрации.\n\n";
+
     // Добавлено 2026-08-02 по явному запросу пользователя — ассистент иногда
     // отвечал не по смыслу вопроса, если тот был сформулирован нестандартно.
     private const string IntentUnderstandingInstruction =
@@ -88,6 +126,28 @@ public class AiAssistantService(
         "подходящим для обычного информационного сообщения (для покупателя — \"none\", для " +
         "фермера/админа — \"info\"), и вежливо попроси именно эту недостающую деталь на языке " +
         "вопроса.";
+
+    // Навигация по разделам приложения (2026-08-03, по явному запросу
+    // пользователя) — раньше ассистент мог только ОБЪЯСНИТЬ словами, куда
+    // перейти ("зайдите в личный кабинет..."), теперь для запросов "покажи/
+    // открой/перейди в [раздел]" без уточнения конкретных данных он должен
+    // вернуть саму навигацию (intent="navigate" + action.targetPath), а
+    // клиент (AiAssistantWidget.tsx) реально переключит страницу. Backend
+    // НЕ выполняет переход сам — только возвращает путь, который сверяется
+    // (дважды — и здесь, и на фронтенде, defense in depth) со списком
+    // допустимых путей ЭТОЙ роли, чтобы модель не могла увести пользователя
+    // на путь чужой роли или произвольный URL (см. NavigateTargetPathIsAllowed).
+    private const string NavigateExplanationInstruction =
+        "НАВИГАЦИЯ ПО РАЗДЕЛАМ: если пользователь явно просит ПОКАЗАТЬ/ОТКРЫТЬ/ПЕРЕЙТИ в целый " +
+        "раздел приложения (например \"покажи каталог\", \"открой мой кошелёк\", \"перейди в " +
+        "профиль\") БЕЗ уточнения конкретных данных внутри этого раздела (без фильтра, без " +
+        "номера, без конкретного товара/суммы/статуса) — верни intent=\"navigate\", в message — " +
+        "короткое подтверждение на языке вопроса (например \"Открываю каталог...\"), а в " +
+        "action — {\"type\":\"navigate\",\"params\":{\"targetPath\":\"<один путь из списка " +
+        "ниже>\"},\"confirmLabel\":\"\"}. Если же вопрос требует КОНКРЕТНЫХ данных (цена, " +
+        "статус, количество, сумма, фильтр и т.п.) — используй подходящий инструмент или " +
+        "обычный текстовый ответ, а НЕ navigate. targetPath должен быть буквально одним из " +
+        "путей ниже — никогда не придумывай свой путь и не используй путь из чужой роли.\n\n";
 
     // Разные формулировки одного и того же намерения "статус заказа" — по
     // явному запросу пользователя (2026-08-02), т.к. это самый частый случай,
@@ -103,12 +163,22 @@ public class AiAssistantService(
         "- \"есть помидоры\", \"нужны помидоры\", \"ищу помидоры\", \"продаёте ли вы помидоры\", " +
         "\"do you have tomatoes\" — во всех случаях вызови search_products(query=\"помидоры\"/" +
         "\"tomatoes\").\n" +
-        "- \"покажи все мои заказы\", \"мои заказы\", \"история заказов\" (без конкретного номера) " +
-        "— вызови get_my_orders (без orderNumber).\n" +
+        "- \"покажи все мои заказы\", \"мои заказы\", \"открой мои заказы\", \"история заказов\" " +
+        "(без конкретного номера/статуса/фильтра) — верни intent=\"navigate\" на " +
+        "/customer/orders (см. НАВИГАЦИЯ выше). Если же спрашивают с фильтром/уточнением " +
+        "(например \"заказы в статусе Delivered\", \"сколько у меня заказов\", \"мои последние " +
+        "заказы за неделю\") — вызови get_my_orders.\n" +
         "- \"что у меня в избранном\", \"мой список желаний\", \"favorites\" — вызови " +
         "get_my_favorites.\n" +
         "- \"какие отзывы я оставлял\", \"мои отзывы\" — вызови get_my_reviews.\n" +
-        "- \"мой адрес\", \"мой профиль\", \"мои данные\" — вызови get_my_profile.\n\n";
+        "- \"мой адрес\", \"мои данные\", \"какой у меня регион/район\" — вызови get_my_profile. " +
+        "\"мой профиль\", \"открой профиль\", \"перейти в профиль\" (без уточнения, какие " +
+        "именно данные показать) — верни intent=\"navigate\" на /customer/profile.\n" +
+        "- \"покажи каталог\", \"открой каталог\", \"весь каталог\", \"все товары\" (без " +
+        "конкретного названия товара для поиска) — верни intent=\"navigate\" на /catalog.\n" +
+        "- \"мой кошелёк\", \"открой кошелёк\", \"баланс кошелька\" — верни intent=\"navigate\" " +
+        "на /customer/wallet (доступно только авторизованному покупателю — см. список " +
+        "допустимых путей ниже, гостю такой путь не давай).\n\n";
 
     private const string CustomerSystemPrompt =
         "Ты AI-ассистент маркетплейса Market.tj — платформы, где фермеры продают свежую " +
@@ -116,7 +186,9 @@ public class AiAssistantService(
         "доступ ко ВСЕМ данным ЭТОГО покупателя (его заказы, избранное, отзывы, профиль) — " +
         "не ограничивайся только статусом одного заказа, если пользователь спрашивает шире.\n\n" +
         ResponseStyleInstruction + "\n\n" +
+        TajikLanguageDetectionInstruction +
         IntentUnderstandingInstruction + "\n\n" +
+        NavigateExplanationInstruction +
         CustomerFewShotExamples +
         "Инструменты (вызывай, когда вопрос требует конкретных данных):\n" +
         "- search_products(query) — ищет товары в каталоге по ключевому слову.\n" +
@@ -140,27 +212,39 @@ public class AiAssistantService(
         "регистрации, заполнить профиль хозяйства (название, регион, район, адрес), после чего " +
         "аккаунт проходит проверку администратором — до подтверждения объявления публиковать " +
         "нельзя.\n\n" +
-        "Верни СТРОГО JSON без markdown: {\"intent\":\"product|category|cart|orders|none\"," +
-        "\"productId\":null,\"categoryId\":null,\"message\":\"\"}. product — когда речь про " +
-        "один явный товар (после search_products, если нашёлся единственный явный кандидат — " +
-        "заполни productId). category — несколько товаров одной категории. cart — если просит " +
-        "перейти в корзину/оформить заказ. orders — если просит показать свои заказы или " +
-        "спрашивает про статус заказа. none — для всех остальных вопросов (доставка, " +
+        "Верни СТРОГО JSON без markdown: {\"intent\":\"product|category|cart|orders|navigate|" +
+        "none\",\"productId\":null,\"categoryId\":null,\"message\":\"\",\"action\":null}. " +
+        "product — когда речь про один явный товар (после search_products, если нашёлся " +
+        "единственный явный кандидат — заполни productId). category — несколько товаров одной " +
+        "категории. cart — если просит перейти в корзину/оформить заказ. orders — устаревшее, " +
+        "не используй (вместо него используй navigate на /customer/orders для списка заказов, " +
+        "или get_order_status для статуса конкретного заказа). navigate — для бесфильтровых " +
+        "запросов \"покажи/открой [раздел]\" (см. НАВИГАЦИЯ выше) — тогда заполни " +
+        "action:{\"type\":\"navigate\",\"params\":{\"targetPath\":\"...\"},\"confirmLabel\":\"\"}, " +
+        "а productId/categoryId оставь null. none — для всех остальных вопросов (доставка, " +
         "регистрация фермера, общие вопросы о платформе) — message должен содержать полный " +
         "ответ.";
 
     private const string FarmerFewShotExamples =
         "ПРИМЕРЫ (разные формулировки одного и того же намерения — во всех случаях реакция " +
         "должна быть одинаковой):\n" +
-        "- \"покажи мои товары\", \"какие у меня объявления\", \"мои листинги\", \"что я " +
-        "продаю\" — во всех случаях вызови get_my_listings.\n" +
+        "- \"покажи мои товары\", \"открой мои объявления\", \"перейти к товарам\" (без " +
+        "фильтра/статуса) — верни intent=\"navigate\" на /farmer/products. С фильтром/" +
+        "уточнением (\"какие у меня объявления в статусе Draft\", \"мои листинги\", \"что я " +
+        "продаю\") — вызови get_my_listings.\n" +
         "- \"как дела с продажами\", \"сколько я заработал\", \"сводка\", \"дашборд\" — во всех " +
         "случаях вызови get_dashboard.\n" +
         "- \"подними цену на картошку\" без указания, на сколько и на какое именно объявление — " +
         "не вызывай propose_update_listing с придуманными данными, сначала уточни, на какое " +
         "объявление и до какой цены.\n" +
-        "- \"какие у меня заказы\", \"что заказали покупатели\", \"новые заказы\", \"мои " +
-        "продажи\" — во всех случаях вызови get_my_orders.\n" +
+        "- \"покажи мои заказы\", \"открой заказы\", \"раздел заказов\" (без фильтра/статуса) " +
+        "— верни intent=\"navigate\" на /farmer/orders. С фильтром/уточнением (\"какие у меня " +
+        "заказы\", \"что заказали покупатели\", \"новые заказы\", \"сколько заказов в статусе " +
+        "Pending\", \"мои продажи за месяц\") — вызови get_my_orders.\n" +
+        "- \"мой кошелёк\", \"открой кошелёк\", \"баланс кошелька\" — верни intent=\"navigate\" " +
+        "на /farmer/wallet.\n" +
+        "- \"мой профиль\", \"открой профиль хозяйства\", \"перейти в профиль\" — верни " +
+        "intent=\"navigate\" на /farmer/profile.\n" +
         "- \"мои документы\", \"загруженные документы\", \"статус документов\" — вызови " +
         "get_my_documents.\n" +
         "- \"проверили меня?\", \"я верифицирован?\", \"статус верификации\", \"когда одобрят " +
@@ -181,7 +265,9 @@ public class AiAssistantService(
         "ЭТОГО фермера — не только к списку товаров, но и к его заказам, документам, статусу " +
         "верификации и сотрудникам; не ограничивайся узким набором тем.\n\n" +
         ResponseStyleInstruction + "\n\n" +
+        TajikLanguageDetectionInstruction +
         IntentUnderstandingInstruction + "\n\n" +
+        NavigateExplanationInstruction +
         FarmerFewShotExamples +
         "Инструменты: get_dashboard — сводка по моим товарам/заказам/выручке; " +
         "get_my_listings — список МОИХ объявлений (можно фильтровать по статусу); " +
@@ -202,7 +288,9 @@ public class AiAssistantService(
         "вызывай подходящий инструмент, если вопрос требует данных.\n\n" +
         "Верни СТРОГО JSON без markdown: {\"intent\":\"info\",\"message\":\"<полный развёрнутый " +
         "ответ на языке пользователя по полученным данным>\"}. Если инструмент не нужен — " +
-        "тоже верни {\"intent\":\"info\",\"message\":\"...\"}.";
+        "тоже верни {\"intent\":\"info\",\"message\":\"...\"}. Для навигации по разделу (см. " +
+        "НАВИГАЦИЯ выше) верни {\"intent\":\"navigate\",\"message\":\"<короткое подтверждение>\"," +
+        "\"action\":{\"type\":\"navigate\",\"params\":{\"targetPath\":\"...\"},\"confirmLabel\":\"\"}}.";
 
     private const string AdminFewShotExamples =
         "ПРИМЕРЫ (разные формулировки одного и того же намерения — во всех случаях реакция " +
@@ -213,10 +301,16 @@ public class AiAssistantService(
         "get_pending_verifications.\n" +
         "- \"отклони жалобу\" без номера жалобы — не вызывай propose_resolve_report с " +
         "придуманным reportId, сначала уточни, какую именно жалобу.\n" +
-        "- \"покажи все товары\", \"весь каталог\", \"список объявлений\" — вызови " +
+        "- \"покажи каталог\", \"открой каталог\", \"весь каталог\", \"список объявлений\" (без " +
+        "фильтра/статуса) — верни intent=\"navigate\" на /admin/catalog. С фильтром/уточнением " +
+        "(\"покажи товары в статусе Draft\", \"сколько товаров в каталоге\") — вызови " +
         "get_all_products.\n" +
-        "- \"все заказы\", \"последние заказы на платформе\", \"заказы за сегодня\" — вызови " +
+        "- \"покажи все заказы\", \"открой заказы\", \"раздел заказов\" (без фильтра) — верни " +
+        "intent=\"navigate\" на /admin/orders. С фильтром/уточнением (\"последние заказы на " +
+        "платформе\", \"заказы за сегодня\", \"заказы в статусе Cancelled\") — вызови " +
         "get_all_orders.\n" +
+        "- \"мой профиль\", \"открой профиль администратора\", \"перейти в профиль\" — верни " +
+        "intent=\"navigate\" на /admin/profile.\n" +
         "- \"список пользователей\", \"все фермеры\", \"все покупатели\", \"кто зарегистрирован\" " +
         "— вызови get_users_list (с role, если роль явно названа).\n" +
         "- \"курьеры\", \"список курьеров\", \"кто развозит заказы\" — вызови get_couriers.\n" +
@@ -232,7 +326,9 @@ public class AiAssistantService(
         "курьеры, комиссии, зоны доставки, а не только к жалобам и верификациям — свободно " +
         "отвечай на вопросы по любому из этих разделов.\n\n" +
         ResponseStyleInstruction + "\n\n" +
+        TajikLanguageDetectionInstruction +
         IntentUnderstandingInstruction + "\n\n" +
+        NavigateExplanationInstruction +
         AdminFewShotExamples +
         "Инструменты: get_dashboard — сводная аналитика по всей платформе (заказы, выручка, " +
         "пользователи); get_pending_verifications — фермеры, ожидающие проверки; " +
@@ -250,7 +346,9 @@ public class AiAssistantService(
         "вызывай подходящий инструмент, если вопрос требует данных.\n\n" +
         "Верни СТРОГО JSON без markdown: {\"intent\":\"info\",\"message\":\"<полный развёрнутый " +
         "ответ на языке пользователя по полученным данным>\"}. Если инструмент не нужен — " +
-        "тоже верни {\"intent\":\"info\",\"message\":\"...\"}.";
+        "тоже верни {\"intent\":\"info\",\"message\":\"...\"}. Для навигации по разделу (см. " +
+        "НАВИГАЦИЯ выше) верни {\"intent\":\"navigate\",\"message\":\"<короткое подтверждение>\"," +
+        "\"action\":{\"type\":\"navigate\",\"params\":{\"targetPath\":\"...\"},\"confirmLabel\":\"\"}}.";
 
     // Сколько последних реплик истории учитывать (не считая текущего вопроса) —
     // ограничение и на размер запроса к Groq, и на то, чтобы старый контекст
@@ -269,7 +367,7 @@ public class AiAssistantService(
             }
 
             var role = currentUser.Role;
-            var (systemPrompt, tools) = BuildPromptAndTools(role);
+            var (systemPrompt, tools, allowedNavigationPaths) = BuildPromptAndTools(role);
 
             var messages = new JsonArray
             {
@@ -363,24 +461,72 @@ public class AiAssistantService(
                 json = json[4..].Trim();
             }
 
-            var parsed = JsonSerializer.Deserialize<AssistantResponseDto>(json, new JsonSerializerOptions
+            AssistantResponseDto? parsed;
+            try
             {
-                PropertyNameCaseInsensitive = true
-            });
+                parsed = JsonSerializer.Deserialize<AssistantResponseDto>(json, new JsonSerializerOptions
+                {
+                    PropertyNameCaseInsensitive = true
+                });
+            }
+            catch (JsonException)
+            {
+                // Модель иногда не следует инструкции "верни строго JSON" и отвечает
+                // обычным текстом (наблюдалось на живой проверке 2026-08-02, запрос
+                // "pomidor" — ответ начинался с обычного русского текста, не с "{").
+                // Это тот же случай, что и parsed is null ниже — тот же понятный
+                // ответ пользователю, а не общий "Ошибка AI-ассистента" из catch
+                // снаружи, который не объясняет причину.
+                parsed = null;
+            }
 
             if (parsed is null)
             {
                 logger.LogError("Не удалось распарсить JSON от ассистента: {Json}", json);
-                return Result<AssistantResponseDto>.Fail("Не удалось разобрать ответ ассистента", ErrorType.InternalServerError);
+                return Result<AssistantResponseDto>.Fail("Не удалось разобрать ответ ассистента, попробуйте переформулировать вопрос", ErrorType.InternalServerError);
+            }
+
+            // Защита от prompt injection/галлюцинации пути (defense in depth —
+            // то же самое ещё раз проверяется на фронтенде перед реальным
+            // переходом, см. AiAssistantWidget.tsx). Модель не выполняет
+            // навигацию сама, только предлагает путь — но раз уж мы доверяем
+            // ей строку, которую увидит react-router на клиенте, эта строка
+            // обязана быть ровно одним из путей, которые МЫ сами перечислили
+            // в промпте для ЭТОЙ роли, а не тем, что модель придумала или
+            // подхватила из истории диалога.
+            if (parsed.Intent == "navigate")
+            {
+                var targetPath = parsed.Action?.Params.GetValueOrDefault("targetPath");
+                if (!NavigateTargetPathIsAllowed(targetPath, allowedNavigationPaths))
+                {
+                    logger.LogWarning("AI-ассистент предложил недопустимый путь навигации {TargetPath} для роли {Role}", targetPath, role ?? "guest");
+                    parsed = new AssistantResponseDto { Intent = "none", Message = parsed.Message };
+                }
             }
 
             return Result<AssistantResponseDto>.Ok(parsed);
         }
+        catch (GroqRateLimitedException ex)
+        {
+            var retryHint = ex.RetryAfter is { } delta
+                ? $"через {FormatRetryDelay(delta)}"
+                : "через несколько минут";
+            logger.LogWarning("AI-ассистент недоступен из-за лимита запросов Groq, повтор {RetryHint}", retryHint);
+            return Result<AssistantResponseDto>.Fail(
+                $"AI-ассистент временно перегружен (превышена квота бесплатного тарифа) — попробуйте {retryHint}",
+                ErrorType.TooManyRequests);
+        }
         catch (Exception ex)
         {
             logger.LogError(ex, "Ошибка при обращении к AI-ассистенту");
-            return Result<AssistantResponseDto>.Fail("Ошибка AI-ассистента", ErrorType.InternalServerError);
+            return Result<AssistantResponseDto>.Fail("Ошибка AI-ассистента, попробуйте ещё раз через некоторое время", ErrorType.InternalServerError);
         }
+    }
+
+    private static string FormatRetryDelay(TimeSpan delta)
+    {
+        if (delta.TotalMinutes >= 1) return $"{Math.Ceiling(delta.TotalMinutes)} мин.";
+        return $"{Math.Max(1, (int)delta.TotalSeconds)} сек.";
     }
 
     public async Task<Result<string>> ExecuteActionAsync(ExecuteAssistantActionDto dto)
@@ -402,9 +548,80 @@ public class AiAssistantService(
         }
     }
 
+    // === Допустимые пути навигации по роли (2026-08-03) ===
+    // Взято построчно из реальных маршрутов Frontend/src/App.tsx — сознательно
+    // только СТАТИЧЕСКИЕ пути (без /admin/farmers/:id, /admin/users/:id и
+    // т.п.), т.к. у ассистента нет способа надёжно узнать конкретный id без
+    // отдельного вызова инструмента, а придумывать его нельзя. Используются
+    // дважды: (1) подставляются в системный промпт, чтобы модель не могла
+    // предложить путь другой роли или несуществующий путь, (2) сверяются
+    // здесь же на сервере ПОСЛЕ ответа модели (NavigateTargetPathIsAllowed) —
+    // модель всё равно может ошибиться или быть жертвой prompt injection из
+    // истории диалога, поэтому доверять её выбору пути без проверки нельзя.
+    // Фронтенд (AiAssistantWidget.tsx) держит ту же сверку независимо —
+    // defense in depth, а не единственная линия защиты.
+    private static readonly (string Path, string Description)[] GuestNavigationPaths =
+    [
+        ("/", "главная страница"),
+        ("/catalog", "каталог всех товаров"),
+        ("/about", "о платформе"),
+        ("/contact", "контакты"),
+    ];
+
+    private static readonly (string Path, string Description)[] CustomerNavigationPaths =
+    [
+        ("/catalog", "каталог товаров"),
+        ("/customer", "личный кабинет (сводка)"),
+        ("/customer/orders", "мои заказы"),
+        ("/customer/wallet", "мой кошелёк"),
+        ("/customer/messages", "мои сообщения/чаты с фермерами"),
+        ("/customer/notifications", "мои уведомления"),
+        ("/customer/profile", "мой профиль"),
+        ("/checkout", "корзина/оформление заказа"),
+    ];
+
+    private static readonly (string Path, string Description)[] FarmerNavigationPaths =
+    [
+        ("/farmer", "сводка/дашборд фермера"),
+        ("/farmer/products", "мои товары/объявления"),
+        ("/farmer/orders", "заказы на мои товары"),
+        ("/farmer/messages", "сообщения с покупателями"),
+        ("/farmer/reviews", "отзывы обо мне"),
+        ("/farmer/profile", "профиль моего хозяйства"),
+        ("/farmer/documents", "мои документы для верификации"),
+        ("/farmer/wallet", "мой кошелёк"),
+        ("/farmer/notifications", "мои уведомления"),
+    ];
+
+    private static readonly (string Path, string Description)[] AdminNavigationPaths =
+    [
+        ("/admin", "сводная аналитика платформы"),
+        ("/admin/orders", "все заказы платформы"),
+        ("/admin/catalog", "весь каталог товаров"),
+        ("/admin/farmers", "список фермеров"),
+        ("/admin/farmer-documents", "документы фермеров на проверку"),
+        ("/admin/couriers", "курьеры"),
+        ("/admin/delivery-zones", "зоны доставки"),
+        ("/admin/users", "пользователи платформы"),
+        ("/admin/reviews", "отзывы"),
+        ("/admin/commissions", "комиссии платформы"),
+        ("/admin/support", "обращения в поддержку"),
+        ("/admin/notifications", "мои уведомления"),
+        ("/admin/settings", "настройки платформы"),
+        ("/admin/profile", "мой профиль администратора"),
+    ];
+
+    private static string BuildNavigationPathsBlock((string Path, string Description)[] paths) =>
+        "ДОПУСТИМЫЕ ПУТИ ДЛЯ НАВИГАЦИИ (используй ТОЛЬКО эти пути, никогда не придумывай " +
+        "свои и не бери путь из другой роли):\n" +
+        string.Join("\n", paths.Select(p => $"- {p.Path} — {p.Description}")) + "\n";
+
+    private static bool NavigateTargetPathIsAllowed(string? targetPath, (string Path, string Description)[] allowedPaths) =>
+        !string.IsNullOrWhiteSpace(targetPath) && allowedPaths.Any(p => p.Path == targetPath);
+
     // === Построение промпта/инструментов по роли ===
 
-    private (string SystemPrompt, JsonArray Tools) BuildPromptAndTools(string? role)
+    private (string SystemPrompt, JsonArray Tools, (string Path, string Description)[] AllowedNavigationPaths) BuildPromptAndTools(string? role)
     {
         var customerTool = BuildFunctionDeclaration(
             "search_products", "Ищет товары в каталоге Market.tj по ключевому слову",
@@ -431,7 +648,7 @@ public class AiAssistantService(
                     ("reviewId", "integer", null, true),
                     ("reply", "string", null, true)),
             };
-            return (FarmerSystemPrompt, tools);
+            return (FarmerSystemPrompt + "\n\n" + BuildNavigationPathsBlock(FarmerNavigationPaths), tools, FarmerNavigationPaths);
         }
 
         if (role == "Admin")
@@ -461,7 +678,7 @@ public class AiAssistantService(
                     ("reportId", "integer", null, true),
                     ("resolution", "string", new[] { "Reviewed", "Dismissed" }, true)),
             };
-            return (AdminSystemPrompt, tools);
+            return (AdminSystemPrompt + "\n\n" + BuildNavigationPathsBlock(AdminNavigationPaths), tools, AdminNavigationPaths);
         }
 
         // Покупатель, курьер или гость (без токена) — тот же customer-flow, что и раньше,
@@ -479,7 +696,11 @@ public class AiAssistantService(
             BuildFunctionDeclaration("get_my_reviews", "Список отзывов, которые покупатель сам оставил на фермеров"),
             BuildFunctionDeclaration("get_my_profile", "Данные профиля покупателя: адрес по умолчанию, регион, район, тип покупателя"),
         };
-        return (CustomerSystemPrompt, customerTools);
+        // Гость (без userId в токене) не должен получать пути внутри /customer/* —
+        // это защищённые маршруты, ProtectedRoute всё равно бы его туда не пустил,
+        // но список путей в промпте не должен даже предлагать модели такой вариант.
+        var navigationPaths = currentUser.UserId is not null ? CustomerNavigationPaths : GuestNavigationPaths;
+        return (CustomerSystemPrompt + "\n\n" + BuildNavigationPathsBlock(navigationPaths), customerTools, navigationPaths);
     }
 
     private static readonly string[] OrderStatusValues =
@@ -1073,8 +1294,18 @@ public class AiAssistantService(
     {
         for (var attempt = 1; attempt <= 2; attempt++)
         {
-            var (body, statusCode, rawBody) = await PostToGroqAsync(apiKey, tools, messages, toolChoice: "auto");
+            var (body, statusCode, rawBody, retryAfter) = await PostToGroqAsync(apiKey, tools, messages, toolChoice: "auto");
             if (body is not null) return body;
+
+            // 429 — дневная/минутная квота бесплатного тарифа Groq исчерпана, а не
+            // "плавающая" особенность генерации модели (в отличие от tool_use_failed
+            // ниже) — ретраить тем же запросом бессмысленно, нужен отдельный,
+            // информативный ответ пользователю (см. AskAsync, catch GroqRateLimitedException).
+            if (statusCode == HttpStatusCode.TooManyRequests)
+            {
+                logger.LogWarning("Groq API вернул 429 (квота исчерпана): {Body}", rawBody);
+                throw new GroqRateLimitedException(retryAfter);
+            }
 
             if (!IsToolUseFailed(rawBody))
             {
@@ -1093,8 +1324,14 @@ public class AiAssistantService(
         }
 
         logger.LogWarning("Groq дважды вернул tool_use_failed, финальная попытка без инструментов");
-        var (finalBody, finalStatus, finalRaw) = await PostToGroqAsync(apiKey, tools: null, messages, toolChoice: null);
+        var (finalBody, finalStatus, finalRaw, finalRetryAfter) = await PostToGroqAsync(apiKey, tools: null, messages, toolChoice: null);
         if (finalBody is not null) return finalBody;
+
+        if (finalStatus == HttpStatusCode.TooManyRequests)
+        {
+            logger.LogWarning("Groq API вернул 429 (квота исчерпана): {Body}", finalRaw);
+            throw new GroqRateLimitedException(finalRetryAfter);
+        }
 
         logger.LogError("Groq API вернул {StatusCode}: {Body}", finalStatus, finalRaw);
         throw new InvalidOperationException($"Groq API error {finalStatus}");
@@ -1154,7 +1391,7 @@ public class AiAssistantService(
         }
     };
 
-    private async Task<(JsonObject? Body, System.Net.HttpStatusCode StatusCode, string RawBody)> PostToGroqAsync(string apiKey, JsonArray? tools, JsonArray messages, string? toolChoice)
+    private async Task<(JsonObject? Body, HttpStatusCode StatusCode, string RawBody, TimeSpan? RetryAfter)> PostToGroqAsync(string apiKey, JsonArray? tools, JsonArray messages, string? toolChoice)
     {
         var requestBody = new JsonObject
         {
@@ -1185,9 +1422,21 @@ public class AiAssistantService(
 
         if (!response.IsSuccessStatusCode)
         {
-            return (null, response.StatusCode, responseBody);
+            // Groq (как и большинство OpenAI-совместимых API) отдаёт Retry-After
+            // на 429 — используем его, если есть, чтобы сказать пользователю
+            // не просто "попробуйте позже", а когда именно.
+            return (null, response.StatusCode, responseBody, response.Headers.RetryAfter?.Delta);
         }
 
-        return (JsonNode.Parse(responseBody)!.AsObject(), response.StatusCode, responseBody);
+        return (JsonNode.Parse(responseBody)!.AsObject(), response.StatusCode, responseBody, null);
     }
+}
+
+// Groq вернул 429 (превышена квота бесплатного тарифа — по запросу в минуту
+// или в день) — отдельный тип исключения, а не общий InvalidOperationException,
+// чтобы AskAsync мог поймать именно этот случай и ответить пользователю
+// конкретно, а не общим "Ошибка AI-ассистента" (см. AskAsync catch-блок).
+public class GroqRateLimitedException(TimeSpan? retryAfter) : Exception("Groq API rate limit exceeded (429)")
+{
+    public TimeSpan? RetryAfter { get; } = retryAfter;
 }

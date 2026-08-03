@@ -153,6 +153,11 @@ public class OrderService(
                 Subtotal = dto.Subtotal,
                 DeliveryPrice = dto.DeliveryPrice,
                 TotalAmount = dto.Subtotal + dto.DeliveryPrice,
+                PaymentMethod = dto.PaymentMethod,
+                // Card — оплачено сразу (списание ниже). CashOnDelivery —
+                // ожидает оплаты наличными при получении (см. MarkPaidAsync).
+                IsPaid = dto.PaymentMethod == OrderPaymentMethod.Card,
+                WalletId = dto.PaymentMethod == OrderPaymentMethod.Card ? dto.WalletId : null,
                 IsDeleted = false,
                 CreatedAt = DateTime.UtcNow
             };
@@ -161,16 +166,22 @@ public class OrderService(
 
             // Списание при оформлении заказа (не при более позднем этапе
             // жизненного цикла) — покупатель платит сразу, как только заказ
-            // создан, а не когда фермер его примет. Если средств не хватает
-            // (или у покупателя вовсе нет карты), только что созданная
-            // запись удаляется полностью (не soft-delete — платежа не было,
-            // заказа как бы не было вовсе), а не остаётся висеть в базе
-            // неоплаченной.
-            var debitResult = await walletService.DebitForOrderAsync(customerProfile.UserId, order.TotalAmount, order.Id);
-            if (!debitResult.IsSuccess)
+            // создан, а не когда фермер его примет. Только для Card — при
+            // CashOnDelivery деньги не списываются вовсе, курьер/фермер
+            // получает их физически при доставке (см. MarkPaidAsync), и эта
+            // опция должна работать даже для покупателя без единой карты.
+            // Если средств не хватает (или выбранная карта недоступна),
+            // только что созданная запись удаляется полностью (не soft-delete —
+            // платежа не было, заказа как бы не было вовсе), а не остаётся
+            // висеть в базе неоплаченной.
+            if (dto.PaymentMethod == OrderPaymentMethod.Card)
             {
-                await orderRepository.DeleteAsync(order);
-                return Result<string>.Fail(debitResult.Error ?? "Недостаточно средств для оплаты заказа", debitResult.ErrorType ?? ErrorType.Validation);
+                var debitResult = await walletService.DebitForOrderAsync(customerProfile.UserId, dto.WalletId!.Value, order.TotalAmount, order.Id);
+                if (!debitResult.IsSuccess)
+                {
+                    await orderRepository.DeleteAsync(order);
+                    return Result<string>.Fail(debitResult.Error ?? "Недостаточно средств для оплаты заказа", debitResult.ErrorType ?? ErrorType.Validation);
+                }
             }
 
             return Result<string>.Ok("Заказ создан");
@@ -356,6 +367,64 @@ public class OrderService(
         }
     }
 
+    // Раздел "гибридная оплата": курьер физически принимает Delivery (свою
+    // сущность, не Order), а статус/оплата САМОГО заказа — прерогатива
+    // Farmer/Admin, как и весь остальной жизненный цикл Order в этом
+    // проекте (см. IsOwnerAsync — Courier туда никогда не допускается, у
+    // него своя авторизация через Delivery.CourierId). Поэтому "отметить
+    // оплаченным" здесь — действие фермера (владельца заказа) или админа,
+    // не курьера.
+    public async Task<Result<string>> MarkPaidAsync(int id)
+    {
+        try
+        {
+            var order = await orderRepository.GetByIdAsync(id);
+            if (order is null)
+                return Result<string>.Fail("Заказ не найден", ErrorType.NotFound);
+
+            if (!currentUser.IsAdmin())
+            {
+                if (currentUser.UserId is null)
+                    return Result<string>.Fail("Нет доступа к этому заказу", ErrorType.Forbidden);
+
+                var farmerProfile = await farmerProfileRepository.GetByUserIdAsync(currentUser.UserId.Value);
+                if (farmerProfile is null || farmerProfile.Id != order.FarmerId)
+                    return Result<string>.Fail("Нет доступа к этому заказу", ErrorType.Forbidden);
+            }
+
+            if (order.PaymentMethod != OrderPaymentMethod.CashOnDelivery)
+                return Result<string>.Fail("Этот заказ не оплачивается наличными", ErrorType.Validation);
+
+            if (order.IsPaid)
+                return Result<string>.Ok("Заказ уже отмечен как оплаченный");
+
+            order.IsPaid = true;
+            await orderRepository.UpdateAsync(order);
+
+            // Если заказ уже был завершён ДО подтверждения оплаты наличными
+            // (маловероятный, но возможный порядок действий) — начислить
+            // фермеру сейчас, т.к. в ChangeStatusAsync/UpdateAsync начисление
+            // было пропущено именно из-за IsPaid == false на тот момент.
+            if (order.Status == OrderStatus.Completed)
+            {
+                var farmerProfile = await farmerProfileRepository.GetByIdAsync(order.FarmerId);
+                if (farmerProfile is not null)
+                {
+                    var creditResult = await walletService.CreditFarmerForOrderAsync(farmerProfile.UserId, order.Subtotal, order.Id);
+                    if (!creditResult.IsSuccess)
+                        logger.LogError("Не удалось начислить фермеру за заказ {OrderId} после подтверждения оплаты наличными: {Error}", order.Id, creditResult.Error);
+                }
+            }
+
+            return Result<string>.Ok("Оплата наличными подтверждена");
+        }
+        catch (Exception ex)
+        {
+            logger.LogError(ex, "Ошибка при подтверждении оплаты наличными для заказа {Id}", id);
+            return Result<string>.Fail("Не удалось подтвердить оплату", ErrorType.InternalServerError);
+        }
+    }
+
     // Единая точка для обоих мест, где меняется статус заказа (ChangeStatusAsync
     // и UpdateAsync) — начисление фермеру при завершении заказа, возврат
     // покупателю при отклонении/отмене. Списание при этом происходит один
@@ -371,6 +440,16 @@ public class OrderService(
     {
         if (newStatus == OrderStatus.Completed && previousStatus != OrderStatus.Completed)
         {
+            // CashOnDelivery, ещё не оплаченный наличными физически (IsPaid ==
+            // false) — платформа не может начислить фермеру комиссию с денег,
+            // которые ещё не подтверждены как полученные (см. MarkPaidAsync).
+            // Card всегда IsPaid == true с момента создания заказа.
+            if (order.PaymentMethod == OrderPaymentMethod.CashOnDelivery && !order.IsPaid)
+            {
+                logger.LogInformation("Заказ {OrderId} завершён наличными без подтверждения оплаты — начисление фермеру отложено до MarkPaidAsync", order.Id);
+                return;
+            }
+
             var farmerProfile = await farmerProfileRepository.GetByIdAsync(order.FarmerId);
             if (farmerProfile is null) return;
 
@@ -381,10 +460,14 @@ public class OrderService(
         else if ((newStatus == OrderStatus.Rejected || newStatus == OrderStatus.Cancelled) &&
                  previousStatus != OrderStatus.Rejected && previousStatus != OrderStatus.Cancelled)
         {
-            var customerProfile = await customerProfileRepository.GetByIdAsync(order.CustomerId);
-            if (customerProfile is null) return;
+            // RefundForOrderAsync сам находит нужную карту по исходной
+            // Purchase-транзакции заказа и no-op'ается, если списания не было
+            // (CashOnDelivery) — явная проверка PaymentMethod здесь не нужна,
+            // но избавляет от лишнего похода в БД в самом частом случае.
+            if (order.PaymentMethod != OrderPaymentMethod.Card)
+                return;
 
-            var refundResult = await walletService.RefundForOrderAsync(customerProfile.UserId, order.TotalAmount, order.Id);
+            var refundResult = await walletService.RefundForOrderAsync(order.Id);
             if (!refundResult.IsSuccess)
                 logger.LogError("Не удалось вернуть средства покупателю за заказ {OrderId}: {Error}", order.Id, refundResult.Error);
         }
@@ -462,7 +545,10 @@ public class OrderService(
             CompletedAt = order.CompletedAt,
             CancelledAt = order.CancelledAt,
             CustomerFullName = customer.FullName,
-            CustomerPhone = customer.Phone
+            CustomerPhone = customer.Phone,
+            PaymentMethod = order.PaymentMethod,
+            IsPaid = order.IsPaid,
+            WalletId = order.WalletId
         };
     }
 }

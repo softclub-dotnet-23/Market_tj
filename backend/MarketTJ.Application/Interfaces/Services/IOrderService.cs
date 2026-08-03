@@ -15,4 +15,9 @@ public interface IOrderService
 
     Task<Result<PagedResult<GetOrderDto>>> GetPagedAsync(PagedRequest request, OrderStatus? status);
     Task<Result<string>> ChangeStatusAsync(int id, OrderStatus status, int adminId);
+
+    // Гибридная оплата: подтверждение оплаты наличными при доставке (только
+    // для PaymentMethod == CashOnDelivery) — фермер (владелец заказа) или
+    // админ, см. OrderService.MarkPaidAsync.
+    Task<Result<string>> MarkPaidAsync(int id);
 }

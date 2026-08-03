@@ -18,4 +18,12 @@ public class CreateOrderDto
     public DateTime? AcceptedAt { get; set; }
     public DateTime? CompletedAt { get; set; }
     public DateTime? CancelledAt { get; set; }
+
+    public OrderPaymentMethod PaymentMethod { get; set; }
+
+    // Обязателен, только если PaymentMethod == Card — конкретная карта
+    // покупателя, выбранная при оформлении (см. OrderValidator.ValidateCreate,
+    // OrderService.CreateAsync). Для CashOnDelivery игнорируется — оплата
+    // наличными доступна даже покупателю без единой карты.
+    public int? WalletId { get; set; }
 }

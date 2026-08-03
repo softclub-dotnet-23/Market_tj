@@ -58,7 +58,10 @@ function FarmerPaymentCardSection({ farmerUserId }: { farmerUserId: number }) {
             CARD_GRADIENTS[card.cardType] ?? CARD_GRADIENTS[CardType.Visa],
           )}
         >
-          <span className="font-mono text-sm tracking-[0.15em] text-white/95">•••• {card.cardNumberLast4}</span>
+          <div className="flex flex-col gap-1">
+            <span className="text-[9px] font-semibold tracking-[0.15em] text-white/60 uppercase">{card.bankName}</span>
+            <span className="font-mono text-sm tracking-[0.15em] text-white/95">•••• {card.cardNumberLast4}</span>
+          </div>
           <CardBrandMark cardType={card.cardType} />
         </div>
       )}

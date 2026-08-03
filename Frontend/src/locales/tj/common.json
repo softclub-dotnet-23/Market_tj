@@ -48,6 +48,14 @@
     "actions": "Амалҳо"
   },
   "currencySomoni": "с.",
+  "payment": {
+    "paidByCard": "Бо корт пардохт шуд",
+    "paidCash": "Нақдӣ пардохт шуд",
+    "awaitingCash": "Мунтазири пардохт ҳангоми гирифтан",
+    "markPaid": "Ҳамчун пардохтшуда қайд кунед",
+    "markPaidSuccess": "Пардохти нақдӣ тасдиқ шуд",
+    "markPaidError": "Пардохтро тасдиқ кардан нашуд"
+  },
   "cart": {
     "addedToCart": "{{title}} ба сабад илова шуд",
     "addedToCartDescription": "{{quantity}} {{unit}} × {{price}}"

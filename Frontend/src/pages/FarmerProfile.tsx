@@ -112,6 +112,10 @@ export function FarmerProfile() {
   const [modalOpen, setModalOpen] = useState(false);
   const [refreshKey, setRefreshKey] = useState(0);
   const [avatarBusy, setAvatarBusy] = useState(false);
+  // Аватары, загруженные до переезда на R2 (2026-08-02), могут указывать на
+  // файл, которого больше нет (см. Avatar.tsx) — без этого флага сломанная
+  // ссылка навсегда рендерила бы битую иконку картинки внутри круга.
+  const [avatarLoadFailed, setAvatarLoadFailed] = useState(false);
   const avatarInputRef = useRef<HTMLInputElement>(null);
   const { profile, loading, error } = useFarmerProfile(refreshKey);
 
@@ -146,6 +150,7 @@ export function FarmerProfile() {
     setAvatarBusy(true);
     try {
       await uploadAvatar(file);
+      setAvatarLoadFailed(false);
       toast.success(t("common:avatar.uploadSuccess"));
     } catch (err) {
       toast.error(t("common:avatar.uploadError"), { description: err instanceof ApiError ? err.message : undefined });
@@ -180,8 +185,13 @@ export function FarmerProfile() {
             <span className="relative flex h-24 w-24 items-center justify-center overflow-hidden rounded-full bg-linear-to-br from-grove-500 to-grove-700 text-white shadow-[0_8px_24px_-6px_rgba(59,168,90,0.55)]">
               {avatarBusy ? (
                 <Loader2 size={26} className="animate-spin" />
-              ) : user?.avatarUrl ? (
-                <img src={resolveMediaUrl(user.avatarUrl)} alt="" className="h-full w-full object-cover" />
+              ) : user?.avatarUrl && !avatarLoadFailed ? (
+                <img
+                  src={resolveMediaUrl(user.avatarUrl)}
+                  alt=""
+                  className="h-full w-full object-cover"
+                  onError={() => setAvatarLoadFailed(true)}
+                />
               ) : (
                 <Sprout size={34} />
               )}

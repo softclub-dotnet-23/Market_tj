@@ -5,30 +5,44 @@ using Microsoft.AspNetCore.Mvc;
 
 namespace MarketTJ.WebApi.Controllers;
 
-// [Authorize] на уровне класса — userId для всех операций над "своим"
-// кошельком берётся из JWT claims внутри WalletService (currentUser.UserId),
-// никогда из тела запроса или маршрута, поэтому чужой кошелёк отсюда
-// пополнить/посмотреть нельзя в принципе (нет параметра, который бы это
-// позволял) — см. IWalletService.
+// [Authorize] на уровне класса — userId для операций над "своими" картами
+// берётся из JWT claims внутри WalletService (currentUser.UserId), а для
+// операций по конкретному walletId (topup/transactions) сверяется владение
+// wallet.UserId == currentUser.UserId внутри сервиса — чужую карту отсюда
+// пополнить/посмотреть нельзя (см. IWalletService).
 [Authorize]
 [Route("api/wallet")]
-public class WalletController(IWalletService walletService) : ApiControllerBase
+public class WalletController(IWalletService walletService, IWalletPinService walletPinService) : ApiControllerBase
 {
     [HttpGet]
-    public async Task<IActionResult> GetMyWallet() => HandleResult(await walletService.GetMyWalletAsync());
+    public async Task<IActionResult> GetMyWallets() => HandleResult(await walletService.GetMyWalletsAsync());
 
     [HttpPost]
     public async Task<IActionResult> Create([FromBody] CreateWalletDto dto) => HandleResult(await walletService.CreateAsync(dto));
 
-    [HttpPost("topup")]
-    public async Task<IActionResult> TopUp([FromBody] TopUpWalletDto dto) => HandleResult(await walletService.TopUpAsync(dto));
+    [HttpPost("{id:int}/topup")]
+    public async Task<IActionResult> TopUp(int id, [FromBody] TopUpWalletDto dto) => HandleResult(await walletService.TopUpAsync(id, dto));
 
-    [HttpGet("transactions")]
-    public async Task<IActionResult> GetTransactions() => HandleResult(await walletService.GetMyTransactionsAsync());
+    [HttpGet("{id:int}/transactions")]
+    public async Task<IActionResult> GetTransactions(int id) => HandleResult(await walletService.GetTransactionsAsync(id));
+
+    // PIN защищает ВХОД В РАЗДЕЛ "Кошелёк" на клиенте, а не сами эндпоинты
+    // выше — те остаются на обычной JWT-авторизации (см. IWalletPinService).
+    [HttpGet("pin/status")]
+    public async Task<IActionResult> GetPinStatus() => HandleResult(await walletPinService.GetStatusAsync());
+
+    [HttpPost("pin/set")]
+    public async Task<IActionResult> SetPin([FromBody] SetWalletPinDto dto) => HandleResult(await walletPinService.SetPinAsync(dto));
+
+    [HttpPost("pin/verify")]
+    public async Task<IActionResult> VerifyPin([FromBody] VerifyWalletPinDto dto) => HandleResult(await walletPinService.VerifyPinAsync(dto));
+
+    [HttpPut("pin/change")]
+    public async Task<IActionResult> ChangePin([FromBody] ChangeWalletPinDto dto) => HandleResult(await walletPinService.ChangePinAsync(dto));
 
     // Публичная карточка "способ оплаты фермера" (только тип + последние 4
-    // цифры) — показывается любому посетителю публичного профиля фермера,
-    // поэтому явно разрешаем анонимный доступ поверх [Authorize] класса,
+    // цифры + банк) — показывается любому посетителю публичного профиля
+    // фермера, поэтому явно разрешаем анонимный доступ поверх [Authorize] класса,
     // как и для остального публичного каталога.
     [AllowAnonymous]
     [HttpGet("farmer/{farmerUserId:int}/payment-card")]

@@ -853,9 +853,19 @@ namespace MarketTJ.Infrastructure.Migrations
                     b.Property<bool>("IsDeleted")
                         .HasColumnType("boolean");
 
+                    b.Property<bool>("IsPaid")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("boolean")
+                        .HasDefaultValue(true);
+
                     b.Property<string>("OrderNumber")
                         .IsRequired()
                         .HasColumnType("text");
+
+                    b.Property<int>("PaymentMethod")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("integer")
+                        .HasDefaultValue(1);
 
                     b.Property<string>("Region")
                         .IsRequired()
@@ -872,6 +882,9 @@ namespace MarketTJ.Infrastructure.Migrations
                         .HasPrecision(18, 2)
                         .HasColumnType("numeric(18,2)");
 
+                    b.Property<int?>("WalletId")
+                        .HasColumnType("integer");
+
                     b.HasKey("Id");
 
                     b.HasIndex("CustomerId");
@@ -880,6 +893,8 @@ namespace MarketTJ.Infrastructure.Migrations
 
                     b.HasIndex("OrderNumber")
                         .IsUnique();
+
+                    b.HasIndex("WalletId");
 
                     b.ToTable("Orders");
                 });
@@ -1413,6 +1428,15 @@ namespace MarketTJ.Infrastructure.Migrations
                     b.Property<DateTime>("UpdatedAt")
                         .HasColumnType("timestamp with time zone");
 
+                    b.Property<int>("WalletPinFailedAttempts")
+                        .HasColumnType("integer");
+
+                    b.Property<string>("WalletPinHash")
+                        .HasColumnType("text");
+
+                    b.Property<DateTime?>("WalletPinLockedUntil")
+                        .HasColumnType("timestamp with time zone");
+
                     b.HasKey("Id");
 
                     b.HasIndex("Email")
@@ -1438,6 +1462,13 @@ namespace MarketTJ.Infrastructure.Migrations
                         .HasPrecision(18, 2)
                         .HasColumnType("numeric(18,2)");
 
+                    b.Property<string>("BankName")
+                        .IsRequired()
+                        .ValueGeneratedOnAdd()
+                        .HasMaxLength(200)
+                        .HasColumnType("character varying(200)")
+                        .HasDefaultValue("—");
+
                     b.Property<string>("CardHolderFirstName")
                         .IsRequired()
                         .HasMaxLength(100)
@@ -1447,6 +1478,13 @@ namespace MarketTJ.Infrastructure.Migrations
                         .IsRequired()
                         .HasMaxLength(100)
                         .HasColumnType("character varying(100)");
+
+                    b.Property<string>("CardNumber")
+                        .IsRequired()
+                        .ValueGeneratedOnAdd()
+                        .HasMaxLength(16)
+                        .HasColumnType("character varying(16)")
+                        .HasDefaultValue("0000000000000000");
 
                     b.Property<string>("CardNumberLast4")
                         .IsRequired()
@@ -1458,6 +1496,23 @@ namespace MarketTJ.Infrastructure.Migrations
 
                     b.Property<DateTime>("CreatedAt")
                         .HasColumnType("timestamp with time zone");
+
+                    b.Property<string>("Cvv")
+                        .IsRequired()
+                        .ValueGeneratedOnAdd()
+                        .HasMaxLength(4)
+                        .HasColumnType("character varying(4)")
+                        .HasDefaultValue("000");
+
+                    b.Property<int>("ExpiryMonth")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("integer")
+                        .HasDefaultValue(12);
+
+                    b.Property<int>("ExpiryYear")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("integer")
+                        .HasDefaultValue(2099);
 
                     b.Property<DateTime>("UpdatedAt")
                         .HasColumnType("timestamp with time zone");
@@ -1471,8 +1526,7 @@ namespace MarketTJ.Infrastructure.Migrations
 
                     b.HasKey("Id");
 
-                    b.HasIndex("UserId")
-                        .IsUnique();
+                    b.HasIndex("UserId");
 
                     b.ToTable("Wallets", t =>
                         {
@@ -1762,6 +1816,11 @@ namespace MarketTJ.Infrastructure.Migrations
                         .OnDelete(DeleteBehavior.Restrict)
                         .IsRequired();
 
+                    b.HasOne("MarketTJ.Domain.Entities.Wallet", null)
+                        .WithMany()
+                        .HasForeignKey("WalletId")
+                        .OnDelete(DeleteBehavior.Restrict);
+
                     b.Navigation("Customer");
 
                     b.Navigation("Farmer");
@@ -1973,8 +2032,8 @@ namespace MarketTJ.Infrastructure.Migrations
             modelBuilder.Entity("MarketTJ.Domain.Entities.Wallet", b =>
                 {
                     b.HasOne("MarketTJ.Domain.Entities.User", "User")
-                        .WithOne()
-                        .HasForeignKey("MarketTJ.Domain.Entities.Wallet", "UserId")
+                        .WithMany()
+                        .HasForeignKey("UserId")
                         .OnDelete(DeleteBehavior.Restrict)
                         .IsRequired();
 

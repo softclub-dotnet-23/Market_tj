@@ -4,7 +4,7 @@ import { Controller, useForm } from "react-hook-form";
 import { motion } from "framer-motion";
 import { toast } from "sonner";
 import { useTranslation } from "react-i18next";
-import { AlertTriangle, CheckCircle2, Info, LogIn, MapPin, Minus, Plus, ShoppingBag, Sprout, Trash2, User, Wallet as WalletIcon } from "lucide-react";
+import { AlertTriangle, Banknote, CheckCircle2, CreditCard, Info, LogIn, MapPin, Minus, Plus, ShoppingBag, Sprout, Trash2, User, Wallet as WalletIcon } from "lucide-react";
 import { Breadcrumbs } from "@/components/ui/Breadcrumbs";
 import { Input, Textarea } from "@/components/ui/Field";
 import { Autocomplete } from "@/components/ui/Autocomplete";
@@ -17,78 +17,167 @@ import { useCart } from "@/context/CartContext";
 import { useAuth } from "@/context/AuthContext";
 import { useProducts } from "@/data/products";
 import { useFarmers } from "@/data/farmers";
-import { useCustomerProfile, submitCustomerOrder } from "@/data/customer";
-import { useMyWallet } from "@/data/wallet";
+import { useCustomerProfile, submitCustomerOrder, OrderPaymentMethod } from "@/data/customer";
+import { useMyWallets, type WalletDto } from "@/data/wallet";
+import { CardBrandMark } from "@/components/customer/WalletCard";
 import { TAJIKISTAN_REGION_SUGGESTIONS, getDistrictsForRegion } from "@/data/tajikistanGeo";
 import { ApiError } from "@/lib/api";
-import { formatSomoni, getUnitPrice } from "@/lib/utils";
+import { formatSomoni, getUnitPrice, cn } from "@/lib/utils";
 
-// Показывает баланс кошелька рядом с суммой заказа и явно предупреждает,
-// если средств не хватит на оформление — но не блокирует кнопку "Оформить":
-// сам отказ (если средств правда не хватит) приходит от бэкенда
-// (WalletService.DebitForOrderAsync) с понятным сообщением, это — заранее
-// показанная подсказка, а не единственная линия защиты.
-function WalletBalancePanel({ totalPrice }: { totalPrice: number }) {
+// Гибридная оплата: покупатель выбирает "Картой" (списание с выбранной
+// виртуальной карты сразу при оформлении) или "Наличными курьеру" (без
+// списания вовсе — доступно даже без единой карты). Отдаёт наружу выбранный
+// способ + конкретный walletId (для Card) — Checkout.onSubmit передаёт их
+// в submitCustomerOrder как есть.
+function PaymentMethodSection({
+  totalPrice,
+  paymentMethod,
+  onPaymentMethodChange,
+  selectedWalletId,
+  onSelectWallet,
+}: {
+  totalPrice: number;
+  paymentMethod: number;
+  onPaymentMethodChange: (method: number) => void;
+  selectedWalletId: number | null;
+  onSelectWallet: (id: number) => void;
+}) {
   const { t } = useTranslation(["pages", "wallet", "common"]);
-  const { data: wallet, loading } = useMyWallet();
+  const { data: wallets, loading } = useMyWallets();
 
-  if (loading) {
-    return <Skeleton className="h-12 w-full" />;
-  }
+  useEffect(() => {
+    if (wallets && wallets.length > 0 && selectedWalletId === null) {
+      onSelectWallet(wallets[0].id);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [wallets]);
 
-  if (!wallet) {
-    return (
-      <div className="flex flex-col gap-2 rounded-2xl border border-harvest-200 bg-harvest-50 p-3.5 text-sm dark:border-harvest-900 dark:bg-harvest-950/40">
-        <p className="flex items-center gap-2 font-medium text-harvest-800 dark:text-harvest-300">
-          <WalletIcon size={15} />
-          {t("wallet:checkout.noWalletTitle")}
-        </p>
-        <p className="text-xs text-harvest-700 dark:text-harvest-400">{t("wallet:checkout.noWalletDescription")}</p>
-        <Link to="/customer/wallet">
-          <Button type="button" variant="outline" size="sm" className="mt-1 w-full">
-            {t("wallet:checkout.createWalletButton")}
-          </Button>
-        </Link>
-      </div>
-    );
-  }
-
-  const sufficient = wallet.balance >= totalPrice;
-
-  if (!sufficient) {
-    const shortfall = totalPrice - wallet.balance;
-    return (
-      <div className="flex flex-col gap-2 rounded-2xl border border-clay-200 bg-clay-50 p-3.5 text-sm dark:border-clay-600/40 dark:bg-clay-500/10">
-        <div className="flex items-center justify-between">
-          <span className="flex items-center gap-2 font-medium text-clay-600 dark:text-clay-400">
-            <AlertTriangle size={15} />
-            {t("wallet:checkout.insufficientTitle")}
-          </span>
-          <span className="text-stone-500 dark:text-stone-400">
-            {formatSomoni(wallet.balance)} {t("common:currencySomoni")}
-          </span>
-        </div>
-        <p className="text-xs text-clay-600 dark:text-clay-400">
-          {t("wallet:checkout.insufficientDescription", { amount: formatSomoni(shortfall) })}
-        </p>
-        <Link to="/customer/wallet">
-          <Button type="button" variant="outline" size="sm" className="mt-1 w-full">
-            {t("wallet:checkout.topUpButton")}
-          </Button>
-        </Link>
-      </div>
-    );
-  }
+  const selectedWallet = wallets?.find((w) => w.id === selectedWalletId) ?? null;
 
   return (
-    <div className="flex items-center justify-between rounded-2xl border border-grove-100 bg-grove-50 px-3.5 py-3 text-sm dark:border-grove-900 dark:bg-grove-950/40">
-      <span className="flex items-center gap-2 font-medium text-grove-700 dark:text-grove-400">
-        <WalletIcon size={15} />
-        {t("wallet:checkout.balanceLabel")}
-      </span>
-      <span className="font-display text-stone-900 dark:text-stone-50">
-        {formatSomoni(wallet.balance)} {t("common:currencySomoni")}
-      </span>
+    <div className="flex flex-col gap-3">
+      <div className="grid grid-cols-2 gap-3">
+        <button
+          type="button"
+          onClick={() => onPaymentMethodChange(OrderPaymentMethod.Card)}
+          className={cn(
+            "flex items-center gap-2.5 rounded-2xl border-2 px-4 py-3 text-sm font-semibold transition",
+            paymentMethod === OrderPaymentMethod.Card
+              ? "border-grove-600 bg-grove-50 text-grove-700 dark:border-grove-500 dark:bg-grove-950 dark:text-grove-300"
+              : "border-stone-200 text-stone-500 hover:border-stone-300 dark:border-stone-700 dark:text-stone-400 dark:hover:border-stone-600",
+          )}
+        >
+          <CreditCard size={17} />
+          {t("pages:checkout.paymentMethodCard")}
+        </button>
+        <button
+          type="button"
+          onClick={() => onPaymentMethodChange(OrderPaymentMethod.CashOnDelivery)}
+          className={cn(
+            "flex items-center gap-2.5 rounded-2xl border-2 px-4 py-3 text-sm font-semibold transition",
+            paymentMethod === OrderPaymentMethod.CashOnDelivery
+              ? "border-grove-600 bg-grove-50 text-grove-700 dark:border-grove-500 dark:bg-grove-950 dark:text-grove-300"
+              : "border-stone-200 text-stone-500 hover:border-stone-300 dark:border-stone-700 dark:text-stone-400 dark:hover:border-stone-600",
+          )}
+        >
+          <Banknote size={17} />
+          {t("pages:checkout.paymentMethodCash")}
+        </button>
+      </div>
+
+      {paymentMethod === OrderPaymentMethod.CashOnDelivery && (
+        <p className="flex items-start gap-1.5 rounded-2xl border border-stone-100 bg-stone-50 p-3 text-xs text-stone-500 dark:border-stone-800 dark:bg-stone-800/40 dark:text-stone-400">
+          <Banknote size={14} className="mt-0.5 shrink-0" />
+          {t("pages:checkout.cashOnDeliveryNote", { amount: formatSomoni(totalPrice) })}
+        </p>
+      )}
+
+      {paymentMethod === OrderPaymentMethod.Card && (
+        <>
+          {loading ? (
+            <Skeleton className="h-12 w-full" />
+          ) : !wallets || wallets.length === 0 ? (
+            <div className="flex flex-col gap-2 rounded-2xl border border-harvest-200 bg-harvest-50 p-3.5 text-sm dark:border-harvest-900 dark:bg-harvest-950/40">
+              <p className="flex items-center gap-2 font-medium text-harvest-800 dark:text-harvest-300">
+                <WalletIcon size={15} />
+                {t("wallet:checkout.noWalletTitle")}
+              </p>
+              <p className="text-xs text-harvest-700 dark:text-harvest-400">{t("wallet:checkout.noWalletDescription")}</p>
+              <Link to="/customer/wallet">
+                <Button type="button" variant="outline" size="sm" className="mt-1 w-full">
+                  {t("wallet:checkout.createWalletButton")}
+                </Button>
+              </Link>
+            </div>
+          ) : (
+            <>
+              {wallets.length > 1 && (
+                <div className="flex flex-col gap-2">
+                  {wallets.map((w: WalletDto) => (
+                    <label
+                      key={w.id}
+                      className={cn(
+                        "flex cursor-pointer items-center gap-3 rounded-2xl border-2 p-3 text-sm transition",
+                        selectedWalletId === w.id
+                          ? "border-grove-500 bg-grove-50 dark:border-grove-500 dark:bg-grove-950/40"
+                          : "border-stone-200 dark:border-stone-700",
+                      )}
+                    >
+                      <input
+                        type="radio"
+                        name="walletId"
+                        checked={selectedWalletId === w.id}
+                        onChange={() => onSelectWallet(w.id)}
+                        className="accent-grove-600"
+                      />
+                      <CardBrandMark cardType={w.cardType} />
+                      <span className="flex-1 font-mono text-xs text-stone-600 dark:text-stone-300">•••• {w.cardNumberLast4}</span>
+                      <span className="text-xs text-stone-400 dark:text-stone-500">{w.bankName}</span>
+                      <span className="font-display text-sm text-stone-800 dark:text-stone-100">
+                        {formatSomoni(w.balance)} {t("common:currencySomoni")}
+                      </span>
+                    </label>
+                  ))}
+                </div>
+              )}
+
+              {selectedWallet && selectedWallet.balance < totalPrice && (
+                <div className="flex flex-col gap-2 rounded-2xl border border-clay-200 bg-clay-50 p-3.5 text-sm dark:border-clay-600/40 dark:bg-clay-500/10">
+                  <div className="flex items-center justify-between">
+                    <span className="flex items-center gap-2 font-medium text-clay-600 dark:text-clay-400">
+                      <AlertTriangle size={15} />
+                      {t("wallet:checkout.insufficientTitle")}
+                    </span>
+                    <span className="text-stone-500 dark:text-stone-400">
+                      {formatSomoni(selectedWallet.balance)} {t("common:currencySomoni")}
+                    </span>
+                  </div>
+                  <p className="text-xs text-clay-600 dark:text-clay-400">
+                    {t("wallet:checkout.insufficientDescription", { amount: formatSomoni(totalPrice - selectedWallet.balance) })}
+                  </p>
+                  <Link to="/customer/wallet">
+                    <Button type="button" variant="outline" size="sm" className="mt-1 w-full">
+                      {t("wallet:checkout.topUpButton")}
+                    </Button>
+                  </Link>
+                </div>
+              )}
+
+              {selectedWallet && selectedWallet.balance >= totalPrice && wallets.length === 1 && (
+                <div className="flex items-center justify-between rounded-2xl border border-grove-100 bg-grove-50 px-3.5 py-3 text-sm dark:border-grove-900 dark:bg-grove-950/40">
+                  <span className="flex items-center gap-2 font-medium text-grove-700 dark:text-grove-400">
+                    <WalletIcon size={15} />
+                    {t("wallet:checkout.balanceLabel")}
+                  </span>
+                  <span className="font-display text-stone-900 dark:text-stone-50">
+                    {formatSomoni(selectedWallet.balance)} {t("common:currencySomoni")}
+                  </span>
+                </div>
+              )}
+            </>
+          )}
+        </>
+      )}
     </div>
   );
 }
@@ -118,6 +207,8 @@ export function Checkout() {
   const { user } = useAuth();
   const { profile, loading: profileLoading } = useCustomerProfile();
   const [placedOrder, setPlacedOrder] = useState<PlacedOrder | null>(null);
+  const [paymentMethod, setPaymentMethod] = useState<number>(OrderPaymentMethod.Card);
+  const [selectedWalletId, setSelectedWalletId] = useState<number | null>(null);
 
   const {
     register,
@@ -152,6 +243,11 @@ export function Checkout() {
   const onSubmit = async (values: CheckoutForm) => {
     if (!profile) return;
 
+    if (paymentMethod === OrderPaymentMethod.Card && !selectedWalletId) {
+      toast.error(t("pages:checkout.selectCardRequired"));
+      return;
+    }
+
     try {
       const groups = new Map<number, typeof lines>();
       for (const line of lines) {
@@ -184,6 +280,8 @@ export function Checkout() {
           deliveryAddress,
           customerComment: values.comment || null,
           items,
+          paymentMethod,
+          walletId: paymentMethod === OrderPaymentMethod.Card ? selectedWalletId : null,
         });
         orderNumbers.push(created.orderNumber);
       }
@@ -443,7 +541,13 @@ export function Checkout() {
             </span>
           </div>
 
-          <WalletBalancePanel totalPrice={totalPrice} />
+          <PaymentMethodSection
+            totalPrice={totalPrice}
+            paymentMethod={paymentMethod}
+            onPaymentMethodChange={setPaymentMethod}
+            selectedWalletId={selectedWalletId}
+            onSelectWallet={setSelectedWalletId}
+          />
 
           <p className="flex items-start gap-1.5 text-xs text-stone-400 dark:text-stone-500">
             <Info size={13} className="mt-0.5 shrink-0" />

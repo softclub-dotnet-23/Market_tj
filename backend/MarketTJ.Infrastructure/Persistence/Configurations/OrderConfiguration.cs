@@ -1,4 +1,5 @@
 using MarketTJ.Domain.Entities;
+using MarketTJ.Domain.Enums;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Metadata.Builders;
 
@@ -20,6 +21,22 @@ public class OrderConfiguration : IEntityTypeConfiguration<Order>
         builder.Property(x => x.TotalAmount).HasPrecision(18, 2);
 
         builder.HasIndex(x => x.OrderNumber).IsUnique();
+
+        // Все заказы, созданные до этой миграции, были оплачены картой (это
+        // единственный способ оплаты, существовавший на тот момент) и уже
+        // списаны — поэтому дефолты для обратной совместимости: Card + IsPaid=true.
+        builder.Property(x => x.PaymentMethod).HasDefaultValue(OrderPaymentMethod.Card);
+        builder.Property(x => x.IsPaid).HasDefaultValue(true);
+
+        // WalletId — не строгая FK-навигация (со стороны Order нет свойства
+        // Wallet), а просто ссылка на конкретную карту, с которой было
+        // списание при оплате Card; SetNull на удаление карты не предусмотрен
+        // (карты не удаляются в этой версии), Restrict — чтобы не потерять
+        // историческую ссылку молча.
+        builder.HasOne<Wallet>()
+            .WithMany()
+            .HasForeignKey(x => x.WalletId)
+            .OnDelete(DeleteBehavior.Restrict);
 
         // CustomerProfile/FarmerProfile 1 — many Order (раздел 9 TZ1.md — снова
         // через профили, не напрямую через User).

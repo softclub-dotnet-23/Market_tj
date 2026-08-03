@@ -32,9 +32,9 @@ public class OrderServiceTests
         // тестов заказов сама оплата не важна, важно, что заказ создаётся/
         // меняет статус. Тесты именно на списание/начисление/возврат
         // переопределяют эти заглушки под себя (см. ниже).
-        _walletService.Setup(w => w.DebitForOrderAsync(It.IsAny<int>(), It.IsAny<decimal>(), It.IsAny<int>())).ReturnsAsync(Result<string>.Ok("Списано"));
+        _walletService.Setup(w => w.DebitForOrderAsync(It.IsAny<int>(), It.IsAny<int>(), It.IsAny<decimal>(), It.IsAny<int>())).ReturnsAsync(Result<string>.Ok("Списано"));
         _walletService.Setup(w => w.CreditFarmerForOrderAsync(It.IsAny<int>(), It.IsAny<decimal>(), It.IsAny<int>())).ReturnsAsync(Result<string>.Ok("Начислено"));
-        _walletService.Setup(w => w.RefundForOrderAsync(It.IsAny<int>(), It.IsAny<decimal>(), It.IsAny<int>())).ReturnsAsync(Result<string>.Ok("Возврат выполнен"));
+        _walletService.Setup(w => w.RefundForOrderAsync(It.IsAny<int>())).ReturnsAsync(Result<string>.Ok("Возврат выполнен"));
         // По умолчанию — Customer с UserId=10, чей CustomerProfile.Id=1 (совпадает
         // с CustomerId=1 во всех фабриках Order/DTO ниже) — владелец по умолчанию.
         _currentUser.Setup(c => c.UserId).Returns(10);
@@ -76,7 +76,24 @@ public class OrderServiceTests
         District = "Бохтар",
         Subtotal = 100,
         DeliveryPrice = 10,
-        TotalAmount = 110
+        TotalAmount = 110,
+        PaymentMethod = OrderPaymentMethod.Card,
+        WalletId = 1
+    };
+
+    private static CreateOrderDto ValidCashOnDeliveryCreateDto(string orderNumber = "ORD-1") => new()
+    {
+        OrderNumber = orderNumber,
+        CustomerId = 1,
+        FarmerId = 1,
+        Status = OrderStatus.Pending,
+        DeliveryAddress = "Address",
+        Region = "Хатлон",
+        District = "Бохтар",
+        Subtotal = 100,
+        DeliveryPrice = 10,
+        TotalAmount = 110,
+        PaymentMethod = OrderPaymentMethod.CashOnDelivery
     };
 
     private static UpdateOrderDto ValidUpdateDto(int id = 1, OrderStatus status = OrderStatus.Pending, string orderNumber = "ORD-1") => new()
@@ -466,6 +483,256 @@ public class OrderServiceTests
 
         Assert.False(result.IsSuccess);
         Assert.Equal(ErrorType.InternalServerError, result.ErrorType);
+    }
+
+    // ---------- CreateAsync: гибридная оплата ----------
+
+    [Fact]
+    public async Task CreateAsync_Card_DebitsSelectedWalletAndMarksPaidImmediately()
+    {
+        Order? added = null;
+        _orderRepository.Setup(r => r.AddAsync(It.IsAny<Order>())).Callback<Order>(o => added = o).Returns(Task.CompletedTask);
+        var dto = ValidCreateDto();
+        dto.WalletId = 7;
+
+        var result = await _service.CreateAsync(dto);
+
+        Assert.True(result.IsSuccess);
+        Assert.True(added!.IsPaid);
+        Assert.Equal(OrderPaymentMethod.Card, added.PaymentMethod);
+        Assert.Equal(7, added.WalletId);
+        _walletService.Verify(w => w.DebitForOrderAsync(10, 7, 110, It.IsAny<int>()), Times.Once);
+    }
+
+    [Fact]
+    public async Task CreateAsync_Card_WithoutWalletId_ReturnsValidationErrorWithoutDebiting()
+    {
+        var dto = ValidCreateDto();
+        dto.WalletId = null;
+
+        var result = await _service.CreateAsync(dto);
+
+        Assert.False(result.IsSuccess);
+        Assert.Equal(ErrorType.Validation, result.ErrorType);
+        _orderRepository.Verify(r => r.AddAsync(It.IsAny<Order>()), Times.Never);
+        _walletService.Verify(w => w.DebitForOrderAsync(It.IsAny<int>(), It.IsAny<int>(), It.IsAny<decimal>(), It.IsAny<int>()), Times.Never);
+    }
+
+    [Fact]
+    public async Task CreateAsync_Card_DebitFails_DeletesOrderAndReturnsFailure()
+    {
+        _walletService.Setup(w => w.DebitForOrderAsync(It.IsAny<int>(), It.IsAny<int>(), It.IsAny<decimal>(), It.IsAny<int>()))
+            .ReturnsAsync(Result<string>.Fail("Недостаточно средств", ErrorType.Validation));
+
+        var result = await _service.CreateAsync(ValidCreateDto());
+
+        Assert.False(result.IsSuccess);
+        _orderRepository.Verify(r => r.DeleteAsync(It.IsAny<Order>()), Times.Once);
+    }
+
+    [Fact]
+    public async Task CreateAsync_CashOnDelivery_DoesNotDebitAndLeavesOrderUnpaid()
+    {
+        Order? added = null;
+        _orderRepository.Setup(r => r.AddAsync(It.IsAny<Order>())).Callback<Order>(o => added = o).Returns(Task.CompletedTask);
+
+        var result = await _service.CreateAsync(ValidCashOnDeliveryCreateDto());
+
+        Assert.True(result.IsSuccess);
+        Assert.False(added!.IsPaid);
+        Assert.Equal(OrderPaymentMethod.CashOnDelivery, added.PaymentMethod);
+        Assert.Null(added.WalletId);
+        _walletService.Verify(w => w.DebitForOrderAsync(It.IsAny<int>(), It.IsAny<int>(), It.IsAny<decimal>(), It.IsAny<int>()), Times.Never);
+    }
+
+    [Fact]
+    public async Task CreateAsync_CashOnDelivery_SucceedsEvenWithoutAnyWallet()
+    {
+        // Раздел запроса: "оплата наличными доступна всем, даже без единой
+        // карты" — ни один вызов WalletService не должен требовать наличия
+        // кошелька у покупателя (заглушки по умолчанию его вообще не проверяют).
+        var result = await _service.CreateAsync(ValidCashOnDeliveryCreateDto());
+
+        Assert.True(result.IsSuccess);
+    }
+
+    // ---------- Гибридная оплата: начисление фермеру привязано к IsPaid ----------
+
+    [Fact]
+    public async Task UpdateAsync_CashOnDeliveryNotYetPaid_CompletingOrder_DoesNotCreditFarmer()
+    {
+        var order = CreateOrder(1, OrderStatus.Pending);
+        order.PaymentMethod = OrderPaymentMethod.CashOnDelivery;
+        order.IsPaid = false;
+        _orderRepository.Setup(r => r.GetByIdAsync(1)).ReturnsAsync(order);
+
+        await _service.UpdateAsync(1, ValidUpdateDto(1, OrderStatus.Completed));
+
+        _walletService.Verify(w => w.CreditFarmerForOrderAsync(It.IsAny<int>(), It.IsAny<decimal>(), It.IsAny<int>()), Times.Never);
+    }
+
+    [Fact]
+    public async Task UpdateAsync_CashOnDeliveryAlreadyPaid_CompletingOrder_CreditsFarmer()
+    {
+        var order = CreateOrder(1, OrderStatus.Pending);
+        order.PaymentMethod = OrderPaymentMethod.CashOnDelivery;
+        order.IsPaid = true;
+        _orderRepository.Setup(r => r.GetByIdAsync(1)).ReturnsAsync(order);
+
+        await _service.UpdateAsync(1, ValidUpdateDto(1, OrderStatus.Completed));
+
+        _walletService.Verify(w => w.CreditFarmerForOrderAsync(20, 100, 1), Times.Once);
+    }
+
+    [Fact]
+    public async Task UpdateAsync_Card_CompletingOrder_CreditsFarmer()
+    {
+        var order = CreateOrder(1, OrderStatus.Pending);
+        order.PaymentMethod = OrderPaymentMethod.Card;
+        order.IsPaid = true;
+        _orderRepository.Setup(r => r.GetByIdAsync(1)).ReturnsAsync(order);
+
+        await _service.UpdateAsync(1, ValidUpdateDto(1, OrderStatus.Completed));
+
+        _walletService.Verify(w => w.CreditFarmerForOrderAsync(20, 100, 1), Times.Once);
+    }
+
+    [Fact]
+    public async Task UpdateAsync_CashOnDelivery_RejectingOrder_DoesNotCallRefund()
+    {
+        // Наличными деньги не проходили через Wallet вовсе — возвращать
+        // через Wallet нечего, RefundForOrderAsync не должен вызываться.
+        var order = CreateOrder(1, OrderStatus.Pending);
+        order.PaymentMethod = OrderPaymentMethod.CashOnDelivery;
+        order.IsPaid = false;
+        _orderRepository.Setup(r => r.GetByIdAsync(1)).ReturnsAsync(order);
+
+        await _service.UpdateAsync(1, ValidUpdateDto(1, OrderStatus.Rejected));
+
+        _walletService.Verify(w => w.RefundForOrderAsync(It.IsAny<int>()), Times.Never);
+    }
+
+    [Fact]
+    public async Task UpdateAsync_Card_RejectingOrder_CallsRefundForThatOrder()
+    {
+        var order = CreateOrder(1, OrderStatus.Pending);
+        order.PaymentMethod = OrderPaymentMethod.Card;
+        order.IsPaid = true;
+        _orderRepository.Setup(r => r.GetByIdAsync(1)).ReturnsAsync(order);
+
+        await _service.UpdateAsync(1, ValidUpdateDto(1, OrderStatus.Rejected));
+
+        _walletService.Verify(w => w.RefundForOrderAsync(1), Times.Once);
+    }
+
+    // ---------- MarkPaidAsync ----------
+
+    [Fact]
+    public async Task MarkPaidAsync_FarmerOwnerOfCashOnDeliveryOrder_MarksPaid()
+    {
+        _currentUser.Setup(c => c.UserId).Returns(20);
+        _currentUser.Setup(c => c.Role).Returns(nameof(UserRole.Farmer));
+        _farmerProfileRepository.Setup(r => r.GetByUserIdAsync(20)).ReturnsAsync(new FarmerProfile
+        {
+            Id = 1, UserId = 20, FarmName = "Farm", Region = "Хатлон", District = "Бохтар", Village = "V", Address = "A",
+            VerificationStatus = FarmerVerificationStatus.Verified
+        });
+        var order = CreateOrder(1, OrderStatus.Pending);
+        order.PaymentMethod = OrderPaymentMethod.CashOnDelivery;
+        order.IsPaid = false;
+        _orderRepository.Setup(r => r.GetByIdAsync(1)).ReturnsAsync(order);
+
+        var result = await _service.MarkPaidAsync(1);
+
+        Assert.True(result.IsSuccess);
+        Assert.True(order.IsPaid);
+        _orderRepository.Verify(r => r.UpdateAsync(order), Times.Once);
+    }
+
+    [Fact]
+    public async Task MarkPaidAsync_NotOwningFarmer_ReturnsForbidden()
+    {
+        _currentUser.Setup(c => c.UserId).Returns(200);
+        _currentUser.Setup(c => c.Role).Returns(nameof(UserRole.Farmer));
+        _farmerProfileRepository.Setup(r => r.GetByUserIdAsync(200)).ReturnsAsync(new FarmerProfile
+        {
+            Id = 99, UserId = 200, FarmName = "Other Farm", Region = "Хатлон", District = "Бохтар", Village = "V", Address = "A",
+            VerificationStatus = FarmerVerificationStatus.Verified
+        });
+        var order = CreateOrder(1, OrderStatus.Pending);
+        order.PaymentMethod = OrderPaymentMethod.CashOnDelivery;
+        order.IsPaid = false;
+        _orderRepository.Setup(r => r.GetByIdAsync(1)).ReturnsAsync(order);
+
+        var result = await _service.MarkPaidAsync(1);
+
+        Assert.False(result.IsSuccess);
+        Assert.Equal(ErrorType.Forbidden, result.ErrorType);
+        Assert.False(order.IsPaid);
+    }
+
+    [Fact]
+    public async Task MarkPaidAsync_CardOrder_ReturnsValidationError()
+    {
+        _currentUser.Setup(c => c.UserId).Returns(20);
+        _currentUser.Setup(c => c.Role).Returns(nameof(UserRole.Farmer));
+        _farmerProfileRepository.Setup(r => r.GetByUserIdAsync(20)).ReturnsAsync(new FarmerProfile
+        {
+            Id = 1, UserId = 20, FarmName = "Farm", Region = "Хатлон", District = "Бохтар", Village = "V", Address = "A",
+            VerificationStatus = FarmerVerificationStatus.Verified
+        });
+        var order = CreateOrder(1, OrderStatus.Pending);
+        order.PaymentMethod = OrderPaymentMethod.Card;
+        order.IsPaid = true;
+        _orderRepository.Setup(r => r.GetByIdAsync(1)).ReturnsAsync(order);
+
+        var result = await _service.MarkPaidAsync(1);
+
+        Assert.False(result.IsSuccess);
+        Assert.Equal(ErrorType.Validation, result.ErrorType);
+    }
+
+    [Fact]
+    public async Task MarkPaidAsync_AlreadyPaid_ReturnsOkWithoutDuplicateCredit()
+    {
+        _currentUser.Setup(c => c.UserId).Returns(20);
+        _currentUser.Setup(c => c.Role).Returns(nameof(UserRole.Farmer));
+        _farmerProfileRepository.Setup(r => r.GetByUserIdAsync(20)).ReturnsAsync(new FarmerProfile
+        {
+            Id = 1, UserId = 20, FarmName = "Farm", Region = "Хатлон", District = "Бохтар", Village = "V", Address = "A",
+            VerificationStatus = FarmerVerificationStatus.Verified
+        });
+        var order = CreateOrder(1, OrderStatus.Completed);
+        order.PaymentMethod = OrderPaymentMethod.CashOnDelivery;
+        order.IsPaid = true;
+        _orderRepository.Setup(r => r.GetByIdAsync(1)).ReturnsAsync(order);
+
+        var result = await _service.MarkPaidAsync(1);
+
+        Assert.True(result.IsSuccess);
+        _orderRepository.Verify(r => r.UpdateAsync(It.IsAny<Order>()), Times.Never);
+        _walletService.Verify(w => w.CreditFarmerForOrderAsync(It.IsAny<int>(), It.IsAny<decimal>(), It.IsAny<int>()), Times.Never);
+    }
+
+    [Fact]
+    public async Task MarkPaidAsync_OrderAlreadyCompletedBeforePayment_CreditsFarmerNow()
+    {
+        _currentUser.Setup(c => c.UserId).Returns(20);
+        _currentUser.Setup(c => c.Role).Returns(nameof(UserRole.Farmer));
+        _farmerProfileRepository.Setup(r => r.GetByUserIdAsync(20)).ReturnsAsync(new FarmerProfile
+        {
+            Id = 1, UserId = 20, FarmName = "Farm", Region = "Хатлон", District = "Бохтар", Village = "V", Address = "A",
+            VerificationStatus = FarmerVerificationStatus.Verified
+        });
+        var order = CreateOrder(1, OrderStatus.Completed);
+        order.PaymentMethod = OrderPaymentMethod.CashOnDelivery;
+        order.IsPaid = false;
+        _orderRepository.Setup(r => r.GetByIdAsync(1)).ReturnsAsync(order);
+
+        var result = await _service.MarkPaidAsync(1);
+
+        Assert.True(result.IsSuccess);
+        _walletService.Verify(w => w.CreditFarmerForOrderAsync(20, 100, 1), Times.Once);
     }
 
     // ---------- UpdateAsync ----------

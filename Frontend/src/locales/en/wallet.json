@@ -5,8 +5,8 @@
     "description": "Check your connection and try again."
   },
   "createCard": {
-    "title": "Create your virtual card",
-    "description": "Market.tj's internal wallet — for paying for orders and receiving sales payouts.",
+    "title": "Add a card",
+    "description": "Market.tj's internal wallet — for paying for orders and receiving sales payouts. Up to 5 cards per user.",
     "firstNameLabel": "Cardholder first name",
     "lastNameLabel": "Cardholder last name",
     "firstNamePlaceholder": "e.g. Alisher",
@@ -14,17 +14,37 @@
     "firstNameRequired": "First name is required",
     "lastNameRequired": "Last name is required",
     "cardTypeLabel": "Card type",
+    "cardNumberLabel": "Card number",
+    "cardNumberRequired": "Card number is required",
+    "cardNumberLength": "Card number must be 16 digits",
+    "cardNumberInvalid": "Invalid card number",
+    "cardNumberUnsupported": "Only Visa, Mastercard and UnionPay are supported",
+    "expiryLabel": "Expiry date",
+    "expiryFormat": "Format MM/YY",
+    "expiryPast": "This card has expired",
+    "cvvLabel": "CVV",
+    "cvvRequired": "Enter the 3-digit CVV",
+    "bankNameLabel": "Bank",
+    "bankNamePlaceholder": "e.g. Amonatbank",
+    "bankNameRequired": "Bank name is required",
+    "cancel": "Cancel",
     "submit": "Create card",
     "success": "Card created",
     "error": "Couldn't create the card"
   },
   "card": {
     "holderFallback": "Cardholder",
-    "validFrom": "OPENED"
+    "validFrom": "OPENED",
+    "validThru": "VALID THRU"
   },
   "balance": {
     "title": "Current balance",
-    "topUp": "Top up"
+    "topUp": "Top up",
+    "currency": "som"
+  },
+  "cardsList": {
+    "addCard": "Add card",
+    "maxReached": "Limit reached — up to {{max}} cards per user"
   },
   "topUpForm": {
     "title": "Top up balance",
@@ -56,12 +76,31 @@
     "empty": "The farmer hasn't linked a payment card yet",
     "loading": "Loading..."
   },
+  "pin": {
+    "setupTitle": "Protect your wallet with a PIN",
+    "setupDescription": "Choose a 4-digit PIN — you'll be asked for it every time you open the Wallet section.",
+    "pinLabel": "PIN (4 digits)",
+    "confirmPinLabel": "Confirm PIN",
+    "passwordLabel": "Current account password",
+    "passwordPlaceholder": "Enter your password to confirm",
+    "setupSubmit": "Set PIN",
+    "pinLengthError": "PIN must be exactly 4 digits",
+    "pinMismatchError": "PINs don't match",
+    "setupSuccess": "PIN set",
+    "setupError": "Failed to set PIN",
+    "entryTitle": "Enter PIN",
+    "entryDescription": "The Wallet section is PIN-protected",
+    "enterPinLabel": "PIN",
+    "unlock": "Unlock",
+    "wrongPin": "Incorrect PIN",
+    "statusError": "Failed to check PIN status"
+  },
   "checkout": {
     "balanceLabel": "Wallet balance",
     "insufficientTitle": "Insufficient balance",
     "insufficientDescription": "You're short {{amount}} som — top up your balance to place this order.",
     "noWalletTitle": "You need a Market.tj card",
-    "noWalletDescription": "Create a virtual card in the Wallet section before you can pay for orders.",
+    "noWalletDescription": "Create a virtual card in the Wallet section to pay by card, or choose cash on delivery instead.",
     "topUpButton": "Top up balance",
     "createWalletButton": "Create card",
     "sufficientNote": "Funds will be deducted from your wallet balance once the order is placed."

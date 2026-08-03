@@ -27,4 +27,8 @@ public class GetOrderDto
     public DateTime? AcceptedAt { get; set; }
     public DateTime? CompletedAt { get; set; }
     public DateTime? CancelledAt { get; set; }
+
+    public OrderPaymentMethod PaymentMethod { get; set; }
+    public bool IsPaid { get; set; }
+    public int? WalletId { get; set; }
 }

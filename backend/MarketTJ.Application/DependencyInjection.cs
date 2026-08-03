@@ -58,6 +58,7 @@ public static class DependencyInjection
         services.AddScoped<IAnalyticsService, AnalyticsService>();
         services.AddScoped<IEmailVerificationService, EmailVerificationService>();
         services.AddScoped<IWalletService, WalletService>();
+        services.AddScoped<IWalletPinService, WalletPinService>();
 
         return services;
     }

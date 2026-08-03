@@ -1,5 +1,6 @@
 using MarketTJ.Application.Interfaces.Repositories;
 using MarketTJ.Domain.Entities;
+using MarketTJ.Domain.Enums;
 using Microsoft.EntityFrameworkCore;
 
 namespace MarketTJ.Infrastructure.Persistence.Repositories;
@@ -12,6 +13,9 @@ public class WalletRepository(AppDbContext context) : IWalletRepository
     public async Task<Wallet?> GetByIdAsync(int id)
         => await context.Wallets.FindAsync(id);
 
+    public async Task<List<Wallet>> GetAllByUserIdAsync(int userId)
+        => await context.Wallets.Where(w => w.UserId == userId).OrderBy(w => w.CreatedAt).ToListAsync();
+
     public async Task<bool> TryAddAsync(Wallet wallet)
     {
         await context.Wallets.AddAsync(wallet);
@@ -22,8 +26,6 @@ public class WalletRepository(AppDbContext context) : IWalletRepository
         }
         catch (DbUpdateException)
         {
-            // Unique index на UserId — гонка двух параллельных запросов на
-            // создание карты одним пользователем.
             context.Entry(wallet).State = EntityState.Detached;
             return false;
         }
@@ -55,4 +57,8 @@ public class WalletRepository(AppDbContext context) : IWalletRepository
 
     public async Task<List<WalletTransaction>> GetTransactionsAsync(int walletId)
         => await context.WalletTransactions.Where(t => t.WalletId == walletId).ToListAsync();
+
+    public async Task<WalletTransaction?> FindPurchaseTransactionForOrderAsync(int orderId)
+        => await context.WalletTransactions.FirstOrDefaultAsync(
+            t => t.RelatedOrderId == orderId && t.Type == WalletTransactionType.Purchase);
 }

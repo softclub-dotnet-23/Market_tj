@@ -41,15 +41,23 @@ interface WalletCardProps {
   lastName: string;
   last4: string | null;
   createdAt: string | null;
+  expiryMonth?: number | null;
+  expiryYear?: number | null;
+  bankName?: string | null;
   className?: string;
 }
 
-export function WalletCard({ cardType, firstName, lastName, last4, createdAt, className }: WalletCardProps) {
+export function WalletCard({ cardType, firstName, lastName, last4, createdAt, expiryMonth, expiryYear, bankName, className }: WalletCardProps) {
   const { t } = useTranslation("wallet");
   const holderName = `${firstName} ${lastName}`.trim();
-  const openedLabel = createdAt
-    ? new Date(createdAt).toLocaleDateString(undefined, { month: "2-digit", year: "2-digit" }).replace(/\//g, "/")
-    : "--/--";
+  // Реальный срок действия карты (MM/YY), если он есть — иначе (форма ещё
+  // заполняется) старое поведение "дата открытия по createdAt".
+  const expiryLabel =
+    expiryMonth && expiryYear
+      ? `${String(expiryMonth).padStart(2, "0")}/${String(expiryYear).slice(-2)}`
+      : createdAt
+        ? new Date(createdAt).toLocaleDateString(undefined, { month: "2-digit", year: "2-digit" }).replace(/\//g, "/")
+        : "--/--";
 
   return (
     <motion.div
@@ -70,7 +78,9 @@ export function WalletCard({ cardType, firstName, lastName, last4, createdAt, cl
           <span className="flex h-9 w-12 items-center justify-center rounded-lg bg-white/15 backdrop-blur-sm">
             <span className="h-5 w-8 rounded-[4px] bg-linear-to-br from-harvest-300/90 to-harvest-500/90" />
           </span>
-          <span className="text-[10px] font-semibold tracking-[0.2em] text-white/60 uppercase">Market.tj</span>
+          <span className="text-[10px] font-semibold tracking-[0.2em] text-white/60 uppercase">
+            {bankName || "Market.tj"}
+          </span>
         </div>
 
         <div>
@@ -88,7 +98,7 @@ export function WalletCard({ cardType, firstName, lastName, last4, createdAt, cl
               {holderName || t("card.holderFallback")}
             </p>
             <p className="mt-1 text-[9px] font-medium tracking-[0.15em] text-white/45 uppercase">
-              {t("card.validFrom")} {openedLabel}
+              {expiryMonth && expiryYear ? t("card.validThru") : t("card.validFrom")} {expiryLabel}
             </p>
           </div>
           <CardBrandMark cardType={cardType} />

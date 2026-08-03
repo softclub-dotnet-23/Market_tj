@@ -49,6 +49,7 @@
       "address": "Delivery address",
       "amount": "Amount",
       "status": "Status",
+      "payment": "Payment",
       "createdAt": "Order date & time",
       "receivedAt": "Received date & time",
       "review": "Review",
