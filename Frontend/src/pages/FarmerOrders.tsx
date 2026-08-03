@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { useTranslation } from "react-i18next";
 import { toast } from "sonner";
-import { ShoppingCart } from "lucide-react";
+import { Banknote, ShoppingCart } from "lucide-react";
 import { PageLoader } from "@/components/layout/PageLoader";
 import { EmptyState } from "@/components/ui/EmptyState";
 import { Pagination } from "@/components/ui/Pagination";
@@ -9,6 +9,8 @@ import { ViewModeToggle, type OrdersViewMode } from "@/components/ui/ViewModeTog
 import { StatusMenu } from "@/components/ui/StatusMenu";
 import { OrderItemsCell } from "@/components/ui/OrderItemsCell";
 import { OrderItemsPhotoList } from "@/components/ui/OrderItemsPhotoList";
+import { PaymentBadge } from "@/components/ui/PaymentBadge";
+import { Button } from "@/components/ui/Button";
 import { formatDateTime, formatSomoni } from "@/lib/utils";
 import {
   ORDER_STATUS_CLASSES,
@@ -20,6 +22,8 @@ import {
 } from "@/lib/orderStatus";
 import {
   DeliveryStatus,
+  OrderPaymentMethod,
+  markOrderPaid,
   notifyFarmerOrdersChanged,
   updateFarmerOrderStatus,
   useDeliveriesByOrder,
@@ -62,10 +66,11 @@ const DELIVERY_STATUS_KEYS: Record<number, string> = {
 };
 
 export function FarmerOrders() {
-  const { t } = useTranslation("farmer");
+  const { t } = useTranslation(["farmer", "common"]);
   const [page, setPage] = useState(1);
   const [viewMode, setViewMode] = useState<OrdersViewMode>("table");
   const [busyId, setBusyId] = useState<number | null>(null);
+  const [markingPaidId, setMarkingPaidId] = useState<number | null>(null);
   const { profile, loading: profileLoading, error: profileError } = useFarmerProfile();
   const { orders, loading: ordersLoading, error: ordersError } = useFarmerOrders(profile?.id ?? null);
   const { deliveriesByOrderId, loading: deliveriesLoading } = useDeliveriesByOrder();
@@ -85,6 +90,19 @@ export function FarmerOrders() {
       toast.error(t("orders.updateError"), { description: err instanceof Error ? err.message : undefined });
     } finally {
       setBusyId(null);
+    }
+  };
+
+  const handleMarkPaid = async (order: FarmerOrderDto) => {
+    setMarkingPaidId(order.id);
+    try {
+      await markOrderPaid(order.id);
+      toast.success(t("common:payment.markPaidSuccess"));
+      notifyFarmerOrdersChanged();
+    } catch (err) {
+      toast.error(t("common:payment.markPaidError"), { description: err instanceof Error ? err.message : undefined });
+    } finally {
+      setMarkingPaidId(null);
     }
   };
 
@@ -117,6 +135,23 @@ export function FarmerOrders() {
     ) : (
       t("orders.noDeliveryYet")
     );
+
+  const paymentCell = (order: FarmerOrderDto) => (
+    <div className="flex flex-col items-start gap-1.5">
+      <PaymentBadge paymentMethod={order.paymentMethod} isPaid={order.isPaid} />
+      {order.paymentMethod === OrderPaymentMethod.CashOnDelivery && !order.isPaid && (
+        <Button
+          size="sm"
+          variant="outline"
+          leftIcon={<Banknote size={13} />}
+          loading={markingPaidId === order.id}
+          onClick={() => handleMarkPaid(order)}
+        >
+          {t("common:payment.markPaid")}
+        </Button>
+      )}
+    </div>
+  );
 
   const statusCell = (order: FarmerOrderDto, receivedAt: string | null) => (
     <div className="flex flex-col items-start gap-1.5">
@@ -176,7 +211,10 @@ export function FarmerOrders() {
           <span className="text-stone-400 dark:text-stone-500">{t("orders.columns.delivery")}</span>
           <span className="text-stone-700 dark:text-stone-200">{deliveryInfo(delivery)}</span>
         </div>
-        <div className="pt-1">{statusCell(order, receivedAt)}</div>
+        <div className="flex flex-wrap items-center justify-between gap-3 pt-1">
+          {statusCell(order, receivedAt)}
+          {paymentCell(order)}
+        </div>
       </div>
     );
   };
@@ -199,6 +237,7 @@ export function FarmerOrders() {
               <th className="px-6 py-4 font-medium">{t("orders.columns.address")}</th>
               <th className="px-6 py-4 font-medium">{t("orders.columns.amount")}</th>
               <th className="px-6 py-4 font-medium">{t("orders.columns.status")}</th>
+              <th className="px-6 py-4 font-medium">{t("orders.columns.payment")}</th>
             </tr>
           </thead>
           <tbody>
@@ -230,6 +269,7 @@ export function FarmerOrders() {
                     {formatSomoni(order.totalAmount)} {t("common.somoni")}
                   </td>
                   <td className="px-6 py-4">{statusCell(order, receivedAt)}</td>
+                  <td className="px-6 py-4">{paymentCell(order)}</td>
                 </tr>
               );
             })}

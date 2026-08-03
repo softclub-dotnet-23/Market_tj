@@ -20,6 +20,7 @@ export const OrderStatus = {
   Cancelled: 11,
 } as const;
 export const DeliveryStatus = { Pending: 1, Assigned: 2, PickedUp: 3, InDelivery: 4, Delivered: 5, Cancelled: 6 } as const;
+export const OrderPaymentMethod = { Card: 1, CashOnDelivery: 2 } as const;
 export const FarmerDocumentType = { Passport: 1, LandDeed: 2, Other: 3 } as const;
 export const DocumentReviewStatus = { Pending: 1, Approved: 2, Rejected: 3 } as const;
 
@@ -144,6 +145,9 @@ export interface FarmerOrderDto {
   acceptedAt: string | null;
   completedAt: string | null;
   cancelledAt: string | null;
+  paymentMethod: number;
+  isPaid: boolean;
+  walletId: number | null;
 }
 
 export interface OrderItemDto {
@@ -464,6 +468,14 @@ export function updateFarmerOrderStatus(order: FarmerOrderDto, status: number) {
     completedAt: order.completedAt,
     cancelledAt: order.cancelledAt,
   });
+}
+
+// Гибридная оплата: фермер подтверждает получение наличных при доставке
+// (только для PaymentMethod == CashOnDelivery, см. OrderService.MarkPaidAsync
+// на бэкенде — курьер отдельного доступа к Order не имеет, только к своей
+// Delivery, поэтому отметку ставит фермер/админ).
+export function markOrderPaid(orderId: number) {
+  return apiPatch<string>(`/orders/${orderId}/mark-paid`, {});
 }
 
 // Delivery привязан к заказу через OrderId (не через farmerId напрямую) —

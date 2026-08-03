@@ -8,8 +8,24 @@ namespace MarketTJ.Application.Validators;
 public static class OrderValidator
 {
     public static Result<string>? ValidateCreate(CreateOrderDto dto)
-        => Validate(dto.OrderNumber, dto.CustomerId, dto.FarmerId, dto.DeliveryAddress, dto.Region, dto.District,
+    {
+        var baseValidation = Validate(dto.OrderNumber, dto.CustomerId, dto.FarmerId, dto.DeliveryAddress, dto.Region, dto.District,
             dto.Subtotal, dto.DeliveryPrice, dto.TotalAmount, dto.Status);
+        if (baseValidation is not null)
+            return baseValidation;
+
+        if (!Enum.IsDefined(dto.PaymentMethod))
+            return Result<string>.Fail("Указан несуществующий способ оплаты", ErrorType.Validation);
+
+        // Card требует конкретную карту — без неё непонятно, откуда списывать
+        // (см. запрос: "передавать walletId явно при оформлении заказа").
+        // CashOnDelivery, наоборот, не должен требовать WalletId вообще —
+        // эта опция доступна даже покупателю без единой карты.
+        if (dto.PaymentMethod == OrderPaymentMethod.Card && dto.WalletId is null or <= 0)
+            return Result<string>.Fail("Для оплаты картой нужно выбрать карту", ErrorType.Validation);
+
+        return null;
+    }
 
     public static Result<string>? ValidateUpdate(UpdateOrderDto dto)
         => Validate(dto.OrderNumber, dto.CustomerId, dto.FarmerId, dto.DeliveryAddress, dto.Region, dto.District,

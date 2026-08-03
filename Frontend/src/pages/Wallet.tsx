@@ -1,37 +1,36 @@
 import { useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
-import { Controller, useForm } from "react-hook-form";
+import { useForm } from "react-hook-form";
 import { motion } from "framer-motion";
 import { toast } from "sonner";
-import { CreditCard, Wallet as WalletIcon } from "lucide-react";
+import { CreditCard, Plus, Wallet as WalletIcon } from "lucide-react";
 import { Card } from "@/components/ui/Card";
 import { Button } from "@/components/ui/Button";
 import { Input } from "@/components/ui/Field";
 import { Skeleton } from "@/components/ui/Skeleton";
 import { EmptyState } from "@/components/ui/EmptyState";
-import { WalletCard } from "@/components/customer/WalletCard";
+import { WalletCard, CardBrandMark, CARD_GRADIENTS } from "@/components/customer/WalletCard";
+import { WalletPinGate } from "@/components/customer/WalletPinGate";
 import {
   CardType,
+  MAX_CARDS_PER_USER,
   MAX_TOPUP_AMOUNT,
   WalletTransactionType,
   createWallet,
+  detectCardType,
+  formatCardNumberInput,
+  formatExpiryInput,
+  passesLuhnCheck,
   topUpWallet,
-  useMyWallet,
-  useMyWalletTransactions,
+  useMyWallets,
+  useWalletTransactions,
   type WalletDto,
   type WalletTransactionDto,
 } from "@/data/wallet";
 import { ApiError } from "@/lib/api";
-import { formatDate, formatSomoni } from "@/lib/utils";
-import { cn } from "@/lib/utils";
+import { formatDate, formatSomoni, cn } from "@/lib/utils";
 
 const QUICK_TOPUP_AMOUNTS = [100, 500, 1000];
-
-const CARD_TYPE_OPTIONS = [
-  { value: CardType.Visa, label: "VISA" },
-  { value: CardType.Mastercard, label: "Mastercard" },
-  { value: CardType.UnionPay, label: "UnionPay" },
-];
 
 const TX_TYPE_LABEL_KEY: Record<number, string> = {
   [WalletTransactionType.TopUp]: "topUp",
@@ -43,25 +42,53 @@ const TX_TYPE_LABEL_KEY: Record<number, string> = {
 interface CreateCardFormValues {
   cardHolderFirstName: string;
   cardHolderLastName: string;
-  cardType: number;
+  cardNumber: string;
+  cvv: string;
+  expiry: string;
+  bankName: string;
 }
 
-function CreateCardSection({ onCreated }: { onCreated: (wallet: WalletDto) => void }) {
+function CreateCardSection({ onCreated, onCancel, cancelable }: { onCreated: (wallet: WalletDto) => void; onCancel?: () => void; cancelable?: boolean }) {
   const { t } = useTranslation("wallet");
   const {
     register,
     handleSubmit,
     watch,
-    control,
+    setValue,
     formState: { errors, isSubmitting },
   } = useForm<CreateCardFormValues>({
-    defaultValues: { cardHolderFirstName: "", cardHolderLastName: "", cardType: CardType.Visa },
+    defaultValues: { cardHolderFirstName: "", cardHolderLastName: "", cardNumber: "", cvv: "", expiry: "", bankName: "" },
   });
   const values = watch();
+  const digitsOnly = values.cardNumber.replace(/\D/g, "");
+  const previewCardType = detectCardType(digitsOnly) ?? CardType.Visa;
+  const [expiryMonth, expiryYear] = values.expiry.split("/");
+
+  const validateExpiry = (value: string): string | true => {
+    const [mm, yy] = value.split("/");
+    if (!mm || !yy || mm.length !== 2 || yy.length !== 2) return t("createCard.expiryFormat");
+    const month = Number(mm);
+    const year = 2000 + Number(yy);
+    if (month < 1 || month > 12) return t("createCard.expiryFormat");
+    const now = new Date();
+    if (year < now.getFullYear() || (year === now.getFullYear() && month < now.getMonth() + 1)) {
+      return t("createCard.expiryPast");
+    }
+    return true;
+  };
 
   const onSubmit = async (formValues: CreateCardFormValues) => {
     try {
-      const wallet = await createWallet(formValues);
+      const [mm, yy] = formValues.expiry.split("/");
+      const wallet = await createWallet({
+        cardHolderFirstName: formValues.cardHolderFirstName,
+        cardHolderLastName: formValues.cardHolderLastName,
+        cardNumber: formValues.cardNumber.replace(/\D/g, ""),
+        cvv: formValues.cvv,
+        expiryMonth: Number(mm),
+        expiryYear: 2000 + Number(yy),
+        bankName: formValues.bankName,
+      });
       onCreated(wallet);
       toast.success(t("createCard.success"));
     } catch (err) {
@@ -73,66 +100,108 @@ function CreateCardSection({ onCreated }: { onCreated: (wallet: WalletDto) => vo
     <div className="grid grid-cols-1 items-start gap-8 lg:grid-cols-[1fr_1fr]">
       <div className="flex flex-col items-center gap-4 lg:sticky lg:top-6">
         <WalletCard
-          cardType={values.cardType}
+          cardType={previewCardType}
           firstName={values.cardHolderFirstName}
           lastName={values.cardHolderLastName}
-          last4={null}
+          last4={digitsOnly.length >= 4 ? digitsOnly.slice(-4) : null}
           createdAt={null}
+          expiryMonth={expiryMonth ? Number(expiryMonth) : null}
+          expiryYear={expiryYear ? 2000 + Number(expiryYear) : null}
+          bankName={values.bankName || null}
           className="max-w-full"
         />
       </div>
 
       <Card>
-        <h2 className="font-display text-xl text-stone-900 dark:text-stone-50">{t("createCard.title")}</h2>
+        <div className="flex items-center justify-between">
+          <h2 className="font-display text-xl text-stone-900 dark:text-stone-50">{t("createCard.title")}</h2>
+          {cancelable && (
+            <button type="button" onClick={onCancel} className="text-sm text-stone-400 hover:text-stone-600 dark:text-stone-500 dark:hover:text-stone-300">
+              {t("createCard.cancel")}
+            </button>
+          )}
+        </div>
         <p className="mt-1.5 text-sm text-stone-500 dark:text-stone-400">{t("createCard.description")}</p>
 
         <form onSubmit={handleSubmit(onSubmit)} className="mt-6 flex flex-col gap-5">
-          <Input
-            label={t("createCard.firstNameLabel")}
-            placeholder={t("createCard.firstNamePlaceholder")}
-            error={errors.cardHolderFirstName?.message}
-            {...register("cardHolderFirstName", {
-              required: t("createCard.firstNameRequired"),
-              maxLength: { value: 100, message: t("createCard.firstNameRequired") },
-            })}
-          />
-          <Input
-            label={t("createCard.lastNameLabel")}
-            placeholder={t("createCard.lastNamePlaceholder")}
-            error={errors.cardHolderLastName?.message}
-            {...register("cardHolderLastName", {
-              required: t("createCard.lastNameRequired"),
-              maxLength: { value: 100, message: t("createCard.lastNameRequired") },
-            })}
-          />
-
-          <div>
-            <label className="text-sm font-medium text-stone-700 dark:text-stone-300">{t("createCard.cardTypeLabel")}</label>
-            <Controller
-              name="cardType"
-              control={control}
-              render={({ field }) => (
-                <div className="mt-2 grid grid-cols-3 gap-3">
-                  {CARD_TYPE_OPTIONS.map((opt) => (
-                    <button
-                      key={opt.value}
-                      type="button"
-                      onClick={() => field.onChange(opt.value)}
-                      className={cn(
-                        "flex h-16 flex-col items-center justify-center gap-1.5 rounded-2xl border-2 text-xs font-semibold transition",
-                        field.value === opt.value
-                          ? "border-grove-600 bg-grove-50 text-grove-700 dark:border-grove-500 dark:bg-grove-950 dark:text-grove-300"
-                          : "border-stone-200 text-stone-500 hover:border-stone-300 dark:border-stone-700 dark:text-stone-400 dark:hover:border-stone-600",
-                      )}
-                    >
-                      <CreditCard size={18} />
-                      {opt.label}
-                    </button>
-                  ))}
-                </div>
-              )}
+          <div className="grid grid-cols-1 gap-5 sm:grid-cols-2">
+            <Input
+              label={t("createCard.firstNameLabel")}
+              placeholder={t("createCard.firstNamePlaceholder")}
+              error={errors.cardHolderFirstName?.message}
+              {...register("cardHolderFirstName", {
+                required: t("createCard.firstNameRequired"),
+                maxLength: { value: 100, message: t("createCard.firstNameRequired") },
+              })}
+            />
+            <Input
+              label={t("createCard.lastNameLabel")}
+              placeholder={t("createCard.lastNamePlaceholder")}
+              error={errors.cardHolderLastName?.message}
+              {...register("cardHolderLastName", {
+                required: t("createCard.lastNameRequired"),
+                maxLength: { value: 100, message: t("createCard.lastNameRequired") },
+              })}
             />
           </div>
+
+          <div>
+            <Input
+              label={t("createCard.cardNumberLabel")}
+              placeholder="0000 0000 0000 0000"
+              inputMode="numeric"
+              rightSlot={<CardBrandMarkSmall cardType={digitsOnly ? previewCardType : null} />}
+              error={errors.cardNumber?.message}
+              {...register("cardNumber", {
+                required: t("createCard.cardNumberRequired"),
+                onChange: (e) => setValue("cardNumber", formatCardNumberInput(e.target.value)),
+                validate: (value) => {
+                  const digits = value.replace(/\D/g, "");
+                  if (digits.length !== 16) return t("createCard.cardNumberLength");
+                  if (!passesLuhnCheck(digits)) return t("createCard.cardNumberInvalid");
+                  if (!detectCardType(digits)) return t("createCard.cardNumberUnsupported");
+                  return true;
+                },
+              })}
+            />
+          </div>
+
+          <div className="grid grid-cols-2 gap-5">
+            <Input
+              label={t("createCard.expiryLabel")}
+              placeholder="MM/YY"
+              inputMode="numeric"
+              error={errors.expiry?.message}
+              {...register("expiry", {
+                required: t("createCard.expiryFormat"),
+                onChange: (e) => setValue("expiry", formatExpiryInput(e.target.value)),
+                validate: validateExpiry,
+              })}
+            />
+            <Input
+              label={t("createCard.cvvLabel")}
+              placeholder="***"
+              type="password"
+              inputMode="numeric"
+              maxLength={3}
+              error={errors.cvv?.message}
+              {...register("cvv", {
+                required: t("createCard.cvvRequired"),
+                onChange: (e) => setValue("cvv", e.target.value.replace(/\D/g, "").slice(0, 3)),
+                validate: (value) => value.length === 3 || t("createCard.cvvRequired"),
+              })}
+            />
+          </div>
+
+          <Input
+            label={t("createCard.bankNameLabel")}
+            placeholder={t("createCard.bankNamePlaceholder")}
+            error={errors.bankName?.message}
+            {...register("bankName", {
+              required: t("createCard.bankNameRequired"),
+              maxLength: { value: 200, message: t("createCard.bankNameRequired") },
+            })}
+          />
 
           <Button type="submit" loading={isSubmitting} className="mt-2">
             {t("createCard.submit")}
@@ -143,7 +212,16 @@ function CreateCardSection({ onCreated }: { onCreated: (wallet: WalletDto) => vo
   );
 }
 
-function TopUpForm({ onTopUp }: { onTopUp: (wallet: WalletDto) => void }) {
+function CardBrandMarkSmall({ cardType }: { cardType: number | null }) {
+  if (!cardType) return null;
+  return (
+    <span className="scale-75 opacity-80">
+      <CardBrandMark cardType={cardType} />
+    </span>
+  );
+}
+
+function TopUpForm({ wallet, onTopUp }: { wallet: WalletDto; onTopUp: (wallet: WalletDto) => void }) {
   const { t } = useTranslation("wallet");
   const [amount, setAmount] = useState("");
   const [submitting, setSubmitting] = useState(false);
@@ -168,7 +246,7 @@ function TopUpForm({ onTopUp }: { onTopUp: (wallet: WalletDto) => void }) {
     setError(null);
     setSubmitting(true);
     try {
-      const updated = await topUpWallet(value);
+      const updated = await topUpWallet(wallet.id, value);
       onTopUp(updated);
       setAmount("");
       toast.success(t("topUpForm.success", { amount: formatSomoni(value) }));
@@ -269,32 +347,91 @@ function TransactionHistory({ transactions, loading }: { transactions: WalletTra
   );
 }
 
+// Маленькая плитка карты в сетке слева — компактный вариант WalletCard, без
+// полной иллюстрации, чтобы несколько карт помещались в ряд.
+function CardTile({ wallet, active, onClick }: { wallet: WalletDto; active: boolean; onClick: () => void }) {
+  const { t } = useTranslation("wallet");
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      className={cn(
+        "flex flex-col gap-3 rounded-2xl bg-linear-to-br p-4 text-left text-white shadow-sm transition",
+        CARD_GRADIENTS[wallet.cardType] ?? CARD_GRADIENTS[CardType.Visa],
+        active ? "ring-2 ring-grove-500 ring-offset-2 dark:ring-offset-stone-950" : "opacity-80 hover:opacity-100",
+      )}
+    >
+      <div className="flex items-center justify-between">
+        <span className="text-[9px] font-semibold tracking-[0.15em] text-white/60 uppercase">{wallet.bankName}</span>
+        <CardBrandMarkSmall cardType={wallet.cardType} />
+      </div>
+      <span className="font-mono text-sm tracking-[0.1em] text-white/95">•••• {wallet.cardNumberLast4}</span>
+      <span className="font-display text-lg text-white/95">
+        {formatSomoni(wallet.balance)} <span className="text-xs text-white/60">{t("balance.currency")}</span>
+      </span>
+    </button>
+  );
+}
+
+function AddCardTile({ onClick }: { onClick: () => void }) {
+  const { t } = useTranslation("wallet");
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      className="flex min-h-[132px] flex-col items-center justify-center gap-2 rounded-2xl border-2 border-dashed border-stone-200 text-stone-400 transition hover:border-grove-400 hover:text-grove-600 dark:border-stone-700 dark:text-stone-500 dark:hover:border-grove-500 dark:hover:text-grove-400"
+    >
+      <Plus size={20} />
+      <span className="text-xs font-semibold">{t("cardsList.addCard")}</span>
+    </button>
+  );
+}
+
+// Раздел "Кошелёк" защищён PIN-кодом (2026-08-03) — WalletPinGate спрашивает
+// PIN при каждом заходе (первый раз просит установить) и рендерит содержимое
+// кошелька только после успешной проверки в этой же сессии. Сам компонент
+// с балансом/картами не изменился внутри — просто обёрнут снаружи.
 export function Wallet() {
+  return (
+    <WalletPinGate>
+      <WalletContent />
+    </WalletPinGate>
+  );
+}
+
+function WalletContent() {
   const { t } = useTranslation(["wallet", "common"]);
-  const { data: fetchedWallet, loading: walletLoading, error: walletError } = useMyWallet();
-  const [wallet, setWallet] = useState<WalletDto | null>(null);
-  const [walletLoaded, setWalletLoaded] = useState(false);
+  const { data: fetchedWallets, loading: walletsLoading, error: walletsError } = useMyWallets();
+  const [wallets, setWallets] = useState<WalletDto[] | null>(null);
+  const [selectedId, setSelectedId] = useState<number | null>(null);
+  const [showAddCard, setShowAddCard] = useState(false);
   const [txRefreshKey, setTxRefreshKey] = useState(0);
-  const { data: transactions, loading: txLoading } = useMyWalletTransactions(txRefreshKey);
 
-  // Локальная копия кошелька — после создания карты/пополнения баланс
+  // Локальная копия списка карт — после создания/пополнения баланс
   // обновляется сразу из ответа API (оптимистичный UI), без повторного
-  // GET /wallet и без "прыжка" интерфейса при перезагрузке страницы.
+  // GET /wallet и без "прыжка" интерфейса.
   useEffect(() => {
-    if (!walletLoading) {
-      setWallet(fetchedWallet);
-      setWalletLoaded(true);
+    if (fetchedWallets) {
+      setWallets(fetchedWallets);
+      setSelectedId((prev) => prev ?? fetchedWallets[0]?.id ?? null);
     }
-  }, [walletLoading, fetchedWallet]);
+  }, [fetchedWallets]);
 
-  const handleCreated = (created: WalletDto) => setWallet(created);
+  const selectedWallet = wallets?.find((w) => w.id === selectedId) ?? null;
+  const { data: transactions, loading: txLoading } = useWalletTransactions(selectedWallet?.id ?? null, txRefreshKey);
+
+  const handleCreated = (created: WalletDto) => {
+    setWallets((prev) => [...(prev ?? []), created]);
+    setSelectedId(created.id);
+    setShowAddCard(false);
+  };
 
   const handleToppedUp = (updated: WalletDto) => {
-    setWallet(updated);
+    setWallets((prev) => prev?.map((w) => (w.id === updated.id ? updated : w)) ?? [updated]);
     setTxRefreshKey((k) => k + 1);
   };
 
-  if (walletLoading || !walletLoaded) {
+  if (walletsLoading || wallets === null) {
     return (
       <div className="flex flex-col gap-6">
         <Skeleton className="aspect-[1.586/1] w-full max-w-sm" />
@@ -304,42 +441,63 @@ export function Wallet() {
     );
   }
 
-  if (walletError) {
+  if (walletsError) {
     return (
       <EmptyState icon={<WalletIcon size={26} />} title={t("wallet:loadError.title")} description={t("wallet:loadError.description")} />
     );
   }
 
-  if (!wallet) {
-    return <CreateCardSection onCreated={handleCreated} />;
+  if (wallets.length === 0 || showAddCard) {
+    return <CreateCardSection onCreated={handleCreated} onCancel={() => setShowAddCard(false)} cancelable={wallets.length > 0} />;
   }
 
   return (
     <div className="grid grid-cols-1 items-start gap-8 lg:grid-cols-[1fr_1.15fr]">
       <div className="flex flex-col gap-6">
-        <motion.div initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.4 }}>
-          <WalletCard
-            cardType={wallet.cardType}
-            firstName={wallet.cardHolderFirstName}
-            lastName={wallet.cardHolderLastName}
-            last4={wallet.cardNumberLast4}
-            createdAt={wallet.createdAt}
-            className="max-w-full"
-          />
-        </motion.div>
+        <div className="grid grid-cols-2 gap-4 sm:grid-cols-3 lg:grid-cols-2">
+          {wallets.map((w) => (
+            <CardTile key={w.id} wallet={w} active={w.id === selectedId} onClick={() => setSelectedId(w.id)} />
+          ))}
+          {wallets.length < MAX_CARDS_PER_USER && <AddCardTile onClick={() => setShowAddCard(true)} />}
+        </div>
+        {wallets.length >= MAX_CARDS_PER_USER && (
+          <p className="text-center text-xs text-stone-400 dark:text-stone-500">{t("cardsList.maxReached", { max: MAX_CARDS_PER_USER })}</p>
+        )}
 
-        <Card>
-          <p className="text-sm text-stone-400 dark:text-stone-500">{t("wallet:balance.title")}</p>
-          <p className="mt-1 font-display text-4xl text-stone-900 dark:text-stone-50">
-            {formatSomoni(wallet.balance)} <span className="text-xl text-stone-400 dark:text-stone-500">{t("common:currencySomoni")}</span>
-          </p>
-        </Card>
+        {selectedWallet && (
+          <motion.div key={selectedWallet.id} initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.4 }}>
+            <WalletCard
+              cardType={selectedWallet.cardType}
+              firstName={selectedWallet.cardHolderFirstName}
+              lastName={selectedWallet.cardHolderLastName}
+              last4={selectedWallet.cardNumberLast4}
+              createdAt={selectedWallet.createdAt}
+              expiryMonth={selectedWallet.expiryMonth}
+              expiryYear={selectedWallet.expiryYear}
+              bankName={selectedWallet.bankName}
+              className="max-w-full"
+            />
+          </motion.div>
+        )}
 
-        <TopUpForm onTopUp={handleToppedUp} />
+        {selectedWallet && (
+          <Card>
+            <p className="text-sm text-stone-400 dark:text-stone-500">{t("wallet:balance.title")}</p>
+            <p className="mt-1 font-display text-4xl text-stone-900 dark:text-stone-50">
+              {formatSomoni(selectedWallet.balance)}{" "}
+              <span className="text-xl text-stone-400 dark:text-stone-500">{t("common:currencySomoni")}</span>
+            </p>
+          </Card>
+        )}
+
+        {selectedWallet && <TopUpForm wallet={selectedWallet} onTopUp={handleToppedUp} />}
       </div>
 
       <Card>
-        <h2 className="font-display text-lg text-stone-900 dark:text-stone-50">{t("wallet:history.title")}</h2>
+        <h2 className="flex items-center gap-2 font-display text-lg text-stone-900 dark:text-stone-50">
+          <CreditCard size={17} className="text-grove-600 dark:text-grove-400" />
+          {t("wallet:history.title")}
+        </h2>
         <TransactionHistory transactions={transactions} loading={txLoading} />
       </Card>
     </div>

@@ -3,6 +3,7 @@ using System;
 using MarketTJ.Infrastructure.Persistence;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 
@@ -11,9 +12,11 @@ using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 namespace MarketTJ.Infrastructure.Migrations
 {
     [DbContext(typeof(AppDbContext))]
-    partial class AppDbContextModelSnapshot : ModelSnapshot
+    [Migration("20260802100835_AddMultiCardWalletAndHybridPayment")]
+    partial class AddMultiCardWalletAndHybridPayment
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
@@ -1383,15 +1386,6 @@ namespace MarketTJ.Infrastructure.Migrations
                         .HasColumnType("integer");
 
                     b.Property<DateTime>("UpdatedAt")
-                        .HasColumnType("timestamp with time zone");
-
-                    b.Property<int>("WalletPinFailedAttempts")
-                        .HasColumnType("integer");
-
-                    b.Property<string>("WalletPinHash")
-                        .HasColumnType("text");
-
-                    b.Property<DateTime?>("WalletPinLockedUntil")
                         .HasColumnType("timestamp with time zone");
 
                     b.HasKey("Id");

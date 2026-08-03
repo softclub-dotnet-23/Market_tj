@@ -12,6 +12,7 @@
   "send": "Send",
   "thinking": "Searching…",
   "error": "The AI assistant is temporarily unavailable. Please try again later.",
+  "rateLimited": "The AI assistant is overloaded right now (free-tier daily quota reached) — please try again in a few minutes.",
   "viewCategory": "View catalog section",
   "viewCart": "Go to checkout",
   "viewOrders": "My orders",

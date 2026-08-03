@@ -17,6 +17,14 @@ public class User
     public DateTime CreatedAt { get; set; }
     public DateTime UpdatedAt { get; set; }
 
+    // PIN-защита доступа к разделу "Кошелёк" (2026-08-03) — отдельно от
+    // PasswordHash, хэшируется тем же BCrypt (см. WalletPinService). Один PIN
+    // на пользователя (не на карту/Wallet) — он защищает вход в РАЗДЕЛ, а не
+    // конкретную карту, и пользователь может иметь до 5 карт в одном разделе.
+    public string? WalletPinHash { get; set; }
+    public int WalletPinFailedAttempts { get; set; }
+    public DateTime? WalletPinLockedUntil { get; set; }
+
     // User 1 — 1 FarmerProfile / CustomerProfile / CourierProfile / 0..1 FarmerStaffMember.
     public FarmerProfile? FarmerProfile { get; set; }
     public CustomerProfile? CustomerProfile { get; set; }

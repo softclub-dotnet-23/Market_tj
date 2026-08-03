@@ -13,16 +13,28 @@ public class WalletConfiguration : IEntityTypeConfiguration<Wallet>
         builder.Property(x => x.CardHolderFirstName).IsRequired().HasMaxLength(100);
         builder.Property(x => x.CardHolderLastName).IsRequired().HasMaxLength(100);
         builder.Property(x => x.CardNumberLast4).IsRequired().HasMaxLength(4);
+
+        // Полный номер/CVV — см. подробный комментарий в Wallet.cs (демо-режим,
+        // PCI-DSS-исключение только для этого учебного проекта). Значения по
+        // умолчанию — для обратной совместимости с уже существующими строками
+        // Wallet, созданными до этой миграции (у них не было этих колонок).
+        builder.Property(x => x.CardNumber).IsRequired().HasMaxLength(16).HasDefaultValue("0000000000000000");
+        builder.Property(x => x.Cvv).IsRequired().HasMaxLength(4).HasDefaultValue("000");
+        builder.Property(x => x.ExpiryMonth).IsRequired().HasDefaultValue(12);
+        builder.Property(x => x.ExpiryYear).IsRequired().HasDefaultValue(2099);
+        builder.Property(x => x.BankName).IsRequired().HasMaxLength(200).HasDefaultValue("—");
+
         builder.Property(x => x.Balance).HasPrecision(18, 2);
 
-        // Один пользователь — одна карта: unique constraint на уровне БД, а
-        // не только проверка в сервисе — защищает от гонки, если один и тот
-        // же пользователь параллельно отправит два запроса на создание карты.
-        builder.HasIndex(x => x.UserId).IsUnique();
+        // Один пользователь — до 5 карт (было: одна карта, unique index).
+        // Лимит теперь проверяется на уровне приложения (WalletService.CreateAsync),
+        // а не в БД — обычный (не уникальный) индекс остаётся только ради
+        // производительности запросов "все карты пользователя".
+        builder.HasIndex(x => x.UserId);
 
         builder.HasOne(x => x.User)
-            .WithOne()
-            .HasForeignKey<Wallet>(x => x.UserId)
+            .WithMany()
+            .HasForeignKey(x => x.UserId)
             .OnDelete(DeleteBehavior.Restrict);
 
         // CHECK на уровне БД — последний рубеж защиты от отрицательного

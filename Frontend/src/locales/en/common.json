@@ -35,6 +35,14 @@
     "actions": "Actions"
   },
   "currencySomoni": "TJS",
+  "payment": {
+    "paidByCard": "Paid by card",
+    "paidCash": "Paid in cash",
+    "awaitingCash": "Awaiting payment on delivery",
+    "markPaid": "Mark as paid",
+    "markPaidSuccess": "Cash payment confirmed",
+    "markPaidError": "Couldn't confirm the payment"
+  },
   "cart": {
     "addedToCart": "{{title}} added to cart",
     "addedToCartDescription": "{{quantity}} {{unit}} × {{price}}"

@@ -28,4 +28,11 @@ public class OrderController(IOrderService service) : ApiControllerBase
     [HttpDelete("{id:int}")]
     public async Task<IActionResult> Delete(int id)
         => HandleResult(await service.DeleteAsync(id));
+
+    // Подтверждение оплаты наличными при доставке — фермер/админ, см.
+    // IOrderService.MarkPaidAsync (авторизация проверяется внутри сервиса,
+    // как и для остальных операций в этом контроллере).
+    [HttpPatch("{id:int}/mark-paid")]
+    public async Task<IActionResult> MarkPaid(int id)
+        => HandleResult(await service.MarkPaidAsync(id));
 }

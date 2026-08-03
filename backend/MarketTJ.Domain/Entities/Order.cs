@@ -16,6 +16,22 @@ public class Order
     public decimal Subtotal { get; set; }
     public decimal DeliveryPrice { get; set; }
     public decimal TotalAmount { get; set; }
+
+    public OrderPaymentMethod PaymentMethod { get; set; }
+
+    // Card — становится true сразу при создании (списание уже прошло).
+    // CashOnDelivery — false при создании, курьер/фермер отмечает true через
+    // отдельный эндпоинт после получения наличных при доставке (см.
+    // OrderService.MarkPaidAsync). Начисление фермеру за CashOnDelivery-заказ
+    // при Completed происходит только если IsPaid == true — иначе платформа
+    // начислила бы комиссию с денег, которые ещё не подтверждены как полученные.
+    public bool IsPaid { get; set; }
+
+    // Какая именно карта была списана при оплате Card — нужно для отображения
+    // ("оплачено картой •••• 1234") и как страховочная ссылка в дополнение к
+    // WalletTransaction.RelatedOrderId. Null для CashOnDelivery.
+    public int? WalletId { get; set; }
+
     public bool IsDeleted { get; set; }
     public DateTime? DeletedAt { get; set; }
     public DateTime CreatedAt { get; set; }

@@ -48,6 +48,14 @@
     "actions": "Действия"
   },
   "currencySomoni": "с.",
+  "payment": {
+    "paidByCard": "Оплачено картой",
+    "paidCash": "Оплачено наличными",
+    "awaitingCash": "Ожидает оплаты при получении",
+    "markPaid": "Отметить оплаченным",
+    "markPaidSuccess": "Оплата наличными подтверждена",
+    "markPaidError": "Не удалось подтвердить оплату"
+  },
   "cart": {
     "addedToCart": "{{title}} добавлен в корзину",
     "addedToCartDescription": "{{quantity}} {{unit}} × {{price}}"
