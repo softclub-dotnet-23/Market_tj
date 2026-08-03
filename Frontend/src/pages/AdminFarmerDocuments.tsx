@@ -97,7 +97,21 @@ export function AdminFarmerDocuments() {
   }
 
   const typeLabel = (type: number) =>
-    t(`farmerDocuments.type.${type === FarmerDocumentType.Passport ? "passport" : type === FarmerDocumentType.LandDeed ? "landDeed" : "other"}`);
+    t(
+      `farmerDocuments.type.${
+        type === FarmerDocumentType.PassportFront
+          ? "passportFront"
+          : type === FarmerDocumentType.PassportBack
+            ? "passportBack"
+            : type === FarmerDocumentType.Selfie
+              ? "selfie"
+              : type === FarmerDocumentType.Passport
+                ? "passport"
+                : type === FarmerDocumentType.LandDeed
+                  ? "landDeed"
+                  : "other"
+      }`,
+    );
   const statusLabel = (s: number) =>
     t(`farmerDocuments.status.${s === DocumentReviewStatus.Approved ? "approved" : s === DocumentReviewStatus.Rejected ? "rejected" : "pending"}`);
 

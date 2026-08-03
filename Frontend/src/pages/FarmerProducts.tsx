@@ -1,8 +1,9 @@
 import { useEffect, useRef, useState } from "react";
 import { Controller, useForm } from "react-hook-form";
 import { useTranslation } from "react-i18next";
+import { Link } from "react-router-dom";
 import { toast } from "sonner";
-import { Loader2, Package, Pencil, Plus, Trash2 } from "lucide-react";
+import { AlertTriangle, Loader2, Package, Pencil, Plus, Trash2 } from "lucide-react";
 import { PageLoader } from "@/components/layout/PageLoader";
 import { EmptyState } from "@/components/ui/EmptyState";
 import { Pagination } from "@/components/ui/Pagination";
@@ -20,8 +21,10 @@ import {
   createProductListing,
   deleteProductImage,
   deleteProductListing,
+  hasRequiredFarmerDocuments,
   updateProductListing,
   uploadProductImage,
+  useFarmerDocuments,
   useFarmerOrders,
   useFarmerProducts,
   useFarmerProfile,
@@ -427,6 +430,8 @@ export function FarmerProducts() {
   const { products, loading: productsLoading, error: productsError } = useFarmerProducts(profile?.id ?? null, refreshKey);
   const { orders } = useFarmerOrders(profile?.id ?? null);
   const { orderItems } = useOrderItems();
+  const { documents } = useFarmerDocuments(profile?.id ?? null);
+  const documentsReady = hasRequiredFarmerDocuments(documents);
   const photoByListingId = useProductPhotoMap(products);
 
   if (profileLoading || (profile && productsLoading)) return <PageLoader />;
@@ -541,8 +546,19 @@ export function FarmerProducts() {
 
   return (
     <div className="flex flex-col gap-5">
+      {!documentsReady && (
+        <div className="flex flex-col items-start gap-3 rounded-2xl border border-harvest-200 bg-harvest-50 p-4 text-sm text-harvest-900 sm:flex-row sm:items-center sm:justify-between dark:border-harvest-900 dark:bg-harvest-950 dark:text-harvest-100">
+          <div className="flex items-start gap-2.5">
+            <AlertTriangle size={18} className="mt-0.5 shrink-0" />
+            <p>{t("products.documentsRequiredBanner")}</p>
+          </div>
+          <Link to="/farmer/documents" className="shrink-0 rounded-full bg-harvest-600 px-4 py-2 text-xs font-semibold text-white transition hover:bg-harvest-700">
+            {t("products.documentsRequiredAction")}
+          </Link>
+        </div>
+      )}
       <div className="flex justify-end">
-        <Button leftIcon={<Plus size={16} />} onClick={openCreate}>
+        <Button leftIcon={<Plus size={16} />} onClick={openCreate} disabled={!documentsReady} title={documentsReady ? undefined : t("products.documentsRequiredBanner")}>
           {t("products.addButton")}
         </Button>
       </div>

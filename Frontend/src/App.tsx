@@ -19,6 +19,8 @@ const FarmerPublicProfile = lazy(() => import("@/pages/FarmerPublicProfile").the
 const Checkout = lazy(() => import("@/pages/Checkout").then((m) => ({ default: m.Checkout })));
 const About = lazy(() => import("@/pages/About").then((m) => ({ default: m.About })));
 const Contact = lazy(() => import("@/pages/Contact").then((m) => ({ default: m.Contact })));
+const Terms = lazy(() => import("@/pages/Terms").then((m) => ({ default: m.Terms })));
+const Privacy = lazy(() => import("@/pages/Privacy").then((m) => ({ default: m.Privacy })));
 const Login = lazy(() => import("@/pages/Login").then((m) => ({ default: m.Login })));
 const Register = lazy(() => import("@/pages/Register").then((m) => ({ default: m.Register })));
 const ForgotPassword = lazy(() => import("@/pages/ForgotPassword").then((m) => ({ default: m.ForgotPassword })));
@@ -128,6 +130,8 @@ function App() {
                     <Route index element={<Home />} />
                     <Route path="about" element={<About />} />
                     <Route path="contact" element={<Contact />} />
+                    <Route path="terms" element={<Terms />} />
+                    <Route path="privacy" element={<Privacy />} />
                     <Route path="forbidden" element={<Forbidden />} />
                     <Route path="*" element={<NotFound />} />
                   </Route>
