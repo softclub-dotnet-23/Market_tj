@@ -487,6 +487,39 @@ export function reviewFarmerDocument(id: number, status: number, rejectionReason
   return apiPatch<string>(`/admin/farmer-documents/${id}/review`, { status, rejectionReason });
 }
 
+export interface AdminCourierDocumentDto {
+  id: number;
+  courierProfileId: number;
+  courierFullName: string | null;
+  courierPhoneNumber: string | null;
+  documentType: number;
+  fileUrl: string;
+  status: number;
+  uploadedAt: string;
+  reviewedAt: string | null;
+  reviewedByAdminId: number | null;
+  rejectionReason: string | null;
+}
+
+interface AdminCourierDocumentsPage {
+  items: AdminCourierDocumentDto[];
+  totalCount: number;
+  page: number;
+  pageSize: number;
+}
+
+export function useAdminCourierDocuments(page: number, pageSize: number, status: number | null, refreshKey = 0) {
+  const statusQuery = status !== null ? `&status=${status}` : "";
+  return useAsync(
+    () => apiGet<AdminCourierDocumentsPage>(`/admin/courier-documents?pageNumber=${page}&pageSize=${pageSize}${statusQuery}`),
+    [page, pageSize, status, refreshKey],
+  );
+}
+
+export function reviewCourierDocument(id: number, status: number, rejectionReason: string | null) {
+  return apiPatch<string>(`/admin/courier-documents/${id}/review`, { status, rejectionReason });
+}
+
 export function useAdminAnalytics() {
   const { data, loading, error } = useAsync(() => apiGet<AdminAnalyticsDto>("/analytics/admin/dashboard"), []);
   return { analytics: data, loading, error };

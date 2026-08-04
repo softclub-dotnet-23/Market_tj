@@ -8,6 +8,7 @@ import { Input, Select, Textarea, Checkbox } from "@/components/ui/Field";
 import { Avatar } from "@/components/ui/Avatar";
 import { ConfirmDialog } from "@/components/ui/ConfirmDialog";
 import { EmptyState } from "@/components/ui/EmptyState";
+import { DeliveryAddressMap } from "@/components/delivery/DeliveryAddressMap";
 import { ApiError, resolveMediaUrl } from "@/lib/api";
 import { cn } from "@/lib/utils";
 import {
@@ -26,6 +27,12 @@ interface OrderSummary {
   pickupAddress: string;
   deliveryAddress: string;
   itemCount: number;
+  // Регион/район заказа и текущая стоимость доставки — только для
+  // farmer-варианта (карта адреса + сортировка "тот же район первым",
+  // дефолтная сумма доставки без ручного ввода). Admin эти поля не передаёт.
+  deliveryRegion?: string;
+  deliveryDistrict?: string;
+  currentDeliveryPrice?: number;
 }
 
 function toDatetimeLocal(iso: string | null): string {
@@ -46,12 +53,18 @@ export function AssignCourierDrawer({
   order,
   existingDelivery,
   onAssigned,
+  variant = "admin",
 }: {
   open: boolean;
   onClose: () => void;
   order: OrderSummary;
   existingDelivery: DeliveryDto | null;
   onAssigned: () => void;
+  // "farmer" — по прямому запросу пользователя (2026-08-04): фермер
+  // назначает курьера сам, но не должен видеть/редактировать
+  // admin-специфичные поля (сумма доставки вручную, служебная заметка) —
+  // сумма берётся из уже посчитанной order.deliveryPrice заказа.
+  variant?: "admin" | "farmer";
 }) {
   const { t } = useTranslation(["delivery", "common"]);
 
@@ -60,7 +73,9 @@ export function AssignCourierDrawer({
   const [transportType, setTransportType] = useState("");
   const [minRating, setMinRating] = useState("");
   const [selectedCourierId, setSelectedCourierId] = useState<number | null>(existingDelivery?.courierId ?? null);
-  const [deliveryFee, setDeliveryFee] = useState(existingDelivery ? String(existingDelivery.deliveryPrice) : "");
+  const [deliveryFee, setDeliveryFee] = useState(
+    existingDelivery ? String(existingDelivery.deliveryPrice) : order.currentDeliveryPrice !== undefined ? String(order.currentDeliveryPrice) : "",
+  );
   const [estimatedPickupAt, setEstimatedPickupAt] = useState(toDatetimeLocal(existingDelivery?.estimatedPickupAt ?? null));
   const [estimatedDeliveryAt, setEstimatedDeliveryAt] = useState(toDatetimeLocal(existingDelivery?.estimatedDeliveryAt ?? null));
   const [adminNote, setAdminNote] = useState(existingDelivery?.adminNote ?? "");
@@ -70,17 +85,27 @@ export function AssignCourierDrawer({
   useEffect(() => {
     if (!open) return;
     setSelectedCourierId(existingDelivery?.courierId ?? null);
-    setDeliveryFee(existingDelivery ? String(existingDelivery.deliveryPrice) : "");
+    setDeliveryFee(
+      existingDelivery ? String(existingDelivery.deliveryPrice) : order.currentDeliveryPrice !== undefined ? String(order.currentDeliveryPrice) : "",
+    );
     setEstimatedPickupAt(toDatetimeLocal(existingDelivery?.estimatedPickupAt ?? null));
     setEstimatedDeliveryAt(toDatetimeLocal(existingDelivery?.estimatedDeliveryAt ?? null));
     setAdminNote(existingDelivery?.adminNote ?? "");
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [open, existingDelivery?.id]);
 
-  const { couriers, loading } = useAvailableCouriers(
+  const { couriers: rawCouriers, loading } = useAvailableCouriers(
     { onlyAvailable, region: region || undefined, transportType: transportType || undefined, minRating: minRating ? Number(minRating) : undefined },
     open,
   );
+
+  // Farmer: бэкенд уже сам ограничивает список своим регионом/районом (см.
+  // DeliveryService.GetAvailableCouriersAsync) — здесь только сортировка,
+  // "тот же район, что у заказа, первым" (2026-08-04).
+  const couriers =
+    variant === "farmer" && order.deliveryDistrict && rawCouriers
+      ? [...rawCouriers].sort((a, b) => Number(b.district === order.deliveryDistrict) - Number(a.district === order.deliveryDistrict))
+      : rawCouriers;
 
   const regions = Array.from(new Set((couriers ?? []).map((c) => c.region))).sort();
   const transportTypes = Array.from(new Set((couriers ?? []).map((c) => c.transportType))).sort();
@@ -163,19 +188,29 @@ export function AssignCourierDrawer({
             </div>
           </div>
 
+          {order.deliveryAddress && (
+            <DeliveryAddressMap
+              address={order.deliveryAddress}
+              region={order.deliveryRegion ?? ""}
+              district={order.deliveryDistrict ?? ""}
+            />
+          )}
+
           <div className="flex flex-col gap-3">
             <div className="flex items-center justify-between">
               <h3 className="font-display text-base text-stone-900 dark:text-stone-50">{t("delivery:assign.availableCouriers")}</h3>
               <Checkbox label={t("delivery:assign.onlyAvailable")} checked={onlyAvailable} onChange={(e) => setOnlyAvailable(e.target.checked)} />
             </div>
 
-            <div className="grid grid-cols-2 gap-2.5 sm:grid-cols-3">
-              <Select value={region} onChange={setRegion}>
-                <option value="">{t("delivery:assign.allRegions")}</option>
-                {regions.map((r) => (
-                  <option key={r} value={r}>{r}</option>
-                ))}
-              </Select>
+            <div className={cn("grid grid-cols-2 gap-2.5", variant === "admin" && "sm:grid-cols-3")}>
+              {variant === "admin" && (
+                <Select value={region} onChange={setRegion}>
+                  <option value="">{t("delivery:assign.allRegions")}</option>
+                  {regions.map((r) => (
+                    <option key={r} value={r}>{r}</option>
+                  ))}
+                </Select>
+              )}
               <Select value={transportType} onChange={setTransportType}>
                 <option value="">{t("delivery:assign.allTransportTypes")}</option>
                 {transportTypes.map((tt) => (
@@ -212,14 +247,16 @@ export function AssignCourierDrawer({
 
           {selectedCourierId && (
             <div className="flex flex-col gap-4 border-t border-stone-100 pt-5 dark:border-stone-800">
-              <Input
-                label={t("delivery:assign.deliveryFee")}
-                type="number"
-                min="0"
-                step="0.01"
-                value={deliveryFee}
-                onChange={(e) => setDeliveryFee(e.target.value)}
-              />
+              {variant === "admin" && (
+                <Input
+                  label={t("delivery:assign.deliveryFee")}
+                  type="number"
+                  min="0"
+                  step="0.01"
+                  value={deliveryFee}
+                  onChange={(e) => setDeliveryFee(e.target.value)}
+                />
+              )}
               <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
                 <Input
                   label={t("delivery:assign.estimatedPickup")}
@@ -234,13 +271,15 @@ export function AssignCourierDrawer({
                   onChange={(e) => setEstimatedDeliveryAt(e.target.value)}
                 />
               </div>
-              <Textarea
-                label={t("delivery:assign.adminNote")}
-                hint={t("delivery:assign.adminNoteHint")}
-                rows={3}
-                value={adminNote}
-                onChange={(e) => setAdminNote(e.target.value)}
-              />
+              {variant === "admin" && (
+                <Textarea
+                  label={t("delivery:assign.adminNote")}
+                  hint={t("delivery:assign.adminNoteHint")}
+                  rows={3}
+                  value={adminNote}
+                  onChange={(e) => setAdminNote(e.target.value)}
+                />
+              )}
             </div>
           )}
         </div>

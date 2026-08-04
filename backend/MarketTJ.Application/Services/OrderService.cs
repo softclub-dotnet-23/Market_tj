@@ -249,6 +249,11 @@ public class OrderService(
             order.AcceptedAt = dto.Status == OrderStatus.Accepted && order.AcceptedAt is null ? DateTime.UtcNow : dto.AcceptedAt;
             order.CompletedAt = dto.Status == OrderStatus.Completed && order.CompletedAt is null ? DateTime.UtcNow : dto.CompletedAt;
             order.CancelledAt = dto.Status == OrderStatus.Cancelled && order.CancelledAt is null ? DateTime.UtcNow : dto.CancelledAt;
+            // FarmerStatus — отдельное поле, которое пишет только фермерский
+            // путь (по прямому запросу пользователя, 2026-08-04): фиксируем
+            // "Принят" тем же движением, что и Status → Accepted.
+            if (dto.Status == OrderStatus.Accepted)
+                order.FarmerStatus = FarmerOrderStatus.Accepted;
 
             await orderRepository.UpdateAsync(order);
 
@@ -344,6 +349,8 @@ public class OrderService(
             order.AcceptedAt = status == OrderStatus.Accepted && order.AcceptedAt is null ? DateTime.UtcNow : order.AcceptedAt;
             order.CompletedAt = status == OrderStatus.Completed && order.CompletedAt is null ? DateTime.UtcNow : order.CompletedAt;
             order.CancelledAt = status == OrderStatus.Cancelled && order.CancelledAt is null ? DateTime.UtcNow : order.CancelledAt;
+            if (status == OrderStatus.Accepted)
+                order.FarmerStatus = FarmerOrderStatus.Accepted;
 
             await orderRepository.UpdateAsync(order);
 
@@ -523,6 +530,28 @@ public class OrderService(
         return result;
     }
 
+    // Сводный статус для покупателя/фронтенда — вычисляется из
+    // Status+FarmerStatus+CourierStatus, а не хранится отдельно (по прямому
+    // запросу пользователя, 2026-08-04, п.4 "разделения статусов"). Значения
+    // намеренно взяты из уже существующего OrderStatus (не новый enum) —
+    // фронтенд (ORDER_STATUS_KEYS/CLASSES/ICONS в lib/orderStatus.ts) уже
+    // умеет их отображать, менять справочники там не нужно.
+    private static OrderStatus ComputeDisplayStatus(Order order)
+    {
+        if (order.Status is not (OrderStatus.Accepted or OrderStatus.Preparing or OrderStatus.ReadyForPickup
+            or OrderStatus.CourierAssigned or OrderStatus.PickedUp or OrderStatus.InDelivery or OrderStatus.Delivered))
+            return order.Status;
+
+        if (order.CourierStatus == CourierOrderStatus.Delivered)
+            return OrderStatus.Delivered;
+        if (order.CourierStatus == CourierOrderStatus.Accepted)
+            return OrderStatus.InDelivery;
+        if (order.FarmerStatus == FarmerOrderStatus.HandedToCourier)
+            return OrderStatus.ReadyForPickup;
+
+        return order.Status;
+    }
+
     private static GetOrderDto ToGetDto(Order order, IReadOnlyDictionary<int, (string? FullName, string? Phone)> customers)
     {
         customers.TryGetValue(order.CustomerId, out var customer);
@@ -532,7 +561,9 @@ public class OrderService(
             OrderNumber = order.OrderNumber,
             CustomerId = order.CustomerId,
             FarmerId = order.FarmerId,
-            Status = order.Status,
+            Status = ComputeDisplayStatus(order),
+            FarmerStatus = order.FarmerStatus,
+            CourierStatus = order.CourierStatus,
             DeliveryAddress = order.DeliveryAddress,
             Region = order.Region,
             District = order.District,

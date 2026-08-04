@@ -42,22 +42,29 @@ public class DeliveryController(IDeliveryService service) : ApiControllerBase
     public async Task<IActionResult> GetMyDeliveries()
         => HandleResult(await service.GetMyDeliveriesAsync());
 
-    [Authorize(Roles = "Admin")]
+    // Роль на контроллере — грубая проверка, точная (владелец заказа для
+    // Farmer, без ограничений для Admin) внутри DeliveryService — та же
+    // схема, что и везде в этом контроллере/проекте.
+    [Authorize(Roles = "Farmer,Admin")]
     [HttpGet("available-couriers")]
     public async Task<IActionResult> GetAvailableCouriers(
         [FromQuery] bool onlyAvailable = false,
         [FromQuery] string? region = null,
+        [FromQuery] string? district = null,
         [FromQuery] string? transportType = null,
         [FromQuery] decimal? minRating = null)
         => HandleResult(await service.GetAvailableCouriersAsync(new AvailableCourierFilter
         {
             OnlyAvailable = onlyAvailable,
             Region = region,
+            District = district,
             TransportType = transportType,
             MinRating = minRating,
         }));
 
-    [Authorize(Roles = "Admin")]
+    // Фермер назначает курьера сам (2026-08-04) — Admin сохраняет право как
+    // запасной вариант, если фермер недоступен/не успевает.
+    [Authorize(Roles = "Farmer,Admin")]
     [HttpPost("by-order/{orderId:int}/assign")]
     public async Task<IActionResult> AssignCourier(int orderId, [FromBody] AssignCourierDto dto)
         => HandleResult(await service.AssignCourierAsync(orderId, dto));

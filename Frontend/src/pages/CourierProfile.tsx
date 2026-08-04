@@ -10,7 +10,7 @@ import { StatCard } from "@/components/ui/StatCard";
 import { Avatar } from "@/components/ui/Avatar";
 import { useAuth } from "@/context/AuthContext";
 import { resolveMediaUrl } from "@/lib/api";
-import { useCourierProfile, setCourierAvailability } from "@/data/courier";
+import { useCourierProfile, setCourierAvailability, useCourierDocuments, hasApprovedCourierDocuments } from "@/data/courier";
 import { DeliveryStatus, useMyDeliveries } from "@/data/delivery";
 import { formatNumber } from "@/lib/utils";
 
@@ -38,6 +38,8 @@ export function CourierProfile() {
   const [togglingAvailability, setTogglingAvailability] = useState(false);
   const { profile, loading: profileLoading, error: profileError } = useCourierProfile(refreshKey);
   const { deliveries, loading: deliveriesLoading } = useMyDeliveries();
+  const { documents } = useCourierDocuments(profile?.id ?? null, refreshKey);
+  const documentsApproved = hasApprovedCourierDocuments(documents);
 
   const stats = useMemo(() => {
     if (!deliveries) return { today: 0, week: 0, total: 0, active: 0 };
@@ -53,6 +55,15 @@ export function CourierProfile() {
 
   const handleToggleAvailability = async () => {
     if (!profile) return;
+    // Гейт документов — по прямому запросу пользователя (2026-08-04):
+    // курьер не может включить доступность, пока admin не одобрил оба
+    // обязательных документа. Бэкенд проверяет то же самое (см.
+    // CourierProfileService.UpdateAsync) — это только UX-подсказка, а не
+    // единственная защита.
+    if (!profile.isAvailable && !documentsApproved) {
+      toast.error(t("courier:profile.documentsNotApproved"));
+      return;
+    }
     setTogglingAvailability(true);
     const next = !profile.isAvailable;
     try {
@@ -105,9 +116,16 @@ export function CourierProfile() {
             >
               {profile.isAvailable ? t("courier:profile.availableOn") : t("courier:profile.availableOff")}
             </p>
-            <p className="text-xs text-stone-400 dark:text-stone-500">{t("courier:profile.availabilityHint")}</p>
+            <p className="text-xs text-stone-400 dark:text-stone-500">
+              {!profile.isAvailable && !documentsApproved ? t("courier:profile.documentsNotApproved") : t("courier:profile.availabilityHint")}
+            </p>
           </div>
-          <Switch checked={profile.isAvailable} onChange={handleToggleAvailability} disabled={togglingAvailability} aria-label={t("courier:profile.availableOn")} />
+          <Switch
+            checked={profile.isAvailable}
+            onChange={handleToggleAvailability}
+            disabled={togglingAvailability || (!profile.isAvailable && !documentsApproved)}
+            aria-label={t("courier:profile.availableOn")}
+          />
         </div>
       </Card>
 

@@ -4,7 +4,7 @@ import { Controller, useForm } from "react-hook-form";
 import { motion, AnimatePresence } from "framer-motion";
 import { toast } from "sonner";
 import { useTranslation } from "react-i18next";
-import { ArrowLeft, Eye, EyeOff, KeyRound, Lock, Mail, MapPin, Sprout, Truck, User, UserRound } from "lucide-react";
+import { ArrowLeft, Eye, EyeOff, IdCard, KeyRound, Lock, Mail, MapPin, Sprout, Truck, Upload, User, UserRound } from "lucide-react";
 import { Input, Checkbox, Select } from "@/components/ui/Field";
 import { Autocomplete } from "@/components/ui/Autocomplete";
 import { PhoneInput } from "@/components/ui/PhoneInput";
@@ -13,7 +13,7 @@ import { AuthPanel } from "@/components/layout/AuthPanel";
 import { useAuth, sendVerificationCode, verifyEmailCode } from "@/context/AuthContext";
 import { createFarmerProfile } from "@/data/farmer";
 import { createCustomerProfile } from "@/data/customer";
-import { createCourierProfile } from "@/data/courier";
+import { createCourierProfile, uploadCourierDocument, CourierDocumentType } from "@/data/courier";
 import { TAJIKISTAN_REGION_SUGGESTIONS, getDistrictsForRegion } from "@/data/tajikistanGeo";
 import { ApiError } from "@/lib/api";
 import { cn } from "@/lib/utils";
@@ -31,6 +31,13 @@ const ROLE_VALUES: Record<Role, number> = { farmer: 2, customer: 3, courier: 4 }
 const TRANSPORT_TYPES = ["Автомобиль", "Мотоцикл", "Велосипед", "Пешком"] as const;
 
 const RESEND_COOLDOWN_SECONDS = 60;
+
+// Обязательные документы курьера при регистрации — по прямому запросу
+// пользователя (2026-08-04): без обоих фото курьер не сможет впоследствии
+// стать "доступным" (см. CourierProfileService.UpdateAsync), но саму
+// загрузку делаем обязательной уже на этапе регистрации, а не откладываем.
+const ALLOWED_DOCUMENT_TYPES = ["image/jpeg", "image/png", "image/webp", "application/pdf"];
+const MAX_DOCUMENT_SIZE_BYTES = 10 * 1024 * 1024;
 
 interface RegisterForm {
   fullName: string;
@@ -65,6 +72,11 @@ export function Register() {
   const [code, setCode] = useState("");
   const [codeError, setCodeError] = useState<string | null>(null);
   const [resendCooldown, setResendCooldown] = useState(0);
+  const [licenseFile, setLicenseFile] = useState<File | null>(null);
+  const [vehicleRegFile, setVehicleRegFile] = useState<File | null>(null);
+  const [documentsError, setDocumentsError] = useState<string | null>(null);
+  const licenseInputRef = useRef<HTMLInputElement>(null);
+  const vehicleRegInputRef = useRef<HTMLInputElement>(null);
 
   const {
     register,
@@ -133,8 +145,28 @@ export function Register() {
     }
   };
 
+  const onDocumentFileChange = (setter: (file: File | null) => void) => (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    e.target.value = "";
+    if (!file) return;
+    if (!ALLOWED_DOCUMENT_TYPES.includes(file.type)) {
+      toast.error(t("common:avatar.invalidType"));
+      return;
+    }
+    if (file.size > MAX_DOCUMENT_SIZE_BYTES) {
+      toast.error(t("pages:register.documentTooLarge"));
+      return;
+    }
+    setDocumentsError(null);
+    setter(file);
+  };
+
   const onSubmit = async (values: RegisterForm) => {
     if (isSubmittingRef.current) return;
+    if (role === "courier" && (!licenseFile || !vehicleRegFile)) {
+      setDocumentsError(t("pages:register.documentsRequired"));
+      return;
+    }
     isSubmittingRef.current = true;
     try {
       const user = await registerAccount({
@@ -156,13 +188,18 @@ export function Register() {
           description: null,
         });
       } else if (role === "courier") {
-        await createCourierProfile({
+        const courierProfileId = await createCourierProfile({
           userId: user.userId,
           transportType: values.transportType,
           vehicleNumber: values.vehicleNumber,
           region: values.region,
           district: values.district,
         });
+        // Документы — сразу после создания профиля, тем же токеном (уже
+        // выдан на этом шаге). Оба обязательны — проверено выше, до
+        // registerAccount, чтобы не создавать аккаунт впустую при их отсутствии.
+        await uploadCourierDocument(courierProfileId, CourierDocumentType.DriverLicense, licenseFile!);
+        await uploadCourierDocument(courierProfileId, CourierDocumentType.VehicleRegistration, vehicleRegFile!);
       } else {
         await createCustomerProfile({
           userId: user.userId,
@@ -436,6 +473,58 @@ export function Register() {
                       error={errors.vehicleNumber?.message}
                       {...register("vehicleNumber", { required: t("pages:register.vehicleNumberRequired") })}
                     />
+                  </div>
+                )}
+
+                {role === "courier" && (
+                  <div className="flex flex-col gap-2">
+                    <p className="text-xs font-medium text-stone-500 dark:text-stone-400">{t("pages:register.documentsLabel")}</p>
+                    <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+                      <button
+                        type="button"
+                        onClick={() => licenseInputRef.current?.click()}
+                        className={cn(
+                          "flex items-center gap-2.5 rounded-xl border-2 border-dashed px-3 py-2.5 text-left text-xs transition",
+                          licenseFile
+                            ? "border-grove-300 bg-grove-50 text-grove-700 dark:border-grove-800 dark:bg-grove-950/40 dark:text-grove-300"
+                            : "border-stone-200 text-stone-500 hover:border-stone-300 dark:border-stone-700 dark:text-stone-400",
+                        )}
+                      >
+                        <IdCard size={16} className="shrink-0" />
+                        <span className="min-w-0 flex-1 truncate">{licenseFile ? licenseFile.name : t("pages:register.driverLicenseLabel")}</span>
+                        <Upload size={14} className="shrink-0" />
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => vehicleRegInputRef.current?.click()}
+                        className={cn(
+                          "flex items-center gap-2.5 rounded-xl border-2 border-dashed px-3 py-2.5 text-left text-xs transition",
+                          vehicleRegFile
+                            ? "border-grove-300 bg-grove-50 text-grove-700 dark:border-grove-800 dark:bg-grove-950/40 dark:text-grove-300"
+                            : "border-stone-200 text-stone-500 hover:border-stone-300 dark:border-stone-700 dark:text-stone-400",
+                        )}
+                      >
+                        <Truck size={16} className="shrink-0" />
+                        <span className="min-w-0 flex-1 truncate">{vehicleRegFile ? vehicleRegFile.name : t("pages:register.vehicleRegistrationLabel")}</span>
+                        <Upload size={14} className="shrink-0" />
+                      </button>
+                    </div>
+                    <input
+                      ref={licenseInputRef}
+                      type="file"
+                      accept="image/jpeg,image/png,image/webp,application/pdf"
+                      className="hidden"
+                      onChange={onDocumentFileChange(setLicenseFile)}
+                    />
+                    <input
+                      ref={vehicleRegInputRef}
+                      type="file"
+                      accept="image/jpeg,image/png,image/webp,application/pdf"
+                      className="hidden"
+                      onChange={onDocumentFileChange(setVehicleRegFile)}
+                    />
+                    {documentsError && <p className="text-xs text-danger">{documentsError}</p>}
+                    <p className="text-xs text-stone-400 dark:text-stone-500">{t("pages:register.documentsHint")}</p>
                   </div>
                 )}
 

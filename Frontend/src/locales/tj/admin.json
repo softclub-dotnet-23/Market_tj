@@ -6,6 +6,7 @@
     "catalog": "Категорияҳо",
     "farmers": "Деҳқонон",
     "farmerDocuments": "Ҳуҷҷатҳои деҳқонон",
+    "courierDocuments": "Ҳуҷҷатҳои курерон",
     "customers": "Харидорон",
     "payments": "Пардохтҳо",
     "reviews": "Шарҳҳо",
@@ -451,6 +452,44 @@
     "rejectModalTitle": "Рад кардани ҳуҷҷат",
     "rejectionReasonLabel": "Сабаби рад кардан",
     "rejectionReasonHint": "Ба деҳқон нишон дода мешавад",
+    "required": "Майдони ҳатмӣ",
+    "cancel": "Бекор кардан"
+  },
+  "courierDocuments": {
+    "title": "Ҳуҷҷатҳои курерон",
+    "subtitle": "Пеш аз он ки курер дастрас шавад, шаҳодатномаи ронандагӣ ва техпаспорти нақлиётро санҷед",
+    "errorTitle": "Ҳуҷҷатҳо бор нашуданд",
+    "errorDescription": "Пайвастшавии худро ба сервер санҷед ва аз нав кӯшиш кунед.",
+    "emptyTitle": "Ҳуҷҷат нест",
+    "emptyDescription": "Дар ин ҷо ҳуҷҷатҳои аз ҷониби курерон боргузоришуда барои санҷиш пайдо мешаванд.",
+    "filterAll": "Ҳамаи ҳолатҳо",
+    "columns": {
+      "courier": "Курер",
+      "type": "Навъи ҳуҷҷат",
+      "file": "Файл",
+      "status": "Ҳолат",
+      "uploadedAt": "Бор карда шуд",
+      "actions": "Амалҳо"
+    },
+    "type": {
+      "driverLicense": "Шаҳодатномаи ронандагӣ",
+      "vehicleRegistration": "Техпаспорти нақлиёт"
+    },
+    "status": {
+      "pending": "Дар санҷиш",
+      "approved": "Тасдиқ шуд",
+      "rejected": "Рад карда шуд"
+    },
+    "viewFile": "Кушодани файл",
+    "approveAction": "Тасдиқ кардан",
+    "rejectAction": "Рад кардан",
+    "approveSuccess": "Ҳуҷҷат тасдиқ шуд",
+    "approveError": "Ҳуҷҷат тасдиқ нашуд",
+    "rejectSuccess": "Ҳуҷҷат рад карда шуд",
+    "rejectError": "Ҳуҷҷатро рад карда натавонист",
+    "rejectModalTitle": "Рад кардани ҳуҷҷат",
+    "rejectionReasonLabel": "Сабаби рад кардан",
+    "rejectionReasonHint": "Ба курер нишон дода мешавад",
     "required": "Майдони ҳатмӣ",
     "cancel": "Бекор кардан"
   },

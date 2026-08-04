@@ -6,6 +6,7 @@
     "catalog": "Categories",
     "farmers": "Farmers",
     "farmerDocuments": "Farmer documents",
+    "courierDocuments": "Courier documents",
     "customers": "Customers",
     "payments": "Payments",
     "reviews": "Reviews",
@@ -445,6 +446,44 @@
     "rejectModalTitle": "Reject document",
     "rejectionReasonLabel": "Rejection reason",
     "rejectionReasonHint": "Shown to the farmer",
+    "required": "Required field",
+    "cancel": "Cancel"
+  },
+  "courierDocuments": {
+    "title": "Courier documents",
+    "subtitle": "Review a driver's license and vehicle registration before a courier can go available for orders",
+    "errorTitle": "Failed to load documents",
+    "errorDescription": "Check your connection to the server and try again.",
+    "emptyTitle": "No documents",
+    "emptyDescription": "Documents uploaded by couriers for review will appear here.",
+    "filterAll": "All statuses",
+    "columns": {
+      "courier": "Courier",
+      "type": "Document type",
+      "file": "File",
+      "status": "Status",
+      "uploadedAt": "Uploaded",
+      "actions": "Actions"
+    },
+    "type": {
+      "driverLicense": "Driver's license",
+      "vehicleRegistration": "Vehicle registration"
+    },
+    "status": {
+      "pending": "Pending",
+      "approved": "Approved",
+      "rejected": "Rejected"
+    },
+    "viewFile": "View file",
+    "approveAction": "Approve",
+    "rejectAction": "Reject",
+    "approveSuccess": "Document approved",
+    "approveError": "Failed to approve document",
+    "rejectSuccess": "Document rejected",
+    "rejectError": "Failed to reject document",
+    "rejectModalTitle": "Reject document",
+    "rejectionReasonLabel": "Rejection reason",
+    "rejectionReasonHint": "Shown to the courier",
     "required": "Required field",
     "cancel": "Cancel"
   },

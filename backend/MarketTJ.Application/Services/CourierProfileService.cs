@@ -13,6 +13,7 @@ public class CourierProfileService(
     ICourierProfileRepository courierProfileRepository,
     IUserRepository userRepository,
     ICurrentUserService currentUser,
+    ICourierDocumentService courierDocumentService,
     ILogger<CourierProfileService> logger) : ICourierProfileService
 {
     public async Task<Result<IEnumerable<GetCourierProfileDto>>> GetAllAsync()
@@ -55,25 +56,25 @@ public class CourierProfileService(
         }
     }
 
-    public async Task<Result<string>> CreateAsync(CreateCourierProfileDto dto)
+    public async Task<Result<int>> CreateAsync(CreateCourierProfileDto dto)
     {
         try
         {
             var validation = CourierProfileValidator.ValidateCreate(dto);
             if (validation is not null)
-                return validation;
+                return Result<int>.Fail(validation.Error!, validation.ErrorType!.Value);
 
             if (!currentUser.CanAccess(dto.UserId))
-                return Result<string>.Fail("Нельзя создать профиль для другого пользователя", ErrorType.Forbidden);
+                return Result<int>.Fail("Нельзя создать профиль для другого пользователя", ErrorType.Forbidden);
 
             var user = await userRepository.GetByIdAsync(dto.UserId);
             if (user is null)
-                return Result<string>.Fail("Пользователь не найден", ErrorType.NotFound);
+                return Result<int>.Fail("Пользователь не найден", ErrorType.NotFound);
 
             // Раздел 9 ТЗ: User 1 — 1 CourierProfile.
             var all = await courierProfileRepository.GetAllAsync();
             if (all.Any(c => c.UserId == dto.UserId))
-                return Result<string>.Fail("У этого пользователя уже есть профиль курьера", ErrorType.Conflict);
+                return Result<int>.Fail("У этого пользователя уже есть профиль курьера", ErrorType.Conflict);
 
             var profile = new CourierProfile
             {
@@ -89,12 +90,12 @@ public class CourierProfileService(
             };
 
             await courierProfileRepository.AddAsync(profile);
-            return Result<string>.Ok("Профиль курьера создан");
+            return Result<int>.Ok(profile.Id);
         }
         catch (Exception ex)
         {
             logger.LogError(ex, "Ошибка при создании профиля курьера");
-            return Result<string>.Fail("Не удалось создать профиль курьера", ErrorType.InternalServerError);
+            return Result<int>.Fail("Не удалось создать профиль курьера", ErrorType.InternalServerError);
         }
     }
 
@@ -120,6 +121,17 @@ public class CourierProfileService(
             var all = await courierProfileRepository.GetAllAsync();
             if (all.Any(c => c.Id != id && c.UserId == dto.UserId))
                 return Result<string>.Fail("У этого пользователя уже есть профиль курьера", ErrorType.Conflict);
+
+            // По прямому запросу пользователя (2026-08-04): курьер не может
+            // включить себе доступность для заказов, пока admin не одобрил
+            // оба обязательных документа (права + техпаспорт). Admin сам
+            // освобождён от гейта — та же схема, что и в ProductListingService
+            // для фермеров без документов.
+            if (dto.IsAvailable && !profile.IsAvailable && !currentUser.IsAdmin()
+                && !await courierDocumentService.HasApprovedRequiredDocumentsAsync(id))
+                return Result<string>.Fail(
+                    "Нельзя стать доступным для заказов, пока документы не одобрены администратором",
+                    ErrorType.Validation);
 
             profile.UserId = dto.UserId;
             profile.TransportType = dto.TransportType;

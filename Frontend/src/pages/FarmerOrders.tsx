@@ -13,8 +13,9 @@ import { OrderItemsCell } from "@/components/ui/OrderItemsCell";
 import { OrderItemsPhotoList } from "@/components/ui/OrderItemsPhotoList";
 import { PaymentBadge } from "@/components/ui/PaymentBadge";
 import { DeliveryStatusBadge } from "@/components/delivery/DeliveryStatusBadge";
+import { AssignCourierDrawer } from "@/components/delivery/AssignCourierDrawer";
 import { ApiError } from "@/lib/api";
-import { markReadyForPickup } from "@/data/delivery";
+import { markReadyForPickup, useDeliveryByOrder } from "@/data/delivery";
 import { formatDateTime, formatSomoni } from "@/lib/utils";
 import {
   ORDER_STATUS_CLASSES,
@@ -66,9 +67,12 @@ export function FarmerOrders() {
   const [busyId, setBusyId] = useState<number | null>(null);
   const [markingPaidId, setMarkingPaidId] = useState<number | null>(null);
   const [readyConfirmOrder, setReadyConfirmOrder] = useState<FarmerOrderDto | null>(null);
+  const [assigningOrder, setAssigningOrder] = useState<FarmerOrderDto | null>(null);
+  const [assignRefreshKey, setAssignRefreshKey] = useState(0);
   const { profile, loading: profileLoading, error: profileError } = useFarmerProfile();
   const { orders, loading: ordersLoading, error: ordersError } = useFarmerOrders(profile?.id ?? null);
   const { deliveriesByOrderId, loading: deliveriesLoading } = useDeliveriesByOrder();
+  const { delivery: assigningDelivery } = useDeliveryByOrder(assigningOrder?.id ?? null, assignRefreshKey);
   const { orderItems } = useOrderItems();
   const products = useProducts();
   const photoByListingId = new Map(products.map((p) => [p.id, p.photoUrl]));
@@ -134,8 +138,17 @@ export function FarmerOrders() {
   const pageItems: FarmerOrderDto[] = orders.slice((currentPage - 1) * PAGE_SIZE, currentPage * PAGE_SIZE);
 
   const deliveryInfo = (order: FarmerOrderDto, delivery: DeliveryDto | undefined) => {
+    // Фермер назначает курьера сам (2026-08-04) — раньше здесь было только
+    // "waitingForAdmin" (ждём, пока админ назначит), теперь активная кнопка.
+    // Admin по-прежнему может назначить/переназначить из своей панели как
+    // запасной вариант — обе стороны используют один и тот же
+    // AssignCourierAsync-эндпоинт с разными правами владения.
     if (!delivery || !delivery.courierId) {
-      return <p className="text-sm text-stone-400 dark:text-stone-500">{t("orders.delivery.waitingForAdmin")}</p>;
+      return (
+        <Button type="button" size="sm" variant="outline" leftIcon={<Truck size={14} />} onClick={() => setAssigningOrder(order)}>
+          {t("orders.delivery.assignAction")}
+        </Button>
+      );
     }
 
     const canMarkReady = order.status === OrderStatus.CourierAssigned;
@@ -333,6 +346,31 @@ export function FarmerOrders() {
         description={t("orders.delivery.readyConfirmDescription")}
         confirmLabel={t("orders.delivery.readyAction")}
       />
+
+      {assigningOrder && (
+        <AssignCourierDrawer
+          variant="farmer"
+          open={!!assigningOrder}
+          onClose={() => setAssigningOrder(null)}
+          order={{
+            id: assigningOrder.id,
+            orderNumber: assigningOrder.orderNumber,
+            farmerName: profile.farmName,
+            customerName: assigningOrder.customerFullName ?? t("orders.customerLabel", { id: assigningOrder.customerId }),
+            pickupAddress: profile.address,
+            deliveryAddress: assigningOrder.deliveryAddress,
+            itemCount: orderItems?.filter((i) => i.orderId === assigningOrder.id).length ?? 0,
+            deliveryRegion: assigningOrder.region,
+            deliveryDistrict: assigningOrder.district,
+            currentDeliveryPrice: assigningOrder.deliveryPrice,
+          }}
+          existingDelivery={assigningDelivery}
+          onAssigned={() => {
+            setAssignRefreshKey((k) => k + 1);
+            notifyFarmerOrdersChanged();
+          }}
+        />
+      )}
     </div>
   );
 }
