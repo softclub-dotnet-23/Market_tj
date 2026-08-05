@@ -199,6 +199,7 @@
     "region": "Регион",
     "inStock": "В наличии",
     "minOrder": "Мин. заказ",
+    "minOrderCaption": "Минимальный заказ: {{value}} {{unit}}",
     "addToCartWithPrice": "В корзину · {{price}}",
     "addToFavorites": "В избранное",
     "askFarmer": "Спросить у фермера",

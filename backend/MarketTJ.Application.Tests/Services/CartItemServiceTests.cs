@@ -252,6 +252,55 @@ public class CartItemServiceTests
     }
 
     [Fact]
+    public async Task CreateAsync_WeightUnitBelow50Kg_ReturnsValidationError()
+    {
+        _productListingRepository.Setup(r => r.GetByIdAsync(It.IsAny<int>())).ReturnsAsync(new ProductListing
+        {
+            Id = 1, FarmerProfileId = 1, ProductId = 1, Title = "Listing", RetailPricePerKg = 10, Unit = "кг",
+            AvailableQuantity = 100, MinimumOrderQuantity = 1, QualityGrade = "A", Region = "Хатлон",
+            District = "Бохтар", Address = "A", Status = ListingStatus.Active
+        });
+
+        var result = await _service.CreateAsync(ValidCreateDto(quantity: 49));
+
+        Assert.False(result.IsSuccess);
+        Assert.Equal(ErrorType.Validation, result.ErrorType);
+        _cartItemRepository.Verify(r => r.AddAsync(It.IsAny<CartItem>()), Times.Never);
+    }
+
+    [Fact]
+    public async Task CreateAsync_WeightUnitAt50Kg_Succeeds()
+    {
+        _productListingRepository.Setup(r => r.GetByIdAsync(It.IsAny<int>())).ReturnsAsync(new ProductListing
+        {
+            Id = 1, FarmerProfileId = 1, ProductId = 1, Title = "Listing", RetailPricePerKg = 10, Unit = "кг",
+            AvailableQuantity = 100, MinimumOrderQuantity = 1, QualityGrade = "A", Region = "Хатлон",
+            District = "Бохтар", Address = "A", Status = ListingStatus.Active
+        });
+
+        var result = await _service.CreateAsync(ValidCreateDto(quantity: 50));
+
+        Assert.True(result.IsSuccess);
+        _cartItemRepository.Verify(r => r.AddAsync(It.IsAny<CartItem>()), Times.Once);
+    }
+
+    [Fact]
+    public async Task CreateAsync_NonWeightUnitBelow50_Succeeds()
+    {
+        _productListingRepository.Setup(r => r.GetByIdAsync(It.IsAny<int>())).ReturnsAsync(new ProductListing
+        {
+            Id = 1, FarmerProfileId = 1, ProductId = 1, Title = "Listing", RetailPricePerKg = 10, Unit = "шт",
+            AvailableQuantity = 100, MinimumOrderQuantity = 1, QualityGrade = "A", Region = "Хатлон",
+            District = "Бохтар", Address = "A", Status = ListingStatus.Active
+        });
+
+        var result = await _service.CreateAsync(ValidCreateDto(quantity: 5));
+
+        Assert.True(result.IsSuccess);
+        _cartItemRepository.Verify(r => r.AddAsync(It.IsAny<CartItem>()), Times.Once);
+    }
+
+    [Fact]
     public async Task CreateAsync_QuantityExceedsAvailable_ReturnsValidationError()
     {
         _productListingRepository.Setup(r => r.GetByIdAsync(It.IsAny<int>())).ReturnsAsync(new ProductListing

@@ -47,6 +47,25 @@ export function getUnitPrice(
   return product.retailPricePerKg;
 }
 
+export const WEIGHT_UNIT = "кг";
+export const MINIMUM_WEIGHT_ORDER_QUANTITY = 50;
+const WEIGHT_ORDER_STEP = 5;
+
+// Весовые товары (unit="кг") нельзя заказать меньше 50 кг ни на карточке
+// товара, ни в корзине/чекауте — даже если фермер сам выставил меньший
+// minimumOrderQuantity для объявления. Используется везде, где считается
+// стартовое/минимальное количество (см. lib/utils.ts:getUnitPrice — тот же
+// принцип единой точки правды).
+export function getEffectiveMinQuantity(product: { unit: string; minimumOrderQuantity: number }): number {
+  return product.unit === WEIGHT_UNIT
+    ? Math.max(product.minimumOrderQuantity, MINIMUM_WEIGHT_ORDER_QUANTITY)
+    : product.minimumOrderQuantity;
+}
+
+export function getQuantityStep(product: { unit: string }): number {
+  return product.unit === WEIGHT_UNIT ? WEIGHT_ORDER_STEP : 1;
+}
+
 export function formatDate(iso: string) {
   const d = new Date(iso);
   const months = i18n.t("dates.months", { ns: "common", returnObjects: true }) as string[];

@@ -4,7 +4,7 @@ import { toast } from "sonner";
 import { useTranslation } from "react-i18next";
 import type { CartLine, Product } from "@/types";
 import { getProductById } from "@/data/products";
-import { formatSomoni, getUnitPrice } from "@/lib/utils";
+import { formatSomoni, getEffectiveMinQuantity, getUnitPrice } from "@/lib/utils";
 
 const CART_STORAGE_KEY = "market-tj-cart";
 
@@ -42,7 +42,7 @@ export function CartProvider({ children }: { children: ReactNode }) {
     localStorage.setItem(CART_STORAGE_KEY, JSON.stringify(lines));
   }, [lines]);
 
-  const addItem = (product: Product, quantity = product.minimumOrderQuantity) => {
+  const addItem = (product: Product, quantity = getEffectiveMinQuantity(product)) => {
     setLines((prev) => {
       const existing = prev.find((l) => l.productId === product.id);
       if (existing) {

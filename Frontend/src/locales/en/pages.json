@@ -175,6 +175,7 @@
     "region": "Region",
     "inStock": "In stock",
     "minOrder": "Min. order",
+    "minOrderCaption": "Minimum order: {{value}} {{unit}}",
     "addToCartWithPrice": "Add to cart · {{price}}",
     "addToFavorites": "Add to favorites",
     "askFarmer": "Ask the farmer",

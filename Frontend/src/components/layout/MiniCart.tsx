@@ -7,7 +7,7 @@ import { useCart } from "@/context/CartContext";
 import { useProducts } from "@/data/products";
 import { PhotoTile } from "@/components/ui/PhotoTile";
 import { Button } from "@/components/ui/Button";
-import { formatSomoni, getUnitPrice } from "@/lib/utils";
+import { formatSomoni, getEffectiveMinQuantity, getQuantityStep, getUnitPrice } from "@/lib/utils";
 
 export function MiniCart({ onClose }: { onClose: () => void }) {
   const { t } = useTranslation(["layout", "common"]);
@@ -76,7 +76,10 @@ export function MiniCart({ onClose }: { onClose: () => void }) {
                       <div className="flex items-center gap-1.5 rounded-full bg-stone-100 px-1.5 py-1 dark:bg-stone-800">
                         <button
                           onClick={() =>
-                            setQuantity(line.productId, Math.max(product.minimumOrderQuantity, line.quantity - 1))
+                            setQuantity(
+                              line.productId,
+                              Math.max(getEffectiveMinQuantity(product), line.quantity - getQuantityStep(product)),
+                            )
                           }
                           className="flex h-5 w-5 items-center justify-center rounded-full bg-white text-stone-600 shadow-sm dark:bg-stone-700 dark:text-stone-200"
                         >
@@ -86,7 +89,7 @@ export function MiniCart({ onClose }: { onClose: () => void }) {
                           {line.quantity}
                         </span>
                         <button
-                          onClick={() => setQuantity(line.productId, line.quantity + 1)}
+                          onClick={() => setQuantity(line.productId, line.quantity + getQuantityStep(product))}
                           className="flex h-5 w-5 items-center justify-center rounded-full bg-white text-stone-600 shadow-sm dark:bg-stone-700 dark:text-stone-200"
                         >
                           <Plus size={11} />

@@ -320,6 +320,64 @@ public class OrderItemServiceTests
     }
 
     [Fact]
+    public async Task CreateAsync_WeightUnitBelow50Kg_ReturnsValidationError()
+    {
+        var listing = new ProductListing
+        {
+            Id = 1, FarmerProfileId = 1, ProductId = 1, Title = "Listing", RetailPricePerKg = 10, Unit = "кг",
+            AvailableQuantity = 100, MinimumOrderQuantity = 1, QualityGrade = "A", Region = "Хатлон",
+            District = "Бохтар", Address = "A", Status = ListingStatus.Active
+        };
+        _productListingRepository.Setup(r => r.GetByIdAsync(1)).ReturnsAsync(listing);
+        var dto = ValidCreateDto();
+        dto.Quantity = 49;
+
+        var result = await _service.CreateAsync(dto);
+
+        Assert.False(result.IsSuccess);
+        Assert.Equal(ErrorType.Validation, result.ErrorType);
+        _orderItemRepository.Verify(r => r.AddAsync(It.IsAny<OrderItem>()), Times.Never);
+    }
+
+    [Fact]
+    public async Task CreateAsync_WeightUnitAt50Kg_Succeeds()
+    {
+        var listing = new ProductListing
+        {
+            Id = 1, FarmerProfileId = 1, ProductId = 1, Title = "Listing", RetailPricePerKg = 10, Unit = "кг",
+            AvailableQuantity = 100, MinimumOrderQuantity = 1, QualityGrade = "A", Region = "Хатлон",
+            District = "Бохтар", Address = "A", Status = ListingStatus.Active
+        };
+        _productListingRepository.Setup(r => r.GetByIdAsync(1)).ReturnsAsync(listing);
+        var dto = ValidCreateDto();
+        dto.Quantity = 50;
+
+        var result = await _service.CreateAsync(dto);
+
+        Assert.True(result.IsSuccess);
+        _orderItemRepository.Verify(r => r.AddAsync(It.IsAny<OrderItem>()), Times.Once);
+    }
+
+    [Fact]
+    public async Task CreateAsync_NonWeightUnitBelow50_Succeeds()
+    {
+        var listing = new ProductListing
+        {
+            Id = 1, FarmerProfileId = 1, ProductId = 1, Title = "Listing", RetailPricePerKg = 10, Unit = "шт",
+            AvailableQuantity = 100, MinimumOrderQuantity = 1, QualityGrade = "A", Region = "Хатлон",
+            District = "Бохтар", Address = "A", Status = ListingStatus.Active
+        };
+        _productListingRepository.Setup(r => r.GetByIdAsync(1)).ReturnsAsync(listing);
+        var dto = ValidCreateDto();
+        dto.Quantity = 5;
+
+        var result = await _service.CreateAsync(dto);
+
+        Assert.True(result.IsSuccess);
+        _orderItemRepository.Verify(r => r.AddAsync(It.IsAny<OrderItem>()), Times.Once);
+    }
+
+    [Fact]
     public async Task CreateAsync_RepositoryThrows_ReturnsInternalServerError()
     {
         _orderRepository.Setup(r => r.GetByIdAsync(It.IsAny<int>())).ThrowsAsync(new Exception("db error"));

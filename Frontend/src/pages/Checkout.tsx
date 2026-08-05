@@ -22,7 +22,7 @@ import { useMyWallets, type WalletDto } from "@/data/wallet";
 import { CardBrandMark } from "@/components/customer/WalletCard";
 import { TAJIKISTAN_REGION_SUGGESTIONS, getDistrictsForRegion } from "@/data/tajikistanGeo";
 import { ApiError } from "@/lib/api";
-import { formatSomoni, getUnitPrice, cn } from "@/lib/utils";
+import { formatSomoni, getEffectiveMinQuantity, getQuantityStep, getUnitPrice, cn } from "@/lib/utils";
 
 // Гибридная оплата: покупатель выбирает "Картой" (списание с выбранной
 // виртуальной карты сразу при оформлении) или "Наличными курьеру" (без
@@ -500,7 +500,12 @@ export function Checkout() {
                       <div className="flex items-center gap-1.5 rounded-full bg-stone-100 px-1.5 py-1 dark:bg-stone-800">
                         <button
                           type="button"
-                          onClick={() => setQuantity(line.productId, Math.max(product.minimumOrderQuantity, line.quantity - 1))}
+                          onClick={() =>
+                            setQuantity(
+                              line.productId,
+                              Math.max(getEffectiveMinQuantity(product), line.quantity - getQuantityStep(product)),
+                            )
+                          }
                           className="flex h-5 w-5 items-center justify-center rounded-full bg-white text-stone-600 shadow-sm dark:bg-stone-700 dark:text-stone-200"
                         >
                           <Minus size={11} />
@@ -510,7 +515,7 @@ export function Checkout() {
                         </span>
                         <button
                           type="button"
-                          onClick={() => setQuantity(line.productId, line.quantity + 1)}
+                          onClick={() => setQuantity(line.productId, line.quantity + getQuantityStep(product))}
                           className="flex h-5 w-5 items-center justify-center rounded-full bg-white text-stone-600 shadow-sm dark:bg-stone-700 dark:text-stone-200"
                         >
                           <Plus size={11} />

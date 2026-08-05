@@ -199,6 +199,7 @@
     "region": "Минтақа",
     "inStock": "Мавҷуд",
     "minOrder": "Ҳадди ақали фармоиш",
+    "minOrderCaption": "Ҳадди ақали фармоиш: {{value}} {{unit}}",
     "addToCartWithPrice": "Ба сабад · {{price}}",
     "addToFavorites": "Ба дӯстдоштаҳо",
     "askFarmer": "Аз деҳқон пурсидан",

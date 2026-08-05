@@ -38,7 +38,7 @@ import { useAuth } from "@/context/AuthContext";
 import { useCart } from "@/context/CartContext";
 import { useFavorites } from "@/context/FavoritesContext";
 import { resolveMediaUrl } from "@/lib/api";
-import { cn, formatDate, formatSomoni, getUnitPrice } from "@/lib/utils";
+import { cn, formatDate, formatSomoni, getEffectiveMinQuantity, getQuantityStep, getUnitPrice, WEIGHT_UNIT } from "@/lib/utils";
 
 const BADGE_VARIANTS: Record<string, "grove" | "harvest" | "clay" | "dark"> = {
   organic: "grove",
@@ -57,7 +57,7 @@ export function ProductDetails() {
   const product = products.find((p) => p.slug === slug);
   const { addItem } = useCart();
   const { isFavorite, toggleFavorite } = useFavorites();
-  const [quantity, setQuantity] = useState(product?.minimumOrderQuantity ?? 1);
+  const [quantity, setQuantity] = useState(product ? getEffectiveMinQuantity(product) : 1);
   const [askFarmerOpen, setAskFarmerOpen] = useState(false);
   const categories = useCategories();
   const farmers = useFarmers();
@@ -98,8 +98,11 @@ export function ProductDetails() {
     ? Math.round(((product.oldPrice - product.retailPricePerKg) / product.oldPrice) * 100)
     : 0;
 
-  const changeQty = (delta: number) => {
-    setQuantity((q) => Math.max(product.minimumOrderQuantity, Math.min(product.availableQuantity, q + delta)));
+  const minQuantity = getEffectiveMinQuantity(product);
+  const quantityStep = getQuantityStep(product);
+
+  const changeQty = (direction: 1 | -1) => {
+    setQuantity((q) => Math.max(minQuantity, Math.min(product.availableQuantity, q + direction * quantityStep)));
   };
 
   const handleAskFarmer = () => {
@@ -229,7 +232,7 @@ export function ProductDetails() {
               { icon: CalendarDays, label: t("pages:productDetails.harvestDate"), value: formatDate(product.harvestDate) },
               { icon: Sprout, label: t("pages:productDetails.region"), value: product.district },
               { icon: PackageCheck, label: t("pages:productDetails.inStock"), value: `${product.availableQuantity} ${t(`product:units.${product.unit}`)}` },
-              { icon: Truck, label: t("pages:productDetails.minOrder"), value: `${product.minimumOrderQuantity} ${t(`product:units.${product.unit}`)}` },
+              { icon: Truck, label: t("pages:productDetails.minOrder"), value: `${minQuantity} ${t(`product:units.${product.unit}`)}` },
             ].map((item) => (
               <div key={item.label} className="flex flex-col gap-1.5 rounded-xl border border-stone-100 p-3 dark:border-stone-800">
                 <item.icon size={15} className="text-grove-600 dark:text-grove-400" />
@@ -241,28 +244,29 @@ export function ProductDetails() {
 
           <p className="text-[15px] leading-relaxed text-stone-500 dark:text-stone-400">{product.shortDescription}</p>
 
-          <div className="flex flex-col gap-3 pt-1 sm:flex-row sm:items-center">
-            <div className="flex h-13 items-center gap-3 rounded-xl border border-stone-200 px-2 dark:border-stone-700">
-              <button
-                onClick={() => changeQty(-1)}
-                disabled={quantity <= product.minimumOrderQuantity}
-                className="flex h-9 w-9 items-center justify-center rounded-lg text-stone-600 transition hover:bg-stone-100 disabled:opacity-30 dark:text-stone-300 dark:hover:bg-stone-800"
-              >
-                <Minus size={15} />
-              </button>
-              <span className="min-w-10 text-center text-sm font-semibold text-stone-800 dark:text-stone-100">
-                {quantity} {t(`product:units.${product.unit}`)}
-              </span>
-              <button
-                onClick={() => changeQty(1)}
-                disabled={quantity >= product.availableQuantity}
-                className="flex h-9 w-9 items-center justify-center rounded-lg text-stone-600 transition hover:bg-stone-100 disabled:opacity-30 dark:text-stone-300 dark:hover:bg-stone-800"
-              >
-                <Plus size={15} />
-              </button>
-            </div>
+          <div className="flex flex-col gap-1.5">
+            <div className="flex flex-col gap-3 pt-1 sm:flex-row sm:items-center">
+              <div className="flex h-13 items-center gap-3 rounded-xl border border-stone-200 px-2 dark:border-stone-700">
+                <button
+                  onClick={() => changeQty(-1)}
+                  disabled={quantity <= minQuantity}
+                  className="flex h-9 w-9 items-center justify-center rounded-lg text-stone-600 transition hover:bg-stone-100 disabled:opacity-30 dark:text-stone-300 dark:hover:bg-stone-800"
+                >
+                  <Minus size={15} />
+                </button>
+                <span className="min-w-10 text-center text-sm font-semibold text-stone-800 dark:text-stone-100">
+                  {quantity} {t(`product:units.${product.unit}`)}
+                </span>
+                <button
+                  onClick={() => changeQty(1)}
+                  disabled={quantity >= product.availableQuantity}
+                  className="flex h-9 w-9 items-center justify-center rounded-lg text-stone-600 transition hover:bg-stone-100 disabled:opacity-30 dark:text-stone-300 dark:hover:bg-stone-800"
+                >
+                  <Plus size={15} />
+                </button>
+              </div>
 
-            <Button
+              <Button
               size="lg"
               className="flex-1"
               disabled={outOfStock}
@@ -293,6 +297,16 @@ export function ProductDetails() {
                 <Share2 size={18} />
               </button>
             </div>
+            </div>
+
+            {product.unit === WEIGHT_UNIT && (
+              <p className="text-xs text-stone-500 dark:text-stone-400">
+                {t("pages:productDetails.minOrderCaption", {
+                  value: minQuantity,
+                  unit: t(`product:units.${product.unit}`),
+                })}
+              </p>
+            )}
           </div>
 
           <div className="flex items-center gap-2 pt-1 text-xs text-stone-400 dark:text-stone-500">

@@ -4,6 +4,7 @@ using MarketTJ.Application.Interfaces.Repositories;
 using MarketTJ.Application.Interfaces.Services;
 using MarketTJ.Application.Results;
 using MarketTJ.Application.Validators;
+using MarketTJ.Domain.Constants;
 using MarketTJ.Domain.Entities;
 using Microsoft.Extensions.Logging;
 
@@ -94,6 +95,13 @@ public class CartItemService(
             if (dto.Quantity < listing.MinimumOrderQuantity)
                 return Result<string>.Fail("Quantity не может быть меньше минимального заказа объявления", ErrorType.Validation);
 
+            // Весовые товары (кг) нельзя заказать меньше 50 кг, даже если
+            // фермер сам выставил меньший MinimumOrderQuantity для объявления.
+            if (listing.Unit == OrderQuantityConstants.WeightUnit && dto.Quantity < OrderQuantityConstants.MinimumWeightOrderQuantity)
+                return Result<string>.Fail(
+                    $"Минимальный заказ весового товара — {OrderQuantityConstants.MinimumWeightOrderQuantity} кг",
+                    ErrorType.Validation);
+
             if (dto.Quantity > listing.AvailableQuantity)
                 return Result<string>.Fail("Quantity не может превышать доступный остаток объявления", ErrorType.Validation);
 
@@ -149,6 +157,11 @@ public class CartItemService(
 
             if (dto.Quantity < listing.MinimumOrderQuantity)
                 return Result<string>.Fail("Quantity не может быть меньше минимального заказа объявления", ErrorType.Validation);
+
+            if (listing.Unit == OrderQuantityConstants.WeightUnit && dto.Quantity < OrderQuantityConstants.MinimumWeightOrderQuantity)
+                return Result<string>.Fail(
+                    $"Минимальный заказ весового товара — {OrderQuantityConstants.MinimumWeightOrderQuantity} кг",
+                    ErrorType.Validation);
 
             if (dto.Quantity > listing.AvailableQuantity)
                 return Result<string>.Fail("Quantity не может превышать доступный остаток объявления", ErrorType.Validation);

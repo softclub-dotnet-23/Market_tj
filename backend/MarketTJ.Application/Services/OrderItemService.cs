@@ -4,6 +4,7 @@ using MarketTJ.Application.Interfaces.Repositories;
 using MarketTJ.Application.Interfaces.Services;
 using MarketTJ.Application.Results;
 using MarketTJ.Application.Validators;
+using MarketTJ.Domain.Constants;
 using MarketTJ.Domain.Entities;
 using MarketTJ.Domain.Enums;
 using Microsoft.Extensions.Logging;
@@ -108,6 +109,13 @@ public class OrderItemService(
             if (listing is null)
                 return Result<string>.Fail("Объявление не найдено", ErrorType.NotFound);
 
+            // Весовые товары (кг) нельзя заказать меньше 50 кг, даже если
+            // фермер сам выставил меньший MinimumOrderQuantity для объявления.
+            if (listing.Unit == OrderQuantityConstants.WeightUnit && dto.Quantity < OrderQuantityConstants.MinimumWeightOrderQuantity)
+                return Result<string>.Fail(
+                    $"Минимальный заказ весового товара — {OrderQuantityConstants.MinimumWeightOrderQuantity} кг",
+                    ErrorType.Validation);
+
             if (dto.Quantity > listing.AvailableQuantity)
                 return Result<string>.Fail("Недостаточно товара в наличии", ErrorType.Validation);
 
@@ -166,6 +174,11 @@ public class OrderItemService(
             var listing = await productListingRepository.GetByIdAsync(dto.ProductListingId);
             if (listing is null)
                 return Result<string>.Fail("Объявление не найдено", ErrorType.NotFound);
+
+            if (listing.Unit == OrderQuantityConstants.WeightUnit && dto.Quantity < OrderQuantityConstants.MinimumWeightOrderQuantity)
+                return Result<string>.Fail(
+                    $"Минимальный заказ весового товара — {OrderQuantityConstants.MinimumWeightOrderQuantity} кг",
+                    ErrorType.Validation);
 
             // Меняем остаток объявления на разницу между старым и новым
             // количеством — если объявление то же самое, считаем дельту;
