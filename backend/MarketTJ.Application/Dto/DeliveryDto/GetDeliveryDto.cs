@@ -7,6 +7,8 @@ public class GetDeliveryDto
     public int Id { get; set; }
     public int OrderId { get; set; }
     public int? CourierId { get; set; }
+    public string? ManualCourierName { get; set; }
+    public string? ManualCourierPhone { get; set; }
     public string PickupAddress { get; set; } = null!;
     public string DeliveryAddress { get; set; } = null!;
     public decimal DeliveryPrice { get; set; }

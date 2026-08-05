@@ -7,6 +7,15 @@ public class Delivery
     public int Id { get; set; }
     public int OrderId { get; set; }
     public int? CourierId { get; set; }
+
+    // По прямому запросу пользователя (2026-08-05) — фермер может назначить
+    // курьера "вручную", не выбирая из зарегистрированных на платформе
+    // (например, знакомого водителя/такси). CourierId в этом случае null,
+    // а эти два поля хранят контакт. Ровно одно из (CourierId) / (ManualCourierName
+    // + ManualCourierPhone) заполнено — проверяется в DeliveryService.
+    public string? ManualCourierName { get; set; }
+    public string? ManualCourierPhone { get; set; }
+
     public string PickupAddress { get; set; } = null!;
     public string DeliveryAddress { get; set; } = null!;
     public decimal DeliveryPrice { get; set; }

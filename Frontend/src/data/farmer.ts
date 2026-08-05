@@ -192,6 +192,10 @@ export interface DeliveryDto {
   id: number;
   orderId: number;
   courierId: number | null;
+  // Курьер "вручную" — не зарегистрирован на платформе (2026-08-05, см.
+  // data/delivery.ts). courierId в этом случае null.
+  manualCourierName?: string | null;
+  manualCourierPhone?: string | null;
   status: number;
   assignedAt: string | null;
   pickedUpAt: string | null;

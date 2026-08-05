@@ -186,13 +186,12 @@
       "receivedAt": "Received date & time"
     },
     "delivery": {
-      "waitingForAdmin": "Waiting for the administrator to assign a courier.",
       "assignAction": "Assign courier",
-      "readyAction": "Order ready for pickup",
-      "readySuccess": "Order marked as ready for pickup",
-      "readyError": "Failed to mark the order as ready",
-      "readyConfirmTitle": "Order ready for pickup?",
-      "readyConfirmDescription": "The courier will be notified that the order can be picked up."
+      "confirmManualAction": "Confirm delivery",
+      "confirmManualTitle": "Confirm delivery",
+      "confirmManualDescription": "Ask the customer for the 4-digit code and enter it here.",
+      "confirmManualSuccess": "Delivery confirmed",
+      "confirmManualError": "Failed to confirm delivery"
     },
     "customerLabel": "Customer #{{id}}",
     "courierLabel": "Courier #{{id}}",

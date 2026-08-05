@@ -5,8 +5,7 @@
     "products": "Товары",
     "catalog": "Категории",
     "farmers": "Фермеры",
-    "farmerDocuments": "Документы фермеров",
-    "courierDocuments": "Документы курьеров",
+    "documents": "Документы",
     "customers": "Покупатели",
     "payments": "Платежи",
     "reviews": "Отзывы",
@@ -83,10 +82,6 @@
       "delivery": "Доставка",
       "createdAt": "Дата и время заказа",
       "receivedAt": "Дата и время получения"
-    },
-    "delivery": {
-      "assignAction": "Назначить курьера",
-      "manageAction": "Управление доставкой"
     },
     "customerLabel": "Клиент #{{id}}",
     "farmerLabel": "Фермер #{{id}}",
@@ -492,6 +487,24 @@
     "rejectionReasonHint": "Будет показана курьеру",
     "required": "Обязательное поле",
     "cancel": "Отмена"
+  },
+  "documents": {
+    "title": "Документы",
+    "subtitle": "Проверьте документы фермеров и курьеров перед подтверждением",
+    "emptyDescription": "Здесь появятся документы, загруженные фермерами и курьерами на проверку.",
+    "filterType": {
+      "all": "Все",
+      "farmer": "Фермеры",
+      "courier": "Курьеры"
+    },
+    "role": {
+      "farmer": "Фермер",
+      "courier": "Курьер"
+    },
+    "columns": {
+      "name": "Имя",
+      "role": "Роль"
+    }
   },
   "platformSettings": {
     "title": "Общие настройки платформы",

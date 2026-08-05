@@ -735,6 +735,70 @@ public class OrderServiceTests
         _walletService.Verify(w => w.CreditFarmerForOrderAsync(20, 100, 1), Times.Once);
     }
 
+    // ---------- CompleteAfterDeliveryAsync ----------
+
+    [Fact]
+    public async Task CompleteAfterDeliveryAsync_DeliveredOrder_CompletesAndCreditsFarmer()
+    {
+        var order = CreateOrder(1, OrderStatus.Delivered);
+        order.PaymentMethod = OrderPaymentMethod.Card;
+        order.IsPaid = true;
+        _orderRepository.Setup(r => r.GetByIdAsync(1)).ReturnsAsync(order);
+
+        var result = await _service.CompleteAfterDeliveryAsync(1);
+
+        Assert.True(result.IsSuccess);
+        Assert.Equal(OrderStatus.Completed, order.Status);
+        Assert.NotNull(order.CompletedAt);
+        _orderRepository.Verify(r => r.UpdateAsync(order), Times.Once);
+        _walletService.Verify(w => w.CreditFarmerForOrderAsync(20, 100, 1), Times.Once);
+    }
+
+    [Fact]
+    public async Task CompleteAfterDeliveryAsync_CashOnDeliveryNotYetPaid_CompletesWithoutCreditingFarmer()
+    {
+        var order = CreateOrder(1, OrderStatus.Delivered);
+        order.PaymentMethod = OrderPaymentMethod.CashOnDelivery;
+        order.IsPaid = false;
+        _orderRepository.Setup(r => r.GetByIdAsync(1)).ReturnsAsync(order);
+
+        var result = await _service.CompleteAfterDeliveryAsync(1);
+
+        Assert.True(result.IsSuccess);
+        Assert.Equal(OrderStatus.Completed, order.Status);
+        _walletService.Verify(w => w.CreditFarmerForOrderAsync(It.IsAny<int>(), It.IsAny<decimal>(), It.IsAny<int>()), Times.Never);
+    }
+
+    [Theory]
+    [InlineData(OrderStatus.Completed)]
+    [InlineData(OrderStatus.Cancelled)]
+    [InlineData(OrderStatus.Rejected)]
+    public async Task CompleteAfterDeliveryAsync_AlreadyClosedOrder_IsNoOp(OrderStatus status)
+    {
+        var order = CreateOrder(1, status);
+        order.PaymentMethod = OrderPaymentMethod.Card;
+        order.IsPaid = true;
+        _orderRepository.Setup(r => r.GetByIdAsync(1)).ReturnsAsync(order);
+
+        var result = await _service.CompleteAfterDeliveryAsync(1);
+
+        Assert.True(result.IsSuccess);
+        Assert.Equal(status, order.Status);
+        _orderRepository.Verify(r => r.UpdateAsync(It.IsAny<Order>()), Times.Never);
+        _walletService.Verify(w => w.CreditFarmerForOrderAsync(It.IsAny<int>(), It.IsAny<decimal>(), It.IsAny<int>()), Times.Never);
+    }
+
+    [Fact]
+    public async Task CompleteAfterDeliveryAsync_OrderNotFound_ReturnsNotFound()
+    {
+        _orderRepository.Setup(r => r.GetByIdAsync(1)).ReturnsAsync((Order?)null);
+
+        var result = await _service.CompleteAfterDeliveryAsync(1);
+
+        Assert.False(result.IsSuccess);
+        Assert.Equal(ErrorType.NotFound, result.ErrorType);
+    }
+
     // ---------- UpdateAsync ----------
 
     [Fact]
@@ -830,9 +894,24 @@ public class OrderServiceTests
         _orderRepository.Verify(r => r.UpdateAsync(It.IsAny<Order>()), Times.Never);
     }
 
+    // Принять заказ (Status → Accepted) с 2026-08-05 может только фермер —
+    // владелец заказа, поэтому тесты на это явно переключают роль на Farmer,
+    // а не полагаются на дефолтного Customer из конструктора.
+    private void SetUpOwningFarmer()
+    {
+        _currentUser.Setup(c => c.UserId).Returns(20);
+        _currentUser.Setup(c => c.Role).Returns(nameof(UserRole.Farmer));
+        _farmerProfileRepository.Setup(r => r.GetByUserIdAsync(20)).ReturnsAsync(new FarmerProfile
+        {
+            Id = 1, UserId = 20, FarmName = "Farm", Region = "Хатлон", District = "Бохтар", Village = "V", Address = "A",
+            VerificationStatus = FarmerVerificationStatus.Verified
+        });
+    }
+
     [Fact]
     public async Task UpdateAsync_StatusChangedToAccepted_SetsAcceptedAt()
     {
+        SetUpOwningFarmer();
         var order = CreateOrder(1);
         _orderRepository.Setup(r => r.GetByIdAsync(1)).ReturnsAsync(order);
 
@@ -846,12 +925,31 @@ public class OrderServiceTests
     {
         // FarmerStatus — отдельное поле, которое пишет только фермерский путь
         // (2026-08-04, разделение статусов фермера/курьера).
+        SetUpOwningFarmer();
         var order = CreateOrder(1);
         _orderRepository.Setup(r => r.GetByIdAsync(1)).ReturnsAsync(order);
 
         await _service.UpdateAsync(1, ValidUpdateDto(1, OrderStatus.Accepted));
 
         Assert.Equal(FarmerOrderStatus.Accepted, order.FarmerStatus);
+    }
+
+    [Fact]
+    public async Task UpdateAsync_StatusChangedToAccepted_AdminCaller_ReturnsForbidden()
+    {
+        // По прямому запросу пользователя (2026-08-05): принять заказ может
+        // только фермер — Admin (и покупатель) больше не может выставить
+        // Accepted даже через общий Update.
+        _currentUser.Setup(c => c.UserId).Returns(999);
+        _currentUser.Setup(c => c.Role).Returns(nameof(UserRole.Admin));
+        var order = CreateOrder(1);
+        _orderRepository.Setup(r => r.GetByIdAsync(1)).ReturnsAsync(order);
+
+        var result = await _service.UpdateAsync(1, ValidUpdateDto(1, OrderStatus.Accepted));
+
+        Assert.False(result.IsSuccess);
+        Assert.Equal(ErrorType.Forbidden, result.ErrorType);
+        Assert.Equal(OrderStatus.Pending, order.Status);
     }
 
     [Fact]
@@ -925,6 +1023,7 @@ public class OrderServiceTests
     [Fact]
     public async Task UpdateAsync_StatusChangedToAccepted_DoesNotTouchStock()
     {
+        SetUpOwningFarmer();
         var order = CreateOrder(1, OrderStatus.Pending);
         _orderRepository.Setup(r => r.GetByIdAsync(1)).ReturnsAsync(order);
 
@@ -954,6 +1053,36 @@ public class OrderServiceTests
 
         Assert.False(result.IsSuccess);
         Assert.Equal(ErrorType.InternalServerError, result.ErrorType);
+    }
+
+    // ---------- ChangeStatusAsync ----------
+    // Вызывается только из AdminOrderController (см. IOrderService.ChangeStatusAsync)
+    // — по прямому запросу пользователя (2026-08-05) эта админ-ручка больше не
+    // может выставить Accepted вообще, остальные статусы админу доступны как раньше.
+
+    [Fact]
+    public async Task ChangeStatusAsync_ToAccepted_ReturnsForbidden()
+    {
+        var order = CreateOrder(1, OrderStatus.Pending);
+        _orderRepository.Setup(r => r.GetByIdAsync(1)).ReturnsAsync(order);
+
+        var result = await _service.ChangeStatusAsync(1, OrderStatus.Accepted, adminId: 1);
+
+        Assert.False(result.IsSuccess);
+        Assert.Equal(ErrorType.Forbidden, result.ErrorType);
+        Assert.Equal(OrderStatus.Pending, order.Status);
+    }
+
+    [Fact]
+    public async Task ChangeStatusAsync_ToRejected_Succeeds()
+    {
+        var order = CreateOrder(1, OrderStatus.Pending);
+        _orderRepository.Setup(r => r.GetByIdAsync(1)).ReturnsAsync(order);
+
+        var result = await _service.ChangeStatusAsync(1, OrderStatus.Rejected, adminId: 1);
+
+        Assert.True(result.IsSuccess);
+        Assert.Equal(OrderStatus.Rejected, order.Status);
     }
 
     // ---------- DeleteAsync ----------

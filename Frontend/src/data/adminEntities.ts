@@ -475,11 +475,14 @@ interface AdminFarmerDocumentsPage {
   pageSize: number;
 }
 
-export function useAdminFarmerDocuments(page: number, pageSize: number, status: number | null, refreshKey = 0) {
+export function useAdminFarmerDocuments(page: number, pageSize: number, status: number | null, refreshKey = 0, enabled = true) {
   const statusQuery = status !== null ? `&status=${status}` : "";
   return useAsync(
-    () => apiGet<AdminFarmerDocumentsPage>(`/admin/farmer-documents?pageNumber=${page}&pageSize=${pageSize}${statusQuery}`),
-    [page, pageSize, status, refreshKey],
+    () =>
+      enabled
+        ? apiGet<AdminFarmerDocumentsPage>(`/admin/farmer-documents?pageNumber=${page}&pageSize=${pageSize}${statusQuery}`)
+        : Promise.resolve(null as never),
+    [page, pageSize, status, refreshKey, enabled],
   );
 }
 
@@ -508,11 +511,14 @@ interface AdminCourierDocumentsPage {
   pageSize: number;
 }
 
-export function useAdminCourierDocuments(page: number, pageSize: number, status: number | null, refreshKey = 0) {
+export function useAdminCourierDocuments(page: number, pageSize: number, status: number | null, refreshKey = 0, enabled = true) {
   const statusQuery = status !== null ? `&status=${status}` : "";
   return useAsync(
-    () => apiGet<AdminCourierDocumentsPage>(`/admin/courier-documents?pageNumber=${page}&pageSize=${pageSize}${statusQuery}`),
-    [page, pageSize, status, refreshKey],
+    () =>
+      enabled
+        ? apiGet<AdminCourierDocumentsPage>(`/admin/courier-documents?pageNumber=${page}&pageSize=${pageSize}${statusQuery}`)
+        : Promise.resolve(null as never),
+    [page, pageSize, status, refreshKey, enabled],
   );
 }
 

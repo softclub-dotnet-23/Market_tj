@@ -79,10 +79,40 @@ export function CustomerDeliveryModal({
                     <Truck size={11} /> {delivery.courierTransportType} · {maskVehicleNumber(delivery.courierVehicleNumber)}
                   </span>
                 )}
+                {delivery.courierPhoneNumber && (
+                  <a href={`tel:${delivery.courierPhoneNumber}`} className="flex items-center gap-1 text-xs text-grove-700 hover:underline dark:text-grove-400">
+                    <Phone size={11} /> {delivery.courierPhoneNumber}
+                  </a>
+                )}
               </div>
               {delivery.courierPhoneNumber && (
                 <a
                   href={`tel:${delivery.courierPhoneNumber}`}
+                  className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-grove-700 text-white transition hover:bg-grove-800"
+                  aria-label={t("delivery:customer.callCourier")}
+                >
+                  <Phone size={15} />
+                </a>
+              )}
+            </div>
+          ) : delivery.manualCourierName ? (
+            // Курьер "вручную" (не зарегистрирован на платформе, 2026-08-05) —
+            // та же карточка/звонок, только без аватара/рейтинга/машины. Номер
+            // телефона показываем текстом (по прямому запросу пользователя) —
+            // не только за кнопкой звонка.
+            <div className="flex items-center gap-3 rounded-2xl border border-stone-100 bg-stone-25 p-4 dark:border-stone-800 dark:bg-stone-950/40">
+              <Avatar name={delivery.manualCourierName} size={48} />
+              <div className="min-w-0 flex-1">
+                <p className="truncate font-medium text-stone-900 dark:text-stone-50">{delivery.manualCourierName.split(" ")[0]}</p>
+                {delivery.manualCourierPhone && (
+                  <a href={`tel:${delivery.manualCourierPhone}`} className="flex items-center gap-1 text-xs text-grove-700 hover:underline dark:text-grove-400">
+                    <Phone size={11} /> {delivery.manualCourierPhone}
+                  </a>
+                )}
+              </div>
+              {delivery.manualCourierPhone && (
+                <a
+                  href={`tel:${delivery.manualCourierPhone}`}
                   className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-grove-700 text-white transition hover:bg-grove-800"
                   aria-label={t("delivery:customer.callCourier")}
                 >
@@ -121,6 +151,9 @@ export function CustomerDeliveryModal({
 
           <div className="border-t border-stone-100 pt-4 dark:border-stone-800">
             <DeliveryTimeline orderConfirmed={orderConfirmed} status={delivery.status} />
+            {!delivery.courierId && delivery.manualCourierName && delivery.status !== DeliveryStatus.Delivered && (
+              <p className="-mt-3 text-xs text-stone-400 dark:text-stone-500">{t("delivery:customer.manualTrackingHint")}</p>
+            )}
           </div>
 
           <p className="text-xs text-stone-400 dark:text-stone-500">

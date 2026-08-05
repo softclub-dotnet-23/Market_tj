@@ -23,20 +23,26 @@ public class DeliveryService(
     IUserRepository userRepository,
     INotificationService notificationService,
     IAuditLogService auditLogService,
+    IOrderService orderService,
     ICurrentUserService currentUser,
     ILogger<DeliveryService> logger) : IDeliveryService
 {
-    // Курьер продвигает доставку строго по одному шагу за раз — с текущего
-    // статуса разрешён переход только на указанный следующий (audit
-    // 2026-08-02). Delivered достигается отдельно, через ConfirmDeliveryAsync
-    // (нужен код от покупателя), поэтому в эту карту не входит.
+    // Упрощение находки 2026-08-05: раньше курьер продвигал доставку по 5
+    // отдельным шагам (Accepted→GoingToFarmer→ArrivedAtFarmer→PickedUp→
+    // InTransit→ArrivedAtClient) — по прямому запросу пользователя ("каждый
+    // шаг должен записать, это очень неудобно") сведено к одному действию
+    // "Забрал, еду к покупателю" сразу после принятия доставки; подтверждение
+    // кодом (ConfirmDeliveryAsync) теперь тоже доступно прямо из InTransit,
+    // без обязательной остановки на ArrivedAtClient. GoingToFarmer/
+    // ArrivedAtFarmer/PickedUp как источники оставлены здесь только как
+    // fallback для доставок, застрявших на этих статусах ДО этого упрощения —
+    // у них тоже должна остаться ровно одна кнопка "далее".
     private static readonly Dictionary<DeliveryStatus, DeliveryStatus> CourierTransitions = new()
     {
-        [DeliveryStatus.Accepted] = DeliveryStatus.GoingToFarmer,
-        [DeliveryStatus.GoingToFarmer] = DeliveryStatus.ArrivedAtFarmer,
-        [DeliveryStatus.ArrivedAtFarmer] = DeliveryStatus.PickedUp,
+        [DeliveryStatus.Accepted] = DeliveryStatus.InTransit,
+        [DeliveryStatus.GoingToFarmer] = DeliveryStatus.InTransit,
+        [DeliveryStatus.ArrivedAtFarmer] = DeliveryStatus.InTransit,
         [DeliveryStatus.PickedUp] = DeliveryStatus.InTransit,
-        [DeliveryStatus.InTransit] = DeliveryStatus.ArrivedAtClient,
     };
 
     // Audit 2026-07-28, находка 2.2 (IDOR): владелец — Customer/Farmer заказа
@@ -82,6 +88,19 @@ public class DeliveryService(
         var customerProfile = await customerProfileRepository.GetByUserIdAsync(currentUser.UserId.Value);
         if (customerProfile is not null && customerProfile.Id == order.CustomerId)
             return true;
+
+        var farmerProfile = await farmerProfileRepository.GetByUserIdAsync(currentUser.UserId.Value);
+        return farmerProfile is not null && farmerProfile.Id == order.FarmerId;
+    }
+
+    // Строго "фермер — владелец заказа", БЕЗ пропуска для Admin — по прямому
+    // запросу пользователя (2026-08-05): назначение курьера (и связанные
+    // действия) теперь только фермер, администратор эту роль больше не
+    // дублирует ни как основной, ни как запасной путь.
+    private async Task<bool> IsFarmerOwnerAsync(Order order)
+    {
+        if (currentUser.UserId is null)
+            return false;
 
         var farmerProfile = await farmerProfileRepository.GetByUserIdAsync(currentUser.UserId.Value);
         return farmerProfile is not null && farmerProfile.Id == order.FarmerId;
@@ -320,29 +339,26 @@ public class DeliveryService(
     {
         try
         {
-            // По прямому запросу пользователя (2026-08-04): фермер тоже может
-            // смотреть список доступных курьеров (для самостоятельного
-            // назначения), но ТОЛЬКО своего региона/района — Region/District
-            // из query игнорируются для фермера и принудительно берутся из
-            // его собственного FarmerProfile, чтобы он не мог просматривать
-            // курьеров чужих регионов. Admin — без ограничений, как раньше.
-            if (!currentUser.IsAdmin())
-            {
-                if (currentUser.UserId is null)
-                    return Result<IEnumerable<GetAvailableCourierDto>>.Fail("Доступно только администратору или фермеру", ErrorType.Forbidden);
+            // По прямому запросу пользователя (2026-08-05): смотреть список
+            // доступных курьеров и назначать их может ТОЛЬКО фермер — Admin
+            // больше не участвует ни как основной, ни как запасной путь (см.
+            // тот же запрос на AssignCourierAsync).
+            if (currentUser.UserId is null)
+                return Result<IEnumerable<GetAvailableCourierDto>>.Fail("Доступно только фермеру", ErrorType.Forbidden);
 
-                var myFarmerProfile = await farmerProfileRepository.GetByUserIdAsync(currentUser.UserId.Value);
-                if (myFarmerProfile is null)
-                    return Result<IEnumerable<GetAvailableCourierDto>>.Fail("Доступно только администратору или фермеру", ErrorType.Forbidden);
-
-                filter.Region = myFarmerProfile.Region;
-                filter.District = myFarmerProfile.District;
-            }
+            var myFarmerProfile = await farmerProfileRepository.GetByUserIdAsync(currentUser.UserId.Value);
+            if (myFarmerProfile is null)
+                return Result<IEnumerable<GetAvailableCourierDto>>.Fail("Доступно только фермеру", ErrorType.Forbidden);
 
             var couriers = (await courierProfileRepository.GetAllAsync()).Where(c => c.IsActive).ToList();
 
             if (filter.OnlyAvailable)
                 couriers = couriers.Where(c => c.IsAvailable).ToList();
+            // Region/District — теперь явный опциональный фильтр по выбору
+            // фермера (см. регион-селект в AssignCourierDrawer), а не
+            // принудительная подмена значением его FarmerProfile — тот вариант
+            // прятал вообще всех курьеров, если ни один не совпадал с районом
+            // фермера в точности (см. комментарий ниже, у сортировки).
             if (!string.IsNullOrWhiteSpace(filter.Region))
                 couriers = couriers.Where(c => c.Region == filter.Region).ToList();
             if (!string.IsNullOrWhiteSpace(filter.District))
@@ -351,6 +367,22 @@ public class DeliveryService(
                 couriers = couriers.Where(c => c.TransportType == filter.TransportType).ToList();
             if (filter.MinRating.HasValue)
                 couriers = couriers.Where(c => c.Rating >= filter.MinRating.Value).ToList();
+
+            // Исправление находки 2026-08-05: регион/район раньше были жёстким
+            // WHERE-фильтром (заказ "из своего региона/района" исключал всех
+            // остальных) — но в системе может быть считанное число курьеров на
+            // всю платформу, и фермер оставался без единого варианта, даже когда
+            // курьер физически существовал и был свободен. Пользователь просил
+            // именно сортировку ("первым должны попадаться те, кто ближе и
+            // свободен"), а не исключение ("выбрать курьеров из тех кто есть") —
+            // регион/район своего FarmerProfile теперь только поднимают "своих"
+            // курьеров в начало списка, не прячут остальных.
+            couriers = couriers
+                .OrderByDescending(c => c.IsAvailable)
+                .ThenByDescending(c => c.District == myFarmerProfile.District && c.Region == myFarmerProfile.Region)
+                .ThenByDescending(c => c.Region == myFarmerProfile.Region)
+                .ThenByDescending(c => c.Rating)
+                .ToList();
 
             var courierIds = couriers.Select(c => c.Id).ToList();
             var activeCounts = courierIds.Count > 0
@@ -399,19 +431,13 @@ public class DeliveryService(
             if (order is null)
                 return Result<string>.Fail("Заказ не найден", ErrorType.NotFound);
 
-            // По прямому запросу пользователя (2026-08-04): фермер теперь
-            // назначает курьера сам (владелец заказа), Admin сохраняет право
-            // как запасной вариант — тот же приём "controller role attribute
-            // грубый, IDOR-проверка внутри сервиса", что и везде в этом коде.
-            if (!currentUser.IsAdmin())
-            {
-                if (currentUser.UserId is null)
-                    return Result<string>.Fail("Назначить курьера может фермер — владелец заказа, или администратор", ErrorType.Forbidden);
-
-                var myFarmerProfile = await farmerProfileRepository.GetByUserIdAsync(currentUser.UserId.Value);
-                if (myFarmerProfile is null || myFarmerProfile.Id != order.FarmerId)
-                    return Result<string>.Fail("Назначить курьера может фермер — владелец заказа, или администратор", ErrorType.Forbidden);
-            }
+            // По прямому запросу пользователя (2026-08-05): назначает курьера
+            // ТОЛЬКО фермер — владелец заказа. Раньше (2026-08-04) Admin
+            // сохранял это право как запасной вариант — запрос отменён,
+            // администратор больше не участвует в приёме заказа/назначении
+            // курьера вообще.
+            if (!await IsFarmerOwnerAsync(order))
+                return Result<string>.Fail("Назначить курьера может только фермер — владелец заказа", ErrorType.Forbidden);
 
             if (order.Status is OrderStatus.Completed or OrderStatus.Cancelled or OrderStatus.Rejected
                 || order.CourierStatus == CourierOrderStatus.Delivered)
@@ -495,6 +521,153 @@ public class DeliveryService(
         {
             logger.LogError(ex, "Ошибка при назначении курьера на заказ {OrderId}", orderId);
             return Result<string>.Fail("Не удалось назначить курьера", ErrorType.InternalServerError);
+        }
+    }
+
+    // По прямому запросу пользователя (2026-08-05) — фермер может назначить
+    // курьера "вручную" (знакомого/своего водителя), не выбирая из
+    // зарегистрированных на платформе: только имя и телефон, без CourierId.
+    // Дальше по флоу такая доставка не отслеживается курьерским приложением
+    // (нет аккаунта), поэтому статус подтверждает сам фермер — см.
+    // ConfirmManualDeliveryAsync — тем же 4-значным кодом, что видит покупатель.
+    public async Task<Result<string>> AssignManualCourierAsync(int orderId, AssignManualCourierDto dto)
+    {
+        try
+        {
+            var order = await orderRepository.GetByIdAsync(orderId);
+            if (order is null)
+                return Result<string>.Fail("Заказ не найден", ErrorType.NotFound);
+
+            if (!await IsFarmerOwnerAsync(order))
+                return Result<string>.Fail("Назначить курьера может только фермер — владелец заказа", ErrorType.Forbidden);
+
+            if (order.Status is OrderStatus.Completed or OrderStatus.Cancelled or OrderStatus.Rejected
+                || order.CourierStatus == CourierOrderStatus.Delivered)
+                return Result<string>.Fail("Нельзя назначить курьера на завершённый или отменённый заказ", ErrorType.Conflict);
+
+            if (string.IsNullOrWhiteSpace(dto.CourierName) || string.IsNullOrWhiteSpace(dto.CourierPhone))
+                return Result<string>.Fail("Укажите имя и телефон курьера", ErrorType.Validation);
+
+            var existing = await deliveryRepository.GetByOrderIdAsync(orderId);
+            var farmerProfile = await farmerProfileRepository.GetByIdAsync(order.FarmerId);
+            var customerProfile = await customerProfileRepository.GetByIdAsync(order.CustomerId);
+
+            Delivery delivery;
+            if (existing is null)
+            {
+                delivery = new Delivery
+                {
+                    OrderId = orderId,
+                    CourierId = null,
+                    ManualCourierName = dto.CourierName.Trim(),
+                    ManualCourierPhone = dto.CourierPhone.Trim(),
+                    PickupAddress = farmerProfile?.Address ?? "—",
+                    DeliveryAddress = order.DeliveryAddress,
+                    DeliveryPrice = dto.DeliveryFee,
+                    Status = DeliveryStatus.Assigned,
+                    AssignedAt = DateTime.UtcNow,
+                    EstimatedPickupAt = dto.EstimatedPickupAt,
+                    EstimatedDeliveryAt = dto.EstimatedDeliveryAt,
+                    AdminNote = dto.AdminNote,
+                    CreatedAt = DateTime.UtcNow,
+                    UpdatedAt = DateTime.UtcNow,
+                };
+                GenerateConfirmationCode(delivery);
+                await deliveryRepository.AddAsync(delivery);
+            }
+            else
+            {
+                delivery = existing;
+                delivery.CourierId = null;
+                delivery.ManualCourierName = dto.CourierName.Trim();
+                delivery.ManualCourierPhone = dto.CourierPhone.Trim();
+                delivery.Status = DeliveryStatus.Assigned;
+                delivery.AssignedAt = DateTime.UtcNow;
+                delivery.AcceptedAt = null;
+                delivery.PickedUpAt = null;
+                delivery.DeliveredAt = null;
+                delivery.DeliveryPrice = dto.DeliveryFee;
+                delivery.EstimatedPickupAt = dto.EstimatedPickupAt;
+                delivery.EstimatedDeliveryAt = dto.EstimatedDeliveryAt;
+                delivery.AdminNote = dto.AdminNote;
+                delivery.UpdatedAt = DateTime.UtcNow;
+                await deliveryRepository.UpdateAsync(delivery);
+            }
+
+            order.FarmerStatus = FarmerOrderStatus.HandedToCourier;
+            await orderRepository.UpdateAsync(order);
+
+            if (customerProfile is not null)
+                await NotifyAsync(customerProfile.UserId, "Курьер назначен", $"На ваш заказ №{order.OrderNumber} назначен курьер.");
+
+            await CreateAuditLogAsync("AssignManualCourier", delivery.Id, $"Ручной курьер {dto.CourierName} назначен на заказ №{order.OrderNumber}");
+
+            return Result<string>.Ok("Курьер назначен");
+        }
+        catch (Exception ex)
+        {
+            logger.LogError(ex, "Ошибка при ручном назначении курьера на заказ {OrderId}", orderId);
+            return Result<string>.Fail("Не удалось назначить курьера", ErrorType.InternalServerError);
+        }
+    }
+
+    // Подтверждение доставки для "ручного" курьера — у него нет аккаунта и
+    // курьерского приложения, поэтому вместо ConfirmDeliveryAsync (там
+    // проверка идёт по CourierProfile текущего пользователя) код вводит сам
+    // фермер, получив его от покупателя тем же способом, что и обычный курьер.
+    public async Task<Result<string>> ConfirmManualDeliveryAsync(int deliveryId, ConfirmDeliveryDto dto)
+    {
+        try
+        {
+            var delivery = await deliveryRepository.GetByIdAsync(deliveryId);
+            if (delivery is null)
+                return Result<string>.Fail("Доставка не найдена", ErrorType.NotFound);
+            if (delivery.CourierId is not null)
+                return Result<string>.Fail("Эта доставка назначена зарегистрированному курьеру", ErrorType.Conflict);
+
+            var order = await orderRepository.GetByIdAsync(delivery.OrderId);
+            if (order is null)
+                return Result<string>.Fail("Заказ не найден", ErrorType.NotFound);
+
+            if (!await IsFarmerOwnerAsync(order))
+                return Result<string>.Fail("Подтвердить доставку может только фермер — владелец заказа", ErrorType.Forbidden);
+
+            if (delivery.Status == DeliveryStatus.Delivered)
+                return Result<string>.Fail("Доставка уже подтверждена", ErrorType.Conflict);
+            if (delivery.Status == DeliveryStatus.Cancelled)
+                return Result<string>.Fail("Доставка отменена", ErrorType.Conflict);
+
+            if (delivery.ConfirmationAttempts >= 5)
+                return Result<string>.Fail("Превышено число попыток ввода кода — обратитесь в поддержку", ErrorType.Validation);
+
+            if (string.IsNullOrEmpty(delivery.ConfirmationCodeHash) || !BCrypt.Net.BCrypt.Verify(dto.Code, delivery.ConfirmationCodeHash))
+            {
+                delivery.ConfirmationAttempts += 1;
+                await deliveryRepository.UpdateAsync(delivery);
+                return Result<string>.Fail("Неверный код подтверждения", ErrorType.Validation);
+            }
+
+            delivery.Status = DeliveryStatus.Delivered;
+            delivery.DeliveredAt = DateTime.UtcNow;
+            delivery.UpdatedAt = DateTime.UtcNow;
+            await deliveryRepository.UpdateAsync(delivery);
+
+            order.CourierStatus = CourierOrderStatus.Delivered;
+            await orderRepository.UpdateAsync(order);
+            await CompleteOrderAfterDeliveryAsync(order.Id);
+
+            var customerProfile = await customerProfileRepository.GetByIdAsync(order.CustomerId);
+            if (customerProfile is not null)
+                await NotifyAsync(customerProfile.UserId, "Заказ доставлен", $"Заказ №{order.OrderNumber} отмечен как доставленный.");
+
+            await CreateAuditLogAsync("ConfirmManualDelivery", delivery.Id, $"Ручная доставка подтверждена по заказу №{order.OrderNumber}");
+
+            return Result<string>.Ok("Доставка подтверждена");
+        }
+        catch (Exception ex)
+        {
+            logger.LogError(ex, "Ошибка при подтверждении ручной доставки {DeliveryId}", deliveryId);
+            return Result<string>.Fail("Не удалось подтвердить доставку", ErrorType.InternalServerError);
         }
     }
 
@@ -605,18 +778,12 @@ public class DeliveryService(
             if (order is null)
                 return Result<string>.Fail("Заказ не найден", ErrorType.NotFound);
 
-            if (!currentUser.IsAdmin())
-            {
-                if (currentUser.UserId is null)
-                    return Result<string>.Fail("Требуется вход", ErrorType.Forbidden);
-                var farmerProfile = await farmerProfileRepository.GetByUserIdAsync(currentUser.UserId.Value);
-                if (farmerProfile is null || farmerProfile.Id != order.FarmerId)
-                    return Result<string>.Fail("Нет доступа к этому заказу", ErrorType.Forbidden);
-            }
+            if (!await IsFarmerOwnerAsync(order))
+                return Result<string>.Fail("Нет доступа к этому заказу", ErrorType.Forbidden);
 
             var delivery = await deliveryRepository.GetByOrderIdAsync(orderId);
             if (delivery is null)
-                return Result<string>.Fail("Сначала администратор должен назначить курьера", ErrorType.Conflict);
+                return Result<string>.Fail("Сначала нужно назначить курьера", ErrorType.Conflict);
 
             order.Status = OrderStatus.ReadyForPickup;
             await orderRepository.UpdateAsync(order);
@@ -717,7 +884,9 @@ public class DeliveryService(
             delivery.Status = dto.Status;
             if (!string.IsNullOrWhiteSpace(dto.Note))
                 delivery.CourierNote = dto.Note;
-            if (dto.Status == DeliveryStatus.PickedUp)
+            // InTransit — единственная реальная цель перехода теперь (см.
+            // CourierTransitions), это и есть момент "забрал заказ".
+            if (dto.Status is DeliveryStatus.PickedUp or DeliveryStatus.InTransit)
                 delivery.PickedUpAt = DateTime.UtcNow;
             delivery.UpdatedAt = DateTime.UtcNow;
             await deliveryRepository.UpdateAsync(delivery);
@@ -766,8 +935,12 @@ public class DeliveryService(
                 return Result<string>.Fail("Доставка не найдена", ErrorType.NotFound);
             if (delivery.CourierId != courierProfile.Id)
                 return Result<string>.Fail("Эта доставка назначена не вам", ErrorType.Forbidden);
-            if (delivery.Status != DeliveryStatus.ArrivedAtClient)
-                return Result<string>.Fail("Сначала отметьте прибытие к покупателю", ErrorType.Conflict);
+            // ArrivedAtClient оставлен как валидный статус для подтверждения —
+            // не ломать доставки, уже дошедшие до него до упрощения флоу
+            // (2026-08-05, см. CourierTransitions) — но новый флоу подтверждает
+            // код сразу из InTransit, отдельного "прибыл к покупателю" больше нет.
+            if (delivery.Status != DeliveryStatus.InTransit && delivery.Status != DeliveryStatus.ArrivedAtClient)
+                return Result<string>.Fail("Сначала отметьте, что забрали заказ", ErrorType.Conflict);
 
             if (delivery.ConfirmationAttempts >= 5)
                 return Result<string>.Fail("Превышено число попыток ввода кода — обратитесь к администратору", ErrorType.Validation);
@@ -789,8 +962,12 @@ public class DeliveryService(
             {
                 // Раньше order.Status = OrderStatus.Delivered — теперь только
                 // CourierStatus (см. комментарий в AcceptAsync/на самом поле).
+                // Order.Status сам становится Completed чуть ниже (по прямому
+                // запросу пользователя, 2026-08-05) — Admin для этого больше
+                // не нужен, см. CompleteOrderAfterDeliveryAsync.
                 order.CourierStatus = CourierOrderStatus.Delivered;
                 await orderRepository.UpdateAsync(order);
+                await CompleteOrderAfterDeliveryAsync(order.Id);
 
                 var farmerProfile = await farmerProfileRepository.GetByIdAsync(order.FarmerId);
                 var customerProfile = await customerProfileRepository.GetByIdAsync(order.CustomerId);
@@ -867,6 +1044,24 @@ public class DeliveryService(
         }
     }
 
+    // Не проваливает подтверждение доставки, если завершение заказа/начисление
+    // фермеру споткнулось — доставка уже физически подтверждена курьером/
+    // фермером, это тот же принцип "не роняем основное действие", что и у
+    // NotifyAsync выше.
+    private async Task CompleteOrderAfterDeliveryAsync(int orderId)
+    {
+        try
+        {
+            var result = await orderService.CompleteAfterDeliveryAsync(orderId);
+            if (!result.IsSuccess)
+                logger.LogWarning("Не удалось автозавершить заказ {OrderId} после доставки: {Error}", orderId, result.Error);
+        }
+        catch (Exception ex)
+        {
+            logger.LogWarning(ex, "Ошибка при автозавершении заказа {OrderId} после доставки", orderId);
+        }
+    }
+
     private async Task CreateAuditLogAsync(string action, int deliveryId, string details)
     {
         if (currentUser.UserId is null)
@@ -895,6 +1090,8 @@ public class DeliveryService(
             Id = delivery.Id,
             OrderId = delivery.OrderId,
             CourierId = delivery.CourierId,
+            ManualCourierName = delivery.ManualCourierName,
+            ManualCourierPhone = delivery.ManualCourierPhone,
             PickupAddress = delivery.PickupAddress,
             DeliveryAddress = delivery.DeliveryAddress,
             DeliveryPrice = delivery.DeliveryPrice,
