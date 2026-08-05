@@ -98,40 +98,40 @@ export function resolveReceivedAt(status: number, completedAt: string | null, de
   return null;
 }
 
-// Раздел заказа у фермера — только начало цепочки (раздел 8.11 ТЗ: Order одного
-// FarmerId, но дальше доставку и статусы после сборки ведёт Admin/курьер).
-// Фермер принимает/отклоняет заказ и готовит его, а с "Готов к выдаче" эстафету
-// перенимает Admin (назначение курьера и всё, что после).
+// По прямому запросу пользователя (2026-08-05): фермер только принимает или
+// отклоняет заказ — "Принял", и всё, дальше статус вручную не меняется.
+// Готовность к выдаче/сборка больше не отдельный шаг: как только фермер
+// назначает курьера (см. AssignCourierDrawer), это и есть сигнал "заказ
+// готов" — Preparing/ReadyForPickup из старой цепочки убраны намеренно.
 export function getFarmerNextStatuses(current: number): number[] {
   switch (current) {
     case OrderStatus.Pending:
       return [OrderStatus.Accepted, OrderStatus.Rejected];
-    case OrderStatus.Accepted:
-      return [OrderStatus.Preparing];
-    case OrderStatus.Preparing:
-      return [OrderStatus.ReadyForPickup];
     default:
       return [];
   }
 }
 
-// Зеркально getFarmerNextStatuses: пока заказ не дошёл до "Готов к выдаче",
-// это целиком зона фермера — Admin не должен иметь возможность вмешаться
-// (в том числе перепрыгнуть статус или случайно всё сломать). С "Готов к
-// выдаче" эстафету перенимает Admin — назначение курьера и всё дальше по
-// цепочке доставки, плюс отмена на любом из этих шагов.
+// По прямому запросу пользователя (2026-08-05): Admin больше не участвует в
+// приёме заказа и назначении курьера (это фермер, см. getFarmerNextStatuses/
+// AssignCourierDrawer) — реальная доставка отслеживается отдельно через
+// Delivery.Status/CourierStatus, не через Order.Status. С этой же даты заказ
+// завершается САМ, как только доставка подтверждена (см. DeliveryService.
+// CompleteOrderAfterDeliveryAsync на бэкенде) — Admin для этого обычно не
+// нужен. Но Order.Status у заказов, уже дошедших до Delivered/промежуточных
+// статусов ДО этого исправления (или если автозавершение почему-то не
+// сработало), должен оставаться финализируемым вручную — иначе такой заказ
+// зависает навсегда без отзыва/начисления фермеру.
 export function getAdminNextStatuses(current: number): number[] {
   switch (current) {
+    case OrderStatus.Accepted:
+    case OrderStatus.Preparing:
     case OrderStatus.ReadyForPickup:
-      return [OrderStatus.CourierAssigned, OrderStatus.Cancelled];
     case OrderStatus.CourierAssigned:
-      return [OrderStatus.PickedUp, OrderStatus.Cancelled];
     case OrderStatus.PickedUp:
-      return [OrderStatus.InDelivery, OrderStatus.Cancelled];
     case OrderStatus.InDelivery:
-      return [OrderStatus.Delivered, OrderStatus.Cancelled];
     case OrderStatus.Delivered:
-      return [OrderStatus.Completed];
+      return [OrderStatus.Completed, OrderStatus.Cancelled];
     default:
       return [];
   }

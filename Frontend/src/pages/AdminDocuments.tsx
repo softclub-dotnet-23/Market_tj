@@ -1,6 +1,7 @@
-﻿import { useState } from "react";
+import { useMemo, useState } from "react";
 import { useForm } from "react-hook-form";
 import { useTranslation } from "react-i18next";
+import { useSearchParams } from "react-router-dom";
 import { toast } from "sonner";
 import { Check, FileText, X } from "lucide-react";
 import { PageLoader } from "@/components/layout/PageLoader";
@@ -12,14 +13,41 @@ import { Button } from "@/components/ui/Button";
 import { ApiError, resolveMediaUrl } from "@/lib/api";
 import { formatDate } from "@/lib/utils";
 import { DocumentReviewStatus, FarmerDocumentType } from "@/data/farmer";
-import { reviewFarmerDocument, useAdminFarmerDocuments, type AdminFarmerDocumentDto } from "@/data/adminEntities";
+import { CourierDocumentType } from "@/data/courier";
+import { reviewFarmerDocument, reviewCourierDocument, useAdminFarmerDocuments, useAdminCourierDocuments } from "@/data/adminEntities";
 
 const PAGE_SIZE = 20;
+// "Все" грузит оба источника разом и мерджит на клиенте (см. ниже) — единого
+// backend-эндпоинта для документов фермеров+курьеров нет и делать его ради
+// одной страницы админки избыточно. 200 с каждой стороны с запасом покрывает
+// реальный объём очереди модерации.
+const ALL_FETCH_SIZE = 200;
+
+type DocKind = "farmer" | "courier";
+type DocTypeFilter = "all" | DocKind;
+
+interface UnifiedDoc {
+  key: string;
+  id: number;
+  kind: DocKind;
+  primaryName: string;
+  secondaryName: string | null;
+  documentType: number;
+  fileUrl: string;
+  status: number;
+  uploadedAt: string;
+  rejectionReason: string | null;
+}
 
 const STATUS_CLASSES: Record<number, string> = {
   [DocumentReviewStatus.Pending]: "bg-harvest-100 text-harvest-800 dark:bg-harvest-900 dark:text-harvest-100",
   [DocumentReviewStatus.Approved]: "bg-grove-100 text-grove-700 dark:bg-grove-900 dark:text-grove-300",
   [DocumentReviewStatus.Rejected]: "bg-rose-100 text-rose-700 dark:bg-rose-900 dark:text-rose-300",
+};
+
+const ROLE_BADGE_CLASSES: Record<DocKind, string> = {
+  farmer: "bg-grove-50 text-grove-700 dark:bg-grove-950 dark:text-grove-400",
+  courier: "bg-blue-50 text-blue-700 dark:bg-blue-950 dark:text-blue-400",
 };
 
 interface RejectFormValues {
@@ -34,7 +62,7 @@ function RejectModal({
 }: {
   open: boolean;
   onClose: () => void;
-  document: AdminFarmerDocumentDto | null;
+  document: UnifiedDoc | null;
   onReviewed: () => void;
 }) {
   const { t } = useTranslation("admin");
@@ -48,7 +76,8 @@ function RejectModal({
   const onSubmit = async (values: RejectFormValues) => {
     if (!document) return;
     try {
-      await reviewFarmerDocument(document.id, DocumentReviewStatus.Rejected, values.rejectionReason);
+      if (document.kind === "farmer") await reviewFarmerDocument(document.id, DocumentReviewStatus.Rejected, values.rejectionReason);
+      else await reviewCourierDocument(document.id, DocumentReviewStatus.Rejected, values.rejectionReason);
       toast.success(t("farmerDocuments.rejectSuccess"));
       reset();
       onReviewed();
@@ -64,7 +93,7 @@ function RejectModal({
       <form onSubmit={handleSubmit(onSubmit)} className="mt-6 flex flex-col gap-5">
         <Textarea
           label={t("farmerDocuments.rejectionReasonLabel")}
-          hint={t("farmerDocuments.rejectionReasonHint")}
+          hint={t(document?.kind === "courier" ? "courierDocuments.rejectionReasonHint" : "farmerDocuments.rejectionReasonHint")}
           error={errors.rejectionReason?.message}
           {...register("rejectionReason", { required: t("farmerDocuments.required") })}
         />
@@ -81,43 +110,100 @@ function RejectModal({
   );
 }
 
-export function AdminFarmerDocuments() {
+export function AdminDocuments() {
   const { t } = useTranslation("admin");
+  const [searchParams] = useSearchParams();
+  const initialType = searchParams.get("type");
+  const [docType, setDocType] = useState<DocTypeFilter>(initialType === "farmer" || initialType === "courier" ? initialType : "all");
   const [page, setPage] = useState(1);
   const [status, setStatus] = useState<string>(String(DocumentReviewStatus.Pending));
   const [refreshKey, setRefreshKey] = useState(0);
-  const [rejecting, setRejecting] = useState<AdminFarmerDocumentDto | null>(null);
+  const [rejecting, setRejecting] = useState<UnifiedDoc | null>(null);
   const statusFilter = status === "all" ? null : Number(status);
-  const { data, loading, error } = useAdminFarmerDocuments(page, PAGE_SIZE, statusFilter, refreshKey);
+
+  const farmerEnabled = docType !== "courier";
+  const courierEnabled = docType !== "farmer";
+  const farmerPage = docType === "all" ? 1 : page;
+  const courierPage = docType === "all" ? 1 : page;
+  const farmerPageSize = docType === "all" ? ALL_FETCH_SIZE : PAGE_SIZE;
+  const courierPageSize = docType === "all" ? ALL_FETCH_SIZE : PAGE_SIZE;
+
+  const farmer = useAdminFarmerDocuments(farmerPage, farmerPageSize, statusFilter, refreshKey, farmerEnabled);
+  const courier = useAdminCourierDocuments(courierPage, courierPageSize, statusFilter, refreshKey, courierEnabled);
+
+  const loading = docType === "farmer" ? farmer.loading : docType === "courier" ? courier.loading : farmer.loading || courier.loading;
+  const error = docType === "farmer" ? farmer.error : docType === "courier" ? courier.error : (farmer.error ?? courier.error);
+  const ready = docType === "farmer" ? !!farmer.data : docType === "courier" ? !!courier.data : !!farmer.data && !!courier.data;
+
+  const items = useMemo<UnifiedDoc[]>(() => {
+    const farmerItems: UnifiedDoc[] = (farmer.data?.items ?? []).map((doc) => ({
+      key: `farmer-${doc.id}`,
+      id: doc.id,
+      kind: "farmer",
+      primaryName: doc.farmName,
+      secondaryName: doc.farmerFullName,
+      documentType: doc.documentType,
+      fileUrl: doc.fileUrl,
+      status: doc.status,
+      uploadedAt: doc.uploadedAt,
+      rejectionReason: doc.rejectionReason,
+    }));
+    const courierItems: UnifiedDoc[] = (courier.data?.items ?? []).map((doc) => ({
+      key: `courier-${doc.id}`,
+      id: doc.id,
+      kind: "courier",
+      primaryName: doc.courierFullName ?? "—",
+      secondaryName: doc.courierPhoneNumber,
+      documentType: doc.documentType,
+      fileUrl: doc.fileUrl,
+      status: doc.status,
+      uploadedAt: doc.uploadedAt,
+      rejectionReason: doc.rejectionReason,
+    }));
+
+    if (docType === "farmer") return farmerItems;
+    if (docType === "courier") return courierItems;
+    return [...farmerItems, ...courierItems].sort((a, b) => new Date(b.uploadedAt).getTime() - new Date(a.uploadedAt).getTime());
+  }, [docType, farmer.data, courier.data]);
+
+  const displayItems = docType === "all" ? items.slice((page - 1) * PAGE_SIZE, page * PAGE_SIZE) : items;
+  const totalCount = docType === "all" ? items.length : (docType === "farmer" ? farmer.data?.totalCount : courier.data?.totalCount) ?? 0;
 
   if (loading) return <PageLoader />;
 
-  if (error || !data) {
+  if (error || !ready) {
     return <EmptyState icon={<FileText size={26} />} title={t("farmerDocuments.errorTitle")} description={error ?? t("farmerDocuments.errorDescription")} />;
   }
 
-  const typeLabel = (type: number) =>
-    t(
-      `farmerDocuments.type.${
-        type === FarmerDocumentType.PassportFront
-          ? "passportFront"
-          : type === FarmerDocumentType.PassportBack
-            ? "passportBack"
-            : type === FarmerDocumentType.Selfie
-              ? "selfie"
-              : type === FarmerDocumentType.Passport
-                ? "passport"
-                : type === FarmerDocumentType.LandDeed
-                  ? "landDeed"
-                  : "other"
-      }`,
-    );
+  const typeLabel = (doc: UnifiedDoc) => {
+    if (doc.kind === "farmer") {
+      return t(
+        `farmerDocuments.type.${
+          doc.documentType === FarmerDocumentType.PassportFront
+            ? "passportFront"
+            : doc.documentType === FarmerDocumentType.PassportBack
+              ? "passportBack"
+              : doc.documentType === FarmerDocumentType.Selfie
+                ? "selfie"
+                : doc.documentType === FarmerDocumentType.Passport
+                  ? "passport"
+                  : doc.documentType === FarmerDocumentType.LandDeed
+                    ? "landDeed"
+                    : "other"
+        }`,
+      );
+    }
+    return t(`courierDocuments.type.${doc.documentType === CourierDocumentType.DriverLicense ? "driverLicense" : "vehicleRegistration"}`);
+  };
   const statusLabel = (s: number) =>
     t(`farmerDocuments.status.${s === DocumentReviewStatus.Approved ? "approved" : s === DocumentReviewStatus.Rejected ? "rejected" : "pending"}`);
+  const nameColumnLabel =
+    docType === "farmer" ? t("farmerDocuments.columns.farm") : docType === "courier" ? t("courierDocuments.columns.courier") : t("documents.columns.name");
 
-  const handleApprove = async (document: AdminFarmerDocumentDto) => {
+  const handleApprove = async (doc: UnifiedDoc) => {
     try {
-      await reviewFarmerDocument(document.id, DocumentReviewStatus.Approved, null);
+      if (doc.kind === "farmer") await reviewFarmerDocument(doc.id, DocumentReviewStatus.Approved, null);
+      else await reviewCourierDocument(doc.id, DocumentReviewStatus.Approved, null);
       toast.success(t("farmerDocuments.approveSuccess"));
       setRefreshKey((k) => k + 1);
     } catch (err) {
@@ -129,42 +215,64 @@ export function AdminFarmerDocuments() {
     <div className="flex flex-col gap-5">
       <div className="flex flex-col items-stretch gap-3 sm:flex-row sm:items-center sm:justify-between">
         <div>
-          <h1 className="font-display text-xl text-stone-900 dark:text-stone-50">{t("farmerDocuments.title")}</h1>
-          <p className="mt-1 text-sm text-stone-500 dark:text-stone-400">{t("farmerDocuments.subtitle")}</p>
+          <h1 className="font-display text-xl text-stone-900 dark:text-stone-50">{t("documents.title")}</h1>
+          <p className="mt-1 text-sm text-stone-500 dark:text-stone-400">{t("documents.subtitle")}</p>
         </div>
-        <div className="w-full sm:max-w-52">
-          <Select
-            value={status}
-            onChange={(value) => {
-              setStatus(value);
-              setPage(1);
-            }}
-          >
-            <option value="all">{t("farmerDocuments.filterAll")}</option>
-            <option value={DocumentReviewStatus.Pending}>{statusLabel(DocumentReviewStatus.Pending)}</option>
-            <option value={DocumentReviewStatus.Approved}>{statusLabel(DocumentReviewStatus.Approved)}</option>
-            <option value={DocumentReviewStatus.Rejected}>{statusLabel(DocumentReviewStatus.Rejected)}</option>
-          </Select>
+        <div className="grid w-full grid-cols-2 gap-3 sm:flex sm:w-auto">
+          <div className="sm:w-44">
+            <Select
+              value={docType}
+              onChange={(value) => {
+                setDocType(value as DocTypeFilter);
+                setPage(1);
+              }}
+            >
+              <option value="all">{t("documents.filterType.all")}</option>
+              <option value="farmer">{t("documents.filterType.farmer")}</option>
+              <option value="courier">{t("documents.filterType.courier")}</option>
+            </Select>
+          </div>
+          <div className="sm:w-44">
+            <Select
+              value={status}
+              onChange={(value) => {
+                setStatus(value);
+                setPage(1);
+              }}
+            >
+              <option value="all">{t("farmerDocuments.filterAll")}</option>
+              <option value={DocumentReviewStatus.Pending}>{statusLabel(DocumentReviewStatus.Pending)}</option>
+              <option value={DocumentReviewStatus.Approved}>{statusLabel(DocumentReviewStatus.Approved)}</option>
+              <option value={DocumentReviewStatus.Rejected}>{statusLabel(DocumentReviewStatus.Rejected)}</option>
+            </Select>
+          </div>
         </div>
       </div>
 
-      {data.items.length === 0 ? (
-        <EmptyState icon={<FileText size={26} />} title={t("farmerDocuments.emptyTitle")} description={t("farmerDocuments.emptyDescription")} />
+      {displayItems.length === 0 ? (
+        <EmptyState icon={<FileText size={26} />} title={t("farmerDocuments.emptyTitle")} description={t("documents.emptyDescription")} />
       ) : (
         <div className="rounded-3xl border border-stone-100 bg-white dark:border-stone-800 dark:bg-stone-900">
           <div className="flex flex-col gap-3 p-4 lg:hidden">
-            {data.items.map((doc) => (
-              <div key={doc.id} className="flex flex-col gap-2 rounded-2xl border border-stone-100 p-4 dark:border-stone-800">
+            {displayItems.map((doc) => (
+              <div key={doc.key} className="flex flex-col gap-2 rounded-2xl border border-stone-100 p-4 dark:border-stone-800">
                 <div className="flex items-start justify-between gap-3">
                   <div className="min-w-0">
-                    <p className="truncate font-medium text-stone-800 dark:text-stone-100">{doc.farmName}</p>
-                    <p className="truncate text-xs text-stone-400 dark:text-stone-500">{doc.farmerFullName ?? "—"}</p>
+                    <p className="truncate font-medium text-stone-800 dark:text-stone-100">{doc.primaryName}</p>
+                    <p className="truncate text-xs text-stone-400 dark:text-stone-500">{doc.secondaryName ?? "—"}</p>
                   </div>
                   <span className={`shrink-0 rounded-full px-2.5 py-1 text-xs font-semibold ${STATUS_CLASSES[doc.status] ?? STATUS_CLASSES[DocumentReviewStatus.Pending]}`}>
                     {statusLabel(doc.status)}
                   </span>
                 </div>
-                <p className="text-sm text-stone-600 dark:text-stone-300">{typeLabel(doc.documentType)}</p>
+                <div className="flex items-center gap-2">
+                  {docType === "all" && (
+                    <span className={`rounded-full px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide ${ROLE_BADGE_CLASSES[doc.kind]}`}>
+                      {t(`documents.role.${doc.kind}`)}
+                    </span>
+                  )}
+                  <p className="text-sm text-stone-600 dark:text-stone-300">{typeLabel(doc)}</p>
+                </div>
                 {doc.status === DocumentReviewStatus.Rejected && doc.rejectionReason && (
                   <p className="text-xs text-stone-400 dark:text-stone-500">{doc.rejectionReason}</p>
                 )}
@@ -204,7 +312,8 @@ export function AdminFarmerDocuments() {
             <table className="w-full text-left text-sm">
               <thead>
                 <tr className="border-b border-stone-100 text-xs uppercase tracking-wide text-stone-400 dark:border-stone-800 dark:text-stone-500">
-                  <th className="px-6 py-4 font-medium">{t("farmerDocuments.columns.farm")}</th>
+                  <th className="px-6 py-4 font-medium">{nameColumnLabel}</th>
+                  {docType === "all" && <th className="px-6 py-4 font-medium">{t("documents.columns.role")}</th>}
                   <th className="px-6 py-4 font-medium">{t("farmerDocuments.columns.type")}</th>
                   <th className="px-6 py-4 font-medium">{t("farmerDocuments.columns.file")}</th>
                   <th className="px-6 py-4 font-medium">{t("farmerDocuments.columns.status")}</th>
@@ -213,13 +322,20 @@ export function AdminFarmerDocuments() {
                 </tr>
               </thead>
               <tbody>
-                {data.items.map((doc) => (
-                  <tr key={doc.id} className="border-b border-stone-50 last:border-0 dark:border-stone-800/60">
+                {displayItems.map((doc) => (
+                  <tr key={doc.key} className="border-b border-stone-50 last:border-0 dark:border-stone-800/60">
                     <td className="px-6 py-4">
-                      <div className="font-medium text-stone-800 dark:text-stone-100">{doc.farmName}</div>
-                      <div className="text-xs text-stone-400 dark:text-stone-500">{doc.farmerFullName ?? "—"}</div>
+                      <div className="font-medium text-stone-800 dark:text-stone-100">{doc.primaryName}</div>
+                      <div className="text-xs text-stone-400 dark:text-stone-500">{doc.secondaryName ?? "—"}</div>
                     </td>
-                    <td className="px-6 py-4 text-stone-600 dark:text-stone-300">{typeLabel(doc.documentType)}</td>
+                    {docType === "all" && (
+                      <td className="px-6 py-4">
+                        <span className={`rounded-full px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide ${ROLE_BADGE_CLASSES[doc.kind]}`}>
+                          {t(`documents.role.${doc.kind}`)}
+                        </span>
+                      </td>
+                    )}
+                    <td className="px-6 py-4 text-stone-600 dark:text-stone-300">{typeLabel(doc)}</td>
                     <td className="px-6 py-4">
                       <a
                         href={resolveMediaUrl(doc.fileUrl)}
@@ -267,9 +383,9 @@ export function AdminFarmerDocuments() {
             </table>
           </div>
 
-          {data.totalCount > PAGE_SIZE && (
+          {totalCount > PAGE_SIZE && (
             <div className="border-t border-stone-100 p-4 dark:border-stone-800">
-              <Pagination page={data.page} totalPages={Math.max(1, Math.ceil(data.totalCount / data.pageSize))} onPageChange={setPage} />
+              <Pagination page={page} totalPages={Math.max(1, Math.ceil(totalCount / PAGE_SIZE))} onPageChange={setPage} />
             </div>
           )}
         </div>

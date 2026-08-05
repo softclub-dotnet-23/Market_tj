@@ -5,8 +5,7 @@
     "products": "Маҳсулот",
     "catalog": "Категорияҳо",
     "farmers": "Деҳқонон",
-    "farmerDocuments": "Ҳуҷҷатҳои деҳқонон",
-    "courierDocuments": "Ҳуҷҷатҳои курерон",
+    "documents": "Ҳуҷҷатҳо",
     "customers": "Харидорон",
     "payments": "Пардохтҳо",
     "reviews": "Шарҳҳо",
@@ -83,10 +82,6 @@
       "delivery": "Расонидан",
       "createdAt": "Сана ва вақти фармоиш",
       "receivedAt": "Сана ва вақти гирифтан"
-    },
-    "delivery": {
-      "assignAction": "Таъини курер",
-      "manageAction": "Идоракунии расонидан"
     },
     "customerLabel": "Харидор #{{id}}",
     "farmerLabel": "Деҳқон #{{id}}",
@@ -492,6 +487,24 @@
     "rejectionReasonHint": "Ба курер нишон дода мешавад",
     "required": "Майдони ҳатмӣ",
     "cancel": "Бекор кардан"
+  },
+  "documents": {
+    "title": "Ҳуҷҷатҳо",
+    "subtitle": "Пеш аз тасдиқ, ҳуҷҷатҳои деҳқонон ва куреронро санҷед",
+    "emptyDescription": "Дар ин ҷо ҳуҷҷатҳои аз ҷониби деҳқонон ва курерон боргузоришуда барои санҷиш пайдо мешаванд.",
+    "filterType": {
+      "all": "Ҳама",
+      "farmer": "Деҳқонон",
+      "courier": "Курерҳо"
+    },
+    "role": {
+      "farmer": "Деҳқон",
+      "courier": "Курер"
+    },
+    "columns": {
+      "name": "Ном",
+      "role": "Нақш"
+    }
   },
   "platformSettings": {
     "title": "Танзимоти умумии платформа",

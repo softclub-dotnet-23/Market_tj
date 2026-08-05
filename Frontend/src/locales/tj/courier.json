@@ -44,11 +44,7 @@
     "acceptSuccess": "Расонидан қабул шуд",
     "actionSuccess": "Ҳолат навсозӣ шуд",
     "actionError": "Иҷрои амал имконнопазир шуд",
-    "goingToFarmer": "Ба сӯи деҳқон меравам",
-    "arrivedAtFarmer": "Ман дар назди деҳқон ҳастам",
-    "pickedUp": "Молро гирифтам",
-    "inTransit": "Дар роҳ ба сӯи харидор",
-    "arrivedAtClient": "Ман дар назди харидор ҳастам",
+    "pickedUpGoing": "Гирифтам, ба сӯи харидор меравам",
     "confirmDelivery": "Тасдиқи расонидан",
     "reportProblem": "Хабар додан дар бораи мушкилот"
   },

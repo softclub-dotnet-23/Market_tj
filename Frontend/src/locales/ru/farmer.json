@@ -189,13 +189,12 @@
       "receivedAt": "Дата и время получения"
     },
     "delivery": {
-      "waitingForAdmin": "Ожидаем, пока администратор назначит курьера.",
       "assignAction": "Назначить курьера",
-      "readyAction": "Заказ готов к выдаче",
-      "readySuccess": "Заказ отмечен как готовый к выдаче",
-      "readyError": "Не удалось отметить заказ готовым",
-      "readyConfirmTitle": "Заказ готов к выдаче?",
-      "readyConfirmDescription": "Курьер получит уведомление, что можно забирать заказ."
+      "confirmManualAction": "Подтвердить доставку",
+      "confirmManualTitle": "Подтверждение доставки",
+      "confirmManualDescription": "Спросите у покупателя 4-значный код и введите его здесь.",
+      "confirmManualSuccess": "Доставка подтверждена",
+      "confirmManualError": "Не удалось подтвердить доставку"
     },
     "customerLabel": "Клиент #{{id}}",
     "moreItems": "ещё {{count}}",

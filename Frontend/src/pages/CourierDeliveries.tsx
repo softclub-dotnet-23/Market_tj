@@ -22,14 +22,11 @@ import {
 } from "@/data/delivery";
 
 // Подпись кнопки под каждый следующий шаг курьера — по прямому запросу
-// пользователя (2026-08-02). Только один валидный переход с текущего
-// статуса показывается сразу (см. NEXT_COURIER_STATUS), остальное недоступно.
+// пользователя (2026-08-02, упрощено 2026-08-05: один шаг вместо пяти —
+// см. NEXT_COURIER_STATUS). Только один валидный переход с текущего
+// статуса показывается сразу, остальное недоступно.
 const STEP_ACTION_KEY: Partial<Record<number, string>> = {
-  [DeliveryStatus.GoingToFarmer]: "goingToFarmer",
-  [DeliveryStatus.ArrivedAtFarmer]: "arrivedAtFarmer",
-  [DeliveryStatus.PickedUp]: "pickedUp",
-  [DeliveryStatus.InTransit]: "inTransit",
-  [DeliveryStatus.ArrivedAtClient]: "arrivedAtClient",
+  [DeliveryStatus.InTransit]: "pickedUpGoing",
 };
 
 export function CourierDeliveries() {
@@ -147,7 +144,7 @@ export function CourierDeliveries() {
               {t(`courier:actions.${nextStepKey}`)}
             </Button>
           )}
-          {delivery.status === DeliveryStatus.ArrivedAtClient && (
+          {(delivery.status === DeliveryStatus.InTransit || delivery.status === DeliveryStatus.ArrivedAtClient) && (
             <Button type="button" size="sm" leftIcon={<KeyRound size={14} />} onClick={() => setConfirmingDelivery(delivery)}>
               {t("courier:actions.confirmDelivery")}
             </Button>

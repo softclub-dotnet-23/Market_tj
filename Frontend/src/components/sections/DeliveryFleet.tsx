@@ -2,6 +2,7 @@ import { motion } from "framer-motion";
 import { useTranslation } from "react-i18next";
 import { PawPrint, Snowflake, Truck } from "lucide-react";
 import { SectionHeading } from "@/components/ui/SectionHeading";
+import { DeliveryTruckIllustration } from "@/components/illustrations/DeliveryTruckIllustration";
 
 interface DeliveryFeature {
   title: string;
@@ -36,6 +37,7 @@ export function DeliveryFleet() {
           <p className="max-w-lg text-balance leading-relaxed text-stone-500 dark:text-stone-400">
             {t("about.deliveryIntro")}
           </p>
+          <DeliveryTruckIllustration className="mx-auto mt-4 w-full max-w-md lg:mx-0" />
         </motion.div>
 
         <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">

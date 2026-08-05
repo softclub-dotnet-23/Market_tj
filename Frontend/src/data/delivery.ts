@@ -20,18 +20,26 @@ export const DeliveryStatus = {
 // Один разрешённый следующий шаг с текущего статуса — то же самое, что
 // DeliveryService.CourierTransitions на бэкенде. Здесь только для UI (какую
 // именно кнопку показать курьеру); реальная проверка — на сервере.
+// Упрощение находки 2026-08-05 ("каждый шаг должен записать, это очень
+// неудобно"): вместо 5 отдельных кнопок — одна, сразу после принятия
+// доставки ("Забрал, еду к покупателю"). GoingToFarmer/ArrivedAtFarmer/
+// PickedUp как источники — fallback для доставок, застрявших на них до
+// упрощения (у них тоже должна остаться ровно одна кнопка "далее").
 export const NEXT_COURIER_STATUS: Partial<Record<number, number>> = {
-  [DeliveryStatus.Accepted]: DeliveryStatus.GoingToFarmer,
-  [DeliveryStatus.GoingToFarmer]: DeliveryStatus.ArrivedAtFarmer,
-  [DeliveryStatus.ArrivedAtFarmer]: DeliveryStatus.PickedUp,
+  [DeliveryStatus.Accepted]: DeliveryStatus.InTransit,
+  [DeliveryStatus.GoingToFarmer]: DeliveryStatus.InTransit,
+  [DeliveryStatus.ArrivedAtFarmer]: DeliveryStatus.InTransit,
   [DeliveryStatus.PickedUp]: DeliveryStatus.InTransit,
-  [DeliveryStatus.InTransit]: DeliveryStatus.ArrivedAtClient,
 };
 
 export interface DeliveryDto {
   id: number;
   orderId: number;
   courierId: number | null;
+  // По прямому запросу пользователя (2026-08-05) — курьер "вручную", не
+  // зарегистрированный на платформе: courierId в этом случае null.
+  manualCourierName: string | null;
+  manualCourierPhone: string | null;
   pickupAddress: string;
   deliveryAddress: string;
   deliveryPrice: number;
@@ -99,6 +107,15 @@ export interface UpdateDeliveryAdminDetailsPayload {
   adminNote: string | null;
 }
 
+export interface AssignManualCourierPayload {
+  courierName: string;
+  courierPhone: string;
+  deliveryFee: number;
+  estimatedPickupAt: string | null;
+  estimatedDeliveryAt: string | null;
+  adminNote: string | null;
+}
+
 interface AsyncState<T> {
   data: T | null;
   loading: boolean;
@@ -152,10 +169,10 @@ export interface AvailableCourierFilters {
   minRating?: number;
 }
 
-// Для Farmer-вызова Region/District на бэкенде всё равно принудительно
-// подменяются на регион/район самого фермера (см. DeliveryService.
-// GetAvailableCouriersAsync) — то, что передаётся отсюда, имеет значение
-// только для Admin.
+// Region/District — реальный опциональный фильтр (см.
+// DeliveryService.GetAvailableCouriersAsync, доступно только Farmer с
+// 2026-08-05): свой регион/район сервер использует только для сортировки
+// "ближе — выше", а не для исключения остальных курьеров из списка.
 export function useAvailableCouriers(filters: AvailableCourierFilters, enabled: boolean, refreshKey = 0) {
   const query = new URLSearchParams();
   if (filters.onlyAvailable) query.set("onlyAvailable", "true");
@@ -173,6 +190,14 @@ export function useAvailableCouriers(filters: AvailableCourierFilters, enabled: 
 
 export function assignCourier(orderId: number, payload: AssignCourierPayload) {
   return apiPost<string>(`/deliveries/by-order/${orderId}/assign`, payload);
+}
+
+export function assignManualCourier(orderId: number, payload: AssignManualCourierPayload) {
+  return apiPost<string>(`/deliveries/by-order/${orderId}/assign-manual`, payload);
+}
+
+export function confirmManualDelivery(deliveryId: number, code: string) {
+  return apiPost<string>(`/deliveries/${deliveryId}/confirm-manual`, { code });
 }
 
 export function updateDeliveryAdminDetails(deliveryId: number, payload: UpdateDeliveryAdminDetailsPayload) {

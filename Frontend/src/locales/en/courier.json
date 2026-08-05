@@ -44,11 +44,7 @@
     "acceptSuccess": "Delivery accepted",
     "actionSuccess": "Status updated",
     "actionError": "Failed to perform the action",
-    "goingToFarmer": "Going to farmer",
-    "arrivedAtFarmer": "I'm at the farmer's",
-    "pickedUp": "Products picked up",
-    "inTransit": "On the way to customer",
-    "arrivedAtClient": "I'm at the customer's",
+    "pickedUpGoing": "Picked up, heading to customer",
     "confirmDelivery": "Confirm delivery",
     "reportProblem": "Report a problem"
   },

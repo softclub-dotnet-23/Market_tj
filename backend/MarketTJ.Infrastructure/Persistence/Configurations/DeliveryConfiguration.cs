@@ -13,6 +13,8 @@ public class DeliveryConfiguration : IEntityTypeConfiguration<Delivery>
         builder.Property(x => x.PickupAddress).IsRequired();
         builder.Property(x => x.DeliveryAddress).IsRequired();
         builder.Property(x => x.DeliveryPrice).HasPrecision(18, 2);
+        builder.Property(x => x.ManualCourierName).HasMaxLength(150);
+        builder.Property(x => x.ManualCourierPhone).HasMaxLength(30);
 
         // Раздел 8.12: один заказ имеет максимум одну активную доставку.
         builder.HasIndex(x => x.OrderId).IsUnique();

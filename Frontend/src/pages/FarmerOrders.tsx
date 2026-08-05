@@ -1,12 +1,13 @@
 import { useState } from "react";
 import { useTranslation } from "react-i18next";
 import { toast } from "sonner";
-import { Banknote, CheckCircle2, Phone, ShoppingCart, Truck } from "lucide-react";
+import { Banknote, KeyRound, Phone, ShoppingCart, Truck } from "lucide-react";
 import { PageLoader } from "@/components/layout/PageLoader";
 import { EmptyState } from "@/components/ui/EmptyState";
 import { Pagination } from "@/components/ui/Pagination";
 import { Button } from "@/components/ui/Button";
-import { ConfirmDialog } from "@/components/ui/ConfirmDialog";
+import { Modal } from "@/components/ui/Modal";
+import { Input } from "@/components/ui/Field";
 import { ViewModeToggle, type OrdersViewMode } from "@/components/ui/ViewModeToggle";
 import { StatusMenu } from "@/components/ui/StatusMenu";
 import { OrderItemsCell } from "@/components/ui/OrderItemsCell";
@@ -15,7 +16,7 @@ import { PaymentBadge } from "@/components/ui/PaymentBadge";
 import { DeliveryStatusBadge } from "@/components/delivery/DeliveryStatusBadge";
 import { AssignCourierDrawer } from "@/components/delivery/AssignCourierDrawer";
 import { ApiError } from "@/lib/api";
-import { markReadyForPickup, useDeliveryByOrder } from "@/data/delivery";
+import { DeliveryStatus, confirmManualDelivery, useDeliveryByOrder } from "@/data/delivery";
 import { formatDateTime, formatSomoni } from "@/lib/utils";
 import {
   ORDER_STATUS_CLASSES,
@@ -66,7 +67,7 @@ export function FarmerOrders() {
   const [viewMode, setViewMode] = useState<OrdersViewMode>("table");
   const [busyId, setBusyId] = useState<number | null>(null);
   const [markingPaidId, setMarkingPaidId] = useState<number | null>(null);
-  const [readyConfirmOrder, setReadyConfirmOrder] = useState<FarmerOrderDto | null>(null);
+  const [confirmingManualDelivery, setConfirmingManualDelivery] = useState<DeliveryDto | null>(null);
   const [assigningOrder, setAssigningOrder] = useState<FarmerOrderDto | null>(null);
   const [assignRefreshKey, setAssignRefreshKey] = useState(0);
   const { profile, loading: profileLoading, error: profileError } = useFarmerProfile();
@@ -105,15 +106,26 @@ export function FarmerOrders() {
     }
   };
 
-  const handleMarkReady = async () => {
-    if (!readyConfirmOrder) return;
+  const [manualCode, setManualCode] = useState("");
+  const [confirmingManualSubmitting, setConfirmingManualSubmitting] = useState(false);
+
+  const closeManualConfirm = () => {
+    setConfirmingManualDelivery(null);
+    setManualCode("");
+  };
+
+  const handleConfirmManualDelivery = async () => {
+    if (!confirmingManualDelivery || manualCode.length !== 4) return;
+    setConfirmingManualSubmitting(true);
     try {
-      await markReadyForPickup(readyConfirmOrder.id);
-      toast.success(t("orders.delivery.readySuccess"));
+      await confirmManualDelivery(confirmingManualDelivery.id, manualCode);
+      toast.success(t("orders.delivery.confirmManualSuccess"));
       notifyFarmerOrdersChanged();
-      setReadyConfirmOrder(null);
+      closeManualConfirm();
     } catch (err) {
-      toast.error(t("orders.delivery.readyError"), { description: err instanceof ApiError ? err.message : undefined });
+      toast.error(t("orders.delivery.confirmManualError"), { description: err instanceof ApiError ? err.message : undefined });
+    } finally {
+      setConfirmingManualSubmitting(false);
     }
   };
 
@@ -137,13 +149,14 @@ export function FarmerOrders() {
   const currentPage = Math.min(page, totalPages);
   const pageItems: FarmerOrderDto[] = orders.slice((currentPage - 1) * PAGE_SIZE, currentPage * PAGE_SIZE);
 
-  const deliveryInfo = (order: FarmerOrderDto, delivery: DeliveryDto | undefined) => {
-    // Фермер назначает курьера сам (2026-08-04) — раньше здесь было только
-    // "waitingForAdmin" (ждём, пока админ назначит), теперь активная кнопка.
-    // Admin по-прежнему может назначить/переназначить из своей панели как
-    // запасной вариант — обе стороны используют один и тот же
-    // AssignCourierAsync-эндпоинт с разными правами владения.
-    if (!delivery || !delivery.courierId) {
+  // compact=true — узкая ячейка таблицы (по прямому запросу пользователя,
+  // 2026-08-05): без номера телефона/машины/заметки, только имя и статус —
+  // полную карточку с номером видно в карточном виде (renderCard).
+  const deliveryInfo = (order: FarmerOrderDto, delivery: DeliveryDto | undefined, compact = false) => {
+    // Фермер назначает курьера сам — либо выбирает зарегистрированного на
+    // платформе, либо вводит контакт вручную (2026-08-05). Admin больше не
+    // участвует ни в приёме заказа, ни в назначении курьера.
+    if (!delivery || (!delivery.courierId && !delivery.manualCourierName)) {
       return (
         <Button type="button" size="sm" variant="outline" leftIcon={<Truck size={14} />} onClick={() => setAssigningOrder(order)}>
           {t("orders.delivery.assignAction")}
@@ -151,16 +164,44 @@ export function FarmerOrders() {
       );
     }
 
-    const canMarkReady = order.status === OrderStatus.CourierAssigned;
+    const isManual = !delivery.courierId;
+    const canConfirmManual = isManual && delivery.status !== DeliveryStatus.Delivered && delivery.status !== DeliveryStatus.Cancelled;
+    const courierName = delivery.manualCourierName ?? delivery.courierFullName ?? t("orders.courierLabel", { id: delivery.courierId });
+    const courierPhone = delivery.manualCourierPhone ?? delivery.courierPhoneNumber;
+
+    if (compact) {
+      return (
+        <div className="flex flex-col items-start gap-1.5">
+          <div className="flex max-w-full items-center gap-1.5">
+            <span className="truncate text-sm font-medium text-stone-800 dark:text-stone-100">{courierName}</span>
+            {courierPhone && (
+              <a
+                href={`tel:${courierPhone}`}
+                aria-label={courierPhone}
+                className="flex h-5 w-5 shrink-0 items-center justify-center rounded-full text-grove-700 hover:bg-grove-50 dark:text-grove-400 dark:hover:bg-grove-950/40"
+              >
+                <Phone size={11} />
+              </a>
+            )}
+          </div>
+          <DeliveryStatusBadge status={delivery.status} />
+          {canConfirmManual && (
+            <Button type="button" size="sm" leftIcon={<KeyRound size={14} />} onClick={() => setConfirmingManualDelivery(delivery)}>
+              {t("orders.delivery.confirmManualAction")}
+            </Button>
+          )}
+        </div>
+      );
+    }
 
     return (
       <div className="flex flex-col gap-2 rounded-xl border border-stone-100 bg-stone-25 p-3 text-sm dark:border-stone-800 dark:bg-stone-950/40">
         <div className="flex items-center justify-between gap-2">
           <div className="min-w-0">
-            <p className="truncate font-medium text-stone-800 dark:text-stone-100">{delivery.courierFullName ?? t("orders.courierLabel", { id: delivery.courierId })}</p>
-            {delivery.courierPhoneNumber && (
-              <a href={`tel:${delivery.courierPhoneNumber}`} className="flex items-center gap-1 text-xs text-grove-700 hover:underline dark:text-grove-400">
-                <Phone size={11} /> {delivery.courierPhoneNumber}
+            <p className="truncate font-medium text-stone-800 dark:text-stone-100">{courierName}</p>
+            {courierPhone && (
+              <a href={`tel:${courierPhone}`} className="flex items-center gap-1 text-xs text-grove-700 hover:underline dark:text-grove-400">
+                <Phone size={11} /> {courierPhone}
               </a>
             )}
           </div>
@@ -172,9 +213,9 @@ export function FarmerOrders() {
           </p>
         )}
         {delivery.adminNote && <p className="text-xs text-stone-500 dark:text-stone-400">{delivery.adminNote}</p>}
-        {canMarkReady && (
-          <Button type="button" size="sm" leftIcon={<CheckCircle2 size={14} />} onClick={() => setReadyConfirmOrder(order)}>
-            {t("orders.delivery.readyAction")}
+        {canConfirmManual && (
+          <Button type="button" size="sm" leftIcon={<KeyRound size={14} />} onClick={() => setConfirmingManualDelivery(delivery)}>
+            {t("orders.delivery.confirmManualAction")}
           </Button>
         )}
       </div>
@@ -315,7 +356,7 @@ export function FarmerOrders() {
                   </td>
                   <td className="px-6 py-4">{statusCell(order, receivedAt)}</td>
                   <td className="px-6 py-4">{paymentCell(order)}</td>
-                  <td className="max-w-56 px-6 py-4">{deliveryInfo(order, delivery)}</td>
+                  <td className="max-w-56 px-6 py-4">{deliveryInfo(order, delivery, true)}</td>
                 </tr>
               );
             })}
@@ -337,15 +378,26 @@ export function FarmerOrders() {
         </div>
       )}
 
-      <ConfirmDialog
-        open={!!readyConfirmOrder}
-        onClose={() => setReadyConfirmOrder(null)}
-        onConfirm={handleMarkReady}
-        danger={false}
-        title={t("orders.delivery.readyConfirmTitle")}
-        description={t("orders.delivery.readyConfirmDescription")}
-        confirmLabel={t("orders.delivery.readyAction")}
-      />
+      <Modal open={!!confirmingManualDelivery} onClose={closeManualConfirm} className="max-w-sm">
+        <h2 className="font-display text-lg text-stone-900 dark:text-stone-50">{t("orders.delivery.confirmManualTitle")}</h2>
+        <p className="mt-1 text-sm text-stone-500 dark:text-stone-400">{t("orders.delivery.confirmManualDescription")}</p>
+        <Input
+          className="mt-4 text-center font-display text-2xl tracking-[0.4em]"
+          maxLength={4}
+          inputMode="numeric"
+          value={manualCode}
+          onChange={(e) => setManualCode(e.target.value.replace(/\D/g, "").slice(0, 4))}
+          placeholder="••••"
+        />
+        <div className="mt-5 flex justify-end gap-3">
+          <Button type="button" variant="outline" onClick={closeManualConfirm}>
+            {t("common:actions.cancel")}
+          </Button>
+          <Button type="button" loading={confirmingManualSubmitting} disabled={manualCode.length !== 4} onClick={handleConfirmManualDelivery}>
+            {t("orders.delivery.confirmManualAction")}
+          </Button>
+        </div>
+      </Modal>
 
       {assigningOrder && (
         <AssignCourierDrawer

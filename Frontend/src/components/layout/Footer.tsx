@@ -3,7 +3,7 @@ import { useTranslation } from "react-i18next";
 import { Leaf, Mail, MapPin, Phone } from "lucide-react";
 import { useCategories } from "@/data/categories";
 import { useOfficeInfo } from "@/data/site";
-import { FacebookIcon, InstagramIcon, TelegramIcon, WhatsAppIcon } from "@/components/ui/SocialIcons";
+import { InstagramIcon, TelegramIcon, WhatsAppIcon } from "@/components/ui/SocialIcons";
 
 export function Footer() {
   const { t } = useTranslation(["layout", "common"]);
@@ -41,11 +41,18 @@ export function Footer() {
             </Link>
             <p className="max-w-xs text-sm leading-relaxed text-stone-400">{t("layout:footer.description")}</p>
             <div className="flex items-center gap-2.5">
-              {[InstagramIcon, TelegramIcon, FacebookIcon, WhatsAppIcon].map((Icon, i) => (
+              {[
+                { Icon: InstagramIcon, href: "https://www.instagram.com/rashidzodda.7?utm_source=qr&igsh=ZW9pMzgybWRqYjlp" },
+                { Icon: TelegramIcon, href: "https://t.me/nekru01" },
+                { Icon: WhatsAppIcon, href: "https://wa.me/992935375060" },
+                { Icon: Phone, href: "tel:+992935375060" },
+              ].map(({ Icon, href }, i) => (
                 <a
                   key={i}
-                  href="#"
-                  onClick={(e) => e.preventDefault()}
+                  href={href}
+                  onClick={href === "#" ? (e) => e.preventDefault() : undefined}
+                  target={href.startsWith("http") ? "_blank" : undefined}
+                  rel={href.startsWith("http") ? "noopener noreferrer" : undefined}
                   aria-label={t("common:actions.socialNetwork")}
                   className="flex h-9 w-9 items-center justify-center rounded-full border border-stone-800 text-stone-400 transition hover:border-grove-500 hover:text-grove-400"
                 >
