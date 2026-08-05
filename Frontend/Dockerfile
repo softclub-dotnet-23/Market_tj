@@ -15,6 +15,15 @@ COPY Frontend/ .
 # т.к. код выполняется в браузере на хосте, а не внутри docker-сети.
 ARG VITE_API_BASE_URL=http://localhost:5000/api
 ENV VITE_API_BASE_URL=$VITE_API_BASE_URL
+
+# Тот же принцип для Google Maps — без этого ARG Railway некуда прокинуть
+# переменную VITE_GOOGLE_MAPS_API_KEY из Variables сервиса (Railway матчит
+# build-arg'и только с уже объявленными в Dockerfile ARG-инструкциями), Vite
+# запекает import.meta.env.VITE_GOOGLE_MAPS_API_KEY как undefined, а минификатор
+# вырезает весь код карты как недостижимый. Дефолт пустой — карта тогда просто
+# не рендерится (см. DeliveryAddressMap.tsx).
+ARG VITE_GOOGLE_MAPS_API_KEY=
+ENV VITE_GOOGLE_MAPS_API_KEY=$VITE_GOOGLE_MAPS_API_KEY
 RUN npm run build
 
 FROM nginx:alpine AS final
