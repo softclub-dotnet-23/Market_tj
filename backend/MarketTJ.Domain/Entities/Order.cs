@@ -26,6 +26,15 @@ public class Order
     public string DeliveryAddress { get; set; } = null!;
     public string Region { get; set; } = null!;
     public string District { get; set; } = null!;
+
+    // Геокодируются лениво при первом запросе списка доступных курьеров для
+    // этого заказа (см. DeliveryService.GetAvailableCouriersAsync) и
+    // кэшируются здесь — повторные запросы того же заказа не дергают Google
+    // Geocoding API снова. Null, пока ещё не запрашивались/геокодирование
+    // не удалось.
+    public double? DeliveryLatitude { get; set; }
+    public double? DeliveryLongitude { get; set; }
+
     public string? CustomerComment { get; set; }
     public decimal Subtotal { get; set; }
     public decimal DeliveryPrice { get; set; }

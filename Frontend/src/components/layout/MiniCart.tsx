@@ -8,9 +8,10 @@ import { useProducts } from "@/data/products";
 import { PhotoTile } from "@/components/ui/PhotoTile";
 import { Button } from "@/components/ui/Button";
 import { formatSomoni, getEffectiveMinQuantity, getQuantityStep, getUnitPrice } from "@/lib/utils";
+import { getLocalizedTitle } from "@/lib/productI18n";
 
 export function MiniCart({ onClose }: { onClose: () => void }) {
-  const { t } = useTranslation(["layout", "common"]);
+  const { t, i18n } = useTranslation(["layout", "common"]);
   const navigate = useNavigate();
   const products = useProducts();
   const { lines, removeItem, setQuantity, totalPrice } = useCart();
@@ -68,10 +69,10 @@ export function MiniCart({ onClose }: { onClose: () => void }) {
                     onClick={onClose}
                     className="h-14 w-14 shrink-0 overflow-hidden rounded-xl"
                   >
-                    <PhotoTile src={product.photoUrl} alt={product.title} className="h-full w-full" />
+                    <PhotoTile src={product.photoUrl} alt={getLocalizedTitle(product, i18n.language)} className="h-full w-full" />
                   </Link>
                   <div className="flex min-w-0 flex-1 flex-col gap-1">
-                    <p className="truncate text-sm font-medium text-stone-800 dark:text-stone-100">{product.title}</p>
+                    <p className="truncate text-sm font-medium text-stone-800 dark:text-stone-100">{getLocalizedTitle(product, i18n.language)}</p>
                     <div className="flex items-center justify-between">
                       <div className="flex items-center gap-1.5 rounded-full bg-stone-100 px-1.5 py-1 dark:bg-stone-800">
                         <button

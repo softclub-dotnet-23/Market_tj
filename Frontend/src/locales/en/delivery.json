@@ -53,7 +53,8 @@
     "courierAvailable": "Available",
     "courierBusy": "Busy",
     "activeDeliveries": "{{count}} active",
-    "completedDeliveries": "{{count}} completed"
+    "completedDeliveries": "{{count}} completed",
+    "distanceKm": "{{value}} km"
   },
   "customer": {
     "title": "Your order's delivery",
@@ -61,9 +62,9 @@
     "courierFallback": "Courier",
     "callCourier": "Call the courier",
     "waitingForCourier": "Waiting for the farmer to assign a courier.",
-    "manualTrackingHint": "This courier doesn't use the app — the status will jump straight to \"Delivered\" once the farmer confirms delivery with your code.",
+    "manualTrackingHint": "This courier doesn't use the app — the status will jump straight to \"Delivered\" once the farmer confirms delivery with a photo.",
     "estimatedArrival": "Estimated arrival",
-    "confirmationCodeHint": "Give this code to the courier on delivery",
+    "deliveryProofHint": "Delivery proof photo",
     "deliveryAddress": "Delivery address"
   },
   "problem": {

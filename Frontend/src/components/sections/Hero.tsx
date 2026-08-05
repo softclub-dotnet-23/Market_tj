@@ -7,10 +7,11 @@ import { Avatar } from "@/components/ui/Avatar";
 import { useProducts } from "@/data/products";
 import { useFarmers } from "@/data/farmers";
 import { resolveMediaUrl } from "@/lib/api";
+import { getLocalizedTitle } from "@/lib/productI18n";
 import { heroPhoto } from "@/assets/photos";
 
 export function Hero() {
-  const { t } = useTranslation(["sections", "layout", "common"]);
+  const { t, i18n } = useTranslation(["sections", "layout", "common"]);
   const navigate = useNavigate();
   const farmers = useFarmers();
   const products = useProducts();
@@ -112,9 +113,9 @@ export function Hero() {
                 style={{ animation: `float 6s ease-in-out ${i * 0.7}s infinite` }}
               >
                 <div className="mb-2 aspect-square overflow-hidden rounded-xl">
-                  <PhotoTile src={product.photoUrl} alt={product.title} className="h-full w-full" />
+                  <PhotoTile src={product.photoUrl} alt={getLocalizedTitle(product, i18n.language)} className="h-full w-full" />
                 </div>
-                <p className="truncate text-[11px] font-medium text-stone-700">{product.title}</p>
+                <p className="truncate text-[11px] font-medium text-stone-700">{getLocalizedTitle(product, i18n.language)}</p>
                 <p className="text-xs font-semibold text-grove-700">
                   {product.retailPricePerKg} {t("common:currencySomoni")}
                 </p>

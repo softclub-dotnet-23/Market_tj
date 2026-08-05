@@ -8,6 +8,7 @@ import { getCatalogProductById } from "@/data/catalogStore";
 import { useAuth } from "@/context/AuthContext";
 import { ApiError, resolveMediaUrl } from "@/lib/api";
 import { cn, formatSomoni } from "@/lib/utils";
+import { getLocalizedTitle } from "@/lib/productI18n";
 import { AssistantMascot } from "@/components/assistant/AssistantMascot";
 
 type ActionStatus = "idle" | "loading" | "done" | "cancelled" | "error";
@@ -473,7 +474,7 @@ export function AiAssistantWidget() {
 }
 
 function ProductSuggestion({ productId, onOpen }: { productId: number; onOpen: () => void }) {
-  const { t } = useTranslation(["aiAssistant", "common"]);
+  const { t, i18n } = useTranslation(["aiAssistant", "common"]);
   const product = getCatalogProductById(productId);
   if (!product) return null;
 
@@ -493,7 +494,7 @@ function ProductSuggestion({ productId, onOpen }: { productId: number; onOpen: (
         />
       )}
       <div className="min-w-0 flex-1">
-        <p className="truncate text-xs font-medium text-stone-900 dark:text-stone-50">{product.title}</p>
+        <p className="truncate text-xs font-medium text-stone-900 dark:text-stone-50">{getLocalizedTitle(product, i18n.language)}</p>
         <p className="text-xs text-grove-700 dark:text-grove-400">
           {formatSomoni(product.retailPricePerKg)} {t("common:currencySomoni")}
         </p>

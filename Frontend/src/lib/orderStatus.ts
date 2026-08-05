@@ -69,6 +69,30 @@ export const ORDER_STATUS_ICONS: Record<number, LucideIcon> = {
   [OrderStatus.Cancelled]: Ban,
 };
 
+// Раздельные статусы фермера/курьера (Order.FarmerStatus/CourierStatus) —
+// независимые от вычисляемого combined `status` выше. См.
+// OrderService.ComputeDisplayStatus на бэкенде и docs про item 1 (2026-08-05):
+// эти поля уже приходили с бэкенда, но фронтенд их нигде не показывал явно.
+export const FarmerOrderStatus = {
+  Accepted: 1,
+  HandedToCourier: 2,
+} as const;
+
+export const CourierOrderStatus = {
+  Accepted: 1,
+  Delivered: 2,
+} as const;
+
+export const FARMER_ORDER_STATUS_KEYS: Record<number, string> = {
+  [FarmerOrderStatus.Accepted]: "accepted",
+  [FarmerOrderStatus.HandedToCourier]: "handedToCourier",
+};
+
+export const COURIER_ORDER_STATUS_KEYS: Record<number, string> = {
+  [CourierOrderStatus.Accepted]: "accepted",
+  [CourierOrderStatus.Delivered]: "delivered",
+};
+
 export const ALL_ORDER_STATUSES: number[] = [
   OrderStatus.Pending,
   OrderStatus.Accepted,

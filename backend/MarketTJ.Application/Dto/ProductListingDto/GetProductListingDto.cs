@@ -9,7 +9,11 @@ public class GetProductListingDto
     public int CategoryId { get; set; }
     public string Unit { get; set; } = null!;
     public string Title { get; set; } = null!;
+    public string? TitleTj { get; set; }
+    public string? TitleEn { get; set; }
     public string? Description { get; set; }
+    public string? DescriptionTj { get; set; }
+    public string? DescriptionEn { get; set; }
     public decimal RetailPricePerKg { get; set; }
     public decimal? WholesalePricePerKg { get; set; }
     public decimal? WholesaleMinimumQuantity { get; set; }

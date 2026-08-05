@@ -10,6 +10,7 @@ import { useFarmers } from "@/data/farmers";
 import { useCart } from "@/context/CartContext";
 import { useFavorites } from "@/context/FavoritesContext";
 import { cn, formatSomoni } from "@/lib/utils";
+import { getLocalizedTitle } from "@/lib/productI18n";
 
 const BADGE_VARIANTS: Record<string, "grove" | "harvest" | "clay" | "dark"> = {
   organic: "grove",
@@ -20,7 +21,8 @@ const BADGE_VARIANTS: Record<string, "grove" | "harvest" | "clay" | "dark"> = {
 };
 
 export function ProductCard({ product, className }: { product: Product; className?: string }) {
-  const { t } = useTranslation(["product", "common", "data"]);
+  const { t, i18n } = useTranslation(["product", "common", "data"]);
+  const title = getLocalizedTitle(product, i18n.language);
   const farmers = useFarmers();
   const farmer = farmers.find((f) => f.id === product.farmerId);
   const { addItem } = useCart();
@@ -39,7 +41,7 @@ export function ProductCard({ product, className }: { product: Product; classNam
     >
       <Link to={`/product/${product.slug}`} className="relative block aspect-[4/3.4] overflow-hidden">
         <motion.div whileHover={{ scale: 1.06 }} transition={{ duration: 0.5, ease: [0.25, 1, 0.5, 1] }} className="h-full w-full">
-          <PhotoTile src={product.photoUrl} alt={product.title} className="h-full w-full" />
+          <PhotoTile src={product.photoUrl} alt={title} className="h-full w-full" />
         </motion.div>
 
         <div className="absolute left-3 top-3 flex flex-col gap-1.5">
@@ -82,7 +84,7 @@ export function ProductCard({ product, className }: { product: Product; classNam
 
         <Link to={`/product/${product.slug}`}>
           <h3 className="line-clamp-2 font-display text-[17px] leading-snug text-stone-900 transition-colors group-hover:text-grove-800 dark:text-stone-50 dark:group-hover:text-grove-400">
-            {product.title}
+            {title}
           </h3>
         </Link>
 

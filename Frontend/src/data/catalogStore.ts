@@ -44,7 +44,11 @@ interface RawListing {
   categoryId: number;
   unit: string;
   title: string;
+  titleTj: string | null;
+  titleEn: string | null;
   description: string | null;
+  descriptionTj: string | null;
+  descriptionEn: string | null;
   retailPricePerKg: number;
   wholesalePricePerKg: number | null;
   wholesaleMinimumQuantity: number | null;
@@ -247,10 +251,17 @@ async function loadCatalog(): Promise<CatalogData> {
     return {
       id: listing.id,
       title: listing.title,
+      titleTj: listing.titleTj ?? undefined,
+      titleEn: listing.titleEn ?? undefined,
+      // Slug остаётся привязан к русскому названию всегда (не зависит от
+      // языка отображения) — иначе ссылка на товар менялась бы при
+      // переключении языка UI (2026-08-05).
       slug: `${slugify(listing.title)}-${listing.id}`,
       categoryId: listing.categoryId,
       farmerId: listing.farmerProfileId,
       description,
+      descriptionTj: listing.descriptionTj ?? undefined,
+      descriptionEn: listing.descriptionEn ?? undefined,
       shortDescription: description.length > 140 ? `${description.slice(0, 140)}…` : description,
       unit,
       photoUrl,

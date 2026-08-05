@@ -14,6 +14,7 @@ public class CourierProfileService(
     IUserRepository userRepository,
     ICurrentUserService currentUser,
     ICourierDocumentService courierDocumentService,
+    IGoogleGeocodingService geocodingService,
     ILogger<CourierProfileService> logger) : ICourierProfileService
 {
     public async Task<Result<IEnumerable<GetCourierProfileDto>>> GetAllAsync()
@@ -83,12 +84,14 @@ public class CourierProfileService(
                 VehicleNumber = dto.VehicleNumber,
                 Region = dto.Region,
                 District = dto.District,
+                Address = dto.Address,
                 IsAvailable = dto.IsAvailable,
                 IsActive = dto.IsActive,
                 CreatedAt = DateTime.UtcNow,
                 UpdatedAt = DateTime.UtcNow
             };
 
+            await GeocodeIfNeededAsync(profile);
             await courierProfileRepository.AddAsync(profile);
             return Result<int>.Ok(profile.Id);
         }
@@ -133,14 +136,20 @@ public class CourierProfileService(
                     "Нельзя стать доступным для заказов, пока документы не одобрены администратором",
                     ErrorType.Validation);
 
+            var locationChanged = profile.Region != dto.Region || profile.District != dto.District || profile.Address != dto.Address;
+
             profile.UserId = dto.UserId;
             profile.TransportType = dto.TransportType;
             profile.VehicleNumber = dto.VehicleNumber;
             profile.Region = dto.Region;
             profile.District = dto.District;
+            profile.Address = dto.Address;
             profile.IsAvailable = dto.IsAvailable;
             profile.IsActive = dto.IsActive;
             profile.UpdatedAt = DateTime.UtcNow;
+
+            if (locationChanged)
+                await GeocodeIfNeededAsync(profile);
 
             await courierProfileRepository.UpdateAsync(profile);
             return Result<string>.Ok("Профиль курьера обновлён");
@@ -173,6 +182,32 @@ public class CourierProfileService(
         }
     }
 
+    // Раздел "выбор курьера по карте в радиусе 40 км" (2026-08-05) — не
+    // блокирует сохранение профиля при недоступности/ошибке Google Geocoding
+    // API, тот же fail-open принцип, что и у перевода объявлений (Groq):
+    // курьер без координат просто не участвует в подборе по расстоянию,
+    // пока не пересохранит профиль после восстановления геокодирования.
+    private async Task GeocodeIfNeededAsync(CourierProfile profile)
+    {
+        var addressParts = new[] { profile.Address, profile.District, profile.Region }.Where(p => !string.IsNullOrWhiteSpace(p));
+        var fullAddress = string.Join(", ", addressParts);
+        if (string.IsNullOrWhiteSpace(fullAddress))
+            return;
+
+        var geocoded = await geocodingService.GeocodeAsync(fullAddress);
+        if (geocoded.IsSuccess)
+        {
+            profile.Latitude = geocoded.Data.Latitude;
+            profile.Longitude = geocoded.Data.Longitude;
+        }
+        else
+        {
+            logger.LogWarning("Не удалось геокодировать адрес курьера (профиль {ProfileId}): {Error}", profile.Id, geocoded.Error);
+            profile.Latitude = null;
+            profile.Longitude = null;
+        }
+    }
+
     private static GetCourierProfileDto ToGetDto(CourierProfile profile) => new()
     {
         Id = profile.Id,
@@ -181,6 +216,9 @@ public class CourierProfileService(
         VehicleNumber = profile.VehicleNumber,
         Region = profile.Region,
         District = profile.District,
+        Address = profile.Address,
+        Latitude = profile.Latitude,
+        Longitude = profile.Longitude,
         IsAvailable = profile.IsAvailable,
         IsActive = profile.IsActive,
         Rating = profile.Rating,

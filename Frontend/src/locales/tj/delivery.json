@@ -53,7 +53,8 @@
     "courierAvailable": "Озод",
     "courierBusy": "Банд",
     "activeDeliveries": "{{count}} дар кор",
-    "completedDeliveries": "{{count}} иҷрошуда"
+    "completedDeliveries": "{{count}} иҷрошуда",
+    "distanceKm": "{{value}} км"
   },
   "customer": {
     "title": "Расонидани фармоиши шумо",
@@ -61,9 +62,9 @@
     "courierFallback": "Курер",
     "callCourier": "Занг задан ба курер",
     "waitingForCourier": "Мунтазири он ҳастем, ки деҳқон курерро таъин кунад.",
-    "manualTrackingHint": "Ин курер аз замима истифода намебарад — ҳолат рост ба «Расонида шуд» иваз мешавад, вақте ки деҳқон расониданро бо рамзи шумо тасдиқ мекунад.",
+    "manualTrackingHint": "Ин курер аз замима истифода намебарад — ҳолат рост ба «Расонида шуд» иваз мешавад, вақте ки деҳқон расониданро бо сурат тасдиқ мекунад.",
     "estimatedArrival": "Вақти тахминии расидан",
-    "confirmationCodeHint": "Ин рамзро ҳангоми гирифтани фармоиш ба курер гӯед",
+    "deliveryProofHint": "Сурати тасдиқи расонидан",
     "deliveryAddress": "Суроғаи расонидан"
   },
   "problem": {

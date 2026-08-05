@@ -38,7 +38,11 @@ public class ProductListingRepository(AppDbContext context, ICacheService cache)
         => await context.ProductListings
             .AsNoTracking()
             .Where(p => EF.Functions.ILike(p.Title, $"%{query}%")
+                     || (p.TitleTj != null && EF.Functions.ILike(p.TitleTj, $"%{query}%"))
+                     || (p.TitleEn != null && EF.Functions.ILike(p.TitleEn, $"%{query}%"))
                      || (p.Description != null && EF.Functions.ILike(p.Description, $"%{query}%"))
+                     || (p.DescriptionTj != null && EF.Functions.ILike(p.DescriptionTj, $"%{query}%"))
+                     || (p.DescriptionEn != null && EF.Functions.ILike(p.DescriptionEn, $"%{query}%"))
                      || (p.Product != null && EF.Functions.ILike(p.Product.Name, $"%{query}%")))
             .Take(10)
             .ToListAsync();
@@ -78,9 +82,17 @@ public class ProductListingRepository(AppDbContext context, ICacheService cache)
 
         if (!string.IsNullOrWhiteSpace(filter.Search))
         {
+            // Раздел "товар на 3 языках" (2026-08-05) — поиск должен находить
+            // товар независимо от того, на каком языке фермер ввёл/Groq
+            // перевёл название/описание, иначе поиск по неосновному языку
+            // молча переставал бы находить совпадения.
             var term = filter.Search;
             query = query.Where(x => EF.Functions.ILike(x.Title, $"%{term}%")
-                                   || (x.Description != null && EF.Functions.ILike(x.Description, $"%{term}%")));
+                                   || (x.TitleTj != null && EF.Functions.ILike(x.TitleTj, $"%{term}%"))
+                                   || (x.TitleEn != null && EF.Functions.ILike(x.TitleEn, $"%{term}%"))
+                                   || (x.Description != null && EF.Functions.ILike(x.Description, $"%{term}%"))
+                                   || (x.DescriptionTj != null && EF.Functions.ILike(x.DescriptionTj, $"%{term}%"))
+                                   || (x.DescriptionEn != null && EF.Functions.ILike(x.DescriptionEn, $"%{term}%")));
         }
 
         if (filter.ListingIds is { Count: > 0 })

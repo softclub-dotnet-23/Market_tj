@@ -130,9 +130,8 @@
     "transportTypeRequired": "Select your vehicle type",
     "transportTypeOptions": {
       "Автомобиль": "Car",
-      "Мотоцикл": "Motorcycle",
-      "Велосипед": "Bicycle",
-      "Пешком": "On foot"
+      "Портер": "Porter (cargo van)",
+      "КамАЗ": "KamAZ (truck)"
     },
     "vehicleNumberLabel": "Vehicle number",
     "vehicleNumberPlaceholder": "e.g. 01 A 123 AA",

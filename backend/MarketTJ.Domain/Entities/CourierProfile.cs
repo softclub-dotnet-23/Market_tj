@@ -8,6 +8,22 @@ public class CourierProfile
     public string VehicleNumber { get; set; } = null!;
     public string Region { get; set; } = null!;
     public string District { get; set; } = null!;
+
+    // Точный адрес курьера (по образцу FarmerProfile.Address) — по прямому
+    // запросу пользователя (2026-08-05), нужен для точного геокодирования:
+    // Region/District одни дают только центр района, а курьер может жить
+    // на его окраине — координаты по одному Region/District занижали бы
+    // точность 40-километрового радиуса подбора курьера.
+    public string? Address { get; set; }
+
+    // Геокодируются через IGoogleGeocodingService при создании/обновлении
+    // профиля (адрес/район/регион изменились) — см. CourierProfileService.
+    // Null, пока не геокодировано (или если геокодирование не удалось) —
+    // такие курьеры не участвуют в подборе по расстоянию (см.
+    // DeliveryService.GetAvailableCouriersAsync).
+    public double? Latitude { get; set; }
+    public double? Longitude { get; set; }
+
     public bool IsAvailable { get; set; }
     public bool IsActive { get; set; }
 

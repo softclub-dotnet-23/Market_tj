@@ -53,7 +53,8 @@
     "courierAvailable": "Свободен",
     "courierBusy": "Занят",
     "activeDeliveries": "{{count}} в работе",
-    "completedDeliveries": "{{count}} выполнено"
+    "completedDeliveries": "{{count}} выполнено",
+    "distanceKm": "{{value}} км"
   },
   "customer": {
     "title": "Доставка вашего заказа",
@@ -61,9 +62,9 @@
     "courierFallback": "Курьер",
     "callCourier": "Позвонить курьеру",
     "waitingForCourier": "Ожидаем, пока фермер назначит курьера.",
-    "manualTrackingHint": "Этот курьер не пользуется приложением — статус обновится сразу на «Доставлено», когда фермер подтвердит доставку вашим кодом.",
+    "manualTrackingHint": "Этот курьер не пользуется приложением — статус обновится сразу на «Доставлено», когда фермер подтвердит доставку фотографией.",
     "estimatedArrival": "Ожидаемое время прибытия",
-    "confirmationCodeHint": "Назовите этот код курьеру при получении",
+    "deliveryProofHint": "Фото подтверждения доставки",
     "deliveryAddress": "Адрес доставки"
   },
   "problem": {

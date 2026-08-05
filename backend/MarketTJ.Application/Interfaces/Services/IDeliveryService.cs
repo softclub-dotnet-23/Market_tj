@@ -21,7 +21,12 @@ public interface IDeliveryService
 
     Task<Result<string>> AssignCourierAsync(int orderId, AssignCourierDto dto);
     Task<Result<string>> AssignManualCourierAsync(int orderId, AssignManualCourierDto dto);
-    Task<Result<string>> ConfirmManualDeliveryAsync(int deliveryId, ConfirmDeliveryDto dto);
+
+    // Фото вместо кода подтверждения (2026-08-05) — Stream/fileName/fileLength
+    // вместо DTO с IFormFile, тот же приём, что и у ICourierDocumentService.
+    // UploadAsync: ASP.NET Core-специфичный IFormFile не должен протекать в
+    // Application-слой, его распаковывает контроллер.
+    Task<Result<string>> ConfirmManualDeliveryAsync(int deliveryId, Stream photoStream, string fileName, long fileLength);
     Task<Result<string>> UpdateAdminDetailsAsync(int deliveryId, UpdateDeliveryAdminDetailsDto dto);
     Task<Result<string>> CancelAsync(int deliveryId, CancelDeliveryDto dto);
 
@@ -29,12 +34,16 @@ public interface IDeliveryService
 
     Task<Result<string>> AcceptAsync(int deliveryId);
     Task<Result<string>> UpdateCourierStatusAsync(int deliveryId, CourierStatusUpdateDto dto);
-    Task<Result<string>> ConfirmDeliveryAsync(int deliveryId, ConfirmDeliveryDto dto);
+    Task<Result<string>> ConfirmDeliveryAsync(int deliveryId, Stream photoStream, string fileName, long fileLength);
     Task<Result<string>> ReportProblemAsync(int deliveryId, ReportDeliveryProblemDto dto);
 }
 
 public class AvailableCourierFilter
 {
+    // Заказ, для которого подбираются курьеры — координаты адреса доставки
+    // резолвятся сервером (геокодируются лениво и кэшируются на Order, см.
+    // DeliveryService.GetAvailableCouriersAsync), не передаются клиентом.
+    public int OrderId { get; set; }
     public bool OnlyAvailable { get; set; }
     public string? Region { get; set; }
     public string? District { get; set; }

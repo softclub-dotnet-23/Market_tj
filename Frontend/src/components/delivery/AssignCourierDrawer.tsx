@@ -108,20 +108,14 @@ export function AssignCourierDrawer({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [open, existingDelivery?.id]);
 
-  const { couriers: rawCouriers, loading } = useAvailableCouriers(
-    { onlyAvailable, region: region || undefined, transportType: transportType || undefined, minRating: minRating ? Number(minRating) : undefined },
+  // Список уже отфильтрован по ≤40 км от адреса доставки заказа и
+  // отсортирован по возрастанию расстояния на бэкенде (см.
+  // DeliveryService.GetAvailableCouriersAsync, 2026-08-05) — заменяет
+  // прежнюю клиентскую сортировку "тот же район первым".
+  const { couriers, loading } = useAvailableCouriers(
+    { orderId: order.id, onlyAvailable, region: region || undefined, transportType: transportType || undefined, minRating: minRating ? Number(minRating) : undefined },
     open,
   );
-
-  // Farmer: бэкенд возвращает ВСЕХ активных курьеров, свой регион/район
-  // фермера только поднимает их в начало списка (исправление находки
-  // 2026-08-05 — жёсткий фильтр прятал единственного курьера в системе,
-  // если его район не совпадал в точности). Здесь — дополнительная
-  // клиентская сортировка "тот же район, что у заказа, первым" (2026-08-04).
-  const couriers =
-    variant === "farmer" && order.deliveryDistrict && rawCouriers
-      ? [...rawCouriers].sort((a, b) => Number(b.district === order.deliveryDistrict) - Number(a.district === order.deliveryDistrict))
-      : rawCouriers;
 
   const regions = Array.from(new Set((couriers ?? []).map((c) => c.region))).sort();
   const transportTypes = Array.from(new Set((couriers ?? []).map((c) => c.transportType))).sort();
@@ -402,7 +396,7 @@ function CourierCard({ courier, selected, onSelect }: { courier: AvailableCourie
           <Truck size={12} /> {courier.transportType} {courier.vehicleNumber}
         </span>
         <span className="flex items-center gap-1">
-          <MapPin size={12} /> {courier.region}, {courier.district}
+          <MapPin size={12} /> {courier.region}, {courier.district} · {t("assign.distanceKm", { value: courier.distanceKm.toFixed(1) })}
         </span>
         <span className="flex items-center gap-1">
           <Star size={12} className="text-harvest-500" fill="currentColor" /> {courier.rating.toFixed(1)}

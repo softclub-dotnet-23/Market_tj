@@ -27,6 +27,7 @@ import { RatingStars } from "@/components/ui/RatingStars";
 import { ConfirmDialog } from "@/components/ui/ConfirmDialog";
 import { resolveMediaUrl } from "@/lib/api";
 import { formatDate, formatSomoni } from "@/lib/utils";
+import { getLocalizedTitle } from "@/lib/productI18n";
 import {
   DocumentReviewStatus,
   FarmerVerificationStatus,
@@ -89,7 +90,7 @@ const DOC_STATUS_KEYS: Record<number, string> = {
 const DOC_TYPE_KEYS: Record<number, string> = { 1: "passport", 2: "landDeed", 3: "other" };
 
 export function AdminFarmerDetail() {
-  const { t } = useTranslation(["admin", "product"]);
+  const { t, i18n } = useTranslation(["admin", "product"]);
   const { id } = useParams();
   const navigate = useNavigate();
   const { user } = useAuth();
@@ -352,7 +353,7 @@ export function AdminFarmerDetail() {
                               <Package size={18} />
                             </span>
                           )}
-                          <span className="max-w-48 truncate font-medium text-stone-800 dark:text-stone-100">{product.title}</span>
+                          <span className="max-w-48 truncate font-medium text-stone-800 dark:text-stone-100">{getLocalizedTitle(product, i18n.language)}</span>
                         </div>
                       </td>
                       <td className="py-3 pr-4 font-semibold text-stone-800 dark:text-stone-100">

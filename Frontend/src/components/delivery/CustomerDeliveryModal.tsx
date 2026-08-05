@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { useTranslation } from "react-i18next";
 import { toast } from "sonner";
-import { AlertTriangle, KeyRound, Phone, Star, Truck } from "lucide-react";
+import { AlertTriangle, Camera, Phone, Star, Truck } from "lucide-react";
 import { Modal } from "@/components/ui/Modal";
 import { Avatar } from "@/components/ui/Avatar";
 import { Button } from "@/components/ui/Button";
@@ -139,13 +139,16 @@ export function CustomerDeliveryModal({
             </p>
           )}
 
-          {delivery.status !== DeliveryStatus.Delivered && delivery.status !== DeliveryStatus.Cancelled && delivery.confirmationCode && (
-            <div className="flex items-center gap-3 rounded-2xl border border-harvest-200 bg-harvest-50 p-4 dark:border-harvest-900/40 dark:bg-harvest-950/20">
-              <KeyRound size={20} className="shrink-0 text-harvest-700 dark:text-harvest-400" />
-              <div>
-                <p className="text-xs text-harvest-800 dark:text-harvest-200">{t("delivery:customer.confirmationCodeHint")}</p>
-                <p className="font-display text-2xl tracking-[0.3em] text-harvest-900 dark:text-harvest-100">{delivery.confirmationCode}</p>
-              </div>
+          {delivery.status === DeliveryStatus.Delivered && delivery.deliveryProofPhotoUrl && (
+            <div className="flex flex-col gap-2 rounded-2xl border border-grove-200 bg-grove-50 p-4 dark:border-grove-900/40 dark:bg-grove-950/20">
+              <p className="flex items-center gap-2 text-xs text-grove-800 dark:text-grove-200">
+                <Camera size={14} /> {t("delivery:customer.deliveryProofHint")}
+              </p>
+              <img
+                src={resolveMediaUrl(delivery.deliveryProofPhotoUrl)}
+                alt=""
+                className="h-40 w-full rounded-xl object-cover"
+              />
             </div>
           )}
 

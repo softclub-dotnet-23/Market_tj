@@ -36,7 +36,11 @@ interface RawCatalogListing {
   categoryId: number;
   unit: string;
   title: string;
+  titleTj: string | null;
+  titleEn: string | null;
   description: string | null;
+  descriptionTj: string | null;
+  descriptionEn: string | null;
   retailPricePerKg: number;
   wholesalePricePerKg: number | null;
   wholesaleMinimumQuantity: number | null;
@@ -137,10 +141,14 @@ export async function searchCatalog(filter: CatalogSearchFilter): Promise<Catalo
     return {
       id: listing.id,
       title: listing.title,
+      titleTj: listing.titleTj ?? undefined,
+      titleEn: listing.titleEn ?? undefined,
       slug: `${slugify(listing.title)}-${listing.id}`,
       categoryId: listing.categoryId,
       farmerId: listing.farmerProfileId,
       description,
+      descriptionTj: listing.descriptionTj ?? undefined,
+      descriptionEn: listing.descriptionEn ?? undefined,
       shortDescription: description.length > 140 ? `${description.slice(0, 140)}…` : description,
       unit,
       photoUrl,

@@ -22,6 +22,14 @@ public static class DependencyInjection
         {
             client.Timeout = TimeSpan.FromSeconds(15);
         });
+        services.AddHttpClient<IGoogleGeocodingService, GoogleGeocodingService>(client =>
+        {
+            client.Timeout = TimeSpan.FromSeconds(10);
+        });
+        services.AddHttpClient<IProductTranslationService, GroqProductTranslationService>(client =>
+        {
+            client.Timeout = TimeSpan.FromSeconds(15);
+        });
 
         services.AddScoped<IAuthService, AuthService>();
         services.AddScoped<IUserService, UserService>();

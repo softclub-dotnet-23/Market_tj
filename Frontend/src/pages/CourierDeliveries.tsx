@@ -1,12 +1,12 @@
-import { useState } from "react";
+import { useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { toast } from "sonner";
-import { AlertTriangle, KeyRound, MapPin, Package, Phone, Truck } from "lucide-react";
+import { AlertTriangle, Camera, MapPin, Package, Phone, Truck } from "lucide-react";
 import { PageLoader } from "@/components/layout/PageLoader";
 import { EmptyState } from "@/components/ui/EmptyState";
 import { Button } from "@/components/ui/Button";
 import { Modal } from "@/components/ui/Modal";
-import { Input, Textarea } from "@/components/ui/Field";
+import { Textarea } from "@/components/ui/Field";
 import { DeliveryStatusBadge } from "@/components/delivery/DeliveryStatusBadge";
 import { ApiError } from "@/lib/api";
 import { formatDateTime, formatSomoni } from "@/lib/utils";
@@ -20,6 +20,7 @@ import {
   useMyDeliveries,
   type DeliveryDto,
 } from "@/data/delivery";
+import { COURIER_ORDER_STATUS_KEYS, FARMER_ORDER_STATUS_KEYS } from "@/lib/orderStatus";
 
 // Подпись кнопки под каждый следующий шаг курьера — по прямому запросу
 // пользователя (2026-08-02, упрощено 2026-08-05: один шаг вместо пяти —
@@ -120,6 +121,16 @@ export function CourierDeliveries() {
         </div>
 
         <div className="flex flex-wrap items-center gap-x-4 gap-y-1 text-xs text-stone-500 dark:text-stone-400">
+          <span>
+            {t("courier:farmerStatus.label")}:{" "}
+            {delivery.farmerStatus !== null ? t(`courier:farmerStatus.values.${FARMER_ORDER_STATUS_KEYS[delivery.farmerStatus]}`) : "—"}
+          </span>
+          <span>
+            {t("courier:myStatus.label")}:{" "}
+            {delivery.courierStatus !== null
+              ? t(`courier:myStatus.values.${COURIER_ORDER_STATUS_KEYS[delivery.courierStatus]}`)
+              : t("courier:myStatus.notStarted")}
+          </span>
           <span className="flex items-center gap-1">
             <Package size={12} /> {t("courier:card.itemCount", { count: delivery.itemCount })}
           </span>
@@ -145,7 +156,7 @@ export function CourierDeliveries() {
             </Button>
           )}
           {(delivery.status === DeliveryStatus.InTransit || delivery.status === DeliveryStatus.ArrivedAtClient) && (
-            <Button type="button" size="sm" leftIcon={<KeyRound size={14} />} onClick={() => setConfirmingDelivery(delivery)}>
+            <Button type="button" size="sm" leftIcon={<Camera size={14} />} onClick={() => setConfirmingDelivery(delivery)}>
               {t("courier:actions.confirmDelivery")}
             </Button>
           )}
@@ -174,24 +185,52 @@ export function CourierDeliveries() {
         </div>
       )}
 
-      <ConfirmCodeModal delivery={confirmingDelivery} onClose={() => setConfirmingDelivery(null)} onConfirmed={bump} />
+      <ConfirmPhotoModal delivery={confirmingDelivery} onClose={() => setConfirmingDelivery(null)} onConfirmed={bump} />
       <ReportProblemModal delivery={reportingDelivery} onClose={() => setReportingDelivery(null)} onReported={bump} />
     </div>
   );
 }
 
-function ConfirmCodeModal({ delivery, onClose, onConfirmed }: { delivery: DeliveryDto | null; onClose: () => void; onConfirmed: () => void }) {
+const ALLOWED_PROOF_PHOTO_TYPES = ["image/jpeg", "image/png", "image/webp"];
+const MAX_PROOF_PHOTO_SIZE_BYTES = 5 * 1024 * 1024;
+
+function ConfirmPhotoModal({ delivery, onClose, onConfirmed }: { delivery: DeliveryDto | null; onClose: () => void; onConfirmed: () => void }) {
   const { t } = useTranslation(["courier", "common"]);
-  const [code, setCode] = useState("");
+  const [photo, setPhoto] = useState<File | null>(null);
+  const [previewUrl, setPreviewUrl] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
+  const inputRef = useRef<HTMLInputElement>(null);
+
+  const reset = () => {
+    setPhoto(null);
+    setPreviewUrl(null);
+  };
+
+  const onFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    e.target.value = "";
+    if (!file) return;
+
+    if (!ALLOWED_PROOF_PHOTO_TYPES.includes(file.type)) {
+      toast.error(t("courier:confirmModal.invalidType"));
+      return;
+    }
+    if (file.size > MAX_PROOF_PHOTO_SIZE_BYTES) {
+      toast.error(t("courier:confirmModal.tooLarge"));
+      return;
+    }
+
+    setPhoto(file);
+    setPreviewUrl(URL.createObjectURL(file));
+  };
 
   const handleSubmit = async () => {
-    if (!delivery || code.length !== 4) return;
+    if (!delivery || !photo) return;
     setSubmitting(true);
     try {
-      await confirmDelivery(delivery.id, code);
+      await confirmDelivery(delivery.id, photo);
       toast.success(t("courier:confirmModal.success"));
-      setCode("");
+      reset();
       onConfirmed();
       onClose();
     } catch (err) {
@@ -202,22 +241,43 @@ function ConfirmCodeModal({ delivery, onClose, onConfirmed }: { delivery: Delive
   };
 
   return (
-    <Modal open={!!delivery} onClose={() => { setCode(""); onClose(); }} className="max-w-sm">
+    <Modal open={!!delivery} onClose={() => { reset(); onClose(); }} className="max-w-sm">
       <h2 className="font-display text-lg text-stone-900 dark:text-stone-50">{t("courier:confirmModal.title")}</h2>
       <p className="mt-1 text-sm text-stone-500 dark:text-stone-400">{t("courier:confirmModal.description")}</p>
-      <Input
-        className="mt-4 text-center font-display text-2xl tracking-[0.4em]"
-        maxLength={4}
-        inputMode="numeric"
-        value={code}
-        onChange={(e) => setCode(e.target.value.replace(/\D/g, "").slice(0, 4))}
-        placeholder="••••"
+
+      <input
+        ref={inputRef}
+        type="file"
+        accept="image/jpeg,image/png,image/webp"
+        capture="environment"
+        className="hidden"
+        onChange={onFileChange}
       />
+
+      {previewUrl ? (
+        <button
+          type="button"
+          onClick={() => inputRef.current?.click()}
+          className="mt-4 block h-48 w-full overflow-hidden rounded-xl border border-stone-200 dark:border-stone-700"
+        >
+          <img src={previewUrl} alt="" className="h-full w-full object-cover" />
+        </button>
+      ) : (
+        <button
+          type="button"
+          onClick={() => inputRef.current?.click()}
+          className="mt-4 flex h-48 w-full flex-col items-center justify-center gap-2 rounded-xl border-2 border-dashed border-stone-200 text-stone-400 transition hover:border-grove-400 hover:text-grove-600 dark:border-stone-700 dark:text-stone-500"
+        >
+          <Camera size={28} />
+          <span className="text-sm">{t("courier:confirmModal.takePhoto")}</span>
+        </button>
+      )}
+
       <div className="mt-5 flex justify-end gap-3">
         <Button type="button" variant="outline" onClick={onClose}>
           {t("common:actions.cancel")}
         </Button>
-        <Button type="button" loading={submitting} disabled={code.length !== 4} onClick={handleSubmit}>
+        <Button type="button" loading={submitting} disabled={!photo} onClick={handleSubmit}>
           {t("courier:actions.confirmDelivery")}
         </Button>
       </div>

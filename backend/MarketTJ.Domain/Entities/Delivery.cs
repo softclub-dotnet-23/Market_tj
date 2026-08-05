@@ -34,15 +34,11 @@ public class Delivery
     public string? AdminNote { get; set; }
     public string? CourierNote { get; set; }
 
-    // По прямому запросу пользователя (2026-08-02) — 4-значный код
-    // подтверждения доставки. ConfirmationCode хранится в открытом виде
-    // ТОЛЬКО чтобы покупатель мог посмотреть его повторно в любой момент —
-    // сервис отдаёт это поле исключительно покупателю (владельцу заказа), не
-    // курьеру/фермеру/админу. Сама сверка при подтверждении идёт по
-    // ConfirmationCodeHash (курьер никогда не получает код напрямую).
-    public string? ConfirmationCode { get; set; }
-    public string? ConfirmationCodeHash { get; set; }
-    public int ConfirmationAttempts { get; set; }
+    // Замена кода подтверждения на фото (2026-08-05, по прямому запросу
+    // пользователя) — курьер (или фермер для доставки "вручную") загружает
+    // фото у двери клиента, это финальное действие вместо ввода 4-значного
+    // кода. Публично доступно покупателю/фермеру/курьеру через GetDeliveryDto.
+    public string? DeliveryProofPhotoUrl { get; set; }
 
     public string? CancellationReason { get; set; }
     public string? ProblemDescription { get; set; }

@@ -1,5 +1,6 @@
 using MarketTJ.Application.Dto.DeliveryDto;
 using MarketTJ.Application.Interfaces.Services;
+using MarketTJ.WebApi.Models;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 
@@ -49,6 +50,7 @@ public class DeliveryController(IDeliveryService service) : ApiControllerBase
     [Authorize(Roles = "Farmer")]
     [HttpGet("available-couriers")]
     public async Task<IActionResult> GetAvailableCouriers(
+        [FromQuery] int orderId,
         [FromQuery] bool onlyAvailable = false,
         [FromQuery] string? region = null,
         [FromQuery] string? district = null,
@@ -56,6 +58,7 @@ public class DeliveryController(IDeliveryService service) : ApiControllerBase
         [FromQuery] decimal? minRating = null)
         => HandleResult(await service.GetAvailableCouriersAsync(new AvailableCourierFilter
         {
+            OrderId = orderId,
             OnlyAvailable = onlyAvailable,
             Region = region,
             District = district,
@@ -77,8 +80,8 @@ public class DeliveryController(IDeliveryService service) : ApiControllerBase
 
     [Authorize(Roles = "Farmer")]
     [HttpPost("{id:int}/confirm-manual")]
-    public async Task<IActionResult> ConfirmManualDelivery(int id, [FromBody] ConfirmDeliveryDto dto)
-        => HandleResult(await service.ConfirmManualDeliveryAsync(id, dto));
+    public async Task<IActionResult> ConfirmManualDelivery(int id, [FromForm] ConfirmDeliveryPhotoRequest request)
+        => HandleResult(await service.ConfirmManualDeliveryAsync(id, request.Photo.OpenReadStream(), request.Photo.FileName, request.Photo.Length));
 
     [Authorize(Roles = "Admin")]
     [HttpPatch("{id:int}/admin-details")]
@@ -107,8 +110,8 @@ public class DeliveryController(IDeliveryService service) : ApiControllerBase
 
     [Authorize(Roles = "Courier")]
     [HttpPost("{id:int}/confirm")]
-    public async Task<IActionResult> Confirm(int id, [FromBody] ConfirmDeliveryDto dto)
-        => HandleResult(await service.ConfirmDeliveryAsync(id, dto));
+    public async Task<IActionResult> Confirm(int id, [FromForm] ConfirmDeliveryPhotoRequest request)
+        => HandleResult(await service.ConfirmDeliveryAsync(id, request.Photo.OpenReadStream(), request.Photo.FileName, request.Photo.Length));
 
     [HttpPost("{id:int}/report-problem")]
     public async Task<IActionResult> ReportProblem(int id, [FromBody] ReportDeliveryProblemDto dto)

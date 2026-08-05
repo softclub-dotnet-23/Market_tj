@@ -96,6 +96,11 @@
       "title": "Listing title",
       "titlePlaceholder": "e.g. Field-grown tomato, freshly picked",
       "titleLength": "Title must be 3 to 150 characters",
+      "titleHint": "Fill in the name in at least one language — the rest will be translated automatically",
+      "titleRu": "Product name (Russian)",
+      "titleTj": "Номи маҳсулот (Tajik)",
+      "titleEn": "Product name (English)",
+      "titleAnyLanguageRequired": "Fill in the name in at least one language",
       "qualityGrade": "Grade / quality",
       "qualityOptions": {
         "premium": "Premium",
@@ -115,6 +120,9 @@
       "optional": "Optional",
       "description": "Description",
       "descriptionLength": "No more than 2000 characters",
+      "descriptionRu": "Description (Russian)",
+      "descriptionTj": "Тавсиф (Tajik)",
+      "descriptionEn": "Description (English)",
       "required": "Required field",
       "mustBePositive": "Must be greater than 0",
       "submit": "Create listing",
@@ -123,6 +131,8 @@
       "photos": "Product photos",
       "photosHint": "Up to 5 photos, jpg/png/webp formats, up to 5 MB each",
       "photosAfterCreate": "Photos can be added after the product is created",
+      "createdNowAddPhotos": "Product created! You can now add photos.",
+      "done": "Done",
       "photoDelete": "Delete photo",
       "photoInvalidType": "Only jpg, png, webp formats are allowed",
       "photoTooLarge": "Maximum file size is 5 MB",
@@ -189,9 +199,27 @@
       "assignAction": "Assign courier",
       "confirmManualAction": "Confirm delivery",
       "confirmManualTitle": "Confirm delivery",
-      "confirmManualDescription": "Ask the customer for the 4-digit code and enter it here.",
+      "confirmManualDescription": "Take a photo at the customer's door to confirm delivery.",
+      "confirmManualTakePhoto": "Take photo",
+      "confirmManualInvalidType": "Only JPG, PNG, or WEBP photos are allowed",
+      "confirmManualTooLarge": "Photo size must not exceed 5 MB",
       "confirmManualSuccess": "Delivery confirmed",
       "confirmManualError": "Failed to confirm delivery"
+    },
+    "farmerStatus": {
+      "label": "Your status",
+      "values": {
+        "accepted": "Accepted",
+        "handedToCourier": "Handed to courier"
+      }
+    },
+    "courierStatus": {
+      "label": "Courier status",
+      "notStarted": "not started yet",
+      "values": {
+        "accepted": "Accepted",
+        "delivered": "Delivered"
+      }
     },
     "customerLabel": "Customer #{{id}}",
     "courierLabel": "Courier #{{id}}",

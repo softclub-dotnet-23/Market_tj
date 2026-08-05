@@ -96,6 +96,11 @@
       "title": "Название объявления",
       "titlePlaceholder": "Например: Помидор грунтовый, свежий сбор",
       "titleLength": "Название должно быть от 3 до 150 символов",
+      "titleHint": "Заполните название хотя бы на одном языке — остальные переведутся автоматически",
+      "titleRu": "Название товара (Русский)",
+      "titleTj": "Номи маҳсулот (Тоҷикӣ)",
+      "titleEn": "Product name (English)",
+      "titleAnyLanguageRequired": "Заполните название хотя бы на одном языке",
       "qualityGrade": "Сорт / качество",
       "qualityOptions": {
         "premium": "Премиум",
@@ -115,6 +120,9 @@
       "optional": "Необязательно",
       "description": "Описание",
       "descriptionLength": "Не более 2000 символов",
+      "descriptionRu": "Описание (Русский)",
+      "descriptionTj": "Тавсиф (Тоҷикӣ)",
+      "descriptionEn": "Description (English)",
       "required": "Обязательное поле",
       "mustBePositive": "Должно быть больше 0",
       "submit": "Создать объявление",
@@ -123,6 +131,8 @@
       "photos": "Фото товара",
       "photosHint": "До 5 фото, форматы jpg/png/webp, до 5 МБ каждое",
       "photosAfterCreate": "Фото можно будет добавить после создания товара",
+      "createdNowAddPhotos": "Товар создан! Теперь можно добавить фото.",
+      "done": "Готово",
       "photoDelete": "Удалить фото",
       "photoInvalidType": "Разрешены только форматы jpg, png, webp",
       "photoTooLarge": "Максимальный размер файла — 5 МБ",
@@ -192,9 +202,27 @@
       "assignAction": "Назначить курьера",
       "confirmManualAction": "Подтвердить доставку",
       "confirmManualTitle": "Подтверждение доставки",
-      "confirmManualDescription": "Спросите у покупателя 4-значный код и введите его здесь.",
+      "confirmManualDescription": "Сделайте фото у двери покупателя, чтобы подтвердить доставку.",
+      "confirmManualTakePhoto": "Сделать фото",
+      "confirmManualInvalidType": "Разрешены только фото JPG, PNG или WEBP",
+      "confirmManualTooLarge": "Размер фото не должен превышать 5 МБ",
       "confirmManualSuccess": "Доставка подтверждена",
       "confirmManualError": "Не удалось подтвердить доставку"
+    },
+    "farmerStatus": {
+      "label": "Ваш статус",
+      "values": {
+        "accepted": "Принят",
+        "handedToCourier": "Отдан курьеру"
+      }
+    },
+    "courierStatus": {
+      "label": "Статус курьера",
+      "notStarted": "ещё не начал",
+      "values": {
+        "accepted": "Принял",
+        "delivered": "Доставлено"
+      }
     },
     "customerLabel": "Клиент #{{id}}",
     "moreItems": "ещё {{count}}",

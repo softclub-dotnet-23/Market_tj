@@ -41,10 +41,9 @@ public class GetDeliveryDto
     public string? CourierVehicleNumber { get; set; }
     public decimal? CourierRating { get; set; }
 
-    // Только для покупателя своего заказа — видит код подтверждения; для
-    // всех остальных ролей всегда null (сервер хранит только хэш, см.
-    // DeliveryService.ToGetDto).
-    public string? ConfirmationCode { get; set; }
+    // Фото подтверждения доставки вместо кода (2026-08-05) — видно
+    // покупателю, фермеру и курьеру, доставившему заказ.
+    public string? DeliveryProofPhotoUrl { get; set; }
 
     // Сводка по заказу — чтобы курьерский интерфейс ("Мои доставки") не делал
     // отдельный запрос на каждую карточку (audit 2026-08-02).
@@ -54,4 +53,10 @@ public class GetDeliveryDto
     public string? CustomerName { get; set; }
     public string? CustomerPhoneNumber { get; set; }
     public int ItemCount { get; set; }
+
+    // Раздельные статусы фермера/курьера (Order.FarmerStatus/CourierStatus) —
+    // чтобы курьерский интерфейс мог явно показать "статус фермера" рядом со
+    // своим собственным, а не только гранулярный Delivery.Status.
+    public FarmerOrderStatus? FarmerStatus { get; set; }
+    public CourierOrderStatus? CourierStatus { get; set; }
 }

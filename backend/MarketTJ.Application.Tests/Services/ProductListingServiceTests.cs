@@ -17,13 +17,21 @@ public class ProductListingServiceTests
     private readonly Mock<ICategoryRepository> _categoryRepository = new();
     private readonly Mock<IProductImageRepository> _productImageRepository = new();
     private readonly Mock<IFarmerDocumentRepository> _farmerDocumentRepository = new();
+    private readonly Mock<IProductTranslationService> _productTranslationService = new();
     private readonly Mock<ICurrentUserService> _currentUser = new();
     private readonly Mock<ILogger<ProductListingService>> _logger = new();
     private readonly ProductListingService _service;
 
     public ProductListingServiceTests()
     {
-        _service = new ProductListingService(_productListingRepository.Object, _farmerProfileRepository.Object, _categoryRepository.Object, _productImageRepository.Object, _farmerDocumentRepository.Object, _currentUser.Object, _logger.Object);
+        _service = new ProductListingService(_productListingRepository.Object, _farmerProfileRepository.Object, _categoryRepository.Object, _productImageRepository.Object, _farmerDocumentRepository.Object, _productTranslationService.Object, _currentUser.Object, _logger.Object);
+        // По умолчанию — "перевод" ничего не меняет (эхо входа): не ломает
+        // существующие тесты, которые не про сам перевод. Тесты на реальный
+        // merge/фолбэк ниже переопределяют этот мок явно.
+        _productTranslationService
+            .Setup(s => s.TranslateMissingAsync(It.IsAny<ProductTranslationInput>()))
+            .ReturnsAsync((ProductTranslationInput input) => new ProductTranslationOutput(
+                input.TitleRu, input.TitleTj, input.TitleEn, input.DescriptionRu, input.DescriptionTj, input.DescriptionEn));
         // Обогащение (images/rating/orderCount) по умолчанию пустое — иначе Moq
         // вернёт null для незамоканных Task<Dictionary<...>> и EnrichAsync упадёт
         // с NullReferenceException в тестах, которые его не касаются напрямую.
@@ -358,6 +366,20 @@ public class ProductListingServiceTests
     }
 
     [Fact]
+    public async Task CreateAsync_ValidData_ReturnsNewListingId()
+    {
+        _productListingRepository
+            .Setup(r => r.AddAsync(It.IsAny<ProductListing>()))
+            .Callback<ProductListing>(l => l.Id = 42)
+            .Returns(Task.CompletedTask);
+
+        var result = await _service.CreateAsync(ValidCreateDto());
+
+        Assert.True(result.IsSuccess);
+        Assert.Equal(42, result.Data);
+    }
+
+    [Fact]
     public async Task CreateAsync_MissingRequiredDocuments_ReturnsValidationError()
     {
         _farmerDocumentRepository.Setup(r => r.GetByFarmerProfileIdAsync(It.IsAny<int>())).ReturnsAsync([]);
@@ -485,6 +507,85 @@ public class ProductListingServiceTests
         Assert.False(result.IsSuccess);
         Assert.Equal(ErrorType.Validation, result.ErrorType);
         _productListingRepository.Verify(r => r.AddAsync(It.IsAny<ProductListing>()), Times.Never);
+    }
+
+    [Fact]
+    public async Task CreateAsync_AllTitleLanguagesEmpty_ReturnsValidationError()
+    {
+        var dto = ValidCreateDto();
+        dto.Title = null;
+        dto.TitleTj = null;
+        dto.TitleEn = null;
+
+        var result = await _service.CreateAsync(dto);
+
+        Assert.False(result.IsSuccess);
+        Assert.Equal(ErrorType.Validation, result.ErrorType);
+        _productListingRepository.Verify(r => r.AddAsync(It.IsAny<ProductListing>()), Times.Never);
+    }
+
+    [Fact]
+    public async Task CreateAsync_OnlyTitleTjProvided_Succeeds()
+    {
+        var dto = ValidCreateDto();
+        dto.Title = null;
+        dto.TitleTj = "Картошкаи тоза";
+
+        var result = await _service.CreateAsync(dto);
+
+        Assert.True(result.IsSuccess);
+        _productListingRepository.Verify(r => r.AddAsync(It.IsAny<ProductListing>()), Times.Once);
+    }
+
+    [Fact]
+    public async Task CreateAsync_MissingLanguages_TranslatesAndFillsThem()
+    {
+        var dto = ValidCreateDto();
+        dto.Title = "Свежий картофель";
+        dto.TitleTj = null;
+        dto.TitleEn = null;
+        _productTranslationService
+            .Setup(s => s.TranslateMissingAsync(It.IsAny<ProductTranslationInput>()))
+            .ReturnsAsync(new ProductTranslationOutput("Свежий картофель", "Картошкаи тоза", "Fresh potato", null, null, null));
+
+        var result = await _service.CreateAsync(dto);
+
+        Assert.True(result.IsSuccess);
+        _productListingRepository.Verify(r => r.AddAsync(It.Is<ProductListing>(l =>
+            l.Title == "Свежий картофель" && l.TitleTj == "Картошкаи тоза" && l.TitleEn == "Fresh potato")), Times.Once);
+    }
+
+    [Fact]
+    public async Task CreateAsync_OnlyTitleTjProvided_TranslationFillsRussianTitle()
+    {
+        // Title (русский) обязателен в БД (NOT NULL) — если фермер заполнил
+        // только Tj, перевод должен подставить именно его в Title при сохранении.
+        var dto = ValidCreateDto();
+        dto.Title = null;
+        dto.TitleTj = "Картошкаи тоза";
+        dto.TitleEn = null;
+        _productTranslationService
+            .Setup(s => s.TranslateMissingAsync(It.IsAny<ProductTranslationInput>()))
+            .ReturnsAsync(new ProductTranslationOutput("Свежий картофель", "Картошкаи тоза", "Fresh potato", null, null, null));
+
+        var result = await _service.CreateAsync(dto);
+
+        Assert.True(result.IsSuccess);
+        _productListingRepository.Verify(r => r.AddAsync(It.Is<ProductListing>(l => l.Title == "Свежий картофель")), Times.Once);
+    }
+
+    [Fact]
+    public async Task CreateAsync_TranslationServiceThrows_SavesWithOriginalLanguagesOnly()
+    {
+        var dto = ValidCreateDto();
+        dto.Title = "Свежий картофель";
+        _productTranslationService.Setup(s => s.TranslateMissingAsync(It.IsAny<ProductTranslationInput>())).ThrowsAsync(new Exception("Groq unavailable"));
+
+        var result = await _service.CreateAsync(dto);
+
+        Assert.True(result.IsSuccess);
+        _productListingRepository.Verify(r => r.AddAsync(It.Is<ProductListing>(l =>
+            l.Title == "Свежий картофель" && l.TitleTj == null && l.TitleEn == null)), Times.Once);
     }
 
     [Fact]

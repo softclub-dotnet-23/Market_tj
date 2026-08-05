@@ -28,7 +28,11 @@ const ROLE_VALUES: Record<Role, number> = { farmer: 2, customer: 3, courier: 4 }
 // Значения хранятся как канонические русские строки независимо от локали
 // интерфейса (та же схема, что qualityGrade в FarmerProducts.tsx) — метка
 // переводится через t(), значение в БД — нет.
-const TRANSPORT_TYPES = ["Автомобиль", "Мотоцикл", "Велосипед", "Пешком"] as const;
+// По прямому запросу пользователя (2026-08-05): курьер может доставлять
+// только на одном из этих 3 типов транспорта — пешком/мотоцикл/велосипед
+// больше не допускаются (см. CourierProfileValidator на бэкенде — та же
+// проверка продублирована там как настоящий гейт).
+const TRANSPORT_TYPES = ["Автомобиль", "Портер", "КамАЗ"] as const;
 
 const RESEND_COOLDOWN_SECONDS = 60;
 
@@ -194,6 +198,7 @@ export function Register() {
           vehicleNumber: values.vehicleNumber,
           region: values.region,
           district: values.district,
+          address: values.address,
         });
         // Документы — сразу после создания профиля, тем же токеном (уже
         // выдан на этом шаге). Оба обязательны — проверено выше, до
@@ -472,6 +477,13 @@ export function Register() {
                       leftIcon={<Truck size={16} />}
                       error={errors.vehicleNumber?.message}
                       {...register("vehicleNumber", { required: t("pages:register.vehicleNumberRequired") })}
+                    />
+                    <Input
+                      label={t("pages:register.addressLabel")}
+                      placeholder={t("pages:register.addressPlaceholder")}
+                      leftIcon={<MapPin size={16} />}
+                      error={errors.address?.message}
+                      {...register("address", { required: t("pages:register.addressRequired") })}
                     />
                   </div>
                 )}

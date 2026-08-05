@@ -5,6 +5,7 @@ import { useTranslation } from "react-i18next";
 import type { CartLine, Product } from "@/types";
 import { getProductById } from "@/data/products";
 import { formatSomoni, getEffectiveMinQuantity, getUnitPrice } from "@/lib/utils";
+import { getLocalizedTitle } from "@/lib/productI18n";
 
 const CART_STORAGE_KEY = "market-tj-cart";
 
@@ -35,7 +36,7 @@ interface CartContextValue {
 const CartContext = createContext<CartContextValue | null>(null);
 
 export function CartProvider({ children }: { children: ReactNode }) {
-  const { t } = useTranslation(["common", "product"]);
+  const { t, i18n } = useTranslation(["common", "product"]);
   const [lines, setLines] = useState<CartLine[]>(readStoredCart);
 
   useEffect(() => {
@@ -52,7 +53,7 @@ export function CartProvider({ children }: { children: ReactNode }) {
       }
       return [...prev, { productId: product.id, quantity }];
     });
-    toast.success(t("cart.addedToCart", { title: product.title }), {
+    toast.success(t("cart.addedToCart", { title: getLocalizedTitle(product, i18n.language) }), {
       description: t("cart.addedToCartDescription", {
         quantity,
         unit: t(`product:units.${product.unit}`),

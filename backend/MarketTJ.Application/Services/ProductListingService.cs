@@ -16,6 +16,7 @@ public class ProductListingService(
     ICategoryRepository categoryRepository,
     IProductImageRepository productImageRepository,
     IFarmerDocumentRepository farmerDocumentRepository,
+    IProductTranslationService productTranslationService,
     ICurrentUserService currentUser,
     ILogger<ProductListingService> logger) : IProductListingService
 {
@@ -37,6 +38,32 @@ public class ProductListingService(
 
         return RequiredDocumentTypes.All(submittedTypes.Contains);
     }
+    // Автоперевод названия/описания на недостающие языки (2026-08-05) — не
+    // блокирует создание/обновление объявления при недоступности Groq (сам
+    // GroqProductTranslationService уже fail-open, try/catch здесь — только
+    // дополнительная защита на случай непредвиденной ошибки в вызывающем
+    // коде). Title (русский, NOT NULL в БД) гарантированно получает значение:
+    // либо переведённое, либо — если сам перевод не удался — любое из
+    // непустых полей, которые уже прошли валидатор (там гарантирован хотя бы
+    // один язык названия).
+    private async Task<(string Title, string? TitleTj, string? TitleEn, string? Description, string? DescriptionTj, string? DescriptionEn)>
+        TranslateAsync(string? title, string? titleTj, string? titleEn, string? description, string? descriptionTj, string? descriptionEn)
+    {
+        try
+        {
+            var translated = await productTranslationService.TranslateMissingAsync(
+                new ProductTranslationInput(title, titleTj, titleEn, description, descriptionTj, descriptionEn));
+
+            var finalTitle = translated.TitleRu ?? translated.TitleTj ?? translated.TitleEn ?? title ?? titleTj ?? titleEn!;
+            return (finalTitle, translated.TitleTj, translated.TitleEn, translated.DescriptionRu, translated.DescriptionTj, translated.DescriptionEn);
+        }
+        catch (Exception ex)
+        {
+            logger.LogWarning(ex, "Не удалось перевести объявление — сохраняю как есть");
+            return (title ?? titleTj ?? titleEn!, titleTj, titleEn, description, descriptionTj, descriptionEn);
+        }
+    }
+
     // GetAll/GetById сознательно ОСТАЮТСЯ публичными — это каталог. IDOR-guard
     // нужен только на Create/Update/Delete (audit 2026-07-28, находка 2.2):
     // Farmer мог редактировать/удалять чужие объявления, зная только их Id.
@@ -141,41 +168,48 @@ public class ProductListingService(
         }
     }
 
-    public async Task<Result<string>> CreateAsync(CreateProductListingDto dto)
+    public async Task<Result<int>> CreateAsync(CreateProductListingDto dto)
     {
         try
         {
             var validation = ProductListingValidator.ValidateCreate(dto);
             if (validation is not null)
-                return validation;
+                return Result<int>.Fail(validation.Error!, validation.ErrorType!.Value);
 
             var farmerProfile = await farmerProfileRepository.GetByIdAsync(dto.FarmerProfileId);
             if (farmerProfile is null)
-                return Result<string>.Fail("Профиль фермера не найден", ErrorType.NotFound);
+                return Result<int>.Fail("Профиль фермера не найден", ErrorType.NotFound);
 
             if (!await OwnsAsync(dto.FarmerProfileId))
-                return Result<string>.Fail("Нельзя создать объявление для чужой фермы", ErrorType.Forbidden);
+                return Result<int>.Fail("Нельзя создать объявление для чужой фермы", ErrorType.Forbidden);
 
             if (!currentUser.IsAdmin() && !await HasRequiredDocumentsAsync(dto.FarmerProfileId))
-                return Result<string>.Fail(
+                return Result<int>.Fail(
                     "Чтобы добавить товар, сначала загрузите паспорт (лицевую и обратную стороны) и селфи в разделе «Документы»",
                     ErrorType.Validation);
 
             var category = await categoryRepository.GetByIdAsync(dto.CategoryId);
             if (category is null)
-                return Result<string>.Fail("Категория не найдена", ErrorType.NotFound);
+                return Result<int>.Fail("Категория не найдена", ErrorType.NotFound);
 
             // Раздел 10.1 ТЗ: неподтверждённый фермер не может создать активное объявление.
             if (dto.Status == ListingStatus.Active && farmerProfile.VerificationStatus != FarmerVerificationStatus.Verified)
-                return Result<string>.Fail("Неподтверждённый фермер не может создать активное объявление", ErrorType.Validation);
+                return Result<int>.Fail("Неподтверждённый фермер не может создать активное объявление", ErrorType.Validation);
+
+            var (title, titleTj, titleEn, description, descriptionTj, descriptionEn) =
+                await TranslateAsync(dto.Title, dto.TitleTj, dto.TitleEn, dto.Description, dto.DescriptionTj, dto.DescriptionEn);
 
             var listing = new ProductListing
             {
                 FarmerProfileId = dto.FarmerProfileId,
                 CategoryId = dto.CategoryId,
                 Unit = dto.Unit,
-                Title = dto.Title,
-                Description = dto.Description,
+                Title = title,
+                TitleTj = titleTj,
+                TitleEn = titleEn,
+                Description = description,
+                DescriptionTj = descriptionTj,
+                DescriptionEn = descriptionEn,
                 RetailPricePerKg = dto.RetailPricePerKg,
                 WholesalePricePerKg = dto.WholesalePricePerKg,
                 WholesaleMinimumQuantity = dto.WholesaleMinimumQuantity,
@@ -194,12 +228,12 @@ public class ProductListingService(
             };
 
             await productListingRepository.AddAsync(listing);
-            return Result<string>.Ok("Объявление создано");
+            return Result<int>.Ok(listing.Id);
         }
         catch (Exception ex)
         {
             logger.LogError(ex, "Ошибка при создании объявления");
-            return Result<string>.Fail("Не удалось создать объявление", ErrorType.InternalServerError);
+            return Result<int>.Fail("Не удалось создать объявление", ErrorType.InternalServerError);
         }
     }
 
@@ -229,11 +263,18 @@ public class ProductListingService(
             if (dto.Status == ListingStatus.Active && farmerProfile.VerificationStatus != FarmerVerificationStatus.Verified)
                 return Result<string>.Fail("Неподтверждённый фермер не может создать активное объявление", ErrorType.Validation);
 
+            var (title, titleTj, titleEn, description, descriptionTj, descriptionEn) =
+                await TranslateAsync(dto.Title, dto.TitleTj, dto.TitleEn, dto.Description, dto.DescriptionTj, dto.DescriptionEn);
+
             listing.FarmerProfileId = dto.FarmerProfileId;
             listing.CategoryId = dto.CategoryId;
             listing.Unit = dto.Unit;
-            listing.Title = dto.Title;
-            listing.Description = dto.Description;
+            listing.Title = title;
+            listing.TitleTj = titleTj;
+            listing.TitleEn = titleEn;
+            listing.Description = description;
+            listing.DescriptionTj = descriptionTj;
+            listing.DescriptionEn = descriptionEn;
             listing.RetailPricePerKg = dto.RetailPricePerKg;
             listing.WholesalePricePerKg = dto.WholesalePricePerKg;
             listing.WholesaleMinimumQuantity = dto.WholesaleMinimumQuantity;
@@ -330,7 +371,11 @@ public class ProductListingService(
         CategoryId = listing.CategoryId,
         Unit = listing.Unit,
         Title = listing.Title,
+        TitleTj = listing.TitleTj,
+        TitleEn = listing.TitleEn,
         Description = listing.Description,
+        DescriptionTj = listing.DescriptionTj,
+        DescriptionEn = listing.DescriptionEn,
         RetailPricePerKg = listing.RetailPricePerKg,
         WholesalePricePerKg = listing.WholesalePricePerKg,
         WholesaleMinimumQuantity = listing.WholesaleMinimumQuantity,

@@ -23,6 +23,7 @@ import { CardBrandMark } from "@/components/customer/WalletCard";
 import { TAJIKISTAN_REGION_SUGGESTIONS, getDistrictsForRegion } from "@/data/tajikistanGeo";
 import { ApiError } from "@/lib/api";
 import { formatSomoni, getEffectiveMinQuantity, getQuantityStep, getUnitPrice, cn } from "@/lib/utils";
+import { getLocalizedTitle } from "@/lib/productI18n";
 
 // Гибридная оплата: покупатель выбирает "Картой" (списание с выбранной
 // виртуальной карты сразу при оформлении) или "Наличными курьеру" (без
@@ -199,7 +200,7 @@ interface PlacedOrder {
 }
 
 export function Checkout() {
-  const { t } = useTranslation(["pages", "common", "layout"]);
+  const { t, i18n } = useTranslation(["pages", "common", "layout"]);
   const navigate = useNavigate();
   const products = useProducts();
   const farmers = useFarmers();
@@ -492,10 +493,10 @@ export function Checkout() {
               return (
                 <div key={line.productId} className="flex gap-3">
                   <div className="h-14 w-14 shrink-0 overflow-hidden rounded-xl">
-                    <PhotoTile src={product.photoUrl} alt={product.title} className="h-full w-full" />
+                    <PhotoTile src={product.photoUrl} alt={getLocalizedTitle(product, i18n.language)} className="h-full w-full" />
                   </div>
                   <div className="flex min-w-0 flex-1 flex-col gap-1">
-                    <p className="truncate text-sm font-medium text-stone-800 dark:text-stone-100">{product.title}</p>
+                    <p className="truncate text-sm font-medium text-stone-800 dark:text-stone-100">{getLocalizedTitle(product, i18n.language)}</p>
                     <div className="flex items-center justify-between">
                       <div className="flex items-center gap-1.5 rounded-full bg-stone-100 px-1.5 py-1 dark:bg-stone-800">
                         <button

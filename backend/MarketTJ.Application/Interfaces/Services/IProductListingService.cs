@@ -19,7 +19,11 @@ public interface IProductListingService
     // статусу). Только Active + в наличии, фильтры/сортировка на уровне БД.
     Task<Result<PagedResult<GetProductListingDto>>> SearchCatalogAsync(ProductListingSearchFilter filter);
     Task<Result<List<string>>> GetDistinctActiveRegionsAsync();
-    Task<Result<string>> CreateAsync(CreateProductListingDto dto);
+    // Возвращает Id созданного объявления — нужен фронтенду, чтобы сразу
+    // после создания (не только при последующем Edit) прикрепить фото через
+    // ProductImagesField (2026-08-05, тот же приём, что и у
+    // ICourierProfileService.CreateAsync для документов курьера).
+    Task<Result<int>> CreateAsync(CreateProductListingDto dto);
     Task<Result<string>> UpdateAsync(int id, UpdateProductListingDto dto);
     Task<Result<string>> DeleteAsync(int id);
 }

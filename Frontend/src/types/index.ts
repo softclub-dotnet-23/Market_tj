@@ -39,10 +39,14 @@ export type ProductBadge = "organic" | "new" | "bestseller" | "discount" | "prem
 export interface Product {
   id: number;
   title: string;
+  titleTj?: string;
+  titleEn?: string;
   slug: string;
   categoryId: number;
   farmerId: number;
   description: string;
+  descriptionTj?: string;
+  descriptionEn?: string;
   shortDescription: string;
   unit: string;
   photoUrl?: string;

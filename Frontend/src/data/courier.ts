@@ -10,6 +10,9 @@ export interface CourierProfileDto {
   vehicleNumber: string;
   region: string;
   district: string;
+  address: string | null;
+  latitude: number | null;
+  longitude: number | null;
   isAvailable: boolean;
   isActive: boolean;
   rating: number;
@@ -55,6 +58,7 @@ export interface CreateCourierProfilePayload {
   vehicleNumber: string;
   region: string;
   district: string;
+  address: string;
 }
 
 // Регистрация курьера (Register.tsx) — тот же приём, что createFarmerProfile/

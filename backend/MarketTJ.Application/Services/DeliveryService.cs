@@ -25,6 +25,8 @@ public class DeliveryService(
     IAuditLogService auditLogService,
     IOrderService orderService,
     ICurrentUserService currentUser,
+    IGoogleGeocodingService geocodingService,
+    IFileStorageService fileStorageService,
     ILogger<DeliveryService> logger) : IDeliveryService
 {
     // Упрощение находки 2026-08-05: раньше курьер продвигал доставку по 5
@@ -350,15 +352,35 @@ public class DeliveryService(
             if (myFarmerProfile is null)
                 return Result<IEnumerable<GetAvailableCourierDto>>.Fail("Доступно только фермеру", ErrorType.Forbidden);
 
+            var order = await orderRepository.GetByIdAsync(filter.OrderId);
+            if (order is null)
+                return Result<IEnumerable<GetAvailableCourierDto>>.Fail("Заказ не найден", ErrorType.NotFound);
+            if (order.FarmerId != myFarmerProfile.Id)
+                return Result<IEnumerable<GetAvailableCourierDto>>.Fail("Нет доступа к этому заказу", ErrorType.Forbidden);
+
+            // Раздел "выбор курьера по карте в радиусе 40 км" (2026-08-05):
+            // координаты адреса доставки геокодируются лениво при первом
+            // запросе и кэшируются на Order — повторные запросы для того же
+            // заказа не дёргают Google Geocoding API снова.
+            if (order.DeliveryLatitude is null || order.DeliveryLongitude is null)
+            {
+                var geocoded = await geocodingService.GeocodeAsync($"{order.DeliveryAddress}, {order.District}, {order.Region}");
+                if (!geocoded.IsSuccess)
+                    return Result<IEnumerable<GetAvailableCourierDto>>.Fail(
+                        "Не удалось определить координаты адреса доставки — назначьте курьера вручную", ErrorType.Validation);
+
+                order.DeliveryLatitude = geocoded.Data.Latitude;
+                order.DeliveryLongitude = geocoded.Data.Longitude;
+                await orderRepository.UpdateAsync(order);
+            }
+
+            var orderLat = order.DeliveryLatitude.Value;
+            var orderLng = order.DeliveryLongitude.Value;
+
             var couriers = (await courierProfileRepository.GetAllAsync()).Where(c => c.IsActive).ToList();
 
             if (filter.OnlyAvailable)
                 couriers = couriers.Where(c => c.IsAvailable).ToList();
-            // Region/District — теперь явный опциональный фильтр по выбору
-            // фермера (см. регион-селект в AssignCourierDrawer), а не
-            // принудительная подмена значением его FarmerProfile — тот вариант
-            // прятал вообще всех курьеров, если ни один не совпадал с районом
-            // фермера в точности (см. комментарий ниже, у сортировки).
             if (!string.IsNullOrWhiteSpace(filter.Region))
                 couriers = couriers.Where(c => c.Region == filter.Region).ToList();
             if (!string.IsNullOrWhiteSpace(filter.District))
@@ -368,23 +390,21 @@ public class DeliveryService(
             if (filter.MinRating.HasValue)
                 couriers = couriers.Where(c => c.Rating >= filter.MinRating.Value).ToList();
 
-            // Исправление находки 2026-08-05: регион/район раньше были жёстким
-            // WHERE-фильтром (заказ "из своего региона/района" исключал всех
-            // остальных) — но в системе может быть считанное число курьеров на
-            // всю платформу, и фермер оставался без единого варианта, даже когда
-            // курьер физически существовал и был свободен. Пользователь просил
-            // именно сортировку ("первым должны попадаться те, кто ближе и
-            // свободен"), а не исключение ("выбрать курьеров из тех кто есть") —
-            // регион/район своего FarmerProfile теперь только поднимают "своих"
-            // курьеров в начало списка, не прячут остальных.
-            couriers = couriers
-                .OrderByDescending(c => c.IsAvailable)
-                .ThenByDescending(c => c.District == myFarmerProfile.District && c.Region == myFarmerProfile.Region)
-                .ThenByDescending(c => c.Region == myFarmerProfile.Region)
-                .ThenByDescending(c => c.Rating)
+            // Реальное расстояние (Haversine) от курьера до адреса доставки —
+            // заменяет прежнюю сортировку "тот же район первым" (2026-08-05).
+            // Курьеры без координат (ещё не геокодированы) исключаются из
+            // списка целиком, а не просто опускаются вниз — так же, как и
+            // курьеры вне 40-километрового радиуса.
+            const double maxDistanceKm = 40.0;
+            var withDistance = couriers
+                .Where(c => c.Latitude.HasValue && c.Longitude.HasValue)
+                .Select(c => (Courier: c, DistanceKm: GeoDistance.HaversineKm(orderLat, orderLng, c.Latitude!.Value, c.Longitude!.Value)))
+                .Where(x => x.DistanceKm <= maxDistanceKm)
+                .OrderBy(x => x.DistanceKm)
+                .ThenByDescending(x => x.Courier.Rating)
                 .ToList();
 
-            var courierIds = couriers.Select(c => c.Id).ToList();
+            var courierIds = withDistance.Select(x => x.Courier.Id).ToList();
             var activeCounts = courierIds.Count > 0
                 ? await deliveryRepository.GetActiveCountsByCourierIdsAsync(courierIds)
                 : [];
@@ -393,7 +413,7 @@ public class DeliveryService(
                 : [];
 
             var dtos = new List<GetAvailableCourierDto>();
-            foreach (var courier in couriers)
+            foreach (var (courier, distanceKm) in withDistance)
             {
                 var user = await userRepository.GetByIdAsync(courier.UserId);
                 dtos.Add(new GetAvailableCourierDto
@@ -411,6 +431,7 @@ public class DeliveryService(
                     IsAvailable = courier.IsAvailable,
                     ActiveDeliveries = activeCounts.GetValueOrDefault(courier.Id, 0),
                     CompletedDeliveries = completedCounts.GetValueOrDefault(courier.Id, 0),
+                    DistanceKm = distanceKm,
                 });
             }
 
@@ -478,7 +499,6 @@ public class DeliveryService(
                     CreatedAt = DateTime.UtcNow,
                     UpdatedAt = DateTime.UtcNow,
                 };
-                GenerateConfirmationCode(delivery);
                 await deliveryRepository.AddAsync(delivery);
             }
             else
@@ -572,7 +592,6 @@ public class DeliveryService(
                     CreatedAt = DateTime.UtcNow,
                     UpdatedAt = DateTime.UtcNow,
                 };
-                GenerateConfirmationCode(delivery);
                 await deliveryRepository.AddAsync(delivery);
             }
             else
@@ -615,7 +634,7 @@ public class DeliveryService(
     // курьерского приложения, поэтому вместо ConfirmDeliveryAsync (там
     // проверка идёт по CourierProfile текущего пользователя) код вводит сам
     // фермер, получив его от покупателя тем же способом, что и обычный курьер.
-    public async Task<Result<string>> ConfirmManualDeliveryAsync(int deliveryId, ConfirmDeliveryDto dto)
+    public async Task<Result<string>> ConfirmManualDeliveryAsync(int deliveryId, Stream photoStream, string fileName, long fileLength)
     {
         try
         {
@@ -632,37 +651,8 @@ public class DeliveryService(
             if (!await IsFarmerOwnerAsync(order))
                 return Result<string>.Fail("Подтвердить доставку может только фермер — владелец заказа", ErrorType.Forbidden);
 
-            if (delivery.Status == DeliveryStatus.Delivered)
-                return Result<string>.Fail("Доставка уже подтверждена", ErrorType.Conflict);
-            if (delivery.Status == DeliveryStatus.Cancelled)
-                return Result<string>.Fail("Доставка отменена", ErrorType.Conflict);
-
-            if (delivery.ConfirmationAttempts >= 5)
-                return Result<string>.Fail("Превышено число попыток ввода кода — обратитесь в поддержку", ErrorType.Validation);
-
-            if (string.IsNullOrEmpty(delivery.ConfirmationCodeHash) || !BCrypt.Net.BCrypt.Verify(dto.Code, delivery.ConfirmationCodeHash))
-            {
-                delivery.ConfirmationAttempts += 1;
-                await deliveryRepository.UpdateAsync(delivery);
-                return Result<string>.Fail("Неверный код подтверждения", ErrorType.Validation);
-            }
-
-            delivery.Status = DeliveryStatus.Delivered;
-            delivery.DeliveredAt = DateTime.UtcNow;
-            delivery.UpdatedAt = DateTime.UtcNow;
-            await deliveryRepository.UpdateAsync(delivery);
-
-            order.CourierStatus = CourierOrderStatus.Delivered;
-            await orderRepository.UpdateAsync(order);
-            await CompleteOrderAfterDeliveryAsync(order.Id);
-
-            var customerProfile = await customerProfileRepository.GetByIdAsync(order.CustomerId);
-            if (customerProfile is not null)
-                await NotifyAsync(customerProfile.UserId, "Заказ доставлен", $"Заказ №{order.OrderNumber} отмечен как доставленный.");
-
-            await CreateAuditLogAsync("ConfirmManualDelivery", delivery.Id, $"Ручная доставка подтверждена по заказу №{order.OrderNumber}");
-
-            return Result<string>.Ok("Доставка подтверждена");
+            return await ConfirmDeliveryWithPhotoAsync(delivery, order, photoStream, fileName, fileLength, "ConfirmManualDelivery",
+                "Ручная доставка подтверждена по заказу №{0}");
         }
         catch (Exception ex)
         {
@@ -919,7 +909,7 @@ public class DeliveryService(
         }
     }
 
-    public async Task<Result<string>> ConfirmDeliveryAsync(int deliveryId, ConfirmDeliveryDto dto)
+    public async Task<Result<string>> ConfirmDeliveryAsync(int deliveryId, Stream photoStream, string fileName, long fileLength)
     {
         try
         {
@@ -938,52 +928,69 @@ public class DeliveryService(
             // ArrivedAtClient оставлен как валидный статус для подтверждения —
             // не ломать доставки, уже дошедшие до него до упрощения флоу
             // (2026-08-05, см. CourierTransitions) — но новый флоу подтверждает
-            // код сразу из InTransit, отдельного "прибыл к покупателю" больше нет.
+            // фото сразу из InTransit, отдельного "прибыл к покупателю" больше нет.
             if (delivery.Status != DeliveryStatus.InTransit && delivery.Status != DeliveryStatus.ArrivedAtClient)
                 return Result<string>.Fail("Сначала отметьте, что забрали заказ", ErrorType.Conflict);
 
-            if (delivery.ConfirmationAttempts >= 5)
-                return Result<string>.Fail("Превышено число попыток ввода кода — обратитесь к администратору", ErrorType.Validation);
-
-            if (string.IsNullOrEmpty(delivery.ConfirmationCodeHash) || !BCrypt.Net.BCrypt.Verify(dto.Code, delivery.ConfirmationCodeHash))
-            {
-                delivery.ConfirmationAttempts += 1;
-                await deliveryRepository.UpdateAsync(delivery);
-                return Result<string>.Fail("Неверный код подтверждения", ErrorType.Validation);
-            }
-
-            delivery.Status = DeliveryStatus.Delivered;
-            delivery.DeliveredAt = DateTime.UtcNow;
-            delivery.UpdatedAt = DateTime.UtcNow;
-            await deliveryRepository.UpdateAsync(delivery);
-
             var order = await orderRepository.GetByIdAsync(delivery.OrderId);
-            if (order is not null)
-            {
-                // Раньше order.Status = OrderStatus.Delivered — теперь только
-                // CourierStatus (см. комментарий в AcceptAsync/на самом поле).
-                // Order.Status сам становится Completed чуть ниже (по прямому
-                // запросу пользователя, 2026-08-05) — Admin для этого больше
-                // не нужен, см. CompleteOrderAfterDeliveryAsync.
-                order.CourierStatus = CourierOrderStatus.Delivered;
-                await orderRepository.UpdateAsync(order);
-                await CompleteOrderAfterDeliveryAsync(order.Id);
+            if (order is null)
+                return Result<string>.Fail("Заказ не найден", ErrorType.NotFound);
 
+            var result = await ConfirmDeliveryWithPhotoAsync(delivery, order, photoStream, fileName, fileLength, "ConfirmDelivery",
+                "Доставка подтверждена по заказу №{0}");
+
+            if (result.IsSuccess)
+            {
                 var farmerProfile = await farmerProfileRepository.GetByIdAsync(order.FarmerId);
-                var customerProfile = await customerProfileRepository.GetByIdAsync(order.CustomerId);
                 if (farmerProfile is not null)
                     await NotifyAsync(farmerProfile.UserId, "Заказ доставлен", $"Заказ №{order.OrderNumber} успешно доставлен покупателю.");
-                if (customerProfile is not null)
-                    await NotifyAsync(customerProfile.UserId, "Заказ доставлен", $"Ваш заказ №{order.OrderNumber} доставлен.");
             }
 
-            return Result<string>.Ok("Доставка подтверждена");
+            return result;
         }
         catch (Exception ex)
         {
             logger.LogError(ex, "Ошибка при подтверждении доставки {Id}", deliveryId);
             return Result<string>.Fail("Не удалось подтвердить доставку", ErrorType.InternalServerError);
         }
+    }
+
+    // Общая логика фото-подтверждения доставки (2026-08-05) — раньше
+    // ConfirmDeliveryAsync/ConfirmManualDeliveryAsync дублировали почти
+    // идентичную проверку кода; теперь загрузка фото и завершение заказа
+    // вынесены сюда, вызывающий код отвечает только за проверку владения/роли.
+    private async Task<Result<string>> ConfirmDeliveryWithPhotoAsync(
+        Delivery delivery, Order order, Stream photoStream, string fileName, long fileLength,
+        string auditAction, string auditMessageTemplate)
+    {
+        if (delivery.Status == DeliveryStatus.Delivered)
+            return Result<string>.Fail("Доставка уже подтверждена", ErrorType.Conflict);
+        if (delivery.Status == DeliveryStatus.Cancelled)
+            return Result<string>.Fail("Доставка отменена", ErrorType.Conflict);
+
+        var validation = FileUploadValidator.ValidateImage(fileName, fileLength);
+        if (validation is not null)
+            return validation;
+
+        var photoUrl = await fileStorageService.SaveAsync(photoStream, fileName, $"delivery-proof/{delivery.Id}");
+
+        delivery.DeliveryProofPhotoUrl = photoUrl;
+        delivery.Status = DeliveryStatus.Delivered;
+        delivery.DeliveredAt = DateTime.UtcNow;
+        delivery.UpdatedAt = DateTime.UtcNow;
+        await deliveryRepository.UpdateAsync(delivery);
+
+        order.CourierStatus = CourierOrderStatus.Delivered;
+        await orderRepository.UpdateAsync(order);
+        await CompleteOrderAfterDeliveryAsync(order.Id);
+
+        var customerProfile = await customerProfileRepository.GetByIdAsync(order.CustomerId);
+        if (customerProfile is not null)
+            await NotifyAsync(customerProfile.UserId, "Заказ доставлен", $"Заказ №{order.OrderNumber} отмечен как доставленный.");
+
+        await CreateAuditLogAsync(auditAction, delivery.Id, string.Format(auditMessageTemplate, order.OrderNumber));
+
+        return Result<string>.Ok("Доставка подтверждена");
     }
 
     public async Task<Result<string>> ReportProblemAsync(int deliveryId, ReportDeliveryProblemDto dto)
@@ -1012,14 +1019,6 @@ public class DeliveryService(
             logger.LogError(ex, "Ошибка при сообщении о проблеме с доставкой {Id}", deliveryId);
             return Result<string>.Fail("Не удалось отправить сообщение о проблеме", ErrorType.InternalServerError);
         }
-    }
-
-    private static void GenerateConfirmationCode(Delivery delivery)
-    {
-        var code = Random.Shared.Next(0, 10000).ToString("D4");
-        delivery.ConfirmationCode = code;
-        delivery.ConfirmationCodeHash = BCrypt.Net.BCrypt.HashPassword(code);
-        delivery.ConfirmationAttempts = 0;
     }
 
     private static (string Title, string Message) StatusNotificationText(DeliveryStatus status, string orderNumber) => status switch
@@ -1109,6 +1108,7 @@ public class DeliveryService(
             CourierNote = delivery.CourierNote,
             CancellationReason = delivery.CancellationReason,
             ProblemDescription = delivery.ProblemDescription,
+            DeliveryProofPhotoUrl = delivery.DeliveryProofPhotoUrl,
             CreatedAt = delivery.CreatedAt,
             UpdatedAt = delivery.UpdatedAt,
         };
@@ -1133,6 +1133,8 @@ public class DeliveryService(
         {
             dto.OrderNumber = order.OrderNumber;
             dto.ItemCount = (await orderItemRepository.GetAllAsync()).Count(i => i.OrderId == order.Id);
+            dto.FarmerStatus = order.FarmerStatus;
+            dto.CourierStatus = order.CourierStatus;
 
             var farmerProfile = await farmerProfileRepository.GetByIdAsync(order.FarmerId);
             if (farmerProfile is not null)
@@ -1150,13 +1152,6 @@ public class DeliveryService(
                 dto.CustomerPhoneNumber = customerUser?.PhoneNumber;
             }
 
-            // Код подтверждения видит только покупатель — владелец заказа.
-            if (currentUser.UserId is not null && !string.IsNullOrEmpty(delivery.ConfirmationCode) && customerProfile is not null)
-            {
-                var callerCustomerProfile = await customerProfileRepository.GetByUserIdAsync(currentUser.UserId.Value);
-                if (callerCustomerProfile is not null && callerCustomerProfile.Id == order.CustomerId)
-                    dto.ConfirmationCode = delivery.ConfirmationCode;
-            }
         }
 
         return dto;

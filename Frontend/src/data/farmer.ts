@@ -99,7 +99,11 @@ export interface ProductListingDto {
   categoryId: number;
   unit: string;
   title: string;
+  titleTj: string | null;
+  titleEn: string | null;
   description: string | null;
+  descriptionTj: string | null;
+  descriptionEn: string | null;
   retailPricePerKg: number;
   wholesalePricePerKg: number | null;
   wholesaleMinimumQuantity: number | null;
@@ -127,8 +131,14 @@ export interface CreateProductListingDto {
   farmerProfileId: number;
   categoryId: number;
   unit: string;
-  title: string;
+  // Nullable — фермер обязан заполнить МИНИМУМ один язык названия (см.
+  // ProductListingValidator на бэкенде), остальные переводятся автоматически.
+  title?: string | null;
+  titleTj?: string | null;
+  titleEn?: string | null;
   description?: string | null;
+  descriptionTj?: string | null;
+  descriptionEn?: string | null;
   retailPricePerKg: number;
   wholesalePricePerKg?: number | null;
   wholesaleMinimumQuantity?: number | null;
@@ -168,6 +178,10 @@ export interface FarmerOrderDto {
   paymentMethod: number;
   isPaid: boolean;
   walletId: number | null;
+  // Order.FarmerStatus/CourierStatus — раздельные статусы, независимые от
+  // общего computed status (см. OrderService.ComputeDisplayStatus на бэкенде).
+  farmerStatus: number | null;
+  courierStatus: number | null;
 }
 
 export interface OrderItemDto {
@@ -368,8 +382,11 @@ export function useFarmerProducts(farmerProfileId: number | null, refreshKey = 0
   return { products, loading, error };
 }
 
+// Возвращает Id созданного объявления (2026-08-05) — нужен, чтобы сразу
+// после создания прикрепить фото через ProductImagesField, не дожидаясь
+// повторного открытия в режиме редактирования.
 export function createProductListing(dto: CreateProductListingDto) {
-  return apiPost<string>("/product-listings", dto);
+  return apiPost<number>("/product-listings", dto);
 }
 
 // UpdateProductListingDto на бэкенде требует Id и в теле запроса, не только в URL.

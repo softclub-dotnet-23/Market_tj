@@ -16,4 +16,10 @@ public class GetAvailableCourierDto
     public bool IsAvailable { get; set; }
     public int ActiveDeliveries { get; set; }
     public int CompletedDeliveries { get; set; }
+
+    // Реальное расстояние (Haversine) от курьера до адреса доставки заказа —
+    // заменяет прежнюю сортировку "тот же район первым" (2026-08-05). Список
+    // уже отфильтрован по ≤40 км на бэкенде (см. DeliveryService.
+    // GetAvailableCouriersAsync), отсортирован по возрастанию.
+    public double DistanceKm { get; set; }
 }

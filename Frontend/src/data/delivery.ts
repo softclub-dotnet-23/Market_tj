@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { apiGet, apiPatch, apiPost } from "@/lib/api";
+import { apiGet, apiPatch, apiPost, apiUpload } from "@/lib/api";
 
 // Полноценное назначение и отслеживание курьера — по прямому запросу
 // пользователя (2026-08-02). DeliveryStatus здесь — точное зеркало
@@ -65,15 +65,20 @@ export interface DeliveryDto {
   courierTransportType: string | null;
   courierVehicleNumber: string | null;
   courierRating: number | null;
-  // Только для покупателя — владельца заказа; всем остальным ролям сервер
-  // всегда отдаёт null (см. DeliveryService.ToGetDtoAsync).
-  confirmationCode: string | null;
+  // Фото подтверждения доставки вместо кода (2026-08-05) — загружает
+  // курьер (или фермер для доставки "вручную") при confirmDelivery/
+  // confirmManualDelivery, видно покупателю/фермеру/курьеру.
+  deliveryProofPhotoUrl: string | null;
   orderNumber: string | null;
   farmerName: string | null;
   farmerPhoneNumber: string | null;
   customerName: string | null;
   customerPhoneNumber: string | null;
   itemCount: number;
+  // Order.FarmerStatus/CourierStatus — раздельные статусы (см. FarmerOrderDto
+  // в data/farmer.ts, тот же принцип).
+  farmerStatus: number | null;
+  courierStatus: number | null;
 }
 
 export interface AvailableCourierDto {
@@ -90,6 +95,10 @@ export interface AvailableCourierDto {
   isAvailable: boolean;
   activeDeliveries: number;
   completedDeliveries: number;
+  // Реальное расстояние (Haversine) от курьера до адреса доставки заказа —
+  // список уже отфильтрован по ≤40 км и отсортирован по возрастанию на
+  // бэкенде (см. DeliveryService.GetAvailableCouriersAsync, 2026-08-05).
+  distanceKm: number;
 }
 
 export interface AssignCourierPayload {
@@ -162,6 +171,7 @@ export function useMyDeliveries(refreshKey = 0) {
 }
 
 export interface AvailableCourierFilters {
+  orderId: number;
   onlyAvailable?: boolean;
   region?: string;
   district?: string;
@@ -170,11 +180,13 @@ export interface AvailableCourierFilters {
 }
 
 // Region/District — реальный опциональный фильтр (см.
-// DeliveryService.GetAvailableCouriersAsync, доступно только Farmer с
-// 2026-08-05): свой регион/район сервер использует только для сортировки
-// "ближе — выше", а не для исключения остальных курьеров из списка.
+// DeliveryService.GetAvailableCouriersAsync). orderId обязателен — сервер
+// резолвит координаты адреса доставки этого заказа (геокодирует и кэширует
+// лениво) и по ним же жёстко фильтрует курьеров в радиусе 40 км (2026-08-05,
+// заменяет прежнюю сортировку "тот же район первым").
 export function useAvailableCouriers(filters: AvailableCourierFilters, enabled: boolean, refreshKey = 0) {
   const query = new URLSearchParams();
+  query.set("orderId", String(filters.orderId));
   if (filters.onlyAvailable) query.set("onlyAvailable", "true");
   if (filters.region) query.set("region", filters.region);
   if (filters.district) query.set("district", filters.district);
@@ -183,7 +195,7 @@ export function useAvailableCouriers(filters: AvailableCourierFilters, enabled: 
 
   const { data, loading, error } = useAsync(
     () => (enabled ? apiGet<AvailableCourierDto[]>(`/deliveries/available-couriers?${query.toString()}`) : Promise.resolve(null)),
-    [enabled, filters.onlyAvailable, filters.region, filters.district, filters.transportType, filters.minRating, refreshKey],
+    [enabled, filters.orderId, filters.onlyAvailable, filters.region, filters.district, filters.transportType, filters.minRating, refreshKey],
   );
   return { couriers: data, loading, error };
 }
@@ -196,8 +208,12 @@ export function assignManualCourier(orderId: number, payload: AssignManualCourie
   return apiPost<string>(`/deliveries/by-order/${orderId}/assign-manual`, payload);
 }
 
-export function confirmManualDelivery(deliveryId: number, code: string) {
-  return apiPost<string>(`/deliveries/${deliveryId}/confirm-manual`, { code });
+// Фото вместо кода (2026-08-05) — тот же multipart-приём, что и
+// uploadCourierDocument в data/courier.ts.
+export function confirmManualDelivery(deliveryId: number, photo: File) {
+  const formData = new FormData();
+  formData.append("photo", photo);
+  return apiUpload<string>(`/deliveries/${deliveryId}/confirm-manual`, formData);
 }
 
 export function updateDeliveryAdminDetails(deliveryId: number, payload: UpdateDeliveryAdminDetailsPayload) {
@@ -220,8 +236,10 @@ export function updateCourierDeliveryStatus(deliveryId: number, status: number, 
   return apiPatch<string>(`/deliveries/${deliveryId}/status`, { status, note: note ?? null });
 }
 
-export function confirmDelivery(deliveryId: number, code: string) {
-  return apiPost<string>(`/deliveries/${deliveryId}/confirm`, { code });
+export function confirmDelivery(deliveryId: number, photo: File) {
+  const formData = new FormData();
+  formData.append("photo", photo);
+  return apiUpload<string>(`/deliveries/${deliveryId}/confirm`, formData);
 }
 
 export function reportDeliveryProblem(deliveryId: number, description: string) {

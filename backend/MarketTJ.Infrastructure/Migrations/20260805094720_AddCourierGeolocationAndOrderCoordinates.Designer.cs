@@ -3,6 +3,7 @@ using System;
 using MarketTJ.Infrastructure.Persistence;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 
@@ -11,9 +12,11 @@ using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 namespace MarketTJ.Infrastructure.Migrations
 {
     [DbContext(typeof(AppDbContext))]
-    partial class AppDbContextModelSnapshot : ModelSnapshot
+    [Migration("20260805094720_AddCourierGeolocationAndOrderCoordinates")]
+    partial class AddCourierGeolocationAndOrderCoordinates
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
@@ -485,6 +488,15 @@ namespace MarketTJ.Infrastructure.Migrations
                     b.Property<string>("ClientNote")
                         .HasColumnType("text");
 
+                    b.Property<int>("ConfirmationAttempts")
+                        .HasColumnType("integer");
+
+                    b.Property<string>("ConfirmationCode")
+                        .HasColumnType("text");
+
+                    b.Property<string>("ConfirmationCodeHash")
+                        .HasColumnType("text");
+
                     b.Property<int?>("CourierId")
                         .HasColumnType("integer");
 
@@ -504,9 +516,6 @@ namespace MarketTJ.Infrastructure.Migrations
                     b.Property<decimal>("DeliveryPrice")
                         .HasPrecision(18, 2)
                         .HasColumnType("numeric(18,2)");
-
-                    b.Property<string>("DeliveryProofPhotoUrl")
-                        .HasColumnType("text");
 
                     b.Property<DateTime?>("EstimatedDeliveryAt")
                         .HasColumnType("timestamp with time zone");
@@ -1137,12 +1146,6 @@ namespace MarketTJ.Infrastructure.Migrations
                     b.Property<string>("Description")
                         .HasColumnType("text");
 
-                    b.Property<string>("DescriptionEn")
-                        .HasColumnType("text");
-
-                    b.Property<string>("DescriptionTj")
-                        .HasColumnType("text");
-
                     b.Property<string>("District")
                         .IsRequired()
                         .HasColumnType("text");
@@ -1183,12 +1186,6 @@ namespace MarketTJ.Infrastructure.Migrations
 
                     b.Property<string>("Title")
                         .IsRequired()
-                        .HasColumnType("text");
-
-                    b.Property<string>("TitleEn")
-                        .HasColumnType("text");
-
-                    b.Property<string>("TitleTj")
                         .HasColumnType("text");
 
                     b.Property<string>("Unit")

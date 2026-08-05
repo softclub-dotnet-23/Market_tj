@@ -1,13 +1,12 @@
-import { useState } from "react";
+import { useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { toast } from "sonner";
-import { Banknote, KeyRound, Phone, ShoppingCart, Truck } from "lucide-react";
+import { Banknote, Camera, Phone, ShoppingCart, Truck } from "lucide-react";
 import { PageLoader } from "@/components/layout/PageLoader";
 import { EmptyState } from "@/components/ui/EmptyState";
 import { Pagination } from "@/components/ui/Pagination";
 import { Button } from "@/components/ui/Button";
 import { Modal } from "@/components/ui/Modal";
-import { Input } from "@/components/ui/Field";
 import { ViewModeToggle, type OrdersViewMode } from "@/components/ui/ViewModeToggle";
 import { StatusMenu } from "@/components/ui/StatusMenu";
 import { OrderItemsCell } from "@/components/ui/OrderItemsCell";
@@ -19,6 +18,8 @@ import { ApiError } from "@/lib/api";
 import { DeliveryStatus, confirmManualDelivery, useDeliveryByOrder } from "@/data/delivery";
 import { formatDateTime, formatSomoni } from "@/lib/utils";
 import {
+  COURIER_ORDER_STATUS_KEYS,
+  FARMER_ORDER_STATUS_KEYS,
   ORDER_STATUS_CLASSES,
   ORDER_STATUS_ICONS,
   ORDER_STATUS_KEYS,
@@ -106,19 +107,40 @@ export function FarmerOrders() {
     }
   };
 
-  const [manualCode, setManualCode] = useState("");
+  const [manualPhoto, setManualPhoto] = useState<File | null>(null);
+  const [manualPhotoPreview, setManualPhotoPreview] = useState<string | null>(null);
   const [confirmingManualSubmitting, setConfirmingManualSubmitting] = useState(false);
+  const manualPhotoInputRef = useRef<HTMLInputElement>(null);
 
   const closeManualConfirm = () => {
     setConfirmingManualDelivery(null);
-    setManualCode("");
+    setManualPhoto(null);
+    setManualPhotoPreview(null);
+  };
+
+  const onManualPhotoChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    e.target.value = "";
+    if (!file) return;
+
+    if (!["image/jpeg", "image/png", "image/webp"].includes(file.type)) {
+      toast.error(t("orders.delivery.confirmManualInvalidType"));
+      return;
+    }
+    if (file.size > 5 * 1024 * 1024) {
+      toast.error(t("orders.delivery.confirmManualTooLarge"));
+      return;
+    }
+
+    setManualPhoto(file);
+    setManualPhotoPreview(URL.createObjectURL(file));
   };
 
   const handleConfirmManualDelivery = async () => {
-    if (!confirmingManualDelivery || manualCode.length !== 4) return;
+    if (!confirmingManualDelivery || !manualPhoto) return;
     setConfirmingManualSubmitting(true);
     try {
-      await confirmManualDelivery(confirmingManualDelivery.id, manualCode);
+      await confirmManualDelivery(confirmingManualDelivery.id, manualPhoto);
       toast.success(t("orders.delivery.confirmManualSuccess"));
       notifyFarmerOrdersChanged();
       closeManualConfirm();
@@ -185,8 +207,14 @@ export function FarmerOrders() {
             )}
           </div>
           <DeliveryStatusBadge status={delivery.status} />
+          <span className="text-xs text-stone-400 dark:text-stone-500">
+            {t("orders.courierStatus.label")}:{" "}
+            {order.courierStatus !== null
+              ? t(`orders.courierStatus.values.${COURIER_ORDER_STATUS_KEYS[order.courierStatus]}`)
+              : t("orders.courierStatus.notStarted")}
+          </span>
           {canConfirmManual && (
-            <Button type="button" size="sm" leftIcon={<KeyRound size={14} />} onClick={() => setConfirmingManualDelivery(delivery)}>
+            <Button type="button" size="sm" leftIcon={<Camera size={14} />} onClick={() => setConfirmingManualDelivery(delivery)}>
               {t("orders.delivery.confirmManualAction")}
             </Button>
           )}
@@ -212,9 +240,15 @@ export function FarmerOrders() {
             <Truck size={11} /> {delivery.courierTransportType} {delivery.courierVehicleNumber}
           </p>
         )}
+        <p className="text-xs text-stone-400 dark:text-stone-500">
+          {t("orders.courierStatus.label")}:{" "}
+          {order.courierStatus !== null
+            ? t(`orders.courierStatus.values.${COURIER_ORDER_STATUS_KEYS[order.courierStatus]}`)
+            : t("orders.courierStatus.notStarted")}
+        </p>
         {delivery.adminNote && <p className="text-xs text-stone-500 dark:text-stone-400">{delivery.adminNote}</p>}
         {canConfirmManual && (
-          <Button type="button" size="sm" leftIcon={<KeyRound size={14} />} onClick={() => setConfirmingManualDelivery(delivery)}>
+          <Button type="button" size="sm" leftIcon={<Camera size={14} />} onClick={() => setConfirmingManualDelivery(delivery)}>
             {t("orders.delivery.confirmManualAction")}
           </Button>
         )}
@@ -256,6 +290,11 @@ export function FarmerOrders() {
       <span className="text-xs text-stone-400 dark:text-stone-500">
         {receivedAt ? formatDateTime(receivedAt) : t("orders.notReceivedYet")}
       </span>
+      {order.farmerStatus !== null && (
+        <span className="text-xs text-stone-500 dark:text-stone-400">
+          {t("orders.farmerStatus.label")}: {t(`orders.farmerStatus.values.${FARMER_ORDER_STATUS_KEYS[order.farmerStatus]}`)}
+        </span>
+      )}
     </div>
   );
 
@@ -381,19 +420,40 @@ export function FarmerOrders() {
       <Modal open={!!confirmingManualDelivery} onClose={closeManualConfirm} className="max-w-sm">
         <h2 className="font-display text-lg text-stone-900 dark:text-stone-50">{t("orders.delivery.confirmManualTitle")}</h2>
         <p className="mt-1 text-sm text-stone-500 dark:text-stone-400">{t("orders.delivery.confirmManualDescription")}</p>
-        <Input
-          className="mt-4 text-center font-display text-2xl tracking-[0.4em]"
-          maxLength={4}
-          inputMode="numeric"
-          value={manualCode}
-          onChange={(e) => setManualCode(e.target.value.replace(/\D/g, "").slice(0, 4))}
-          placeholder="••••"
+
+        <input
+          ref={manualPhotoInputRef}
+          type="file"
+          accept="image/jpeg,image/png,image/webp"
+          capture="environment"
+          className="hidden"
+          onChange={onManualPhotoChange}
         />
+
+        {manualPhotoPreview ? (
+          <button
+            type="button"
+            onClick={() => manualPhotoInputRef.current?.click()}
+            className="mt-4 block h-48 w-full overflow-hidden rounded-xl border border-stone-200 dark:border-stone-700"
+          >
+            <img src={manualPhotoPreview} alt="" className="h-full w-full object-cover" />
+          </button>
+        ) : (
+          <button
+            type="button"
+            onClick={() => manualPhotoInputRef.current?.click()}
+            className="mt-4 flex h-48 w-full flex-col items-center justify-center gap-2 rounded-xl border-2 border-dashed border-stone-200 text-stone-400 transition hover:border-grove-400 hover:text-grove-600 dark:border-stone-700 dark:text-stone-500"
+          >
+            <Camera size={28} />
+            <span className="text-sm">{t("orders.delivery.confirmManualTakePhoto")}</span>
+          </button>
+        )}
+
         <div className="mt-5 flex justify-end gap-3">
           <Button type="button" variant="outline" onClick={closeManualConfirm}>
             {t("common:actions.cancel")}
           </Button>
-          <Button type="button" loading={confirmingManualSubmitting} disabled={manualCode.length !== 4} onClick={handleConfirmManualDelivery}>
+          <Button type="button" loading={confirmingManualSubmitting} disabled={!manualPhoto} onClick={handleConfirmManualDelivery}>
             {t("orders.delivery.confirmManualAction")}
           </Button>
         </div>

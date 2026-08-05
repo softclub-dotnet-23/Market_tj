@@ -48,6 +48,8 @@ export interface AdminProductListingDto {
   id: number;
   farmerProfileId: number;
   title: string;
+  titleTj?: string;
+  titleEn?: string;
   unit: string;
   retailPricePerKg: number;
   availableQuantity: number;

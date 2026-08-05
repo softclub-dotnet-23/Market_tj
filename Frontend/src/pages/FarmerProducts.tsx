@@ -147,7 +147,9 @@ function StatusBadge({ status, label }: { status: number; label: string }) {
 interface ProductFormValues {
   categoryId: string;
   unit: string;
-  title: string;
+  titleRu: string;
+  titleTj: string;
+  titleEn: string;
   qualityGrade: string;
   retailPricePerKg: string;
   wholesalePricePerKg: string;
@@ -155,14 +157,18 @@ interface ProductFormValues {
   availableQuantity: string;
   minimumOrderQuantity: string;
   harvestDate: string;
-  description: string;
+  descriptionRu: string;
+  descriptionTj: string;
+  descriptionEn: string;
   status: string;
 }
 
 function toFormValues(product: ProductListingDto): Omit<ProductFormValues, "categoryId"> {
   return {
     unit: product.unit,
-    title: product.title,
+    titleRu: product.title,
+    titleTj: product.titleTj ?? "",
+    titleEn: product.titleEn ?? "",
     qualityGrade: product.qualityGrade,
     retailPricePerKg: String(product.retailPricePerKg),
     wholesalePricePerKg: product.wholesalePricePerKg != null ? String(product.wholesalePricePerKg) : "",
@@ -170,7 +176,9 @@ function toFormValues(product: ProductListingDto): Omit<ProductFormValues, "cate
     availableQuantity: String(product.availableQuantity),
     minimumOrderQuantity: String(product.minimumOrderQuantity),
     harvestDate: product.harvestDate ? product.harvestDate.slice(0, 10) : "",
-    description: product.description ?? "",
+    descriptionRu: product.description ?? "",
+    descriptionTj: product.descriptionTj ?? "",
+    descriptionEn: product.descriptionEn ?? "",
     status: String(product.status),
   };
 }
@@ -201,12 +209,30 @@ function ProductFormModal({
     defaultValues: { qualityGrade: "Первый сорт", status: String(ListingStatus.Draft) },
   });
 
+  // Раздел "товар на 3 языках" (2026-08-05) — сразу после создания (не
+  // только при последующем Edit) модалка переключается в режим загрузки
+  // фото для только что созданного объявления, используя тот же
+  // ProductImagesField, что и Edit.
+  const [createdListingId, setCreatedListingId] = useState<number | null>(null);
+
   useEffect(() => {
     if (!open) return;
+    setCreatedListingId(null);
     if (editing) {
       reset({ ...toFormValues(editing), categoryId: String(editing.categoryId) });
     } else {
-      reset({ qualityGrade: "Первый сорт", status: String(ListingStatus.Draft), categoryId: "", unit: "" });
+      reset({
+        qualityGrade: "Первый сорт",
+        status: String(ListingStatus.Draft),
+        categoryId: "",
+        unit: "",
+        titleRu: "",
+        titleTj: "",
+        titleEn: "",
+        descriptionRu: "",
+        descriptionTj: "",
+        descriptionEn: "",
+      });
     }
   }, [open, editing, reset]);
 
@@ -220,8 +246,12 @@ function ProductFormModal({
       farmerProfileId: farmerProfile.id,
       categoryId: Number(values.categoryId),
       unit: values.unit,
-      title: values.title,
-      description: values.description || null,
+      title: values.titleRu || null,
+      titleTj: values.titleTj || null,
+      titleEn: values.titleEn || null,
+      description: values.descriptionRu || null,
+      descriptionTj: values.descriptionTj || null,
+      descriptionEn: values.descriptionEn || null,
       retailPricePerKg: Number(values.retailPricePerKg),
       wholesalePricePerKg: values.wholesalePricePerKg ? Number(values.wholesalePricePerKg) : null,
       wholesaleMinimumQuantity: values.wholesaleMinimumQuantity ? Number(values.wholesaleMinimumQuantity) : null,
@@ -239,12 +269,16 @@ function ProductFormModal({
       if (editing) {
         await updateProductListing(editing.id, dto);
         toast.success(t("products.updateSuccess"));
+        onSaved();
+        onClose();
       } else {
-        await createProductListing(dto);
+        const newId = await createProductListing(dto);
         toast.success(t("products.createSuccess"));
+        onSaved();
+        // Не закрываем модалку — переключаем её на загрузку фото для только
+        // что созданного объявления (см. createdListingId выше).
+        setCreatedListingId(newId);
       }
-      onSaved();
-      onClose();
     } catch (err) {
       toast.error(editing ? t("products.updateError") : t("products.createError"), {
         description: err instanceof Error ? err.message : undefined,
@@ -256,6 +290,8 @@ function ProductFormModal({
     <Modal open={open} onClose={onClose} className="max-w-2xl">
       <h2 className="font-display text-xl text-stone-900 dark:text-stone-50">{editing ? t("products.editModalTitle") : t("products.modalTitle")}</h2>
       <form onSubmit={handleSubmit(onSubmit)} className="mt-6 flex flex-col gap-5">
+        {!createdListingId && (
+        <>
         <div className="grid grid-cols-1 gap-5 sm:grid-cols-2">
           <Controller
             name="categoryId"
@@ -294,16 +330,35 @@ function ProductFormModal({
           />
         </div>
 
-        <Input
-          label={t("products.form.title")}
-          placeholder={t("products.form.titlePlaceholder")}
-          error={errors.title?.message}
-          {...register("title", {
-            required: t("products.form.required"),
-            minLength: { value: 3, message: t("products.form.titleLength") },
-            maxLength: { value: 150, message: t("products.form.titleLength") },
-          })}
-        />
+        <div className="flex flex-col gap-2">
+          <p className="text-xs text-stone-400 dark:text-stone-500">{t("products.form.titleHint")}</p>
+          <div className="grid grid-cols-1 gap-5 sm:grid-cols-3">
+            <Input
+              label={t("products.form.titleRu")}
+              error={errors.titleRu?.message}
+              {...register("titleRu", {
+                validate: {
+                  atLeastOne: (v, values) => !!(v || values.titleTj || values.titleEn) || t("products.form.titleAnyLanguageRequired"),
+                  length: (v) => !v || (v.length >= 3 && v.length <= 150) || t("products.form.titleLength"),
+                },
+              })}
+            />
+            <Input
+              label={t("products.form.titleTj")}
+              error={errors.titleTj?.message}
+              {...register("titleTj", {
+                validate: (v) => !v || (v.length >= 3 && v.length <= 150) || t("products.form.titleLength"),
+              })}
+            />
+            <Input
+              label={t("products.form.titleEn")}
+              error={errors.titleEn?.message}
+              {...register("titleEn", {
+                validate: (v) => !v || (v.length >= 3 && v.length <= 150) || t("products.form.titleLength"),
+              })}
+            />
+          </div>
+        </div>
 
         <div className="grid grid-cols-1 gap-5 sm:grid-cols-2">
           <Controller
@@ -397,21 +452,55 @@ function ProductFormModal({
           />
         </div>
 
-        <Textarea label={t("products.form.description")} hint={t("products.form.optional")} {...register("description", { maxLength: { value: 2000, message: t("products.form.descriptionLength") } })} />
+        <div className="flex flex-col gap-3">
+          <Textarea
+            label={t("products.form.descriptionRu")}
+            hint={t("products.form.optional")}
+            {...register("descriptionRu", { maxLength: { value: 2000, message: t("products.form.descriptionLength") } })}
+            error={errors.descriptionRu?.message}
+          />
+          <Textarea
+            label={t("products.form.descriptionTj")}
+            hint={t("products.form.optional")}
+            {...register("descriptionTj", { maxLength: { value: 2000, message: t("products.form.descriptionLength") } })}
+            error={errors.descriptionTj?.message}
+          />
+          <Textarea
+            label={t("products.form.descriptionEn")}
+            hint={t("products.form.optional")}
+            {...register("descriptionEn", { maxLength: { value: 2000, message: t("products.form.descriptionLength") } })}
+            error={errors.descriptionEn?.message}
+          />
+        </div>
+        </>
+        )}
 
         {editing ? (
           <ProductImagesField listingId={editing.id} />
+        ) : createdListingId ? (
+          <div className="flex flex-col gap-2">
+            <p className="text-sm font-medium text-grove-700 dark:text-grove-400">{t("products.form.createdNowAddPhotos")}</p>
+            <ProductImagesField listingId={createdListingId} />
+          </div>
         ) : (
           <p className="text-xs text-stone-400 dark:text-stone-500">{t("products.form.photosAfterCreate")}</p>
         )}
 
         <div className="mt-2 flex justify-end gap-3">
-          <Button type="button" variant="outline" onClick={onClose}>
-            {t("products.form.cancel")}
-          </Button>
-          <Button type="submit" loading={isSubmitting}>
-            {editing ? t("products.form.saveChanges") : t("products.form.submit")}
-          </Button>
+          {createdListingId ? (
+            <Button type="button" onClick={onClose}>
+              {t("products.form.done")}
+            </Button>
+          ) : (
+            <>
+              <Button type="button" variant="outline" onClick={onClose}>
+                {t("products.form.cancel")}
+              </Button>
+              <Button type="submit" loading={isSubmitting}>
+                {editing ? t("products.form.saveChanges") : t("products.form.submit")}
+              </Button>
+            </>
+          )}
         </div>
       </form>
     </Modal>

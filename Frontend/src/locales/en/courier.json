@@ -39,6 +39,21 @@
     "itemCount": "{{count}} item(s)",
     "eta": "Expected"
   },
+  "farmerStatus": {
+    "label": "Farmer status",
+    "values": {
+      "accepted": "Accepted",
+      "handedToCourier": "Handed to courier"
+    }
+  },
+  "myStatus": {
+    "label": "My status",
+    "notStarted": "not started yet",
+    "values": {
+      "accepted": "Accepted",
+      "delivered": "Delivered"
+    }
+  },
   "actions": {
     "accept": "Accept delivery",
     "acceptSuccess": "Delivery accepted",
@@ -50,9 +65,12 @@
   },
   "confirmModal": {
     "title": "Confirm delivery",
-    "description": "Ask the customer for the 4-digit code and enter it here.",
+    "description": "Take a photo at the customer's door to confirm delivery.",
+    "takePhoto": "Take photo",
+    "invalidType": "Only JPG, PNG, or WEBP photos are allowed",
+    "tooLarge": "Photo size must not exceed 5 MB",
     "success": "Delivery confirmed",
-    "error": "Incorrect code or too many attempts"
+    "error": "Failed to confirm delivery"
   },
   "notificationsPage": {
     "errorTitle": "Failed to load notifications",

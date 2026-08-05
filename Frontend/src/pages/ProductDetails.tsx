@@ -39,6 +39,7 @@ import { useCart } from "@/context/CartContext";
 import { useFavorites } from "@/context/FavoritesContext";
 import { resolveMediaUrl } from "@/lib/api";
 import { cn, formatDate, formatSomoni, getEffectiveMinQuantity, getQuantityStep, getUnitPrice, WEIGHT_UNIT } from "@/lib/utils";
+import { getLocalizedDescription, getLocalizedShortDescription, getLocalizedTitle } from "@/lib/productI18n";
 
 const BADGE_VARIANTS: Record<string, "grove" | "harvest" | "clay" | "dark"> = {
   organic: "grove",
@@ -49,7 +50,7 @@ const BADGE_VARIANTS: Record<string, "grove" | "harvest" | "clay" | "dark"> = {
 };
 
 export function ProductDetails() {
-  const { t } = useTranslation(["pages", "product", "common", "layout", "data"]);
+  const { t, i18n } = useTranslation(["pages", "product", "common", "layout", "data"]);
   const { slug } = useParams();
   const navigate = useNavigate();
   const { user } = useAuth();
@@ -95,6 +96,9 @@ export function ProductDetails() {
   const category = categories.find((c) => c.id === product.categoryId);
   const farmer = farmers.find((f) => f.id === product.farmerId);
   const reviews = getReviewsForProduct(product.id);
+  const title = getLocalizedTitle(product, i18n.language);
+  const description = getLocalizedDescription(product, i18n.language);
+  const shortDescription = getLocalizedShortDescription(product, i18n.language);
   const related = products
     .filter((p) => p.id !== product.id && (p.categoryId === product.categoryId || p.farmerId === product.farmerId))
     .slice(0, 4);
@@ -133,7 +137,7 @@ export function ProductDetails() {
       <Breadcrumbs
         items={[
           { label: category?.name ?? t("layout:nav.catalog"), to: `/catalog?category=${category?.slug}` },
-          { label: product.title },
+          { label: title },
         ]}
         className="mb-6"
       />
@@ -141,7 +145,7 @@ export function ProductDetails() {
       <div className="grid grid-cols-1 gap-12 lg:grid-cols-2">
         <ProductGallery
           src={product.photoUrl}
-          title={product.title}
+          title={title}
         />
 
         <div className="flex flex-col gap-5">
@@ -155,7 +159,7 @@ export function ProductDetails() {
           </div>
 
           <h1 className="text-balance font-display text-3xl leading-tight text-stone-900 sm:text-4xl dark:text-stone-50">
-            {product.title}
+            {title}
           </h1>
 
           <div className="flex flex-wrap items-center gap-4">
@@ -252,7 +256,7 @@ export function ProductDetails() {
             ))}
           </div>
 
-          <p className="text-[15px] leading-relaxed text-stone-500 dark:text-stone-400">{product.shortDescription}</p>
+          <p className="text-[15px] leading-relaxed text-stone-500 dark:text-stone-400">{shortDescription}</p>
 
           <div className="flex flex-col gap-1.5">
             <div className="flex flex-col gap-3 pt-1 sm:flex-row sm:items-center">
@@ -336,7 +340,7 @@ export function ProductDetails() {
 
           <div className="mt-8 max-w-3xl">
             <TabsContent value="description">
-              <p className="text-[15px] leading-relaxed text-stone-600 dark:text-stone-300">{product.description}</p>
+              <p className="text-[15px] leading-relaxed text-stone-600 dark:text-stone-300">{description}</p>
             </TabsContent>
             <TabsContent value="specs">
               <dl className="divide-y divide-stone-100 overflow-hidden rounded-2xl border border-stone-100 dark:divide-stone-800 dark:border-stone-800">

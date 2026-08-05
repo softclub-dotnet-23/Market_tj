@@ -10,18 +10,21 @@ public static class ProductListingValidator
     // Create: AvailableQuantity строго больше 0 (раздел 21 ТЗ — на момент
     // публикации объявление должно быть в наличии).
     public static Result<string>? ValidateCreate(CreateProductListingDto dto)
-        => Validate(dto.FarmerProfileId, dto.CategoryId, dto.Unit, dto.Title, dto.Description, dto.RetailPricePerKg,
+        => Validate(dto.FarmerProfileId, dto.CategoryId, dto.Unit, dto.Title, dto.TitleTj, dto.TitleEn,
+            dto.Description, dto.DescriptionTj, dto.DescriptionEn, dto.RetailPricePerKg,
             dto.WholesalePricePerKg, dto.WholesaleMinimumQuantity, dto.AvailableQuantity, dto.MinimumOrderQuantity,
             dto.QualityGrade, dto.Region, dto.District, dto.Address, dto.Status, requireQuantityPositive: true);
 
     // Update: AvailableQuantity может опуститься до 0 (раздел 8.7/10.2 —
     // тогда статус переходит в OutOfStock), поэтому здесь >= 0.
     public static Result<string>? ValidateUpdate(UpdateProductListingDto dto)
-        => Validate(dto.FarmerProfileId, dto.CategoryId, dto.Unit, dto.Title, dto.Description, dto.RetailPricePerKg,
+        => Validate(dto.FarmerProfileId, dto.CategoryId, dto.Unit, dto.Title, dto.TitleTj, dto.TitleEn,
+            dto.Description, dto.DescriptionTj, dto.DescriptionEn, dto.RetailPricePerKg,
             dto.WholesalePricePerKg, dto.WholesaleMinimumQuantity, dto.AvailableQuantity, dto.MinimumOrderQuantity,
             dto.QualityGrade, dto.Region, dto.District, dto.Address, dto.Status, requireQuantityPositive: false);
 
-    private static Result<string>? Validate(int farmerProfileId, int categoryId, string unit, string title, string? description,
+    private static Result<string>? Validate(int farmerProfileId, int categoryId, string unit,
+        string? title, string? titleTj, string? titleEn, string? description, string? descriptionTj, string? descriptionEn,
         decimal retailPrice, decimal? wholesalePrice, decimal? wholesaleMinQuantity, decimal availableQuantity,
         decimal minimumOrderQuantity, string qualityGrade, string region, string district, string address,
         ListingStatus status, bool requireQuantityPositive)
@@ -35,15 +38,19 @@ public static class ProductListingValidator
         if (string.IsNullOrWhiteSpace(unit))
             return Result<string>.Fail("Unit обязателен", ErrorType.Validation);
 
-        // Раздел 21 ТЗ.
-        if (string.IsNullOrWhiteSpace(title))
-            return Result<string>.Fail("Title обязателен", ErrorType.Validation);
+        // По прямому запросу пользователя (2026-08-05): достаточно заполнить
+        // МИНИМУМ один язык названия — остальные (включая русский Title)
+        // переводятся автоматически через Groq (см. ProductListingService).
+        if (string.IsNullOrWhiteSpace(title) && string.IsNullOrWhiteSpace(titleTj) && string.IsNullOrWhiteSpace(titleEn))
+            return Result<string>.Fail("Заполните название товара хотя бы на одном языке", ErrorType.Validation);
 
-        if (title.Length is < 3 or > 150)
-            return Result<string>.Fail("Title должен быть от 3 до 150 символов", ErrorType.Validation);
+        foreach (var (fieldName, value) in new[] { ("Title", title), ("TitleTj", titleTj), ("TitleEn", titleEn) })
+            if (value is { Length: < 3 or > 150 })
+                return Result<string>.Fail($"{fieldName} должен быть от 3 до 150 символов", ErrorType.Validation);
 
-        if (description is { Length: > 2000 })
-            return Result<string>.Fail("Description не должен превышать 2000 символов", ErrorType.Validation);
+        foreach (var (fieldName, value) in new[] { ("Description", description), ("DescriptionTj", descriptionTj), ("DescriptionEn", descriptionEn) })
+            if (value is { Length: > 2000 })
+                return Result<string>.Fail($"{fieldName} не должен превышать 2000 символов", ErrorType.Validation);
 
         // Раздел 21/8.7 ТЗ.
         if (retailPrice <= 0)

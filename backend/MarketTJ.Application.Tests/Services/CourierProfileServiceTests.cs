@@ -2,6 +2,7 @@ using MarketTJ.Application.Common;
 using MarketTJ.Application.Dto.CourierProfileDto;
 using MarketTJ.Application.Interfaces.Repositories;
 using MarketTJ.Application.Interfaces.Services;
+using MarketTJ.Application.Results;
 using MarketTJ.Application.Services;
 using MarketTJ.Domain.Entities;
 using MarketTJ.Domain.Enums;
@@ -16,24 +17,26 @@ public class CourierProfileServiceTests
     private readonly Mock<IUserRepository> _userRepository = new();
     private readonly Mock<ICurrentUserService> _currentUser = new();
     private readonly Mock<ICourierDocumentService> _courierDocumentService = new();
+    private readonly Mock<IGoogleGeocodingService> _geocodingService = new();
     private readonly Mock<ILogger<CourierProfileService>> _logger = new();
     private readonly CourierProfileService _service;
 
     public CourierProfileServiceTests()
     {
-        _service = new CourierProfileService(_courierProfileRepository.Object, _userRepository.Object, _currentUser.Object, _courierDocumentService.Object, _logger.Object);
+        _service = new CourierProfileService(_courierProfileRepository.Object, _userRepository.Object, _currentUser.Object, _courierDocumentService.Object, _geocodingService.Object, _logger.Object);
         _currentUser.Setup(c => c.UserId).Returns(1);
         _currentUser.Setup(c => c.Role).Returns(nameof(UserRole.Courier));
         _userRepository.Setup(r => r.GetByIdAsync(It.IsAny<int>())).ReturnsAsync((int id) => new User { Id = id, Role = UserRole.Courier, FullName = "Courier", Email = "cr@example.com", PhoneNumber = "+992900000000", PasswordHash = "hash" });
         _courierProfileRepository.Setup(r => r.GetAllAsync()).ReturnsAsync([]);
         _courierDocumentService.Setup(s => s.HasApprovedRequiredDocumentsAsync(It.IsAny<int>())).ReturnsAsync(true);
+        _geocodingService.Setup(s => s.GeocodeAsync(It.IsAny<string>())).ReturnsAsync(Result<(double, double)>.Ok((38.5, 68.7)));
     }
 
     private static CourierProfile CreateProfile(int id = 1, int userId = 1) => new()
     {
         Id = id,
         UserId = userId,
-        TransportType = "Car",
+        TransportType = "Автомобиль",
         VehicleNumber = "1234AB",
         Region = "Хатлон",
         District = "Бохтар",
@@ -46,7 +49,7 @@ public class CourierProfileServiceTests
     private static CreateCourierProfileDto ValidCreateDto(int userId = 1) => new()
     {
         UserId = userId,
-        TransportType = "Car",
+        TransportType = "Автомобиль",
         VehicleNumber = "1234AB",
         Region = "Хатлон",
         District = "Бохтар",
@@ -58,7 +61,7 @@ public class CourierProfileServiceTests
     {
         Id = id,
         UserId = userId,
-        TransportType = "Car",
+        TransportType = "Автомобиль",
         VehicleNumber = "1234AB",
         Region = "Хатлон",
         District = "Бохтар",
@@ -151,10 +154,66 @@ public class CourierProfileServiceTests
     }
 
     [Fact]
+    public async Task CreateAsync_ValidData_GeocodesAddressAndSetsCoordinates()
+    {
+        var dto = ValidCreateDto();
+        dto.Address = "ул. Тестовая 1";
+        _geocodingService.Setup(s => s.GeocodeAsync(It.IsAny<string>())).ReturnsAsync(Result<(double, double)>.Ok((38.55, 68.78)));
+
+        var result = await _service.CreateAsync(dto);
+
+        Assert.True(result.IsSuccess);
+        _geocodingService.Verify(s => s.GeocodeAsync(It.IsAny<string>()), Times.Once);
+        _courierProfileRepository.Verify(r => r.AddAsync(It.Is<CourierProfile>(p => p.Latitude == 38.55 && p.Longitude == 68.78)), Times.Once);
+    }
+
+    [Fact]
+    public async Task CreateAsync_GeocodingFails_SavesProfileWithNullCoordinates()
+    {
+        var dto = ValidCreateDto();
+        _geocodingService.Setup(s => s.GeocodeAsync(It.IsAny<string>())).ReturnsAsync(Result<(double, double)>.Fail("Адрес не найден", ErrorType.Validation));
+
+        var result = await _service.CreateAsync(dto);
+
+        Assert.True(result.IsSuccess);
+        _courierProfileRepository.Verify(r => r.AddAsync(It.Is<CourierProfile>(p => p.Latitude == null && p.Longitude == null)), Times.Once);
+    }
+
+    [Fact]
     public async Task CreateAsync_EmptyTransportType_ReturnsValidationError()
     {
         var dto = ValidCreateDto();
         dto.TransportType = "";
+
+        var result = await _service.CreateAsync(dto);
+
+        Assert.False(result.IsSuccess);
+        Assert.Equal(ErrorType.Validation, result.ErrorType);
+        _courierProfileRepository.Verify(r => r.AddAsync(It.IsAny<CourierProfile>()), Times.Never);
+    }
+
+    [Theory]
+    [InlineData("Портер")]
+    [InlineData("КамАЗ")]
+    public async Task CreateAsync_AllowedTransportType_AddsProfileAndReturnsOk(string transportType)
+    {
+        var dto = ValidCreateDto();
+        dto.TransportType = transportType;
+
+        var result = await _service.CreateAsync(dto);
+
+        Assert.True(result.IsSuccess);
+        _courierProfileRepository.Verify(r => r.AddAsync(It.IsAny<CourierProfile>()), Times.Once);
+    }
+
+    [Theory]
+    [InlineData("Мотоцикл")]
+    [InlineData("Велосипед")]
+    [InlineData("Пешком")]
+    public async Task CreateAsync_DisallowedTransportType_ReturnsValidationError(string transportType)
+    {
+        var dto = ValidCreateDto();
+        dto.TransportType = transportType;
 
         var result = await _service.CreateAsync(dto);
 
@@ -240,6 +299,39 @@ public class CourierProfileServiceTests
     // ---------- UpdateAsync ----------
 
     [Fact]
+    public async Task UpdateAsync_AddressChanged_Regeocodes()
+    {
+        var profile = CreateProfile(1, 1);
+        profile.Address = "Old address";
+        _courierProfileRepository.Setup(r => r.GetByIdAsync(1)).ReturnsAsync(profile);
+        var dto = ValidUpdateDto(1, 1);
+        dto.Address = "New address";
+        _geocodingService.Setup(s => s.GeocodeAsync(It.IsAny<string>())).ReturnsAsync(Result<(double, double)>.Ok((38.60, 68.85)));
+
+        var result = await _service.UpdateAsync(1, dto);
+
+        Assert.True(result.IsSuccess);
+        _geocodingService.Verify(s => s.GeocodeAsync(It.IsAny<string>()), Times.Once);
+        Assert.Equal(38.60, profile.Latitude);
+        Assert.Equal(68.85, profile.Longitude);
+    }
+
+    [Fact]
+    public async Task UpdateAsync_LocationUnchanged_DoesNotRegeocode()
+    {
+        var profile = CreateProfile(1, 1);
+        profile.Address = "Same address";
+        _courierProfileRepository.Setup(r => r.GetByIdAsync(1)).ReturnsAsync(profile);
+        var dto = ValidUpdateDto(1, 1);
+        dto.Address = "Same address";
+
+        var result = await _service.UpdateAsync(1, dto);
+
+        Assert.True(result.IsSuccess);
+        _geocodingService.Verify(s => s.GeocodeAsync(It.IsAny<string>()), Times.Never);
+    }
+
+    [Fact]
     public async Task UpdateAsync_ValidData_UpdatesProfileAndReturnsOk()
     {
         var profile = CreateProfile(1, 1);
@@ -298,6 +390,38 @@ public class CourierProfileServiceTests
     {
         var dto = ValidUpdateDto(1);
         dto.TransportType = "";
+
+        var result = await _service.UpdateAsync(1, dto);
+
+        Assert.False(result.IsSuccess);
+        Assert.Equal(ErrorType.Validation, result.ErrorType);
+        _courierProfileRepository.Verify(r => r.UpdateAsync(It.IsAny<CourierProfile>()), Times.Never);
+    }
+
+    [Theory]
+    [InlineData("Портер")]
+    [InlineData("КамАЗ")]
+    public async Task UpdateAsync_AllowedTransportType_UpdatesProfileAndReturnsOk(string transportType)
+    {
+        var profile = CreateProfile(1, 1);
+        _courierProfileRepository.Setup(r => r.GetByIdAsync(1)).ReturnsAsync(profile);
+        var dto = ValidUpdateDto(1);
+        dto.TransportType = transportType;
+
+        var result = await _service.UpdateAsync(1, dto);
+
+        Assert.True(result.IsSuccess);
+        _courierProfileRepository.Verify(r => r.UpdateAsync(It.IsAny<CourierProfile>()), Times.Once);
+    }
+
+    [Theory]
+    [InlineData("Мотоцикл")]
+    [InlineData("Велосипед")]
+    [InlineData("Пешком")]
+    public async Task UpdateAsync_DisallowedTransportType_ReturnsValidationError(string transportType)
+    {
+        var dto = ValidUpdateDto(1);
+        dto.TransportType = transportType;
 
         var result = await _service.UpdateAsync(1, dto);
 

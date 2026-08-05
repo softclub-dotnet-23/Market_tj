@@ -96,6 +96,11 @@
       "title": "Номи эълон",
       "titlePlaceholder": "Масалан: Помидори заминӣ, ҳосили тару тоза",
       "titleLength": "Ном бояд аз 3 то 150 аломат бошад",
+      "titleHint": "Номро ҳадди ақал ба як забон пур кунед — боқимонда худкор тарҷума мешаванд",
+      "titleRu": "Номи маҳсулот (Русӣ)",
+      "titleTj": "Номи маҳсулот (Тоҷикӣ)",
+      "titleEn": "Product name (English)",
+      "titleAnyLanguageRequired": "Номро ҳадди ақал ба як забон пур кунед",
       "qualityGrade": "Навъ / сифат",
       "qualityOptions": {
         "premium": "Премиум",
@@ -115,6 +120,9 @@
       "optional": "Ихтиёрӣ",
       "description": "Тавсиф",
       "descriptionLength": "На бештар аз 2000 аломат",
+      "descriptionRu": "Тавсиф (Русӣ)",
+      "descriptionTj": "Тавсиф (Тоҷикӣ)",
+      "descriptionEn": "Description (English)",
       "required": "Майдони ҳатмӣ",
       "mustBePositive": "Бояд аз 0 зиёд бошад",
       "submit": "Сохтани эълон",
@@ -123,6 +131,8 @@
       "photos": "Акси маҳсулот",
       "photosHint": "То 5 акс, форматҳои jpg/png/webp, то 5 МБ ҳар як",
       "photosAfterCreate": "Аксро пас аз сохтани маҳсулот илова карда метавонед",
+      "createdNowAddPhotos": "Маҳсулот сохта шуд! Ҳоло метавонед акс илова кунед.",
+      "done": "Тайёр",
       "photoDelete": "Нест кардани акс",
       "photoInvalidType": "Танҳо форматҳои jpg, png, webp иҷозат дода мешаванд",
       "photoTooLarge": "Андозаи ҳадди аксари файл — 5 МБ",
@@ -192,9 +202,27 @@
       "assignAction": "Таъини курер",
       "confirmManualAction": "Тасдиқи расонидан",
       "confirmManualTitle": "Тасдиқи расонидан",
-      "confirmManualDescription": "Аз харидор рамзи 4-рақама пурсед ва инҷо ворид кунед.",
+      "confirmManualDescription": "Дар назди дари харидор сурат гиред, то расониданро тасдиқ кунед.",
+      "confirmManualTakePhoto": "Сурат гирифтан",
+      "confirmManualInvalidType": "Танҳо суратҳои JPG, PNG ё WEBP иҷозат дода мешаванд",
+      "confirmManualTooLarge": "Андозаи сурат набояд аз 5 МБ зиёд бошад",
       "confirmManualSuccess": "Расонидан тасдиқ шуд",
       "confirmManualError": "Тасдиқи расонидан имконнопазир шуд"
+    },
+    "farmerStatus": {
+      "label": "Ҳолати шумо",
+      "values": {
+        "accepted": "Қабул шуд",
+        "handedToCourier": "Ба курер дода шуд"
+      }
+    },
+    "courierStatus": {
+      "label": "Ҳолати курер",
+      "notStarted": "ҳанӯз оғоз нашудааст",
+      "values": {
+        "accepted": "Қабул кард",
+        "delivered": "Расонида шуд"
+      }
     },
     "customerLabel": "Харидор #{{id}}",
     "moreItems": "боз {{count}}",

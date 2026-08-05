@@ -15,8 +15,16 @@ public class ProductListing
     public int? ProductId { get; set; }
     public int CategoryId { get; set; }
     public string Unit { get; set; } = null!;
+    // Title/Description — русский (основной, обязательный) язык, по образцу
+    // Category.Name/NameTj/NameEn. TitleTj/TitleEn/DescriptionTj/
+    // DescriptionEn — nullable, автоматически переводятся через Groq
+    // (ProductListingService), если фермер их не заполнил сам (2026-08-05).
     public string Title { get; set; } = null!;
+    public string? TitleTj { get; set; }
+    public string? TitleEn { get; set; }
     public string? Description { get; set; }
+    public string? DescriptionTj { get; set; }
+    public string? DescriptionEn { get; set; }
     public decimal RetailPricePerKg { get; set; }
     public decimal? WholesalePricePerKg { get; set; }
     public decimal? WholesaleMinimumQuantity { get; set; }

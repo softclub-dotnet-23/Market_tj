@@ -6,9 +6,10 @@ import { PhotoTile } from "@/components/ui/PhotoTile";
 import { RatingStars } from "@/components/ui/RatingStars";
 import { useProducts } from "@/data/products";
 import { formatSomoni, timeAgo } from "@/lib/utils";
+import { getLocalizedTitle } from "@/lib/productI18n";
 
 export function FreshHarvest() {
-  const { t } = useTranslation(["sections", "common", "product"]);
+  const { t, i18n } = useTranslation(["sections", "common", "product"]);
   const products = useProducts();
   const freshest = [...products]
     .sort((a, b) => new Date(b.harvestDate).getTime() - new Date(a.harvestDate).getTime())
@@ -76,10 +77,10 @@ export function FreshHarvest() {
                   className="flex items-center gap-3 rounded-2xl border border-stone-100 bg-white p-3 transition hover:shadow-(--shadow-card) dark:border-stone-800 dark:bg-stone-900"
                 >
                   <div className="h-16 w-16 shrink-0 overflow-hidden rounded-xl">
-                    <PhotoTile src={product.photoUrl} alt={product.title} className="h-full w-full" />
+                    <PhotoTile src={product.photoUrl} alt={getLocalizedTitle(product, i18n.language)} className="h-full w-full" />
                   </div>
                   <div className="min-w-0">
-                    <p className="truncate text-sm font-medium text-stone-800 dark:text-stone-100">{product.title}</p>
+                    <p className="truncate text-sm font-medium text-stone-800 dark:text-stone-100">{getLocalizedTitle(product, i18n.language)}</p>
                     <span className="text-[11px] text-stone-400 dark:text-stone-500">{timeAgo(product.harvestDate)}</span>
                   </div>
                 </Link>
