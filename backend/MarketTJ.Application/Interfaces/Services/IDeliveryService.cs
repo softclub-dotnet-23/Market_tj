@@ -20,6 +20,8 @@ public interface IDeliveryService
     Task<Result<IEnumerable<GetAvailableCourierDto>>> GetAvailableCouriersAsync(AvailableCourierFilter filter);
 
     Task<Result<string>> AssignCourierAsync(int orderId, AssignCourierDto dto);
+    Task<Result<string>> AssignManualCourierAsync(int orderId, AssignManualCourierDto dto);
+    Task<Result<string>> ConfirmManualDeliveryAsync(int deliveryId, ConfirmDeliveryDto dto);
     Task<Result<string>> UpdateAdminDetailsAsync(int deliveryId, UpdateDeliveryAdminDetailsDto dto);
     Task<Result<string>> CancelAsync(int deliveryId, CancelDeliveryDto dto);
 

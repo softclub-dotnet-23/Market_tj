@@ -5,8 +5,7 @@
     "products": "Products",
     "catalog": "Categories",
     "farmers": "Farmers",
-    "farmerDocuments": "Farmer documents",
-    "courierDocuments": "Courier documents",
+    "documents": "Documents",
     "customers": "Customers",
     "payments": "Payments",
     "reviews": "Reviews",
@@ -79,10 +78,6 @@
       "delivery": "Delivery",
       "createdAt": "Order date & time",
       "receivedAt": "Received date & time"
-    },
-    "delivery": {
-      "assignAction": "Assign courier",
-      "manageAction": "Manage delivery"
     },
     "customerLabel": "Customer #{{id}}",
     "farmerLabel": "Farmer #{{id}}",
@@ -486,6 +481,24 @@
     "rejectionReasonHint": "Shown to the courier",
     "required": "Required field",
     "cancel": "Cancel"
+  },
+  "documents": {
+    "title": "Documents",
+    "subtitle": "Review farmer and courier documents before verifying them",
+    "emptyDescription": "Documents uploaded by farmers and couriers for review will appear here.",
+    "filterType": {
+      "all": "All",
+      "farmer": "Farmers",
+      "courier": "Couriers"
+    },
+    "role": {
+      "farmer": "Farmer",
+      "courier": "Courier"
+    },
+    "columns": {
+      "name": "Name",
+      "role": "Role"
+    }
   },
   "platformSettings": {
     "title": "General platform settings",

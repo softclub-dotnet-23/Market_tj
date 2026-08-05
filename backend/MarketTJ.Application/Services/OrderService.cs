@@ -42,6 +42,18 @@ public class OrderService(
         return farmerProfile is not null && farmerProfile.Id == order.FarmerId;
     }
 
+    // Строго "фермер — владелец заказа", БЕЗ пропуска для Admin — по прямому
+    // запросу пользователя (2026-08-05): принять заказ (Status → Accepted)
+    // может только фермер, администратор эту роль больше не дублирует.
+    private async Task<bool> IsFarmerOwnerAsync(Order order)
+    {
+        if (currentUser.UserId is null)
+            return false;
+
+        var farmerProfile = await farmerProfileRepository.GetByUserIdAsync(currentUser.UserId.Value);
+        return farmerProfile is not null && farmerProfile.Id == order.FarmerId;
+    }
+
     public async Task<Result<IEnumerable<GetOrderDto>>> GetAllAsync()
     {
         try
@@ -212,6 +224,11 @@ public class OrderService(
             if (order.Status == OrderStatus.Completed)
                 return Result<string>.Fail("Завершённый заказ нельзя редактировать", ErrorType.Validation);
 
+            // По прямому запросу пользователя (2026-08-05): принять заказ
+            // может только фермер — владелец заказа, не Admin и не покупатель.
+            if (dto.Status == OrderStatus.Accepted && order.Status != OrderStatus.Accepted && !await IsFarmerOwnerAsync(order))
+                return Result<string>.Fail("Принять заказ может только фермер — владелец заказа", ErrorType.Forbidden);
+
             var customerProfile = await customerProfileRepository.GetByIdAsync(dto.CustomerId);
             if (customerProfile is null)
                 return Result<string>.Fail("Профиль покупателя не найден", ErrorType.NotFound);
@@ -333,6 +350,13 @@ public class OrderService(
             if (!Enum.IsDefined(status))
                 return Result<string>.Fail("Указан несуществующий статус заказа", ErrorType.Validation);
 
+            // По прямому запросу пользователя (2026-08-05): этот метод вызывает
+            // только Admin (см. AdminOrderController) — принимать заказ должен
+            // исключительно фермер (UpdateAsync/IsFarmerOwnerAsync), эта админ-
+            // ручка больше не может выставить Accepted вообще.
+            if (status == OrderStatus.Accepted)
+                return Result<string>.Fail("Принять заказ может только фермер — владелец заказа", ErrorType.Forbidden);
+
             var order = await orderRepository.GetByIdAsync(id);
             if (order is null)
                 return Result<string>.Fail("Заказ не найден", ErrorType.NotFound);
@@ -429,6 +453,40 @@ public class OrderService(
         {
             logger.LogError(ex, "Ошибка при подтверждении оплаты наличными для заказа {Id}", id);
             return Result<string>.Fail("Не удалось подтвердить оплату", ErrorType.InternalServerError);
+        }
+    }
+
+    // По прямому запросу пользователя (2026-08-05): заказ завершается сам,
+    // как только доставка подтверждена (курьером или фермером — для "ручного"
+    // курьера), без отдельного шага Admin. Вызывается изнутри DeliveryService
+    // после успешного ConfirmDeliveryAsync/ConfirmManualDeliveryAsync — права
+    // уже проверены там (и на доставку, и через владение заказом), здесь
+    // повторной проверки нет намеренно. Идемпотентно: если заказ уже
+    // Completed/Cancelled/Rejected, ничего не делает и не считается ошибкой.
+    public async Task<Result<string>> CompleteAfterDeliveryAsync(int orderId)
+    {
+        try
+        {
+            var order = await orderRepository.GetByIdAsync(orderId);
+            if (order is null)
+                return Result<string>.Fail("Заказ не найден", ErrorType.NotFound);
+
+            if (order.Status is OrderStatus.Completed or OrderStatus.Cancelled or OrderStatus.Rejected)
+                return Result<string>.Ok("Заказ уже закрыт");
+
+            var previousStatus = order.Status;
+            order.Status = OrderStatus.Completed;
+            order.CompletedAt ??= DateTime.UtcNow;
+            await orderRepository.UpdateAsync(order);
+
+            await ApplyWalletEffectsForStatusChangeAsync(order, previousStatus, OrderStatus.Completed);
+
+            return Result<string>.Ok("Заказ завершён");
+        }
+        catch (Exception ex)
+        {
+            logger.LogError(ex, "Ошибка при автозавершении заказа {OrderId} после доставки", orderId);
+            return Result<string>.Fail("Не удалось завершить заказ", ErrorType.InternalServerError);
         }
     }
 

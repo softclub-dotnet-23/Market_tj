@@ -42,10 +42,11 @@ public class DeliveryController(IDeliveryService service) : ApiControllerBase
     public async Task<IActionResult> GetMyDeliveries()
         => HandleResult(await service.GetMyDeliveriesAsync());
 
-    // Роль на контроллере — грубая проверка, точная (владелец заказа для
-    // Farmer, без ограничений для Admin) внутри DeliveryService — та же
-    // схема, что и везде в этом контроллере/проекте.
-    [Authorize(Roles = "Farmer,Admin")]
+    // По прямому запросу пользователя (2026-08-05): назначение курьера —
+    // исключительно фермер, Admin в этом больше не участвует ни основным, ни
+    // запасным путём (роль на контроллере — грубая проверка, точная внутри
+    // DeliveryService, та же схема, что и везде в этом контроллере/проекте).
+    [Authorize(Roles = "Farmer")]
     [HttpGet("available-couriers")]
     public async Task<IActionResult> GetAvailableCouriers(
         [FromQuery] bool onlyAvailable = false,
@@ -62,12 +63,22 @@ public class DeliveryController(IDeliveryService service) : ApiControllerBase
             MinRating = minRating,
         }));
 
-    // Фермер назначает курьера сам (2026-08-04) — Admin сохраняет право как
-    // запасной вариант, если фермер недоступен/не успевает.
-    [Authorize(Roles = "Farmer,Admin")]
+    [Authorize(Roles = "Farmer")]
     [HttpPost("by-order/{orderId:int}/assign")]
     public async Task<IActionResult> AssignCourier(int orderId, [FromBody] AssignCourierDto dto)
         => HandleResult(await service.AssignCourierAsync(orderId, dto));
+
+    // Курьер "вручную" (не зарегистрирован на платформе) — только имя и
+    // телефон, см. AssignManualCourierDto/AssignManualCourierAsync.
+    [Authorize(Roles = "Farmer")]
+    [HttpPost("by-order/{orderId:int}/assign-manual")]
+    public async Task<IActionResult> AssignManualCourier(int orderId, [FromBody] AssignManualCourierDto dto)
+        => HandleResult(await service.AssignManualCourierAsync(orderId, dto));
+
+    [Authorize(Roles = "Farmer")]
+    [HttpPost("{id:int}/confirm-manual")]
+    public async Task<IActionResult> ConfirmManualDelivery(int id, [FromBody] ConfirmDeliveryDto dto)
+        => HandleResult(await service.ConfirmManualDeliveryAsync(id, dto));
 
     [Authorize(Roles = "Admin")]
     [HttpPatch("{id:int}/admin-details")]
@@ -79,7 +90,7 @@ public class DeliveryController(IDeliveryService service) : ApiControllerBase
     public async Task<IActionResult> Cancel(int id, [FromBody] CancelDeliveryDto dto)
         => HandleResult(await service.CancelAsync(id, dto));
 
-    [Authorize(Roles = "Farmer,Admin")]
+    [Authorize(Roles = "Farmer")]
     [HttpPost("by-order/{orderId:int}/mark-ready")]
     public async Task<IActionResult> MarkReadyForPickup(int orderId)
         => HandleResult(await service.MarkReadyForPickupAsync(orderId));

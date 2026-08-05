@@ -1,10 +1,11 @@
 import { useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { toast } from "sonner";
-import { Loader2, MapPin, Package, Phone, Search, Star, Truck } from "lucide-react";
+import { Loader2, MapPin, Package, Phone, Search, Star, Truck, UserPen } from "lucide-react";
 import { Drawer } from "@/components/ui/Drawer";
 import { Button } from "@/components/ui/Button";
 import { Input, Select, Textarea, Checkbox } from "@/components/ui/Field";
+import { PhoneInput } from "@/components/ui/PhoneInput";
 import { Avatar } from "@/components/ui/Avatar";
 import { ConfirmDialog } from "@/components/ui/ConfirmDialog";
 import { EmptyState } from "@/components/ui/EmptyState";
@@ -13,6 +14,7 @@ import { ApiError, resolveMediaUrl } from "@/lib/api";
 import { cn } from "@/lib/utils";
 import {
   assignCourier,
+  assignManualCourier,
   updateDeliveryAdminDetails,
   useAvailableCouriers,
   type AvailableCourierDto,
@@ -68,6 +70,15 @@ export function AssignCourierDrawer({
 }) {
   const { t } = useTranslation(["delivery", "common"]);
 
+  // По прямому запросу пользователя (2026-08-05) — фермер может назначить
+  // курьера "вручную" (знакомого/своего водителя), не выбирая из
+  // зарегистрированных на платформе. Переключатель только для variant="farmer".
+  const [mode, setMode] = useState<"select" | "manual">(
+    existingDelivery && !existingDelivery.courierId && existingDelivery.manualCourierName ? "manual" : "select",
+  );
+  const [manualCourierName, setManualCourierName] = useState(existingDelivery?.manualCourierName ?? "");
+  const [manualCourierPhone, setManualCourierPhone] = useState(existingDelivery?.manualCourierPhone ?? "");
+
   const [onlyAvailable, setOnlyAvailable] = useState(true);
   const [region, setRegion] = useState("");
   const [transportType, setTransportType] = useState("");
@@ -84,6 +95,9 @@ export function AssignCourierDrawer({
 
   useEffect(() => {
     if (!open) return;
+    setMode(existingDelivery && !existingDelivery.courierId && existingDelivery.manualCourierName ? "manual" : "select");
+    setManualCourierName(existingDelivery?.manualCourierName ?? "");
+    setManualCourierPhone(existingDelivery?.manualCourierPhone ?? "");
     setSelectedCourierId(existingDelivery?.courierId ?? null);
     setDeliveryFee(
       existingDelivery ? String(existingDelivery.deliveryPrice) : order.currentDeliveryPrice !== undefined ? String(order.currentDeliveryPrice) : "",
@@ -99,9 +113,11 @@ export function AssignCourierDrawer({
     open,
   );
 
-  // Farmer: бэкенд уже сам ограничивает список своим регионом/районом (см.
-  // DeliveryService.GetAvailableCouriersAsync) — здесь только сортировка,
-  // "тот же район, что у заказа, первым" (2026-08-04).
+  // Farmer: бэкенд возвращает ВСЕХ активных курьеров, свой регион/район
+  // фермера только поднимает их в начало списка (исправление находки
+  // 2026-08-05 — жёсткий фильтр прятал единственного курьера в системе,
+  // если его район не совпадал в точности). Здесь — дополнительная
+  // клиентская сортировка "тот же район, что у заказа, первым" (2026-08-04).
   const couriers =
     variant === "farmer" && order.deliveryDistrict && rawCouriers
       ? [...rawCouriers].sort((a, b) => Number(b.district === order.deliveryDistrict) - Number(a.district === order.deliveryDistrict))
@@ -110,30 +126,40 @@ export function AssignCourierDrawer({
   const regions = Array.from(new Set((couriers ?? []).map((c) => c.region))).sort();
   const transportTypes = Array.from(new Set((couriers ?? []).map((c) => c.transportType))).sort();
 
+  const canSubmit =
+    mode === "select"
+      ? !!selectedCourierId
+      : manualCourierName.trim() !== "" && manualCourierPhone.replace(/\D/g, "").length === 12;
+
+  // Меняем ли мы уже назначенного курьера на другого (зарегистрированного
+  // или ручного) — в этом случае перед отправкой требуем подтверждение.
+  const isReplacing =
+    !!existingDelivery &&
+    (mode === "select" ? existingDelivery.courierId !== selectedCourierId : !existingDelivery.manualCourierName || existingDelivery.manualCourierName !== manualCourierName.trim());
+
   const doSubmit = async () => {
-    if (!selectedCourierId) return;
+    if (!canSubmit) return;
     setSubmitting(true);
     try {
-      if (existingDelivery) {
-        if (existingDelivery.courierId !== selectedCourierId) {
-          await assignCourier(order.id, {
-            courierId: selectedCourierId,
-            deliveryFee: Number(deliveryFee) || 0,
-            estimatedPickupAt: fromDatetimeLocal(estimatedPickupAt),
-            estimatedDeliveryAt: fromDatetimeLocal(estimatedDeliveryAt),
-            adminNote: adminNote || null,
-          });
-        } else {
-          await updateDeliveryAdminDetails(existingDelivery.id, {
-            deliveryFee: Number(deliveryFee) || 0,
-            estimatedPickupAt: fromDatetimeLocal(estimatedPickupAt),
-            estimatedDeliveryAt: fromDatetimeLocal(estimatedDeliveryAt),
-            adminNote: adminNote || null,
-          });
-        }
+      if (mode === "manual") {
+        await assignManualCourier(order.id, {
+          courierName: manualCourierName.trim(),
+          courierPhone: manualCourierPhone.trim(),
+          deliveryFee: Number(deliveryFee) || 0,
+          estimatedPickupAt: fromDatetimeLocal(estimatedPickupAt),
+          estimatedDeliveryAt: fromDatetimeLocal(estimatedDeliveryAt),
+          adminNote: adminNote || null,
+        });
+      } else if (existingDelivery && existingDelivery.courierId === selectedCourierId) {
+        await updateDeliveryAdminDetails(existingDelivery.id, {
+          deliveryFee: Number(deliveryFee) || 0,
+          estimatedPickupAt: fromDatetimeLocal(estimatedPickupAt),
+          estimatedDeliveryAt: fromDatetimeLocal(estimatedDeliveryAt),
+          adminNote: adminNote || null,
+        });
       } else {
         await assignCourier(order.id, {
-          courierId: selectedCourierId,
+          courierId: selectedCourierId!,
           deliveryFee: Number(deliveryFee) || 0,
           estimatedPickupAt: fromDatetimeLocal(estimatedPickupAt),
           estimatedDeliveryAt: fromDatetimeLocal(estimatedDeliveryAt),
@@ -151,8 +177,8 @@ export function AssignCourierDrawer({
   };
 
   const handleSubmitClick = () => {
-    if (!selectedCourierId) return;
-    if (existingDelivery?.courierId && existingDelivery.courierId !== selectedCourierId) {
+    if (!canSubmit) return;
+    if (isReplacing) {
       setConfirmReplace(true);
       return;
     }
@@ -196,67 +222,107 @@ export function AssignCourierDrawer({
             />
           )}
 
-          <div className="flex flex-col gap-3">
-            <div className="flex items-center justify-between">
-              <h3 className="font-display text-base text-stone-900 dark:text-stone-50">{t("delivery:assign.availableCouriers")}</h3>
-              <Checkbox label={t("delivery:assign.onlyAvailable")} checked={onlyAvailable} onChange={(e) => setOnlyAvailable(e.target.checked)} />
+          {variant === "farmer" && (
+            <div className="flex gap-2 rounded-xl bg-stone-100 p-1 dark:bg-stone-800">
+              <button
+                type="button"
+                onClick={() => setMode("select")}
+                className={cn(
+                  "flex-1 rounded-lg py-2 text-sm font-medium transition",
+                  mode === "select" ? "bg-white text-stone-900 shadow-sm dark:bg-stone-900 dark:text-stone-50" : "text-stone-500 dark:text-stone-400",
+                )}
+              >
+                {t("delivery:assign.modeSelect")}
+              </button>
+              <button
+                type="button"
+                onClick={() => setMode("manual")}
+                className={cn(
+                  "flex-1 rounded-lg py-2 text-sm font-medium transition",
+                  mode === "manual" ? "bg-white text-stone-900 shadow-sm dark:bg-stone-900 dark:text-stone-50" : "text-stone-500 dark:text-stone-400",
+                )}
+              >
+                {t("delivery:assign.modeManual")}
+              </button>
             </div>
+          )}
 
-            <div className={cn("grid grid-cols-2 gap-2.5", variant === "admin" && "sm:grid-cols-3")}>
-              {variant === "admin" && (
-                <Select value={region} onChange={setRegion}>
-                  <option value="">{t("delivery:assign.allRegions")}</option>
-                  {regions.map((r) => (
-                    <option key={r} value={r}>{r}</option>
+          {mode === "manual" ? (
+            <div className="flex flex-col gap-3">
+              <p className="text-sm text-stone-500 dark:text-stone-400">{t("delivery:assign.manualHint")}</p>
+              <Input
+                label={t("delivery:assign.manualName")}
+                leftIcon={<UserPen size={15} />}
+                value={manualCourierName}
+                onChange={(e) => setManualCourierName(e.target.value)}
+              />
+              <PhoneInput
+                label={t("delivery:assign.manualPhone")}
+                value={manualCourierPhone}
+                onChange={setManualCourierPhone}
+              />
+            </div>
+          ) : (
+            <div className="flex flex-col gap-3">
+              <div className="flex items-center justify-between">
+                <h3 className="font-display text-base text-stone-900 dark:text-stone-50">{t("delivery:assign.availableCouriers")}</h3>
+                <Checkbox label={t("delivery:assign.onlyAvailable")} checked={onlyAvailable} onChange={(e) => setOnlyAvailable(e.target.checked)} />
+              </div>
+
+              <div className={cn("grid grid-cols-2 gap-2.5", variant === "admin" && "sm:grid-cols-3")}>
+                {variant === "admin" && (
+                  <Select value={region} onChange={setRegion}>
+                    <option value="">{t("delivery:assign.allRegions")}</option>
+                    {regions.map((r) => (
+                      <option key={r} value={r}>{r}</option>
+                    ))}
+                  </Select>
+                )}
+                <Select value={transportType} onChange={setTransportType}>
+                  <option value="">{t("delivery:assign.allTransportTypes")}</option>
+                  {transportTypes.map((tt) => (
+                    <option key={tt} value={tt}>{tt}</option>
                   ))}
                 </Select>
+                <Select value={minRating} onChange={setMinRating}>
+                  <option value="">{t("delivery:assign.anyRating")}</option>
+                  <option value="3">3+</option>
+                  <option value="4">4+</option>
+                  <option value="4.5">4.5+</option>
+                </Select>
+              </div>
+
+              {loading ? (
+                <div className="flex justify-center py-8">
+                  <Loader2 size={22} className="animate-spin text-grove-600" />
+                </div>
+              ) : !couriers || couriers.length === 0 ? (
+                <EmptyState icon={<Search size={22} />} title={t("delivery:assign.noCouriers")} description={t("delivery:assign.noCouriersHint")} />
+              ) : (
+                <div className="flex flex-col gap-2.5">
+                  {couriers.map((courier) => (
+                    <CourierCard
+                      key={courier.id}
+                      courier={courier}
+                      selected={selectedCourierId === courier.id}
+                      onSelect={() => setSelectedCourierId(courier.id)}
+                    />
+                  ))}
+                </div>
               )}
-              <Select value={transportType} onChange={setTransportType}>
-                <option value="">{t("delivery:assign.allTransportTypes")}</option>
-                {transportTypes.map((tt) => (
-                  <option key={tt} value={tt}>{tt}</option>
-                ))}
-              </Select>
-              <Select value={minRating} onChange={setMinRating}>
-                <option value="">{t("delivery:assign.anyRating")}</option>
-                <option value="3">3+</option>
-                <option value="4">4+</option>
-                <option value="4.5">4.5+</option>
-              </Select>
             </div>
+          )}
 
-            {loading ? (
-              <div className="flex justify-center py-8">
-                <Loader2 size={22} className="animate-spin text-grove-600" />
-              </div>
-            ) : !couriers || couriers.length === 0 ? (
-              <EmptyState icon={<Search size={22} />} title={t("delivery:assign.noCouriers")} description={t("delivery:assign.noCouriersHint")} />
-            ) : (
-              <div className="flex flex-col gap-2.5">
-                {couriers.map((courier) => (
-                  <CourierCard
-                    key={courier.id}
-                    courier={courier}
-                    selected={selectedCourierId === courier.id}
-                    onSelect={() => setSelectedCourierId(courier.id)}
-                  />
-                ))}
-              </div>
-            )}
-          </div>
-
-          {selectedCourierId && (
+          {canSubmit && (
             <div className="flex flex-col gap-4 border-t border-stone-100 pt-5 dark:border-stone-800">
-              {variant === "admin" && (
-                <Input
-                  label={t("delivery:assign.deliveryFee")}
-                  type="number"
-                  min="0"
-                  step="0.01"
-                  value={deliveryFee}
-                  onChange={(e) => setDeliveryFee(e.target.value)}
-                />
-              )}
+              <Input
+                label={t("delivery:assign.deliveryFee")}
+                type="number"
+                min="0"
+                step="0.01"
+                value={deliveryFee}
+                onChange={(e) => setDeliveryFee(e.target.value)}
+              />
               <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
                 <Input
                   label={t("delivery:assign.estimatedPickup")}
@@ -288,7 +354,7 @@ export function AssignCourierDrawer({
           <Button type="button" variant="outline" onClick={onClose}>
             {t("common:actions.cancel")}
           </Button>
-          <Button type="button" loading={submitting} disabled={!selectedCourierId} onClick={handleSubmitClick} leftIcon={<Truck size={16} />}>
+          <Button type="button" loading={submitting} disabled={!canSubmit} onClick={handleSubmitClick} leftIcon={<Truck size={16} />}>
             {t("delivery:assign.submit")}
           </Button>
         </div>

@@ -189,13 +189,12 @@
       "receivedAt": "Сана ва вақти гирифтан"
     },
     "delivery": {
-      "waitingForAdmin": "Мунтазири он ҳастем, ки админ курерро таъин кунад.",
       "assignAction": "Таъини курер",
-      "readyAction": "Фармоиш барои супоридан омода аст",
-      "readySuccess": "Фармоиш ҳамчун омода қайд шуд",
-      "readyError": "Қайд кардани фармоиш ҳамчун омода имконнопазир шуд",
-      "readyConfirmTitle": "Фармоиш барои супоридан омода аст?",
-      "readyConfirmDescription": "Курер огоҳинома мегирад, ки фармоишро гирифта метавонад."
+      "confirmManualAction": "Тасдиқи расонидан",
+      "confirmManualTitle": "Тасдиқи расонидан",
+      "confirmManualDescription": "Аз харидор рамзи 4-рақама пурсед ва инҷо ворид кунед.",
+      "confirmManualSuccess": "Расонидан тасдиқ шуд",
+      "confirmManualError": "Тасдиқи расонидан имконнопазир шуд"
     },
     "customerLabel": "Харидор #{{id}}",
     "moreItems": "боз {{count}}",

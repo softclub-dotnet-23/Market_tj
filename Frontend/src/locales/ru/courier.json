@@ -44,11 +44,7 @@
     "acceptSuccess": "Доставка принята",
     "actionSuccess": "Статус обновлён",
     "actionError": "Не удалось выполнить действие",
-    "goingToFarmer": "Еду к фермеру",
-    "arrivedAtFarmer": "Я на месте у фермера",
-    "pickedUp": "Забрал товар",
-    "inTransit": "В пути к покупателю",
-    "arrivedAtClient": "Я на месте у покупателя",
+    "pickedUpGoing": "Забрал, еду к покупателю",
     "confirmDelivery": "Подтвердить доставку",
     "reportProblem": "Сообщить о проблеме"
   },
