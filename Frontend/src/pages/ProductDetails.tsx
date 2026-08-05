@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { Link, useNavigate, useParams } from "react-router-dom";
 import { motion } from "framer-motion";
 import { useTranslation } from "react-i18next";
@@ -62,6 +62,16 @@ export function ProductDetails() {
   const categories = useCategories();
   const farmers = useFarmers();
   const catalogLoaded = useCatalogLoaded();
+
+  // При первой загрузке страницы напрямую по ссылке каталог ещё не успевает
+  // загрузиться синхронно (product === undefined в момент инициализации
+  // useState выше), поэтому количество приходится досчитывать здесь же, как
+  // только товар появляется/меняется (переход между товарами переиспользует
+  // тот же компонент через react-router).
+  useEffect(() => {
+    if (product) setQuantity(getEffectiveMinQuantity(product));
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [product?.id]);
 
   if (!product && !catalogLoaded) return <PageLoader />;
 
