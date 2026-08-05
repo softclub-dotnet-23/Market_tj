@@ -24,6 +24,7 @@ public class AppDbContext(DbContextOptions<AppDbContext> options) : DbContext(op
     public DbSet<ChatMessage> ChatMessages => Set<ChatMessage>();
     public DbSet<AppSetting> AppSettings => Set<AppSetting>();
     public DbSet<FarmerDocument> FarmerDocuments => Set<FarmerDocument>();
+    public DbSet<CourierDocument> CourierDocuments => Set<CourierDocument>();
     public DbSet<AuditLog> AuditLogs => Set<AuditLog>();
     public DbSet<ReportedListing> ReportedListings => Set<ReportedListing>();
     public DbSet<RefundRequest> RefundRequests => Set<RefundRequest>();

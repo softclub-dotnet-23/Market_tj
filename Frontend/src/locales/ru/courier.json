@@ -1,7 +1,8 @@
 {
   "nav": {
     "myDeliveries": "Мои доставки",
-    "profile": "Профиль"
+    "profile": "Профиль",
+    "documents": "Документы"
   },
   "logout": "Выйти",
   "notifications": "Уведомления",
@@ -15,6 +16,7 @@
     "availableOnSuccess": "Вы снова доступны для заказов",
     "availableOffSuccess": "Вы отмечены как недоступный",
     "availabilityError": "Не удалось изменить статус доступности",
+    "documentsNotApproved": "Нельзя стать доступным, пока документы не одобрены администратором",
     "detailsTitle": "О себе",
     "transport": "Транспорт",
     "region": "Регион работы",
@@ -61,5 +63,32 @@
     "errorDescription": "Проверьте подключение к серверу и попробуйте снова.",
     "emptyTitle": "Пока нет уведомлений",
     "emptyDescription": "Здесь появятся уведомления о новых доставках."
+  },
+  "documents": {
+    "errorTitle": "Не удалось загрузить документы",
+    "errorDescription": "Проверьте подключение к серверу и попробуйте снова.",
+    "required": {
+      "title": "Документы для верификации",
+      "description": "Загрузите фото прав и техпаспорта транспорта — без одобрения администратором вы не сможете стать доступным для заказов.",
+      "notUploaded": "Не загружено",
+      "uploadAction": "Загрузить",
+      "replaceAction": "Заменить"
+    },
+    "type": {
+      "driverLicense": "Водительские права",
+      "vehicleRegistration": "Техпаспорт транспорта"
+    },
+    "status": {
+      "pending": "На проверке",
+      "approved": "Одобрено",
+      "rejected": "Отклонено"
+    },
+    "form": {
+      "fileInvalidType": "Разрешены только форматы: jpg, png, webp, pdf",
+      "fileTooLarge": "Максимальный размер файла — 10 МБ",
+      "fileHint": "JPG, PNG, WEBP или PDF, до 10 МБ"
+    },
+    "uploadSuccess": "Документ загружен",
+    "uploadError": "Не удалось загрузить документ"
   }
 }

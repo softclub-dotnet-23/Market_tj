@@ -43,6 +43,7 @@ public static class DependencyInjection
         services.AddScoped<IAppSettingService, AppSettingService>();
         services.AddScoped<IPlatformSettingsService, PlatformSettingsService>();
         services.AddScoped<IFarmerDocumentService, FarmerDocumentService>();
+        services.AddScoped<ICourierDocumentService, CourierDocumentService>();
         services.AddScoped<IAuditLogService, AuditLogService>();
         services.AddScoped<IReportedListingService, ReportedListingService>();
         services.AddScoped<IRefundRequestService, RefundRequestService>();

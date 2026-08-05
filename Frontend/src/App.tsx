@@ -33,6 +33,7 @@ const AdminFarmers = lazy(() => import("@/pages/AdminFarmers").then((m) => ({ de
 const AdminFarmerDetail = lazy(() => import("@/pages/AdminFarmerDetail").then((m) => ({ default: m.AdminFarmerDetail })));
 const AdminCatalog = lazy(() => import("@/pages/AdminCatalog").then((m) => ({ default: m.AdminCatalog })));
 const AdminFarmerDocuments = lazy(() => import("@/pages/AdminFarmerDocuments").then((m) => ({ default: m.AdminFarmerDocuments })));
+const AdminCourierDocuments = lazy(() => import("@/pages/AdminCourierDocuments").then((m) => ({ default: m.AdminCourierDocuments })));
 const AdminCouriers = lazy(() => import("@/pages/AdminCouriers").then((m) => ({ default: m.AdminCouriers })));
 const AdminDeliveryZones = lazy(() => import("@/pages/AdminDeliveryZones").then((m) => ({ default: m.AdminDeliveryZones })));
 const AdminCommissions = lazy(() => import("@/pages/AdminCommissions").then((m) => ({ default: m.AdminCommissions })));
@@ -59,6 +60,7 @@ const CustomerNotifications = lazy(() => import("@/pages/CustomerNotifications")
 const Wallet = lazy(() => import("@/pages/Wallet").then((m) => ({ default: m.Wallet })));
 const CourierDeliveries = lazy(() => import("@/pages/CourierDeliveries").then((m) => ({ default: m.CourierDeliveries })));
 const CourierProfile = lazy(() => import("@/pages/CourierProfile").then((m) => ({ default: m.CourierProfile })));
+const CourierDocuments = lazy(() => import("@/pages/CourierDocuments").then((m) => ({ default: m.CourierDocuments })));
 const CourierNotifications = lazy(() => import("@/pages/CourierNotifications").then((m) => ({ default: m.CourierNotifications })));
 
 function App() {
@@ -82,6 +84,7 @@ function App() {
                       <Route path="farmers" element={<AdminFarmers />} />
                       <Route path="farmers/:id" element={<AdminFarmerDetail />} />
                       <Route path="farmer-documents" element={<AdminFarmerDocuments />} />
+                      <Route path="courier-documents" element={<AdminCourierDocuments />} />
                       <Route path="couriers" element={<AdminCouriers />} />
                       <Route path="delivery-zones" element={<AdminDeliveryZones />} />
                       <Route path="users" element={<AdminUsers />} />
@@ -127,6 +130,7 @@ function App() {
                     <Route path="courier" element={<CourierLayout />}>
                       <Route index element={<CourierDeliveries />} />
                       <Route path="profile" element={<CourierProfile />} />
+                      <Route path="documents" element={<CourierDocuments />} />
                       <Route path="notifications" element={<CourierNotifications />} />
                       <Route path="*" element={<Navigate to="/courier" replace />} />
                     </Route>

@@ -147,20 +147,26 @@ export function useMyDeliveries(refreshKey = 0) {
 export interface AvailableCourierFilters {
   onlyAvailable?: boolean;
   region?: string;
+  district?: string;
   transportType?: string;
   minRating?: number;
 }
 
+// Для Farmer-вызова Region/District на бэкенде всё равно принудительно
+// подменяются на регион/район самого фермера (см. DeliveryService.
+// GetAvailableCouriersAsync) — то, что передаётся отсюда, имеет значение
+// только для Admin.
 export function useAvailableCouriers(filters: AvailableCourierFilters, enabled: boolean, refreshKey = 0) {
   const query = new URLSearchParams();
   if (filters.onlyAvailable) query.set("onlyAvailable", "true");
   if (filters.region) query.set("region", filters.region);
+  if (filters.district) query.set("district", filters.district);
   if (filters.transportType) query.set("transportType", filters.transportType);
   if (filters.minRating) query.set("minRating", String(filters.minRating));
 
   const { data, loading, error } = useAsync(
     () => (enabled ? apiGet<AvailableCourierDto[]>(`/deliveries/available-couriers?${query.toString()}`) : Promise.resolve(null)),
-    [enabled, filters.onlyAvailable, filters.region, filters.transportType, filters.minRating, refreshKey],
+    [enabled, filters.onlyAvailable, filters.region, filters.district, filters.transportType, filters.minRating, refreshKey],
   );
   return { couriers: data, loading, error };
 }

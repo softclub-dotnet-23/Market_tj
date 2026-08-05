@@ -6,6 +6,7 @@
     "catalog": "Категории",
     "farmers": "Фермеры",
     "farmerDocuments": "Документы фермеров",
+    "courierDocuments": "Документы курьеров",
     "customers": "Покупатели",
     "payments": "Платежи",
     "reviews": "Отзывы",
@@ -451,6 +452,44 @@
     "rejectModalTitle": "Отклонить документ",
     "rejectionReasonLabel": "Причина отклонения",
     "rejectionReasonHint": "Будет показана фермеру",
+    "required": "Обязательное поле",
+    "cancel": "Отмена"
+  },
+  "courierDocuments": {
+    "title": "Документы курьеров",
+    "subtitle": "Проверьте права и техпаспорт транспорта перед тем, как курьер сможет стать доступным для заказов",
+    "errorTitle": "Не удалось загрузить документы",
+    "errorDescription": "Проверьте подключение к серверу и попробуйте снова.",
+    "emptyTitle": "Нет документов",
+    "emptyDescription": "Здесь появятся документы, загруженные курьерами на проверку.",
+    "filterAll": "Все статусы",
+    "columns": {
+      "courier": "Курьер",
+      "type": "Тип документа",
+      "file": "Файл",
+      "status": "Статус",
+      "uploadedAt": "Загружен",
+      "actions": "Действия"
+    },
+    "type": {
+      "driverLicense": "Водительские права",
+      "vehicleRegistration": "Техпаспорт транспорта"
+    },
+    "status": {
+      "pending": "На проверке",
+      "approved": "Одобрен",
+      "rejected": "Отклонён"
+    },
+    "viewFile": "Открыть файл",
+    "approveAction": "Одобрить",
+    "rejectAction": "Отклонить",
+    "approveSuccess": "Документ одобрен",
+    "approveError": "Не удалось одобрить документ",
+    "rejectSuccess": "Документ отклонён",
+    "rejectError": "Не удалось отклонить документ",
+    "rejectModalTitle": "Отклонить документ",
+    "rejectionReasonLabel": "Причина отклонения",
+    "rejectionReasonHint": "Будет показана курьеру",
     "required": "Обязательное поле",
     "cancel": "Отмена"
   },

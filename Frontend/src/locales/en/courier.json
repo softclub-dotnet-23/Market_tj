@@ -1,7 +1,8 @@
 {
   "nav": {
     "myDeliveries": "My deliveries",
-    "profile": "Profile"
+    "profile": "Profile",
+    "documents": "Documents"
   },
   "logout": "Log out",
   "notifications": "Notifications",
@@ -15,6 +16,7 @@
     "availableOnSuccess": "You're available for orders again",
     "availableOffSuccess": "You're now marked unavailable",
     "availabilityError": "Failed to change availability status",
+    "documentsNotApproved": "You can't go available until the admin approves your documents",
     "detailsTitle": "About",
     "transport": "Transport",
     "region": "Working area",
@@ -61,5 +63,32 @@
     "errorDescription": "Check your connection to the server and try again.",
     "emptyTitle": "No notifications yet",
     "emptyDescription": "Notifications about new deliveries will appear here."
+  },
+  "documents": {
+    "errorTitle": "Failed to load documents",
+    "errorDescription": "Check your connection to the server and try again.",
+    "required": {
+      "title": "Verification documents",
+      "description": "Upload a photo of your driver's license and vehicle registration — you can't go available for orders until an admin approves both.",
+      "notUploaded": "Not uploaded",
+      "uploadAction": "Upload",
+      "replaceAction": "Replace"
+    },
+    "type": {
+      "driverLicense": "Driver's license",
+      "vehicleRegistration": "Vehicle registration"
+    },
+    "status": {
+      "pending": "Pending review",
+      "approved": "Approved",
+      "rejected": "Rejected"
+    },
+    "form": {
+      "fileInvalidType": "Only jpg, png, webp, or pdf files are allowed",
+      "fileTooLarge": "Maximum file size is 10 MB",
+      "fileHint": "JPG, PNG, WEBP or PDF, up to 10 MB"
+    },
+    "uploadSuccess": "Document uploaded",
+    "uploadError": "Failed to upload document"
   }
 }

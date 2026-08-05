@@ -15,16 +15,18 @@ public class CourierProfileServiceTests
     private readonly Mock<ICourierProfileRepository> _courierProfileRepository = new();
     private readonly Mock<IUserRepository> _userRepository = new();
     private readonly Mock<ICurrentUserService> _currentUser = new();
+    private readonly Mock<ICourierDocumentService> _courierDocumentService = new();
     private readonly Mock<ILogger<CourierProfileService>> _logger = new();
     private readonly CourierProfileService _service;
 
     public CourierProfileServiceTests()
     {
-        _service = new CourierProfileService(_courierProfileRepository.Object, _userRepository.Object, _currentUser.Object, _logger.Object);
+        _service = new CourierProfileService(_courierProfileRepository.Object, _userRepository.Object, _currentUser.Object, _courierDocumentService.Object, _logger.Object);
         _currentUser.Setup(c => c.UserId).Returns(1);
         _currentUser.Setup(c => c.Role).Returns(nameof(UserRole.Courier));
         _userRepository.Setup(r => r.GetByIdAsync(It.IsAny<int>())).ReturnsAsync((int id) => new User { Id = id, Role = UserRole.Courier, FullName = "Courier", Email = "cr@example.com", PhoneNumber = "+992900000000", PasswordHash = "hash" });
         _courierProfileRepository.Setup(r => r.GetAllAsync()).ReturnsAsync([]);
+        _courierDocumentService.Setup(s => s.HasApprovedRequiredDocumentsAsync(It.IsAny<int>())).ReturnsAsync(true);
     }
 
     private static CourierProfile CreateProfile(int id = 1, int userId = 1) => new()
@@ -242,6 +244,36 @@ public class CourierProfileServiceTests
     {
         var profile = CreateProfile(1, 1);
         _courierProfileRepository.Setup(r => r.GetByIdAsync(1)).ReturnsAsync(profile);
+
+        var result = await _service.UpdateAsync(1, ValidUpdateDto(1, 1));
+
+        Assert.True(result.IsSuccess);
+        _courierProfileRepository.Verify(r => r.UpdateAsync(It.IsAny<CourierProfile>()), Times.Once);
+    }
+
+    [Fact]
+    public async Task UpdateAsync_BecomingAvailableWithoutApprovedDocuments_ReturnsValidationError()
+    {
+        var profile = CreateProfile(1, 1);
+        profile.IsAvailable = false;
+        _courierProfileRepository.Setup(r => r.GetByIdAsync(1)).ReturnsAsync(profile);
+        _courierDocumentService.Setup(s => s.HasApprovedRequiredDocumentsAsync(1)).ReturnsAsync(false);
+
+        var result = await _service.UpdateAsync(1, ValidUpdateDto(1, 1));
+
+        Assert.False(result.IsSuccess);
+        Assert.Equal(ErrorType.Validation, result.ErrorType);
+        _courierProfileRepository.Verify(r => r.UpdateAsync(It.IsAny<CourierProfile>()), Times.Never);
+    }
+
+    [Fact]
+    public async Task UpdateAsync_AdminBecomingAvailableWithoutApprovedDocuments_Succeeds()
+    {
+        var profile = CreateProfile(1, 1);
+        profile.IsAvailable = false;
+        _currentUser.Setup(c => c.Role).Returns(nameof(UserRole.Admin));
+        _courierProfileRepository.Setup(r => r.GetByIdAsync(1)).ReturnsAsync(profile);
+        _courierDocumentService.Setup(s => s.HasApprovedRequiredDocumentsAsync(1)).ReturnsAsync(false);
 
         var result = await _service.UpdateAsync(1, ValidUpdateDto(1, 1));
 

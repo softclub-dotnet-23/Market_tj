@@ -276,6 +276,48 @@ namespace MarketTJ.Infrastructure.Migrations
                     b.ToTable("Conversations");
                 });
 
+            modelBuilder.Entity("MarketTJ.Domain.Entities.CourierDocument", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("integer");
+
+                    NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<int>("Id"));
+
+                    b.Property<int>("CourierProfileId")
+                        .HasColumnType("integer");
+
+                    b.Property<int>("DocumentType")
+                        .HasColumnType("integer");
+
+                    b.Property<string>("FileUrl")
+                        .IsRequired()
+                        .HasColumnType("text");
+
+                    b.Property<string>("RejectionReason")
+                        .HasColumnType("text");
+
+                    b.Property<DateTime?>("ReviewedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<int?>("ReviewedByAdminId")
+                        .HasColumnType("integer");
+
+                    b.Property<int>("Status")
+                        .HasColumnType("integer");
+
+                    b.Property<DateTime>("UploadedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("CourierProfileId");
+
+                    b.HasIndex("ReviewedByAdminId");
+
+                    b.ToTable("CourierDocuments");
+                });
+
             modelBuilder.Entity("MarketTJ.Domain.Entities.CourierProfile", b =>
                 {
                     b.Property<int>("Id")
@@ -823,6 +865,9 @@ namespace MarketTJ.Infrastructure.Migrations
                     b.Property<DateTime?>("CompletedAt")
                         .HasColumnType("timestamp with time zone");
 
+                    b.Property<int?>("CourierStatus")
+                        .HasColumnType("integer");
+
                     b.Property<DateTime>("CreatedAt")
                         .HasColumnType("timestamp with time zone");
 
@@ -848,6 +893,9 @@ namespace MarketTJ.Infrastructure.Migrations
                         .HasColumnType("text");
 
                     b.Property<int>("FarmerId")
+                        .HasColumnType("integer");
+
+                    b.Property<int?>("FarmerStatus")
                         .HasColumnType("integer");
 
                     b.Property<bool>("IsDeleted")
@@ -1666,6 +1714,24 @@ namespace MarketTJ.Infrastructure.Migrations
                     b.Navigation("Order");
                 });
 
+            modelBuilder.Entity("MarketTJ.Domain.Entities.CourierDocument", b =>
+                {
+                    b.HasOne("MarketTJ.Domain.Entities.CourierProfile", "CourierProfile")
+                        .WithMany("Documents")
+                        .HasForeignKey("CourierProfileId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.HasOne("MarketTJ.Domain.Entities.User", "ReviewedByAdmin")
+                        .WithMany()
+                        .HasForeignKey("ReviewedByAdminId")
+                        .OnDelete(DeleteBehavior.SetNull);
+
+                    b.Navigation("CourierProfile");
+
+                    b.Navigation("ReviewedByAdmin");
+                });
+
             modelBuilder.Entity("MarketTJ.Domain.Entities.CourierProfile", b =>
                 {
                     b.HasOne("MarketTJ.Domain.Entities.User", "User")
@@ -2075,6 +2141,8 @@ namespace MarketTJ.Infrastructure.Migrations
             modelBuilder.Entity("MarketTJ.Domain.Entities.CourierProfile", b =>
                 {
                     b.Navigation("Deliveries");
+
+                    b.Navigation("Documents");
                 });
 
             modelBuilder.Entity("MarketTJ.Domain.Entities.CustomerProfile", b =>

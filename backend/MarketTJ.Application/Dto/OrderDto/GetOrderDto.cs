@@ -15,7 +15,14 @@ public class GetOrderDto
     // взять имя покупателя было неоткуда).
     public string? CustomerFullName { get; set; }
     public string? CustomerPhone { get; set; }
+    // Status — вычисляемое поле для обратной совместимости (те же значения,
+    // что фронтенд уже знает и умеет отображать), см. OrderService.ComputeDisplayStatus.
+    // FarmerStatus/CourierStatus — реальные, независимо пишущиеся поля,
+    // добавлены по прямому запросу пользователя (2026-08-04) для тех, кому
+    // нужна явная раздельная правда, а не вычисленная сводка.
     public OrderStatus Status { get; set; }
+    public FarmerOrderStatus? FarmerStatus { get; set; }
+    public CourierOrderStatus? CourierStatus { get; set; }
     public string DeliveryAddress { get; set; } = null!;
     public string Region { get; set; } = null!;
     public string District { get; set; } = null!;

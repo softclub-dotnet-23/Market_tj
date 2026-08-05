@@ -9,6 +9,20 @@ public class Order
     public int CustomerId { get; set; }
     public int FarmerId { get; set; }
     public OrderStatus Status { get; set; }
+
+    // Разделены по прямому запросу пользователя (2026-08-04) — раньше и
+    // фермер, и курьер писали в общий Status (DeliveryService трогал его
+    // из courier-эндпоинтов наравне с OrderService), что создавало риск
+    // перезаписи. FarmerStatus пишет только фермерский путь (OrderService,
+    // DeliveryService.AssignCourierAsync), CourierStatus — только курьерский
+    // (DeliveryService.AcceptAsync/ConfirmDeliveryAsync). Оба nullable —
+    // null, пока соответствующая сторона ещё не действовала. Старый Status
+    // остаётся источником истины для Pending/Accepted/Rejected/Preparing/
+    // Completed/Cancelled (в т.ч. комиссия в ApplyWalletEffectsForStatusChangeAsync
+    // завязана именно на него) — см. миграцию AddFarmerCourierOrderStatus.
+    public FarmerOrderStatus? FarmerStatus { get; set; }
+    public CourierOrderStatus? CourierStatus { get; set; }
+
     public string DeliveryAddress { get; set; } = null!;
     public string Region { get; set; } = null!;
     public string District { get; set; } = null!;

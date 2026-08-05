@@ -138,6 +138,12 @@
     "vehicleNumberPlaceholder": "e.g. 01 A 123 AA",
     "vehicleNumberRequired": "Enter your vehicle number",
     "submitCourier": "Sign up as a courier",
+    "documentsLabel": "Verification documents",
+    "driverLicenseLabel": "Driver's license",
+    "vehicleRegistrationLabel": "Vehicle registration",
+    "documentsHint": "JPG, PNG, WEBP or PDF, up to 10 MB. You can't go available for orders until an admin approves them.",
+    "documentsRequired": "Upload both documents",
+    "documentTooLarge": "Maximum file size is 10 MB",
     "registerErrorFallback": "Couldn't sign up. Please try again."
   },
   "catalog": {

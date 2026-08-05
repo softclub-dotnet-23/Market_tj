@@ -842,6 +842,19 @@ public class OrderServiceTests
     }
 
     [Fact]
+    public async Task UpdateAsync_StatusChangedToAccepted_SetsFarmerStatusAccepted()
+    {
+        // FarmerStatus — отдельное поле, которое пишет только фермерский путь
+        // (2026-08-04, разделение статусов фермера/курьера).
+        var order = CreateOrder(1);
+        _orderRepository.Setup(r => r.GetByIdAsync(1)).ReturnsAsync(order);
+
+        await _service.UpdateAsync(1, ValidUpdateDto(1, OrderStatus.Accepted));
+
+        Assert.Equal(FarmerOrderStatus.Accepted, order.FarmerStatus);
+    }
+
+    [Fact]
     public async Task UpdateAsync_StatusChangedToCompleted_SetsCompletedAt()
     {
         var order = CreateOrder(1);

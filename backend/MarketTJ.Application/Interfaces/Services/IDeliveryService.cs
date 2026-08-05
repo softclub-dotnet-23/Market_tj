@@ -35,6 +35,7 @@ public class AvailableCourierFilter
 {
     public bool OnlyAvailable { get; set; }
     public string? Region { get; set; }
+    public string? District { get; set; }
     public string? TransportType { get; set; }
     public decimal? MinRating { get; set; }
 }

@@ -24,4 +24,7 @@ public class CourierProfile
 
     // CourierProfile 1 — many Delivery (CourierId у Delivery nullable).
     public ICollection<Delivery> Deliveries { get; set; } = new List<Delivery>();
+
+    // CourierProfile 1 — many CourierDocument (права/техпаспорт для верификации).
+    public ICollection<CourierDocument> Documents { get; set; } = new List<CourierDocument>();
 }

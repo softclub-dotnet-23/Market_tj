@@ -320,8 +320,24 @@ public class DeliveryService(
     {
         try
         {
+            // По прямому запросу пользователя (2026-08-04): фермер тоже может
+            // смотреть список доступных курьеров (для самостоятельного
+            // назначения), но ТОЛЬКО своего региона/района — Region/District
+            // из query игнорируются для фермера и принудительно берутся из
+            // его собственного FarmerProfile, чтобы он не мог просматривать
+            // курьеров чужих регионов. Admin — без ограничений, как раньше.
             if (!currentUser.IsAdmin())
-                return Result<IEnumerable<GetAvailableCourierDto>>.Fail("Доступно только администратору", ErrorType.Forbidden);
+            {
+                if (currentUser.UserId is null)
+                    return Result<IEnumerable<GetAvailableCourierDto>>.Fail("Доступно только администратору или фермеру", ErrorType.Forbidden);
+
+                var myFarmerProfile = await farmerProfileRepository.GetByUserIdAsync(currentUser.UserId.Value);
+                if (myFarmerProfile is null)
+                    return Result<IEnumerable<GetAvailableCourierDto>>.Fail("Доступно только администратору или фермеру", ErrorType.Forbidden);
+
+                filter.Region = myFarmerProfile.Region;
+                filter.District = myFarmerProfile.District;
+            }
 
             var couriers = (await courierProfileRepository.GetAllAsync()).Where(c => c.IsActive).ToList();
 
@@ -329,6 +345,8 @@ public class DeliveryService(
                 couriers = couriers.Where(c => c.IsAvailable).ToList();
             if (!string.IsNullOrWhiteSpace(filter.Region))
                 couriers = couriers.Where(c => c.Region == filter.Region).ToList();
+            if (!string.IsNullOrWhiteSpace(filter.District))
+                couriers = couriers.Where(c => c.District == filter.District).ToList();
             if (!string.IsNullOrWhiteSpace(filter.TransportType))
                 couriers = couriers.Where(c => c.TransportType == filter.TransportType).ToList();
             if (filter.MinRating.HasValue)
@@ -377,14 +395,26 @@ public class DeliveryService(
     {
         try
         {
-            if (!currentUser.IsAdmin())
-                return Result<string>.Fail("Назначить курьера может только администратор", ErrorType.Forbidden);
-
             var order = await orderRepository.GetByIdAsync(orderId);
             if (order is null)
                 return Result<string>.Fail("Заказ не найден", ErrorType.NotFound);
 
-            if (order.Status is OrderStatus.Delivered or OrderStatus.Completed or OrderStatus.Cancelled or OrderStatus.Rejected)
+            // По прямому запросу пользователя (2026-08-04): фермер теперь
+            // назначает курьера сам (владелец заказа), Admin сохраняет право
+            // как запасной вариант — тот же приём "controller role attribute
+            // грубый, IDOR-проверка внутри сервиса", что и везде в этом коде.
+            if (!currentUser.IsAdmin())
+            {
+                if (currentUser.UserId is null)
+                    return Result<string>.Fail("Назначить курьера может фермер — владелец заказа, или администратор", ErrorType.Forbidden);
+
+                var myFarmerProfile = await farmerProfileRepository.GetByUserIdAsync(currentUser.UserId.Value);
+                if (myFarmerProfile is null || myFarmerProfile.Id != order.FarmerId)
+                    return Result<string>.Fail("Назначить курьера может фермер — владелец заказа, или администратор", ErrorType.Forbidden);
+            }
+
+            if (order.Status is OrderStatus.Completed or OrderStatus.Cancelled or OrderStatus.Rejected
+                || order.CourierStatus == CourierOrderStatus.Delivered)
                 return Result<string>.Fail("Нельзя назначить курьера на завершённый или отменённый заказ", ErrorType.Conflict);
 
             var courier = await courierProfileRepository.GetByIdAsync(dto.CourierId);
@@ -442,7 +472,13 @@ public class DeliveryService(
                 await deliveryRepository.UpdateAsync(delivery);
             }
 
-            order.Status = OrderStatus.CourierAssigned;
+            // Раньше здесь писали order.Status = OrderStatus.CourierAssigned —
+            // по прямому запросу пользователя (2026-08-04) теперь пишем в
+            // отдельное FarmerStatus, а не в общий Status (см. комментарий на
+            // Order.FarmerStatus/CourierStatus). Status остаётся как есть —
+            // источник истины для Pending/Accepted/Rejected/Preparing/
+            // Completed/Cancelled и завязанной на них комиссии.
+            order.FarmerStatus = FarmerOrderStatus.HandedToCourier;
             await orderRepository.UpdateAsync(order);
 
             if (farmerProfile is not null)
@@ -620,14 +656,30 @@ public class DeliveryService(
             if (delivery.Status != DeliveryStatus.Assigned)
                 return Result<string>.Fail("Принять можно только только что назначенную доставку", ErrorType.Conflict);
 
+            var orderForGuard = await orderRepository.GetByIdAsync(delivery.OrderId);
+            // Порядок обязателен (по прямому запросу пользователя, 2026-08-04):
+            // курьер не может "принять" доставку, пока фермер официально не
+            // отдал заказ курьеру. На практике Delivery создаётся только внутри
+            // AssignCourierAsync, который сам выставляет HandedToCourier, так
+            // что это защита от рассинхронизации, а не реально достижимый
+            // путь — но проверка запрошена явно.
+            if (orderForGuard is not null && orderForGuard.FarmerStatus != FarmerOrderStatus.HandedToCourier)
+                return Result<string>.Fail("Заказ ещё не передан курьеру фермером", ErrorType.Validation);
+
             delivery.Status = DeliveryStatus.Accepted;
             delivery.AcceptedAt = DateTime.UtcNow;
             delivery.UpdatedAt = DateTime.UtcNow;
             await deliveryRepository.UpdateAsync(delivery);
 
-            var order = await orderRepository.GetByIdAsync(delivery.OrderId);
+            var order = orderForGuard;
             if (order is not null)
             {
+                // CourierStatus — исключительно курьерское поле (см. комментарий
+                // на Order.FarmerStatus/CourierStatus) — "Принял" фиксируется
+                // именно здесь, в момент реального принятия доставки.
+                order.CourierStatus = CourierOrderStatus.Accepted;
+                await orderRepository.UpdateAsync(order);
+
                 var farmerProfile = await farmerProfileRepository.GetByIdAsync(order.FarmerId);
                 if (farmerProfile is not null)
                     await NotifyAsync(farmerProfile.UserId, "Курьер принял доставку", $"Курьер принял доставку по заказу №{order.OrderNumber}.");
@@ -673,12 +725,13 @@ public class DeliveryService(
             var order = await orderRepository.GetByIdAsync(delivery.OrderId);
             if (order is not null)
             {
-                if (dto.Status == DeliveryStatus.PickedUp)
-                    order.Status = OrderStatus.PickedUp;
-                else if (dto.Status == DeliveryStatus.InTransit)
-                    order.Status = OrderStatus.InDelivery;
-                await orderRepository.UpdateAsync(order);
-
+                // Раньше здесь писали order.Status = PickedUp/InDelivery — по
+                // прямому запросу пользователя (2026-08-04) эти промежуточные
+                // шаги больше НЕ попадают в Order (ни в Status, ни в
+                // CourierStatus, который сознательно грубее): вся гранулярность
+                // курьерского пути остаётся только в Delivery.Status, чтобы
+                // это поле правил единолично курьерский путь и никогда не
+                // писалось из фермерского кода, и наоборот.
                 var (title, message) = StatusNotificationText(dto.Status, order.OrderNumber);
                 var farmerProfile = await farmerProfileRepository.GetByIdAsync(order.FarmerId);
                 var customerProfile = await customerProfileRepository.GetByIdAsync(order.CustomerId);
@@ -734,7 +787,9 @@ public class DeliveryService(
             var order = await orderRepository.GetByIdAsync(delivery.OrderId);
             if (order is not null)
             {
-                order.Status = OrderStatus.Delivered;
+                // Раньше order.Status = OrderStatus.Delivered — теперь только
+                // CourierStatus (см. комментарий в AcceptAsync/на самом поле).
+                order.CourierStatus = CourierOrderStatus.Delivered;
                 await orderRepository.UpdateAsync(order);
 
                 var farmerProfile = await farmerProfileRepository.GetByIdAsync(order.FarmerId);

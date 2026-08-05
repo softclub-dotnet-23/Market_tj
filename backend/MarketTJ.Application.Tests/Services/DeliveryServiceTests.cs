@@ -40,7 +40,12 @@ public class DeliveryServiceTests
         _currentUser.Setup(c => c.Role).Returns(nameof(UserRole.Admin));
         _orderRepository.Setup(r => r.GetByIdAsync(It.IsAny<int>())).ReturnsAsync((int id) => new Order
         {
+            // FarmerStatus = HandedToCourier по умолчанию — большинство тестов
+            // в этом файле работают с уже-назначенной доставкой (реалистичный
+            // случай для DeliveryService), а AcceptAsync с 2026-08-04 проверяет
+            // именно это поле перед тем, как разрешить курьеру принять доставку.
             Id = id, OrderNumber = "ORD-1", CustomerId = 1, FarmerId = 1, Status = OrderStatus.Pending,
+            FarmerStatus = FarmerOrderStatus.HandedToCourier,
             DeliveryAddress = "A", Region = "Хатлон", District = "Бохтар", Subtotal = 100, DeliveryPrice = 10, TotalAmount = 110
         });
         _courierProfileRepository.Setup(r => r.GetByIdAsync(It.IsAny<int>())).ReturnsAsync((int id) => new CourierProfile
@@ -476,7 +481,7 @@ public class DeliveryServiceTests
     };
 
     [Fact]
-    public async Task AssignCourierAsync_NewDelivery_CreatesAndSetsOrderStatus()
+    public async Task AssignCourierAsync_NewDelivery_CreatesAndSetsFarmerStatus()
     {
         _deliveryRepository.Setup(r => r.GetByOrderIdAsync(It.IsAny<int>())).ReturnsAsync((Delivery?)null);
         _deliveryRepository.Setup(r => r.GetByCourierIdAsync(It.IsAny<int>())).ReturnsAsync([]);
@@ -487,14 +492,35 @@ public class DeliveryServiceTests
 
         Assert.True(result.IsSuccess);
         _deliveryRepository.Verify(r => r.AddAsync(It.Is<Delivery>(d => d.CourierId == 5 && d.Status == DeliveryStatus.Assigned && d.PickupAddress == "Farm Address")), Times.Once);
-        _orderRepository.Verify(r => r.UpdateAsync(It.Is<Order>(o => o.Status == OrderStatus.CourierAssigned)), Times.Once);
+        // FarmerStatus, не Status — назначение курьера больше не пишет в общий
+        // Order.Status (2026-08-04, разделение статусов фермера/курьера).
+        _orderRepository.Verify(r => r.UpdateAsync(It.Is<Order>(o => o.FarmerStatus == FarmerOrderStatus.HandedToCourier)), Times.Once);
         _notificationService.Verify(n => n.CreateAsync(It.IsAny<MarketTJ.Application.Dto.NotificationDto.CreateNotificationDto>()), Times.AtLeast(3));
     }
 
     [Fact]
-    public async Task AssignCourierAsync_NotAdmin_ReturnsForbidden()
+    public async Task AssignCourierAsync_OwningFarmer_Succeeds()
     {
         _currentUser.Setup(c => c.Role).Returns(nameof(UserRole.Farmer));
+        _currentUser.Setup(c => c.UserId).Returns(10);
+        _farmerProfileRepository.Setup(r => r.GetByUserIdAsync(10)).ReturnsAsync(new FarmerProfile { Id = 1, UserId = 10, FarmName = "F", Region = "Хатлон", District = "Бохтар", Village = "V", Address = "Farm Address" });
+        _farmerProfileRepository.Setup(r => r.GetByIdAsync(It.IsAny<int>())).ReturnsAsync(new FarmerProfile { Id = 1, UserId = 10, FarmName = "F", Region = "Хатлон", District = "Бохтар", Village = "V", Address = "Farm Address" });
+        _deliveryRepository.Setup(r => r.GetByOrderIdAsync(It.IsAny<int>())).ReturnsAsync((Delivery?)null);
+        _deliveryRepository.Setup(r => r.GetByCourierIdAsync(It.IsAny<int>())).ReturnsAsync([]);
+        _customerProfileRepository.Setup(r => r.GetByIdAsync(It.IsAny<int>())).ReturnsAsync(new CustomerProfile { Id = 1, UserId = 20, CustomerType = CustomerType.Retail, Region = "Хатлон", District = "Бохтар" });
+
+        // Дефолтный мок GetByIdAsync(int) в конструкторе отдаёт Order с FarmerId = 1 — совпадает с профилем фермера выше.
+        var result = await _service.AssignCourierAsync(1, ValidAssignDto());
+
+        Assert.True(result.IsSuccess);
+    }
+
+    [Fact]
+    public async Task AssignCourierAsync_NotOwningFarmerNorAdmin_ReturnsForbidden()
+    {
+        _currentUser.Setup(c => c.Role).Returns(nameof(UserRole.Farmer));
+        _currentUser.Setup(c => c.UserId).Returns(99);
+        _farmerProfileRepository.Setup(r => r.GetByUserIdAsync(99)).ReturnsAsync(new FarmerProfile { Id = 2, UserId = 99, FarmName = "Other", Region = "Хатлон", District = "Бохтар", Village = "V", Address = "Other Address" });
 
         var result = await _service.AssignCourierAsync(1, ValidAssignDto());
 
@@ -520,9 +546,13 @@ public class DeliveryServiceTests
     [Fact]
     public async Task AssignCourierAsync_OrderAlreadyDelivered_ReturnsConflict()
     {
+        // "Доставлено" теперь читается из CourierStatus, не из общего Status
+        // (2026-08-04, разделение статусов) — Status у такого заказа остаётся
+        // на CourierAssigned, реалистичный пост-миграционный кейс.
         _orderRepository.Setup(r => r.GetByIdAsync(It.IsAny<int>())).ReturnsAsync(new Order
         {
-            Id = 1, OrderNumber = "ORD-1", CustomerId = 1, FarmerId = 1, Status = OrderStatus.Delivered,
+            Id = 1, OrderNumber = "ORD-1", CustomerId = 1, FarmerId = 1, Status = OrderStatus.CourierAssigned,
+            FarmerStatus = FarmerOrderStatus.HandedToCourier, CourierStatus = CourierOrderStatus.Delivered,
             DeliveryAddress = "A", Region = "Хатлон", District = "Бохтар", Subtotal = 100, DeliveryPrice = 10, TotalAmount = 110
         });
 
@@ -612,6 +642,40 @@ public class DeliveryServiceTests
     }
 
     [Fact]
+    public async Task AcceptAsync_SetsCourierStatusAccepted()
+    {
+        _currentUser.Setup(c => c.Role).Returns(nameof(UserRole.Courier));
+        _currentUser.Setup(c => c.UserId).Returns(30);
+        _courierProfileRepository.Setup(r => r.GetByUserIdAsync(30)).ReturnsAsync(new CourierProfile { Id = 5, UserId = 30, TransportType = "Car", VehicleNumber = "1", Region = "Хатлон", District = "Бохтар" });
+        _deliveryRepository.Setup(r => r.GetByIdAsync(1)).ReturnsAsync(CreateDelivery(id: 1, courierId: 5, status: DeliveryStatus.Assigned));
+
+        var result = await _service.AcceptAsync(1);
+
+        Assert.True(result.IsSuccess);
+        _orderRepository.Verify(r => r.UpdateAsync(It.Is<Order>(o => o.CourierStatus == CourierOrderStatus.Accepted)), Times.Once);
+    }
+
+    [Fact]
+    public async Task AcceptAsync_FarmerStatusNotHandedToCourier_ReturnsValidationError()
+    {
+        _currentUser.Setup(c => c.Role).Returns(nameof(UserRole.Courier));
+        _currentUser.Setup(c => c.UserId).Returns(30);
+        _courierProfileRepository.Setup(r => r.GetByUserIdAsync(30)).ReturnsAsync(new CourierProfile { Id = 5, UserId = 30, TransportType = "Car", VehicleNumber = "1", Region = "Хатлон", District = "Бохтар" });
+        _deliveryRepository.Setup(r => r.GetByIdAsync(1)).ReturnsAsync(CreateDelivery(id: 1, courierId: 5, status: DeliveryStatus.Assigned));
+        _orderRepository.Setup(r => r.GetByIdAsync(1)).ReturnsAsync(new Order
+        {
+            Id = 1, OrderNumber = "ORD-1", CustomerId = 1, FarmerId = 1, Status = OrderStatus.Pending, FarmerStatus = null,
+            DeliveryAddress = "A", Region = "Хатлон", District = "Бохтар", Subtotal = 100, DeliveryPrice = 10, TotalAmount = 110
+        });
+
+        var result = await _service.AcceptAsync(1);
+
+        Assert.False(result.IsSuccess);
+        Assert.Equal(ErrorType.Validation, result.ErrorType);
+        _deliveryRepository.Verify(r => r.UpdateAsync(It.IsAny<Delivery>()), Times.Never);
+    }
+
+    [Fact]
     public async Task AcceptAsync_DeliveryAssignedToAnotherCourier_ReturnsForbidden()
     {
         _currentUser.Setup(c => c.Role).Returns(nameof(UserRole.Courier));
@@ -671,7 +735,7 @@ public class DeliveryServiceTests
     }
 
     [Fact]
-    public async Task UpdateCourierStatusAsync_PickedUp_SyncsOrderStatusAndTimestamp()
+    public async Task UpdateCourierStatusAsync_PickedUp_UpdatesDeliveryOnlyNotOrder()
     {
         _currentUser.Setup(c => c.Role).Returns(nameof(UserRole.Courier));
         _currentUser.Setup(c => c.UserId).Returns(30);
@@ -682,7 +746,10 @@ public class DeliveryServiceTests
 
         Assert.True(result.IsSuccess);
         _deliveryRepository.Verify(r => r.UpdateAsync(It.Is<Delivery>(d => d.Status == DeliveryStatus.PickedUp && d.PickedUpAt != null)), Times.Once);
-        _orderRepository.Verify(r => r.UpdateAsync(It.Is<Order>(o => o.Status == OrderStatus.PickedUp)), Times.Once);
+        // Промежуточные шаги курьера (PickedUp/InTransit/...) больше НЕ трогают
+        // Order вообще — ни Status, ни CourierStatus (2026-08-04, разделение
+        // статусов: только Delivery.Status меняется на этих шагах).
+        _orderRepository.Verify(r => r.UpdateAsync(It.IsAny<Order>()), Times.Never);
     }
 
     // ---------- ConfirmDeliveryAsync ----------
@@ -702,7 +769,8 @@ public class DeliveryServiceTests
         Assert.True(result.IsSuccess);
         Assert.Equal(DeliveryStatus.Delivered, delivery.Status);
         Assert.NotNull(delivery.DeliveredAt);
-        _orderRepository.Verify(r => r.UpdateAsync(It.Is<Order>(o => o.Status == OrderStatus.Delivered)), Times.Once);
+        // CourierStatus, не Status (2026-08-04, разделение статусов).
+        _orderRepository.Verify(r => r.UpdateAsync(It.Is<Order>(o => o.CourierStatus == CourierOrderStatus.Delivered)), Times.Once);
     }
 
     [Fact]
@@ -797,14 +865,39 @@ public class DeliveryServiceTests
     // ---------- GetAvailableCouriersAsync ----------
 
     [Fact]
-    public async Task GetAvailableCouriersAsync_NotAdmin_ReturnsForbidden()
+    public async Task GetAvailableCouriersAsync_FarmerWithoutProfile_ReturnsForbidden()
     {
         _currentUser.Setup(c => c.Role).Returns(nameof(UserRole.Farmer));
+        _currentUser.Setup(c => c.UserId).Returns(10);
+        _farmerProfileRepository.Setup(r => r.GetByUserIdAsync(10)).ReturnsAsync((FarmerProfile?)null);
 
         var result = await _service.GetAvailableCouriersAsync(new AvailableCourierFilter());
 
         Assert.False(result.IsSuccess);
         Assert.Equal(ErrorType.Forbidden, result.ErrorType);
+    }
+
+    [Fact]
+    public async Task GetAvailableCouriersAsync_Farmer_ForcesOwnRegionAndDistrict()
+    {
+        _currentUser.Setup(c => c.Role).Returns(nameof(UserRole.Farmer));
+        _currentUser.Setup(c => c.UserId).Returns(10);
+        _farmerProfileRepository.Setup(r => r.GetByUserIdAsync(10)).ReturnsAsync(
+            new FarmerProfile { Id = 1, UserId = 10, FarmName = "F", Region = "Хатлон", District = "Бохтар", Village = "V", Address = "A" });
+        _courierProfileRepository.Setup(r => r.GetAllAsync()).ReturnsAsync([
+            new CourierProfile { Id = 1, UserId = 1, TransportType = "Car", VehicleNumber = "1", Region = "Хатлон", District = "Бохтар", IsActive = true, IsAvailable = true },
+            new CourierProfile { Id = 2, UserId = 2, TransportType = "Car", VehicleNumber = "2", Region = "РРП", District = "Турсунзаде", IsActive = true, IsAvailable = true },
+        ]);
+        _deliveryRepository.Setup(r => r.GetActiveCountsByCourierIdsAsync(It.IsAny<List<int>>())).ReturnsAsync(new Dictionary<int, int>());
+        _deliveryRepository.Setup(r => r.GetCompletedCountsByCourierIdsAsync(It.IsAny<List<int>>())).ReturnsAsync(new Dictionary<int, int>());
+        _userRepository.Setup(r => r.GetByIdAsync(It.IsAny<int>())).ReturnsAsync((int id) => new User { Id = id, FullName = "C", Email = "c@test.tj", PhoneNumber = "900000000", PasswordHash = "x", Role = UserRole.Courier });
+
+        // filter.Region пытается запросить чужой регион — фермер не должен его получить.
+        var result = await _service.GetAvailableCouriersAsync(new AvailableCourierFilter { Region = "РРП" });
+
+        Assert.True(result.IsSuccess);
+        var courier = Assert.Single(result.Data!);
+        Assert.Equal(1, courier.Id);
     }
 
     [Fact]

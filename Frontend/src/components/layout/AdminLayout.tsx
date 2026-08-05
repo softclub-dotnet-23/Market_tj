@@ -63,6 +63,7 @@ const NAV_ITEMS: AdminNavItem[] = [
   { labelKey: "farmers", path: "/admin/farmers", icon: Sprout, section: "management" },
   { labelKey: "farmerDocuments", path: "/admin/farmer-documents", icon: FileText, section: "management" },
   { labelKey: "couriers", path: "/admin/couriers", icon: Bike, section: "management" },
+  { labelKey: "courierDocuments", path: "/admin/courier-documents", icon: FileText, section: "management" },
   { labelKey: "delivery", path: "/admin/delivery-zones", icon: MapPinned, section: "management" },
   { labelKey: "customers", path: "/admin/users", icon: Users, section: "management" },
   { labelKey: "reviews", path: "/admin/reviews", icon: MessageSquare, section: "management" },

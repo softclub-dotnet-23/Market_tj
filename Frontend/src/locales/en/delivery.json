@@ -33,6 +33,7 @@
     "anyRating": "Any rating",
     "noCouriers": "No couriers found",
     "noCouriersHint": "Try adjusting the filters.",
+    "mapError": "Couldn't locate the address on the map",
     "deliveryFee": "Delivery fee, somoni",
     "estimatedPickup": "Estimated pickup time",
     "estimatedDelivery": "Estimated delivery time",

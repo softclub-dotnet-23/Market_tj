@@ -187,6 +187,7 @@
     },
     "delivery": {
       "waitingForAdmin": "Waiting for the administrator to assign a courier.",
+      "assignAction": "Assign courier",
       "readyAction": "Order ready for pickup",
       "readySuccess": "Order marked as ready for pickup",
       "readyError": "Failed to mark the order as ready",
