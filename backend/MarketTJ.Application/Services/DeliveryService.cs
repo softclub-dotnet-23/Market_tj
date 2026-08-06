@@ -379,8 +379,20 @@ public class DeliveryService(
 
             var couriers = (await courierProfileRepository.GetAllAsync()).Where(c => c.IsActive).ToList();
 
+            // CourierProfile.IsAvailable — это ручной тумблер курьера ("готов
+            // брать заказы"), он НЕ отражает, что курьер прямо сейчас уже
+            // везёт другую доставку. Раньше бейдж "Свободен"/"Занят" в списке
+            // строился только по этому тумблеру, из-за чего курьер с активной
+            // доставкой показывался как свободный и назначение падало с
+            // "У курьера уже есть активная доставка" только на этапе сохранения.
+            // Реальная доступность = тумблер И отсутствие активной Delivery.
+            var allCourierIds = couriers.Select(c => c.Id).ToList();
+            var activeCounts = allCourierIds.Count > 0
+                ? await deliveryRepository.GetActiveCountsByCourierIdsAsync(allCourierIds)
+                : [];
+
             if (filter.OnlyAvailable)
-                couriers = couriers.Where(c => c.IsAvailable).ToList();
+                couriers = couriers.Where(c => c.IsAvailable && activeCounts.GetValueOrDefault(c.Id, 0) == 0).ToList();
             if (!string.IsNullOrWhiteSpace(filter.Region))
                 couriers = couriers.Where(c => c.Region == filter.Region).ToList();
             if (!string.IsNullOrWhiteSpace(filter.District))
@@ -405,9 +417,6 @@ public class DeliveryService(
                 .ToList();
 
             var courierIds = withDistance.Select(x => x.Courier.Id).ToList();
-            var activeCounts = courierIds.Count > 0
-                ? await deliveryRepository.GetActiveCountsByCourierIdsAsync(courierIds)
-                : [];
             var completedCounts = courierIds.Count > 0
                 ? await deliveryRepository.GetCompletedCountsByCourierIdsAsync(courierIds)
                 : [];
@@ -428,7 +437,7 @@ public class DeliveryService(
                     Region = courier.Region,
                     District = courier.District,
                     Rating = courier.Rating,
-                    IsAvailable = courier.IsAvailable,
+                    IsAvailable = courier.IsAvailable && activeCounts.GetValueOrDefault(courier.Id, 0) == 0,
                     ActiveDeliveries = activeCounts.GetValueOrDefault(courier.Id, 0),
                     CompletedDeliveries = completedCounts.GetValueOrDefault(courier.Id, 0),
                     DistanceKm = distanceKm,

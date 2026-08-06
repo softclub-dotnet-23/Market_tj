@@ -1145,6 +1145,48 @@ public class DeliveryServiceTests
     }
 
     [Fact]
+    public async Task GetAvailableCouriersAsync_CourierHasActiveDelivery_ShownAsUnavailable()
+    {
+        // Баг с прод (2026-08-06): CourierProfile.IsAvailable — ручной тумблер
+        // курьера, не отражает реальную занятость активной доставкой. Курьер
+        // с IsAvailable=true, но с активной (не Delivered/Cancelled) Delivery,
+        // должен показываться как занятый (isAvailable=false в DTO), а не
+        // "Свободен" — иначе назначение падает на этапе сохранения.
+        SetUpFarmerForAvailableCouriers();
+        _courierProfileRepository.Setup(r => r.GetAllAsync()).ReturnsAsync([
+            new CourierProfile { Id = 1, UserId = 1, TransportType = "Автомобиль", VehicleNumber = "1", Region = "Хатлон", District = "Бохтар", IsActive = true, IsAvailable = true, Latitude = 38.57, Longitude = 68.80 },
+        ]);
+        _deliveryRepository.Setup(r => r.GetActiveCountsByCourierIdsAsync(It.IsAny<List<int>>()))
+            .ReturnsAsync(new Dictionary<int, int> { [1] = 1 });
+
+        var result = await _service.GetAvailableCouriersAsync(new AvailableCourierFilter { OrderId = 1 });
+
+        Assert.True(result.IsSuccess);
+        var courier = Assert.Single(result.Data!);
+        Assert.Equal(1, courier.Id);
+        Assert.False(courier.IsAvailable);
+        Assert.Equal(1, courier.ActiveDeliveries);
+    }
+
+    [Fact]
+    public async Task GetAvailableCouriersAsync_OnlyAvailableFilter_ExcludesCourierWithActiveDelivery()
+    {
+        SetUpFarmerForAvailableCouriers();
+        _courierProfileRepository.Setup(r => r.GetAllAsync()).ReturnsAsync([
+            new CourierProfile { Id = 1, UserId = 1, TransportType = "Автомобиль", VehicleNumber = "1", Region = "Хатлон", District = "Бохтар", IsActive = true, IsAvailable = true, Latitude = 38.57, Longitude = 68.80 },
+            new CourierProfile { Id = 2, UserId = 2, TransportType = "Автомобиль", VehicleNumber = "2", Region = "Хатлон", District = "Бохтар", IsActive = true, IsAvailable = true, Latitude = 38.58, Longitude = 68.81 },
+        ]);
+        _deliveryRepository.Setup(r => r.GetActiveCountsByCourierIdsAsync(It.IsAny<List<int>>()))
+            .ReturnsAsync(new Dictionary<int, int> { [1] = 1 });
+
+        var result = await _service.GetAvailableCouriersAsync(new AvailableCourierFilter { OrderId = 1, OnlyAvailable = true });
+
+        Assert.True(result.IsSuccess);
+        var courier = Assert.Single(result.Data!);
+        Assert.Equal(2, courier.Id);
+    }
+
+    [Fact]
     public async Task GetAvailableCouriersAsync_SameDistance_OrdersByRatingDescending()
     {
         SetUpFarmerForAvailableCouriers();
