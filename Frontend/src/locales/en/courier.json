@@ -61,7 +61,17 @@
     "actionError": "Failed to perform the action",
     "pickedUpGoing": "Picked up, heading to customer",
     "confirmDelivery": "Confirm delivery",
-    "reportProblem": "Report a problem"
+    "reportProblem": "Report a problem",
+    "cancelDelivery": "Cancel delivery"
+  },
+  "cancelModal": {
+    "title": "Cancel delivery",
+    "description": "Provide a reason for cancelling (at least a few words) — it will be saved. 3 cancellations within 24 hours will temporarily block your account.",
+    "placeholder": "E.g.: my vehicle broke down on the way to the customer",
+    "tooShort": "Please describe the reason in more detail — at least a few words",
+    "submit": "Cancel delivery",
+    "success": "Delivery cancelled",
+    "error": "Failed to cancel delivery"
   },
   "confirmModal": {
     "title": "Confirm delivery",

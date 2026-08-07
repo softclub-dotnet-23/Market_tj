@@ -26,6 +26,7 @@ public class DeliveryServiceTests
     private readonly Mock<ICurrentUserService> _currentUser = new();
     private readonly Mock<IGoogleGeocodingService> _geocodingService = new();
     private readonly Mock<IFileStorageService> _fileStorageService = new();
+    private readonly Mock<IAccountBlockService> _accountBlockService = new();
     private readonly Mock<ILogger<DeliveryService>> _logger = new();
     private readonly DeliveryService _service;
 
@@ -41,10 +42,14 @@ public class DeliveryServiceTests
             _deliveryRepository.Object, _orderRepository.Object, _orderItemRepository.Object, _courierProfileRepository.Object,
             _customerProfileRepository.Object, _farmerProfileRepository.Object, _userRepository.Object,
             _notificationService.Object, _auditLogService.Object, _orderService.Object, _currentUser.Object,
-            _geocodingService.Object, _fileStorageService.Object, _logger.Object);
+            _geocodingService.Object, _fileStorageService.Object, _accountBlockService.Object, _logger.Object);
         _orderService.Setup(s => s.CompleteAfterDeliveryAsync(It.IsAny<int>())).ReturnsAsync(Result<string>.Ok("Заказ завершён"));
         _fileStorageService.Setup(s => s.SaveAsync(It.IsAny<Stream>(), It.IsAny<string>(), It.IsAny<string>())).ReturnsAsync("/uploads/delivery-proof/1/photo.jpg");
         _geocodingService.Setup(s => s.GeocodeAsync(It.IsAny<string>())).ReturnsAsync(Result<(double, double)>.Ok((DefaultLat, DefaultLng)));
+        _accountBlockService.Setup(s => s.RecordCancellationAsync(It.IsAny<int>(), It.IsAny<string>(), It.IsAny<int>(), It.IsAny<string>()))
+            .ReturnsAsync(Result<string?>.Ok(null));
+        _accountBlockService.Setup(s => s.GetActiveBlockAsync(It.IsAny<int>())).ReturnsAsync((AccountBlock?)null);
+        _accountBlockService.Setup(s => s.GetActiveBlockedUserIdsAsync(It.IsAny<IEnumerable<int>>())).ReturnsAsync(new HashSet<int>());
         _userRepository.Setup(r => r.GetAllAsync()).ReturnsAsync([]);
         _orderItemRepository.Setup(r => r.GetAllAsync()).ReturnsAsync([]);
         _customerProfileRepository.Setup(r => r.GetByIdAsync(It.IsAny<int>())).ReturnsAsync((int id) => new CustomerProfile { Id = id, UserId = 20, CustomerType = CustomerType.Retail, Region = "Хатлон", District = "Бохтар" });
@@ -872,6 +877,135 @@ public class DeliveryServiceTests
         Assert.Equal(ErrorType.Conflict, result.ErrorType);
     }
 
+    [Fact]
+    public async Task AcceptAsync_CourierCurrentlyBlocked_ReturnsForbidden()
+    {
+        // Блок 2 (2026-08-08) — заблокированный курьер не может принять даже
+        // уже назначенную ему доставку, пока не истечёт срок блокировки.
+        _currentUser.Setup(c => c.Role).Returns(nameof(UserRole.Courier));
+        _currentUser.Setup(c => c.UserId).Returns(30);
+        _courierProfileRepository.Setup(r => r.GetByUserIdAsync(30)).ReturnsAsync(new CourierProfile { Id = 5, UserId = 30, TransportType = "Car", VehicleNumber = "1", Region = "Хатлон", District = "Бохтар" });
+        _deliveryRepository.Setup(r => r.GetByIdAsync(1)).ReturnsAsync(CreateDelivery(id: 1, courierId: 5, status: DeliveryStatus.Assigned));
+        _accountBlockService.Setup(s => s.GetActiveBlockAsync(30)).ReturnsAsync(new AccountBlock
+        {
+            Id = 1, UserId = 30, Role = "Courier", BlockType = "Cancellations", Reason = "3 отмены за 24 часа",
+            BlockedAt = DateTime.UtcNow, BlockedUntil = DateTime.UtcNow.AddHours(48)
+        });
+
+        var result = await _service.AcceptAsync(1);
+
+        Assert.False(result.IsSuccess);
+        Assert.Equal(ErrorType.Forbidden, result.ErrorType);
+        _deliveryRepository.Verify(r => r.UpdateAsync(It.IsAny<Delivery>()), Times.Never);
+    }
+
+    // ---------- CancelByCourierAsync ----------
+
+    private const string ValidCancelReason = "Сломался автомобиль по дороге";
+
+    [Fact]
+    public async Task CancelByCourierAsync_ValidReason_CancelsDeliveryAndRecordsCancellation()
+    {
+        _currentUser.Setup(c => c.Role).Returns(nameof(UserRole.Courier));
+        _currentUser.Setup(c => c.UserId).Returns(30);
+        _courierProfileRepository.Setup(r => r.GetByUserIdAsync(30)).ReturnsAsync(new CourierProfile { Id = 5, UserId = 30, TransportType = "Car", VehicleNumber = "1", Region = "Хатлон", District = "Бохтар" });
+        _deliveryRepository.Setup(r => r.GetByIdAsync(1)).ReturnsAsync(CreateDelivery(id: 1, orderId: 1, courierId: 5, status: DeliveryStatus.Accepted));
+
+        var result = await _service.CancelByCourierAsync(1, ValidCancelReason);
+
+        Assert.True(result.IsSuccess);
+        _deliveryRepository.Verify(r => r.UpdateAsync(It.Is<Delivery>(d =>
+            d.Status == DeliveryStatus.Cancelled && d.CancelledAt != null && d.CancellationReason == ValidCancelReason)), Times.Once);
+        _accountBlockService.Verify(s => s.RecordCancellationAsync(30, "Courier", 1, ValidCancelReason), Times.Once);
+    }
+
+    [Fact]
+    public async Task CancelByCourierAsync_NotOwningCourier_ReturnsForbidden()
+    {
+        _currentUser.Setup(c => c.Role).Returns(nameof(UserRole.Courier));
+        _currentUser.Setup(c => c.UserId).Returns(30);
+        _courierProfileRepository.Setup(r => r.GetByUserIdAsync(30)).ReturnsAsync(new CourierProfile { Id = 5, UserId = 30, TransportType = "Car", VehicleNumber = "1", Region = "Хатлон", District = "Бохтар" });
+        _deliveryRepository.Setup(r => r.GetByIdAsync(1)).ReturnsAsync(CreateDelivery(id: 1, courierId: 999, status: DeliveryStatus.Accepted));
+
+        var result = await _service.CancelByCourierAsync(1, ValidCancelReason);
+
+        Assert.False(result.IsSuccess);
+        Assert.Equal(ErrorType.Forbidden, result.ErrorType);
+        _accountBlockService.Verify(s => s.RecordCancellationAsync(It.IsAny<int>(), It.IsAny<string>(), It.IsAny<int>(), It.IsAny<string>()), Times.Never);
+    }
+
+    [Fact]
+    public async Task CancelByCourierAsync_AlreadyDelivered_ReturnsConflict()
+    {
+        _currentUser.Setup(c => c.Role).Returns(nameof(UserRole.Courier));
+        _currentUser.Setup(c => c.UserId).Returns(30);
+        _courierProfileRepository.Setup(r => r.GetByUserIdAsync(30)).ReturnsAsync(new CourierProfile { Id = 5, UserId = 30, TransportType = "Car", VehicleNumber = "1", Region = "Хатлон", District = "Бохтар" });
+        _deliveryRepository.Setup(r => r.GetByIdAsync(1)).ReturnsAsync(CreateDelivery(id: 1, courierId: 5, status: DeliveryStatus.Delivered));
+
+        var result = await _service.CancelByCourierAsync(1, ValidCancelReason);
+
+        Assert.False(result.IsSuccess);
+        Assert.Equal(ErrorType.Conflict, result.ErrorType);
+        _deliveryRepository.Verify(r => r.UpdateAsync(It.IsAny<Delivery>()), Times.Never);
+    }
+
+    [Fact]
+    public async Task CancelByCourierAsync_InvalidReason_ReturnsValidationAndDoesNotCancelDelivery()
+    {
+        // Причина не проходит валидацию AccountBlockService (одно слово) —
+        // отмена доставки не должна произойти вообще.
+        _currentUser.Setup(c => c.Role).Returns(nameof(UserRole.Courier));
+        _currentUser.Setup(c => c.UserId).Returns(30);
+        _courierProfileRepository.Setup(r => r.GetByUserIdAsync(30)).ReturnsAsync(new CourierProfile { Id = 5, UserId = 30, TransportType = "Car", VehicleNumber = "1", Region = "Хатлон", District = "Бохтар" });
+        _deliveryRepository.Setup(r => r.GetByIdAsync(1)).ReturnsAsync(CreateDelivery(id: 1, courierId: 5, status: DeliveryStatus.Accepted));
+        _accountBlockService.Setup(s => s.RecordCancellationAsync(30, "Courier", 1, "Занято"))
+            .ReturnsAsync(Result<string?>.Fail("Опишите причину отмены подробнее", ErrorType.Validation));
+
+        var result = await _service.CancelByCourierAsync(1, "Занято");
+
+        Assert.False(result.IsSuccess);
+        Assert.Equal(ErrorType.Validation, result.ErrorType);
+        _deliveryRepository.Verify(r => r.UpdateAsync(It.IsAny<Delivery>()), Times.Never);
+    }
+
+    [Fact]
+    public async Task CancelByCourierAsync_TriggersNewBan_AppendsNoticeToSuccessMessage()
+    {
+        _currentUser.Setup(c => c.Role).Returns(nameof(UserRole.Courier));
+        _currentUser.Setup(c => c.UserId).Returns(30);
+        _courierProfileRepository.Setup(r => r.GetByUserIdAsync(30)).ReturnsAsync(new CourierProfile { Id = 5, UserId = 30, TransportType = "Car", VehicleNumber = "1", Region = "Хатлон", District = "Бохтар" });
+        _deliveryRepository.Setup(r => r.GetByIdAsync(1)).ReturnsAsync(CreateDelivery(id: 1, courierId: 5, status: DeliveryStatus.Accepted));
+        _accountBlockService.Setup(s => s.RecordCancellationAsync(30, "Courier", 1, ValidCancelReason))
+            .ReturnsAsync(Result<string?>.Ok("Аккаунт заблокирован до 10.08.2026 12:00 UTC. Причина: 3 отмены за 24 часа."));
+
+        var result = await _service.CancelByCourierAsync(1, ValidCancelReason);
+
+        Assert.True(result.IsSuccess);
+        Assert.Contains("заблокирован", result.Data);
+        // Отмена доставки, которая привела к бану, всё равно должна пройти —
+        // бан запрещает брать НОВЫЕ доставки, а не завершать текущую.
+        _deliveryRepository.Verify(r => r.UpdateAsync(It.Is<Delivery>(d => d.Status == DeliveryStatus.Cancelled)), Times.Once);
+    }
+
+    [Fact]
+    public async Task CancelByCourierAsync_OrderWasCourierAssigned_ResetsOrderStatusToReadyForPickup()
+    {
+        _currentUser.Setup(c => c.Role).Returns(nameof(UserRole.Courier));
+        _currentUser.Setup(c => c.UserId).Returns(30);
+        _courierProfileRepository.Setup(r => r.GetByUserIdAsync(30)).ReturnsAsync(new CourierProfile { Id = 5, UserId = 30, TransportType = "Car", VehicleNumber = "1", Region = "Хатлон", District = "Бохтар" });
+        _deliveryRepository.Setup(r => r.GetByIdAsync(1)).ReturnsAsync(CreateDelivery(id: 1, orderId: 1, courierId: 5, status: DeliveryStatus.Accepted));
+        _orderRepository.Setup(r => r.GetByIdAsync(1)).ReturnsAsync(new Order
+        {
+            Id = 1, OrderNumber = "ORD-1", CustomerId = 1, FarmerId = 1, Status = OrderStatus.CourierAssigned,
+            DeliveryAddress = "A", Region = "Хатлон", District = "Бохтар", Subtotal = 100, DeliveryPrice = 10, TotalAmount = 110
+        });
+
+        var result = await _service.CancelByCourierAsync(1, ValidCancelReason);
+
+        Assert.True(result.IsSuccess);
+        _orderRepository.Verify(r => r.UpdateAsync(It.Is<Order>(o => o.Status == OrderStatus.ReadyForPickup)), Times.Once);
+    }
+
     // ---------- UpdateCourierStatusAsync ----------
 
     [Fact]
@@ -1220,6 +1354,25 @@ public class DeliveryServiceTests
         var courier = Assert.Single(result.Data!);
         Assert.Equal(1, courier.Id);
         Assert.True(courier.DistanceKm <= 40.0);
+    }
+
+    [Fact]
+    public async Task GetAvailableCouriersAsync_BlockedCourier_ExcludedFromList()
+    {
+        // Блок 2 (2026-08-08) — заблокированный курьер не должен появляться
+        // в списке кандидатов вообще, не просто "нельзя назначить".
+        SetUpFarmerForAvailableCouriers();
+        _courierProfileRepository.Setup(r => r.GetAllAsync()).ReturnsAsync([
+            new CourierProfile { Id = 1, UserId = 1, TransportType = "Автомобиль", VehicleNumber = "1", Region = "Хатлон", District = "Бохтар", IsActive = true, IsAvailable = true, Latitude = 38.57, Longitude = 68.80 },
+            new CourierProfile { Id = 2, UserId = 2, TransportType = "Автомобиль", VehicleNumber = "2", Region = "Хатлон", District = "Бохтар", IsActive = true, IsAvailable = true, Latitude = 38.57, Longitude = 68.80 },
+        ]);
+        _accountBlockService.Setup(s => s.GetActiveBlockedUserIdsAsync(It.IsAny<IEnumerable<int>>())).ReturnsAsync(new HashSet<int> { 2 });
+
+        var result = await _service.GetAvailableCouriersAsync(new AvailableCourierFilter { OrderId = 1 });
+
+        Assert.True(result.IsSuccess);
+        var courier = Assert.Single(result.Data!);
+        Assert.Equal(1, courier.Id);
     }
 
     [Fact]

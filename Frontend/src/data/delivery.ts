@@ -224,6 +224,13 @@ export function cancelDelivery(deliveryId: number, reason: string) {
   return apiPost<string>(`/deliveries/${deliveryId}/cancel`, { reason });
 }
 
+// Курьер отменяет СВОЮ уже назначенную доставку (Блок 2, 2026-08-08) —
+// причина обязательна (проверяется и на бэкенде), 3+ таких отмены за 24ч
+// временно блокируют аккаунт курьера.
+export function cancelDeliveryByCourier(deliveryId: number, reason: string) {
+  return apiPost<string>(`/deliveries/${deliveryId}/courier-cancel`, { reason });
+}
+
 export function markReadyForPickup(orderId: number) {
   return apiPost<string>(`/deliveries/by-order/${orderId}/mark-ready`, {});
 }

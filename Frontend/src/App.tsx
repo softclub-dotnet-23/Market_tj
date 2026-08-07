@@ -43,6 +43,7 @@ const AdminSettings = lazy(() => import("@/pages/AdminSettings").then((m) => ({ 
 const AdminProfile = lazy(() => import("@/pages/AdminProfile").then((m) => ({ default: m.AdminProfile })));
 const AdminSupport = lazy(() => import("@/pages/AdminSupport").then((m) => ({ default: m.AdminSupport })));
 const AdminAiConversationLogs = lazy(() => import("@/pages/AdminAiConversationLogs").then((m) => ({ default: m.AdminAiConversationLogs })));
+const AdminBlockedAccounts = lazy(() => import("@/pages/AdminBlockedAccounts").then((m) => ({ default: m.AdminBlockedAccounts })));
 const AdminNotifications = lazy(() => import("@/pages/AdminNotifications").then((m) => ({ default: m.AdminNotifications })));
 const FarmerDashboard = lazy(() => import("@/pages/FarmerDashboard").then((m) => ({ default: m.FarmerDashboard })));
 const FarmerProducts = lazy(() => import("@/pages/FarmerProducts").then((m) => ({ default: m.FarmerProducts })));
@@ -94,6 +95,7 @@ function App() {
                       <Route path="commissions" element={<AdminCommissions />} />
                       <Route path="support" element={<AdminSupport />} />
                       <Route path="ai-conversation-logs" element={<AdminAiConversationLogs />} />
+                      <Route path="blocked-accounts" element={<AdminBlockedAccounts />} />
                       <Route path="notifications" element={<AdminNotifications />} />
                       <Route path="settings" element={<AdminSettings />} />
                       <Route path="profile" element={<AdminProfile />} />

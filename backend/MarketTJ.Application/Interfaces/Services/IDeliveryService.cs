@@ -30,6 +30,13 @@ public interface IDeliveryService
     Task<Result<string>> UpdateAdminDetailsAsync(int deliveryId, UpdateDeliveryAdminDetailsDto dto);
     Task<Result<string>> CancelAsync(int deliveryId, CancelDeliveryDto dto);
 
+    // Курьер отменяет СВОЮ уже назначенную доставку (Блок 2, 2026-08-08, по
+    // явному запросу пользователя) — раньше отмена была доступна только
+    // администратору (CancelAsync выше). Причина обязательна и валидируется
+    // в IAccountBlockService (минимум несколько слов) — 3+ таких отмены за
+    // 24ч блокируют аккаунт курьера на 48ч/7д (эскалация при повторе).
+    Task<Result<string>> CancelByCourierAsync(int deliveryId, string reason);
+
     Task<Result<string>> MarkReadyForPickupAsync(int orderId);
 
     Task<Result<string>> AcceptAsync(int deliveryId);

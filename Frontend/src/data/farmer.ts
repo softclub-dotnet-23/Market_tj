@@ -504,7 +504,10 @@ export function useFarmerOrders(farmerProfileId: number | null, refreshKey = 0) 
 // Фермер может принять/отклонить и подготовить заказ — дальше (сборка курьером
 // и всё, что после) ведёт Admin (см. lib/orderStatus.ts, getFarmerNextStatuses).
 // Бэкенд сам расставляет AcceptedAt при первом переходе в Accepted.
-export function updateFarmerOrderStatus(order: FarmerOrderDto, status: number) {
+// rejectionReason обязателен на бэкенде, когда status = Rejected (Блок 2,
+// 2026-08-08) — минимум несколько слов, иначе запрос будет отклонён с
+// ошибкой валидации.
+export function updateFarmerOrderStatus(order: FarmerOrderDto, status: number, rejectionReason?: string) {
   return apiPut<string>(`/orders/${order.id}`, {
     id: order.id,
     orderNumber: order.orderNumber,
@@ -521,6 +524,7 @@ export function updateFarmerOrderStatus(order: FarmerOrderDto, status: number) {
     acceptedAt: order.acceptedAt,
     completedAt: order.completedAt,
     cancelledAt: order.cancelledAt,
+    rejectionReason: rejectionReason ?? null,
   });
 }
 

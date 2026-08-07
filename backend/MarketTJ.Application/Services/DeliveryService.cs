@@ -27,6 +27,7 @@ public class DeliveryService(
     ICurrentUserService currentUser,
     IGoogleGeocodingService geocodingService,
     IFileStorageService fileStorageService,
+    IAccountBlockService accountBlockService,
     ILogger<DeliveryService> logger) : IDeliveryService
 {
     // Упрощение находки 2026-08-05: раньше курьер продвигал доставку по 5
@@ -402,6 +403,13 @@ public class DeliveryService(
             if (filter.MinRating.HasValue)
                 couriers = couriers.Where(c => c.Rating >= filter.MinRating.Value).ToList();
 
+            // Блок 2 (2026-08-08) — заблокированный за частые отмены курьер не
+            // должен появляться в списке кандидатов для назначения вообще
+            // (не просто "нельзя принять" — фермер его даже не видит).
+            var blockedUserIds = await accountBlockService.GetActiveBlockedUserIdsAsync(couriers.Select(c => c.UserId));
+            if (blockedUserIds.Count > 0)
+                couriers = couriers.Where(c => !blockedUserIds.Contains(c.UserId)).ToList();
+
             // Реальное расстояние (Haversine) от курьера до адреса доставки —
             // заменяет прежнюю сортировку "тот же район первым" (2026-08-05).
             // Курьеры без координат (ещё не геокодированы) исключаются из
@@ -769,6 +777,81 @@ public class DeliveryService(
         }
     }
 
+    // Блок 2 (2026-08-08, по явному запросу пользователя) — раньше отмену
+    // доставки мог оформить только администратор (CancelAsync выше), у
+    // курьера такой возможности не было вообще. Причина обязательна (см.
+    // IAccountBlockService.RecordCancellationAsync — минимум несколько слов,
+    // не одно слово) и учитывается в счётчике нарушений за 24ч.
+    public async Task<Result<string>> CancelByCourierAsync(int deliveryId, string reason)
+    {
+        try
+        {
+            if (currentUser.UserId is null)
+                return Result<string>.Fail("Требуется вход", ErrorType.Forbidden);
+
+            var courierProfile = await courierProfileRepository.GetByUserIdAsync(currentUser.UserId.Value);
+            if (courierProfile is null)
+                return Result<string>.Fail("Профиль курьера не найден", ErrorType.NotFound);
+
+            var delivery = await deliveryRepository.GetByIdAsync(deliveryId);
+            if (delivery is null)
+                return Result<string>.Fail("Доставка не найдена", ErrorType.NotFound);
+            if (delivery.CourierId != courierProfile.Id)
+                return Result<string>.Fail("Эта доставка назначена не вам", ErrorType.Forbidden);
+            if (delivery.Status is DeliveryStatus.Delivered or DeliveryStatus.Cancelled)
+                return Result<string>.Fail("Нельзя отменить уже завершённую или отменённую доставку", ErrorType.Conflict);
+
+            // Причину/лимит проверяем ДО мутации доставки — если превышен лимит
+            // отмен и это создаёт новый бан, курьер всё равно узнаёт причину
+            // отказа только если сама валидация причины не провалилась; сама
+            // отмена доставки при этом происходит (бан не отменяет уже начатое
+            // действие "я больше не могу её выполнить" — он лишь не даёт брать
+            // НОВЫЕ доставки дальше).
+            var recordResult = await accountBlockService.RecordCancellationAsync(currentUser.UserId.Value, "Courier", delivery.OrderId, reason);
+            if (!recordResult.IsSuccess)
+                return Result<string>.Fail(recordResult.Error!, recordResult.ErrorType ?? ErrorType.Validation);
+
+            delivery.Status = DeliveryStatus.Cancelled;
+            delivery.CancelledAt = DateTime.UtcNow;
+            delivery.CancellationReason = reason.Trim();
+            delivery.UpdatedAt = DateTime.UtcNow;
+            await deliveryRepository.UpdateAsync(delivery);
+
+            var order = await orderRepository.GetByIdAsync(delivery.OrderId);
+            if (order is not null)
+            {
+                if (order.Status is OrderStatus.CourierAssigned or OrderStatus.PickedUp or OrderStatus.InDelivery)
+                {
+                    order.Status = OrderStatus.ReadyForPickup;
+                    await orderRepository.UpdateAsync(order);
+                }
+
+                var farmerProfile = await farmerProfileRepository.GetByIdAsync(order.FarmerId);
+                var customerProfile = await customerProfileRepository.GetByIdAsync(order.CustomerId);
+                if (farmerProfile is not null)
+                    await NotifyAsync(farmerProfile.UserId, "Курьер отменил доставку", $"Курьер отменил доставку по заказу №{order.OrderNumber}: {reason.Trim()}");
+                if (customerProfile is not null)
+                    await NotifyAsync(customerProfile.UserId, "Доставка отменена", $"Курьер отменил доставку по вашему заказу №{order.OrderNumber}, фермер назначит нового.");
+            }
+
+            await CreateAuditLogAsync("CourierCancelDelivery", delivery.Id, $"Курьер отменил доставку: {reason.Trim()}");
+
+            var successMessage = "Доставка отменена";
+            if (recordResult.Data is not null)
+                successMessage += $". {recordResult.Data}";
+
+            return Result<string>.Ok(successMessage);
+        }
+        catch (Exception ex)
+        {
+            logger.LogError(ex, "Ошибка при отмене доставки курьером {Id}", deliveryId);
+            return Result<string>.Fail("Не удалось отменить доставку", ErrorType.InternalServerError);
+        }
+    }
+
+    private static string FormatBlockMessage(Domain.Entities.AccountBlock block) =>
+        $"Аккаунт временно заблокирован до {block.BlockedUntil:dd.MM.yyyy HH:mm} UTC. Причина: {block.Reason}.";
+
     public async Task<Result<string>> MarkReadyForPickupAsync(int orderId)
     {
         try
@@ -813,6 +896,14 @@ public class DeliveryService(
             var courierProfile = await courierProfileRepository.GetByUserIdAsync(currentUser.UserId.Value);
             if (courierProfile is null)
                 return Result<string>.Fail("Профиль курьера не найден", ErrorType.NotFound);
+
+            // Блок 2 (2026-08-08) — заблокированный за частые отмены курьер не
+            // может брать новые доставки, даже если она уже была назначена ему
+            // ДО блокировки (второй, независимый от списка "доступных
+            // курьеров" барьер — см. GetAvailableCouriersAsync ниже).
+            var activeBlock = await accountBlockService.GetActiveBlockAsync(currentUser.UserId.Value);
+            if (activeBlock is not null)
+                return Result<string>.Fail(FormatBlockMessage(activeBlock), ErrorType.Forbidden);
 
             var delivery = await deliveryRepository.GetByIdAsync(deliveryId);
             if (delivery is null)

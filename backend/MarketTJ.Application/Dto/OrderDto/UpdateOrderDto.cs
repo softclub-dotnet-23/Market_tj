@@ -19,4 +19,9 @@ public class UpdateOrderDto
     public DateTime? AcceptedAt { get; set; }
     public DateTime? CompletedAt { get; set; }
     public DateTime? CancelledAt { get; set; }
+
+    // Блок 2 (2026-08-08, по явному запросу пользователя) — обязательна,
+    // когда фермер сам переводит заказ в Rejected (см. OrderService.UpdateAsync);
+    // для остальных переходов статуса игнорируется.
+    public string? RejectionReason { get; set; }
 }

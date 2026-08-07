@@ -229,6 +229,14 @@
     "updateSuccess": "Order status updated",
     "updateError": "Failed to update order status",
     "statusLockedHint": "The order is then processed by an administrator",
+    "rejectModal": {
+      "title": "Reject order",
+      "description": "Provide a reason for rejecting (at least a few words) — it will be saved. 3 rejections within 24 hours will temporarily block your account.",
+      "placeholder": "E.g.: item is out of stock",
+      "tooShort": "Please describe the reason in more detail — at least a few words",
+      "submit": "Reject order",
+      "success": "Order rejected"
+    },
     "status": {
       "pending": "Pending",
       "accepted": "Accepted",

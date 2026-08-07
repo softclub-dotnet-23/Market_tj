@@ -15,7 +15,8 @@
     "profile": "Профил",
     "couriers": "Курерҳо",
     "delivery": "Расонидан",
-    "aiConversationLogs": "Гуфтугӯҳои AI"
+    "aiConversationLogs": "Гуфтугӯҳои AI",
+    "blockedAccounts": "Ҳисобҳои манъшуда"
   },
   "navSections": {
     "overview": "Дидгоҳ",
@@ -695,5 +696,26 @@
     "errorDescription": "Пайвастшавӣ ба сервер санҷед ва бори дигар кӯшиш кунед.",
     "emptyTitle": "Ҳанӯз гуфтугӯ нест",
     "emptyDescription": "Дар ин ҷо журнали саволу ҷавоби AI-ёрдамчӣ пас аз аввалин муроҷиати корбарон пайдо мешавад."
+  },
+  "blockedAccounts": {
+    "title": "Ҳисобҳои манъшуда",
+    "activeOnly": "Танҳо манъҳои фаъол",
+    "statusActive": "Манъ шудааст",
+    "statusInactive": "Ғайрифаъол",
+    "userLabel": "Корбар #{{id}}",
+    "blockedUntil": "Манъ то",
+    "unblockedAt": "Рафъ шуд",
+    "unblockAction": "Рафъи манъ",
+    "unblockSuccess": "Ҳисоб рафъ карда шуд",
+    "unblockError": "Рафъи манъ имконнопазир шуд",
+    "errorTitle": "Рӯйхати манъҳо бор нашуд",
+    "errorDescription": "Пайвастшавӣ ба сервер санҷед ва бори дигар кӯшиш кунед.",
+    "emptyTitle": "Ҳисобҳои манъшуда нест",
+    "emptyDescription": "Дар ин ҷо ҳисобҳои курерон ва деҳқонон, ки барои бекоркунии зиёди беасоси фармоишҳо манъ шудаанд, пайдо мешаванд.",
+    "blockType": {
+      "cancellations": "Бекоркунии фармоишҳо",
+      "rateLimit": "Клики спам",
+      "other": "Дигар"
+    }
   }
 }

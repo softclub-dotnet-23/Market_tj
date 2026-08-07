@@ -1,7 +1,7 @@
 import { useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { toast } from "sonner";
-import { AlertTriangle, Camera, MapPin, Package, Phone, Truck } from "lucide-react";
+import { AlertTriangle, Camera, MapPin, Package, Phone, Truck, XCircle } from "lucide-react";
 import { PageLoader } from "@/components/layout/PageLoader";
 import { EmptyState } from "@/components/ui/EmptyState";
 import { Button } from "@/components/ui/Button";
@@ -14,6 +14,7 @@ import {
   DeliveryStatus,
   NEXT_COURIER_STATUS,
   acceptDelivery,
+  cancelDeliveryByCourier,
   confirmDelivery,
   reportDeliveryProblem,
   updateCourierDeliveryStatus,
@@ -36,6 +37,7 @@ export function CourierDeliveries() {
   const [busyId, setBusyId] = useState<number | null>(null);
   const [confirmingDelivery, setConfirmingDelivery] = useState<DeliveryDto | null>(null);
   const [reportingDelivery, setReportingDelivery] = useState<DeliveryDto | null>(null);
+  const [cancellingDelivery, setCancellingDelivery] = useState<DeliveryDto | null>(null);
   const { deliveries, loading, error } = useMyDeliveries(refreshKey);
 
   const bump = () => setRefreshKey((k) => k + 1);
@@ -165,6 +167,18 @@ export function CourierDeliveries() {
               {t("courier:actions.reportProblem")}
             </Button>
           )}
+          {canReportProblem && (
+            <Button
+              type="button"
+              size="sm"
+              variant="outline"
+              className="text-rose-600 hover:bg-rose-50 dark:text-rose-400 dark:hover:bg-rose-950/30"
+              leftIcon={<XCircle size={14} />}
+              onClick={() => setCancellingDelivery(delivery)}
+            >
+              {t("courier:actions.cancelDelivery")}
+            </Button>
+          )}
         </div>
       </div>
     );
@@ -187,7 +201,68 @@ export function CourierDeliveries() {
 
       <ConfirmPhotoModal delivery={confirmingDelivery} onClose={() => setConfirmingDelivery(null)} onConfirmed={bump} />
       <ReportProblemModal delivery={reportingDelivery} onClose={() => setReportingDelivery(null)} onReported={bump} />
+      <CancelDeliveryModal delivery={cancellingDelivery} onClose={() => setCancellingDelivery(null)} onCancelled={bump} />
     </div>
+  );
+}
+
+// Блок 2 (2026-08-08): причина отмены обязательна — минимум несколько слов,
+// не одно слово (та же граница, что и на бэкенде — AccountBlockService), но
+// финальная валидация всё равно происходит на сервере, здесь только UX-гейт
+// против пустой/бессмысленной отправки.
+const MIN_CANCEL_REASON_WORDS = 3;
+const MIN_CANCEL_REASON_LENGTH = 10;
+
+function isCancelReasonValid(reason: string) {
+  const trimmed = reason.trim();
+  if (trimmed.length < MIN_CANCEL_REASON_LENGTH) return false;
+  return trimmed.split(/\s+/).filter(Boolean).length >= MIN_CANCEL_REASON_WORDS;
+}
+
+function CancelDeliveryModal({ delivery, onClose, onCancelled }: { delivery: DeliveryDto | null; onClose: () => void; onCancelled: () => void }) {
+  const { t } = useTranslation(["courier", "common"]);
+  const [reason, setReason] = useState("");
+  const [submitting, setSubmitting] = useState(false);
+
+  const handleSubmit = async () => {
+    if (!delivery || !isCancelReasonValid(reason)) return;
+    setSubmitting(true);
+    try {
+      const message = await cancelDeliveryByCourier(delivery.id, reason.trim());
+      toast.success(message || t("courier:cancelModal.success"));
+      setReason("");
+      onCancelled();
+      onClose();
+    } catch (err) {
+      toast.error(t("courier:cancelModal.error"), { description: err instanceof ApiError ? err.message : undefined });
+    } finally {
+      setSubmitting(false);
+    }
+  };
+
+  return (
+    <Modal open={!!delivery} onClose={() => { setReason(""); onClose(); }} className="max-w-sm">
+      <h2 className="font-display text-lg text-stone-900 dark:text-stone-50">{t("courier:cancelModal.title")}</h2>
+      <p className="mt-1 text-sm text-stone-500 dark:text-stone-400">{t("courier:cancelModal.description")}</p>
+      <Textarea
+        className="mt-4"
+        rows={4}
+        placeholder={t("courier:cancelModal.placeholder")}
+        value={reason}
+        onChange={(e) => setReason(e.target.value)}
+      />
+      {reason.trim().length > 0 && !isCancelReasonValid(reason) && (
+        <p className="mt-1 text-xs text-rose-600 dark:text-rose-400">{t("courier:cancelModal.tooShort")}</p>
+      )}
+      <div className="mt-5 flex justify-end gap-3">
+        <Button type="button" variant="outline" onClick={onClose}>
+          {t("common:actions.cancel")}
+        </Button>
+        <Button type="button" loading={submitting} disabled={!isCancelReasonValid(reason)} onClick={handleSubmit}>
+          {t("courier:cancelModal.submit")}
+        </Button>
+      </div>
+    </Modal>
   );
 }
 

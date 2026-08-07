@@ -21,6 +21,7 @@ public class OrderService(
     IAuditLogService auditLogService,
     IWalletService walletService,
     ICurrentUserService currentUser,
+    IAccountBlockService accountBlockService,
     ILogger<OrderService> logger) : IOrderService
 {
     // Audit 2026-07-28, находка 2.2 (IDOR): Order.CustomerId/FarmerId — это Id
@@ -229,6 +230,37 @@ public class OrderService(
             if (dto.Status == OrderStatus.Accepted && order.Status != OrderStatus.Accepted && !await IsFarmerOwnerAsync(order))
                 return Result<string>.Fail("Принять заказ может только фермер — владелец заказа", ErrorType.Forbidden);
 
+            // Блок 2 (2026-08-08) — заблокированный (за частые немотивированные
+            // отклонения) фермер не может принимать новые заказы, пока не
+            // истечёт срок блокировки/его не разблокирует Admin вручную.
+            if (dto.Status == OrderStatus.Accepted && order.Status != OrderStatus.Accepted && currentUser.UserId is not null)
+            {
+                var farmerBlock = await accountBlockService.GetActiveBlockAsync(currentUser.UserId.Value);
+                if (farmerBlock is not null)
+                    return Result<string>.Fail(FormatBlockMessage(farmerBlock), ErrorType.Forbidden);
+            }
+
+            // Блок 2 (2026-08-08, по явному запросу пользователя) — по аналогии
+            // с курьером (DeliveryService.CancelByCourierAsync): отклонение
+            // заказа ИМЕННО фермером-владельцем требует причины (минимум
+            // несколько слов) и учитывается в счётчике нарушений за 24ч. Admin
+            // по-прежнему может выставить Rejected через отдельный
+            // ChangeStatusAsync без этих ограничений — это другой, админский
+            // путь, не входящий в правило "3 отказа фермера = бан".
+            string? farmerRejectionNotice = null;
+            var becomingRejectedByFarmer = order.Status != OrderStatus.Rejected && dto.Status == OrderStatus.Rejected;
+            if (becomingRejectedByFarmer)
+            {
+                if (!await IsFarmerOwnerAsync(order))
+                    return Result<string>.Fail("Отклонить заказ может только фермер — владелец заказа", ErrorType.Forbidden);
+
+                var recordResult = await accountBlockService.RecordCancellationAsync(
+                    currentUser.UserId!.Value, "Farmer", order.Id, dto.RejectionReason ?? string.Empty);
+                if (!recordResult.IsSuccess)
+                    return Result<string>.Fail(recordResult.Error!, recordResult.ErrorType ?? ErrorType.Validation);
+                farmerRejectionNotice = recordResult.Data;
+            }
+
             var customerProfile = await customerProfileRepository.GetByIdAsync(dto.CustomerId);
             if (customerProfile is null)
                 return Result<string>.Fail("Профиль покупателя не найден", ErrorType.NotFound);
@@ -279,7 +311,11 @@ public class OrderService(
 
             await ApplyWalletEffectsForStatusChangeAsync(order, previousStatus, dto.Status);
 
-            return Result<string>.Ok("Заказ обновлён");
+            var successMessage = "Заказ обновлён";
+            if (farmerRejectionNotice is not null)
+                successMessage += $". {farmerRejectionNotice}";
+
+            return Result<string>.Ok(successMessage);
         }
         catch (Exception ex)
         {
@@ -287,6 +323,9 @@ public class OrderService(
             return Result<string>.Fail("Не удалось обновить заказ", ErrorType.InternalServerError);
         }
     }
+
+    private static string FormatBlockMessage(Domain.Entities.AccountBlock block) =>
+        $"Аккаунт временно заблокирован до {block.BlockedUntil:dd.MM.yyyy HH:mm} UTC. Причина: {block.Reason}.";
 
     public async Task<Result<string>> DeleteAsync(int id)
     {

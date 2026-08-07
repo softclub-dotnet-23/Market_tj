@@ -845,3 +845,39 @@ export function useAdminAiConversationLogs(wasError: boolean | null, refreshKey 
   );
   return { logs: data?.items ?? null, totalCount: data?.totalCount ?? 0, loading, error };
 }
+
+// === Заблокированные аккаунты (Блок 2 + Блок 3, 2026-08-08) — единая
+// страница для банов за частые отмены заказов (BlockType="Cancellations")
+// и, позже, за спам-клики (BlockType="RateLimit") ===
+export interface AccountBlockDto {
+  id: number;
+  userId: number;
+  userFullName: string | null;
+  role: string;
+  blockType: string;
+  reason: string;
+  blockedAt: string;
+  blockedUntil: string;
+  unblockedAt: string | null;
+  isActive: boolean;
+}
+
+interface AccountBlockPagedResultDto {
+  items: AccountBlockDto[];
+  totalCount: number;
+}
+
+export function useAdminAccountBlocks(activeOnly: boolean | null, refreshKey = 0) {
+  const { data, loading, error } = useAsync(
+    () =>
+      apiGet<AccountBlockPagedResultDto>(
+        `/admin/account-blocks?pageNumber=1&pageSize=200${activeOnly !== null ? `&activeOnly=${activeOnly}` : ""}`,
+      ),
+    [activeOnly, refreshKey],
+  );
+  return { blocks: data?.items ?? null, totalCount: data?.totalCount ?? 0, loading, error };
+}
+
+export function unblockAccount(blockId: number) {
+  return apiPost<string>(`/admin/account-blocks/${blockId}/unblock`, {});
+}

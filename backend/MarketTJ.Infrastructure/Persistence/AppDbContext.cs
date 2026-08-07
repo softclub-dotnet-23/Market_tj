@@ -27,6 +27,8 @@ public class AppDbContext(DbContextOptions<AppDbContext> options) : DbContext(op
     public DbSet<CourierDocument> CourierDocuments => Set<CourierDocument>();
     public DbSet<AuditLog> AuditLogs => Set<AuditLog>();
     public DbSet<AiConversationLog> AiConversationLogs => Set<AiConversationLog>();
+    public DbSet<OrderCancellation> OrderCancellations => Set<OrderCancellation>();
+    public DbSet<AccountBlock> AccountBlocks => Set<AccountBlock>();
     public DbSet<ReportedListing> ReportedListings => Set<ReportedListing>();
     public DbSet<RefundRequest> RefundRequests => Set<RefundRequest>();
     public DbSet<DeliveryZone> DeliveryZones => Set<DeliveryZone>();

@@ -1,4 +1,4 @@
-import { useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { toast } from "sonner";
 import { Banknote, Camera, Phone, ShoppingCart, Truck } from "lucide-react";
@@ -7,6 +7,7 @@ import { EmptyState } from "@/components/ui/EmptyState";
 import { Pagination } from "@/components/ui/Pagination";
 import { Button } from "@/components/ui/Button";
 import { Modal } from "@/components/ui/Modal";
+import { Textarea } from "@/components/ui/Field";
 import { ViewModeToggle, type OrdersViewMode } from "@/components/ui/ViewModeToggle";
 import { StatusMenu } from "@/components/ui/StatusMenu";
 import { OrderItemsCell } from "@/components/ui/OrderItemsCell";
@@ -71,6 +72,7 @@ export function FarmerOrders() {
   const [confirmingManualDelivery, setConfirmingManualDelivery] = useState<DeliveryDto | null>(null);
   const [assigningOrder, setAssigningOrder] = useState<FarmerOrderDto | null>(null);
   const [assignRefreshKey, setAssignRefreshKey] = useState(0);
+  const [rejectingOrder, setRejectingOrder] = useState<FarmerOrderDto | null>(null);
   const { profile, loading: profileLoading, error: profileError } = useFarmerProfile();
   const { orders, loading: ordersLoading, error: ordersError } = useFarmerOrders(profile?.id ?? null);
   const { deliveriesByOrderId, loading: deliveriesLoading } = useDeliveriesByOrder();
@@ -82,11 +84,33 @@ export function FarmerOrders() {
 
   const handleStatusChange = async (order: FarmerOrderDto, status: number) => {
     if (status === order.status) return;
+    // Блок 2 (2026-08-08) — отклонение заказа требует обязательной причины
+    // (минимум несколько слов), поэтому вместо немедленной отправки
+    // открываем модалку, а не бьём API прямо из выпадающего меню.
+    if (status === OrderStatus.Rejected) {
+      setRejectingOrder(order);
+      return;
+    }
     setBusyId(order.id);
     try {
       await updateFarmerOrderStatus(order, status);
       toast.success(t("orders.updateSuccess"));
       notifyFarmerOrdersChanged();
+    } catch (err) {
+      toast.error(t("orders.updateError"), { description: err instanceof Error ? err.message : undefined });
+    } finally {
+      setBusyId(null);
+    }
+  };
+
+  const handleConfirmReject = async (reason: string) => {
+    if (!rejectingOrder) return;
+    setBusyId(rejectingOrder.id);
+    try {
+      const message = await updateFarmerOrderStatus(rejectingOrder, OrderStatus.Rejected, reason);
+      toast.success(message || t("orders.updateSuccess"));
+      notifyFarmerOrdersChanged();
+      setRejectingOrder(null);
     } catch (err) {
       toast.error(t("orders.updateError"), { description: err instanceof Error ? err.message : undefined });
     } finally {
@@ -483,6 +507,74 @@ export function FarmerOrders() {
           }}
         />
       )}
+
+      <RejectOrderModal
+        open={!!rejectingOrder}
+        submitting={busyId === rejectingOrder?.id}
+        onClose={() => setRejectingOrder(null)}
+        onConfirm={handleConfirmReject}
+      />
     </div>
+  );
+}
+
+// Блок 2 (2026-08-08) — отклонение заказа требует обязательной причины
+// (минимум несколько слов) — та же граница, что и на бэкенде
+// (AccountBlockService), финальная валидация всё равно на сервере.
+const MIN_REJECT_REASON_WORDS = 3;
+const MIN_REJECT_REASON_LENGTH = 10;
+
+function isRejectReasonValid(reason: string) {
+  const trimmed = reason.trim();
+  if (trimmed.length < MIN_REJECT_REASON_LENGTH) return false;
+  return trimmed.split(/\s+/).filter(Boolean).length >= MIN_REJECT_REASON_WORDS;
+}
+
+function RejectOrderModal({
+  open,
+  submitting,
+  onClose,
+  onConfirm,
+}: {
+  open: boolean;
+  submitting: boolean;
+  onClose: () => void;
+  onConfirm: (reason: string) => void;
+}) {
+  const { t } = useTranslation(["farmer", "common"]);
+  const [reason, setReason] = useState("");
+
+  useEffect(() => {
+    if (!open) setReason("");
+  }, [open]);
+
+  const close = () => {
+    setReason("");
+    onClose();
+  };
+
+  return (
+    <Modal open={open} onClose={close} className="max-w-sm">
+      <h2 className="font-display text-lg text-stone-900 dark:text-stone-50">{t("orders.rejectModal.title")}</h2>
+      <p className="mt-1 text-sm text-stone-500 dark:text-stone-400">{t("orders.rejectModal.description")}</p>
+      <Textarea
+        className="mt-4"
+        rows={4}
+        placeholder={t("orders.rejectModal.placeholder")}
+        value={reason}
+        onChange={(e) => setReason(e.target.value)}
+      />
+      {reason.trim().length > 0 && !isRejectReasonValid(reason) && (
+        <p className="mt-1 text-xs text-rose-600 dark:text-rose-400">{t("orders.rejectModal.tooShort")}</p>
+      )}
+      <div className="mt-5 flex justify-end gap-3">
+        <Button type="button" variant="outline" onClick={close}>
+          {t("common:actions.cancel")}
+        </Button>
+        <Button type="button" loading={submitting} disabled={!isRejectReasonValid(reason)} onClick={() => onConfirm(reason.trim())}>
+          {t("orders.rejectModal.submit")}
+        </Button>
+      </div>
+    </Modal>
   );
 }

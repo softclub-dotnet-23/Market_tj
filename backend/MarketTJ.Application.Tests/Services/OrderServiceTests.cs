@@ -22,12 +22,16 @@ public class OrderServiceTests
     private readonly Mock<IAuditLogService> _auditLogService = new();
     private readonly Mock<IWalletService> _walletService = new();
     private readonly Mock<ICurrentUserService> _currentUser = new();
+    private readonly Mock<IAccountBlockService> _accountBlockService = new();
     private readonly Mock<ILogger<OrderService>> _logger = new();
     private readonly OrderService _service;
 
     public OrderServiceTests()
     {
-        _service = new OrderService(_orderRepository.Object, _orderItemRepository.Object, _productListingRepository.Object, _customerProfileRepository.Object, _farmerProfileRepository.Object, _userRepository.Object, _auditLogService.Object, _walletService.Object, _currentUser.Object, _logger.Object);
+        _service = new OrderService(_orderRepository.Object, _orderItemRepository.Object, _productListingRepository.Object, _customerProfileRepository.Object, _farmerProfileRepository.Object, _userRepository.Object, _auditLogService.Object, _walletService.Object, _currentUser.Object, _accountBlockService.Object, _logger.Object);
+        _accountBlockService.Setup(s => s.RecordCancellationAsync(It.IsAny<int>(), It.IsAny<string>(), It.IsAny<int>(), It.IsAny<string>()))
+            .ReturnsAsync(Result<string?>.Ok(null));
+        _accountBlockService.Setup(s => s.GetActiveBlockAsync(It.IsAny<int>())).ReturnsAsync((AccountBlock?)null);
         // По умолчанию кошелёк "молча успешен" — большинству существующих
         // тестов заказов сама оплата не важна, важно, что заказ создаётся/
         // меняет статус. Тесты именно на списание/начисление/возврат
@@ -96,7 +100,7 @@ public class OrderServiceTests
         PaymentMethod = OrderPaymentMethod.CashOnDelivery
     };
 
-    private static UpdateOrderDto ValidUpdateDto(int id = 1, OrderStatus status = OrderStatus.Pending, string orderNumber = "ORD-1") => new()
+    private static UpdateOrderDto ValidUpdateDto(int id = 1, OrderStatus status = OrderStatus.Pending, string orderNumber = "ORD-1", string? rejectionReason = null) => new()
     {
         Id = id,
         OrderNumber = orderNumber,
@@ -108,8 +112,14 @@ public class OrderServiceTests
         District = "Бохтар",
         Subtotal = 100,
         DeliveryPrice = 10,
-        TotalAmount = 110
+        TotalAmount = 110,
+        RejectionReason = rejectionReason
     };
+
+    // Причина отклонения по умолчанию для тестов ниже, где сама причина не
+    // является предметом проверки — реалистичная, проходит валидацию
+    // AccountBlockService (минимум несколько слов).
+    private const string ValidRejectionReason = "Товар закончился на складе";
 
     // ---------- GetAllAsync ----------
 
@@ -602,12 +612,13 @@ public class OrderServiceTests
     {
         // Наличными деньги не проходили через Wallet вовсе — возвращать
         // через Wallet нечего, RefundForOrderAsync не должен вызываться.
+        SetUpOwningFarmer();
         var order = CreateOrder(1, OrderStatus.Pending);
         order.PaymentMethod = OrderPaymentMethod.CashOnDelivery;
         order.IsPaid = false;
         _orderRepository.Setup(r => r.GetByIdAsync(1)).ReturnsAsync(order);
 
-        await _service.UpdateAsync(1, ValidUpdateDto(1, OrderStatus.Rejected));
+        await _service.UpdateAsync(1, ValidUpdateDto(1, OrderStatus.Rejected, rejectionReason: ValidRejectionReason));
 
         _walletService.Verify(w => w.RefundForOrderAsync(It.IsAny<int>()), Times.Never);
     }
@@ -615,12 +626,13 @@ public class OrderServiceTests
     [Fact]
     public async Task UpdateAsync_Card_RejectingOrder_CallsRefundForThatOrder()
     {
+        SetUpOwningFarmer();
         var order = CreateOrder(1, OrderStatus.Pending);
         order.PaymentMethod = OrderPaymentMethod.Card;
         order.IsPaid = true;
         _orderRepository.Setup(r => r.GetByIdAsync(1)).ReturnsAsync(order);
 
-        await _service.UpdateAsync(1, ValidUpdateDto(1, OrderStatus.Rejected));
+        await _service.UpdateAsync(1, ValidUpdateDto(1, OrderStatus.Rejected, rejectionReason: ValidRejectionReason));
 
         _walletService.Verify(w => w.RefundForOrderAsync(1), Times.Once);
     }
@@ -952,6 +964,105 @@ public class OrderServiceTests
         Assert.Equal(OrderStatus.Pending, order.Status);
     }
 
+    // ---------- Блок 2 (2026-08-08): отклонение заказа фермером требует причины ----------
+
+    [Fact]
+    public async Task UpdateAsync_StatusChangedToAccepted_FarmerCurrentlyBlocked_ReturnsForbidden()
+    {
+        SetUpOwningFarmer();
+        _accountBlockService.Setup(s => s.GetActiveBlockAsync(20)).ReturnsAsync(new AccountBlock
+        {
+            Id = 1, UserId = 20, Role = "Farmer", BlockType = "Cancellations", Reason = "3 отказа за 24 часа",
+            BlockedAt = DateTime.UtcNow, BlockedUntil = DateTime.UtcNow.AddHours(48)
+        });
+        var order = CreateOrder(1);
+        _orderRepository.Setup(r => r.GetByIdAsync(1)).ReturnsAsync(order);
+
+        var result = await _service.UpdateAsync(1, ValidUpdateDto(1, OrderStatus.Accepted));
+
+        Assert.False(result.IsSuccess);
+        Assert.Equal(ErrorType.Forbidden, result.ErrorType);
+        Assert.Equal(OrderStatus.Pending, order.Status);
+    }
+
+    [Fact]
+    public async Task UpdateAsync_StatusChangedToRejected_NotFarmerOwner_ReturnsForbidden()
+    {
+        // Дефолтный currentUser в этом файле — Customer(UserId=10) — не
+        // владелец-фермер заказа, отклонить его не может.
+        var order = CreateOrder(1);
+        _orderRepository.Setup(r => r.GetByIdAsync(1)).ReturnsAsync(order);
+
+        var result = await _service.UpdateAsync(1, ValidUpdateDto(1, OrderStatus.Rejected, rejectionReason: ValidRejectionReason));
+
+        Assert.False(result.IsSuccess);
+        Assert.Equal(ErrorType.Forbidden, result.ErrorType);
+        Assert.Equal(OrderStatus.Pending, order.Status);
+        _accountBlockService.Verify(s => s.RecordCancellationAsync(It.IsAny<int>(), It.IsAny<string>(), It.IsAny<int>(), It.IsAny<string>()), Times.Never);
+    }
+
+    [Fact]
+    public async Task UpdateAsync_StatusChangedToRejected_MissingReason_ReturnsValidationAndDoesNotMutateOrder()
+    {
+        SetUpOwningFarmer();
+        var order = CreateOrder(1);
+        _orderRepository.Setup(r => r.GetByIdAsync(1)).ReturnsAsync(order);
+        _accountBlockService.Setup(s => s.RecordCancellationAsync(20, "Farmer", 1, ""))
+            .ReturnsAsync(Result<string?>.Fail("Укажите причину отмены", ErrorType.Validation));
+
+        var result = await _service.UpdateAsync(1, ValidUpdateDto(1, OrderStatus.Rejected));
+
+        Assert.False(result.IsSuccess);
+        Assert.Equal(ErrorType.Validation, result.ErrorType);
+        Assert.Equal(OrderStatus.Pending, order.Status);
+    }
+
+    [Fact]
+    public async Task UpdateAsync_StatusChangedToRejected_ValidReason_RecordsCancellationForFarmerRole()
+    {
+        SetUpOwningFarmer();
+        var order = CreateOrder(1);
+        _orderRepository.Setup(r => r.GetByIdAsync(1)).ReturnsAsync(order);
+
+        var result = await _service.UpdateAsync(1, ValidUpdateDto(1, OrderStatus.Rejected, rejectionReason: ValidRejectionReason));
+
+        Assert.True(result.IsSuccess);
+        Assert.Equal(OrderStatus.Rejected, order.Status);
+        _accountBlockService.Verify(s => s.RecordCancellationAsync(20, "Farmer", 1, ValidRejectionReason), Times.Once);
+    }
+
+    [Fact]
+    public async Task UpdateAsync_StatusChangedToRejected_TriggersNewBan_AppendsNoticeToSuccessMessage()
+    {
+        SetUpOwningFarmer();
+        var order = CreateOrder(1);
+        _orderRepository.Setup(r => r.GetByIdAsync(1)).ReturnsAsync(order);
+        _accountBlockService.Setup(s => s.RecordCancellationAsync(20, "Farmer", 1, ValidRejectionReason))
+            .ReturnsAsync(Result<string?>.Ok("Аккаунт заблокирован до 10.08.2026 12:00 UTC. Причина: 3 отказа за 24 часа."));
+
+        var result = await _service.UpdateAsync(1, ValidUpdateDto(1, OrderStatus.Rejected, rejectionReason: ValidRejectionReason));
+
+        Assert.True(result.IsSuccess);
+        Assert.Contains("заблокирован", result.Data);
+        Assert.Equal(OrderStatus.Rejected, order.Status);
+    }
+
+    [Fact]
+    public async Task UpdateAsync_AlreadyRejected_ChangingOtherFields_DoesNotRecordCancellationAgain()
+    {
+        // Повторный Update заказа, уже находящегося в Rejected (напр. правка
+        // другого поля через тот же эндпоинт) не должен снова считаться
+        // "новым отклонением" и повторно писать в счётчик нарушений.
+        SetUpOwningFarmer();
+        var order = CreateOrder(1, OrderStatus.Rejected);
+        _orderRepository.Setup(r => r.GetByIdAsync(1)).ReturnsAsync(order);
+
+        var result = await _service.UpdateAsync(1, ValidUpdateDto(1, OrderStatus.Rejected));
+
+        Assert.True(result.IsSuccess);
+        _accountBlockService.Verify(s => s.RecordCancellationAsync(It.IsAny<int>(), It.IsAny<string>(), It.IsAny<int>(), It.IsAny<string>()), Times.Never);
+    }
+
     [Fact]
     public async Task UpdateAsync_StatusChangedToCompleted_SetsCompletedAt()
     {
@@ -1002,6 +1113,7 @@ public class OrderServiceTests
     [Fact]
     public async Task UpdateAsync_StatusChangedToRejected_RestoresStockForOrderItems()
     {
+        SetUpOwningFarmer();
         var order = CreateOrder(1, OrderStatus.Pending);
         var listing = new ProductListing
         {
@@ -1015,7 +1127,7 @@ public class OrderServiceTests
         ]);
         _productListingRepository.Setup(r => r.GetByIdAsync(5)).ReturnsAsync(listing);
 
-        await _service.UpdateAsync(1, ValidUpdateDto(1, OrderStatus.Rejected));
+        await _service.UpdateAsync(1, ValidUpdateDto(1, OrderStatus.Rejected, rejectionReason: ValidRejectionReason));
 
         Assert.Equal(23, listing.AvailableQuantity);
     }

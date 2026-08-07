@@ -15,7 +15,8 @@
     "profile": "Profile",
     "couriers": "Couriers",
     "delivery": "Delivery",
-    "aiConversationLogs": "AI Conversations"
+    "aiConversationLogs": "AI Conversations",
+    "blockedAccounts": "Blocked Accounts"
   },
   "navSections": {
     "overview": "Overview",
@@ -689,5 +690,26 @@
     "errorDescription": "Check your connection to the server and try again.",
     "emptyTitle": "No conversations yet",
     "emptyDescription": "The AI assistant's question-and-answer log will appear here after the first user interaction."
+  },
+  "blockedAccounts": {
+    "title": "Blocked Accounts",
+    "activeOnly": "Active blocks only",
+    "statusActive": "Blocked",
+    "statusInactive": "Inactive",
+    "userLabel": "User #{{id}}",
+    "blockedUntil": "Blocked until",
+    "unblockedAt": "Unblocked",
+    "unblockAction": "Unblock",
+    "unblockSuccess": "Account unblocked",
+    "unblockError": "Failed to unblock account",
+    "errorTitle": "Failed to load blocked accounts",
+    "errorDescription": "Check your connection to the server and try again.",
+    "emptyTitle": "No blocked accounts",
+    "emptyDescription": "Courier and farmer accounts blocked for frequent unjustified order cancellations will appear here.",
+    "blockType": {
+      "cancellations": "Order cancellations",
+      "rateLimit": "Spam clicks",
+      "other": "Other"
+    }
   }
 }

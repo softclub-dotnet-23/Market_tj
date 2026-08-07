@@ -98,6 +98,13 @@ public class DeliveryController(IDeliveryService service) : ApiControllerBase
     public async Task<IActionResult> MarkReadyForPickup(int orderId)
         => HandleResult(await service.MarkReadyForPickupAsync(orderId));
 
+    // Курьер отменяет СВОЮ уже назначенную доставку (Блок 2, 2026-08-08) —
+    // причина обязательна, DTO переиспользован от админского CancelAsync.
+    [Authorize(Roles = "Courier")]
+    [HttpPost("{id:int}/courier-cancel")]
+    public async Task<IActionResult> CourierCancel(int id, [FromBody] CancelDeliveryDto dto)
+        => HandleResult(await service.CancelByCourierAsync(id, dto.Reason));
+
     [Authorize(Roles = "Courier")]
     [HttpPost("{id:int}/accept")]
     public async Task<IActionResult> Accept(int id)
