@@ -864,15 +864,35 @@ public class AiAssistantServiceTests
     }
 
     // Модель иногда не следует инструкции "верни строго JSON" и отвечает
-    // обычным текстом (наблюдалось на живой проверке 2026-08-02: ответ
-    // начинался с обычного русского текста, не с "{", что раньше приводило к
-    // необработанному JsonException и падению в общий catch с непонятным
-    // "Ошибка AI-ассистента"). Теперь это тот же понятный путь, что и когда
-    // Deserialize возвращает null.
+    // обычным текстом (наблюдалось на живой проверке 2026-08-02 и повторно
+    // 2026-08-07: запрос "Есть ли у вас лук?" получил абсолютно корректный,
+    // полезный ответ обычным текстом, не JSON). Раньше это приводило к
+    // Fail("Не удалось разобрать ответ ассистента...") — пользователь видел
+    // ошибку вместо хорошего ответа модели. Теперь, если текст не похож на
+    // попытку JSON (не начинается с "{"), используем его как есть — как
+    // Message с Intent="none", а не как ошибку.
     [Fact]
-    public async Task AskAsync_ModelReturnsPlainTextInsteadOfJson_ReturnsClearParseFailureNotGenericError()
+    public async Task AskAsync_ModelReturnsPlainTextInsteadOfJson_UsesTextAsMessageInstead()
     {
-        var body = GroqTextResponse("Извините, я не совсем понял ваш вопрос про помидоры.");
+        var body = GroqTextResponse("Да, у нас есть лук. Цены от 6 до 8 сомони за килограмм.");
+        var handler = MockHandler(HttpStatusCode.OK, body);
+        var service = CreateService(handler);
+
+        var result = await service.AskAsync("Есть ли у вас лук?", null);
+
+        Assert.True(result.IsSuccess);
+        Assert.Equal("none", result.Data!.Intent);
+        Assert.Equal("Да, у нас есть лук. Цены от 6 до 8 сомони за килограмм.", result.Data.Message);
+    }
+
+    // Отличается от случая выше: текст НАЧИНАЕТСЯ с "{", то есть модель явно
+    // пыталась вернуть JSON, но он обрезан/сломан — доверять такому тексту
+    // как обычному сообщению рискованно (может быть частичный кусок JSON),
+    // здесь по-прежнему должна быть понятная ошибка, а не искажённый ответ.
+    [Fact]
+    public async Task AskAsync_ModelReturnsMalformedJson_ReturnsClearParseFailure()
+    {
+        var body = GroqTextResponse("{\"intent\":\"none\",\"message\":\"обрезано на середин");
         var handler = MockHandler(HttpStatusCode.OK, body);
         var service = CreateService(handler);
 
