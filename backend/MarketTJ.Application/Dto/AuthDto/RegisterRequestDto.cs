@@ -9,8 +9,8 @@ public class RegisterRequestDto
     public string PhoneNumber { get; set; } = null!;
     public string Password { get; set; } = null!;
 
-    // Самостоятельная регистрация доступна только Customer/Farmer (раздел 23
-    // ТЗ, Этап 2: "регистрация Customer; регистрация Farmer"). Admin — только
-    // через AdminSeeder, Courier — назначается администратором.
+    // Самостоятельная регистрация доступна Customer/Farmer/Courier (раздел 23
+    // ТЗ + расширение по прямому запросу пользователя для Courier). Admin —
+    // только через AdminSeeder, самостоятельная регистрация недоступна.
     public UserRole Role { get; set; }
 }
