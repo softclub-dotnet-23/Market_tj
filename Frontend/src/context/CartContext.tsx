@@ -3,7 +3,7 @@ import type { ReactNode } from "react";
 import { toast } from "sonner";
 import { useTranslation } from "react-i18next";
 import type { CartLine, Product } from "@/types";
-import { getProductById } from "@/data/products";
+import { getProductById, useProducts } from "@/data/products";
 import { formatSomoni, getEffectiveMinQuantity, getUnitPrice } from "@/lib/utils";
 import { getLocalizedTitle } from "@/lib/productI18n";
 
@@ -38,6 +38,12 @@ const CartContext = createContext<CartContextValue | null>(null);
 export function CartProvider({ children }: { children: ReactNode }) {
   const { t, i18n } = useTranslation(["common", "product"]);
   const [lines, setLines] = useState<CartLine[]>(readStoredCart);
+  // Подписка на каталог нужна не для чтения products напрямую (используем
+  // getProductById), а чтобы totalPrice/totalItems пересчитались, когда
+  // каталог догрузится — иначе при возврате пользователя с уже непустой
+  // корзиной (localStorage) totalPrice считался ДО первой загрузки каталога,
+  // "застревал" на 0 и не обновлялся, пока lines не менялись (баг "Итого: 0 c.").
+  const products = useProducts();
 
   useEffect(() => {
     localStorage.setItem(CART_STORAGE_KEY, JSON.stringify(lines));
@@ -81,7 +87,8 @@ export function CartProvider({ children }: { children: ReactNode }) {
         const product = getProductById(l.productId);
         return sum + (product ? getUnitPrice(product, l.quantity) * l.quantity : 0);
       }, 0),
-    [lines],
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [lines, products],
   );
 
   return (
