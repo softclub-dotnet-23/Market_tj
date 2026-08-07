@@ -14,7 +14,8 @@
     "settings": "Settings",
     "profile": "Profile",
     "couriers": "Couriers",
-    "delivery": "Delivery"
+    "delivery": "Delivery",
+    "aiConversationLogs": "AI Conversations"
   },
   "navSections": {
     "overview": "Overview",
@@ -679,5 +680,14 @@
     "replyPlaceholder": "Your reply...",
     "sendReply": "Send reply",
     "replyError": "Failed to send reply"
+  },
+  "aiConversationLogs": {
+    "title": "AI Assistant Conversations",
+    "errorsOnly": "Errors only",
+    "error": "Error",
+    "errorTitle": "Failed to load conversation log",
+    "errorDescription": "Check your connection to the server and try again.",
+    "emptyTitle": "No conversations yet",
+    "emptyDescription": "The AI assistant's question-and-answer log will appear here after the first user interaction."
   }
 }

@@ -4,6 +4,7 @@ import { useTranslation } from "react-i18next";
 import {
   Bell,
   Bike,
+  Bot,
   ChevronDown,
   ChevronsLeft,
   ChevronsRight,
@@ -68,6 +69,7 @@ const NAV_ITEMS: AdminNavItem[] = [
   { labelKey: "reviews", path: "/admin/reviews", icon: MessageSquare, section: "management" },
   { labelKey: "payments", path: "/admin/commissions", icon: CreditCard, section: "management" },
   { labelKey: "support", path: "/admin/support", icon: LifeBuoy, section: "management" },
+  { labelKey: "aiConversationLogs", path: "/admin/ai-conversation-logs", icon: Bot, section: "management" },
   { labelKey: "notifications", path: "/admin/notifications", icon: Bell, section: "account" },
   { labelKey: "settings", path: "/admin/settings", icon: Settings, section: "account" },
   { labelKey: "profile", path: "/admin/profile", icon: UserIcon, section: "account" },

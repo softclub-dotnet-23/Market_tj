@@ -1,5 +1,6 @@
 using MarketTJ.Application.Interfaces.Services;
 using MarketTJ.Application.Services;
+using Microsoft.Extensions.Caching.Memory;
 using Microsoft.Extensions.DependencyInjection;
 
 namespace MarketTJ.Application;
@@ -68,6 +69,12 @@ public static class DependencyInjection
         services.AddScoped<IEmailVerificationService, EmailVerificationService>();
         services.AddScoped<IWalletService, WalletService>();
         services.AddScoped<IWalletPinService, WalletPinService>();
+        services.AddScoped<IAiConversationLogService, AiConversationLogService>();
+
+        // Кэш повторяющихся вопросов AI-ассистенту (2026-08-08) — простой
+        // in-memory, не Redis: один инстанс backend на Railway, отдельная
+        // внешняя зависимость ради TTL-кэша на несколько минут не оправдана.
+        services.AddMemoryCache();
 
         return services;
     }

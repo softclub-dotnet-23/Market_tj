@@ -813,3 +813,35 @@ export function updateAdminOwnAccount(current: AdminOwnUserDto, edits: AdminAcco
     isActive: current.isActive,
   });
 }
+
+// === Журнал диалогов AI-ассистента (Блок 1.4, 2026-08-08) ===
+export interface AiConversationLogDto {
+  id: number;
+  userId: number | null;
+  userFullName: string | null;
+  role: string;
+  question: string;
+  response: string;
+  intent: string;
+  createdAt: string;
+  wasError: boolean;
+}
+
+interface AiConversationLogPagedResultDto {
+  items: AiConversationLogDto[];
+  totalCount: number;
+}
+
+// pageSize=200 разово, дальнейшая пагинация — на клиенте (тот же приём, что
+// и в data/adminSupport.ts useAdminSupportTickets) — журнал диалогов не
+// настолько велик, чтобы городить полноценный серверный infinite-scroll.
+export function useAdminAiConversationLogs(wasError: boolean | null, refreshKey = 0) {
+  const { data, loading, error } = useAsync(
+    () =>
+      apiGet<AiConversationLogPagedResultDto>(
+        `/admin/ai-conversation-logs?pageNumber=1&pageSize=200${wasError !== null ? `&wasError=${wasError}` : ""}`,
+      ),
+    [wasError, refreshKey],
+  );
+  return { logs: data?.items ?? null, totalCount: data?.totalCount ?? 0, loading, error };
+}

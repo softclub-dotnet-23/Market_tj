@@ -48,6 +48,7 @@ public static class DependencyInjection
         services.AddScoped<IFarmerDocumentRepository, FarmerDocumentRepository>();
         services.AddScoped<ICourierDocumentRepository, CourierDocumentRepository>();
         services.AddScoped<IAuditLogRepository, AuditLogRepository>();
+        services.AddScoped<IAiConversationLogRepository, AiConversationLogRepository>();
         services.AddScoped<IReportedListingRepository, ReportedListingRepository>();
         services.AddScoped<IRefundRequestRepository, RefundRequestRepository>();
         services.AddScoped<IDeliveryZoneRepository, DeliveryZoneRepository>();

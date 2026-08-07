@@ -14,7 +14,8 @@
     "settings": "Настройки",
     "profile": "Профиль",
     "couriers": "Курьеры",
-    "delivery": "Доставка"
+    "delivery": "Доставка",
+    "aiConversationLogs": "Диалоги AI"
   },
   "navSections": {
     "overview": "Обзор",
@@ -685,5 +686,14 @@
     "replyPlaceholder": "Ваш ответ...",
     "sendReply": "Отправить ответ",
     "replyError": "Не удалось отправить ответ"
+  },
+  "aiConversationLogs": {
+    "title": "Диалоги AI-ассистента",
+    "errorsOnly": "Только с ошибками",
+    "error": "Ошибка",
+    "errorTitle": "Не удалось загрузить журнал диалогов",
+    "errorDescription": "Проверьте подключение к серверу и попробуйте снова.",
+    "emptyTitle": "Диалогов пока нет",
+    "emptyDescription": "Здесь появится журнал вопросов и ответов AI-ассистента после первого обращения пользователей."
   }
 }

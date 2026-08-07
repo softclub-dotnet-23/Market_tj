@@ -19,6 +19,7 @@ using MarketTJ.Application.Results;
 using MarketTJ.Application.Services;
 using MarketTJ.Domain.Entities;
 using MarketTJ.Domain.Enums;
+using Microsoft.Extensions.Caching.Memory;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Logging;
 using Moq;
@@ -45,16 +46,28 @@ public class AiAssistantServiceTests
     private readonly Mock<IFarmerStaffMemberService> _farmerStaffMemberService = new();
     private readonly Mock<IFavoriteService> _favoriteService = new();
     private readonly Mock<IReviewService> _reviewService = new();
+    private readonly Mock<ICategoryRepository> _categoryRepository = new();
+    private readonly Mock<IAiConversationLogService> _conversationLogService = new();
     private readonly Mock<ICurrentUserService> _currentUser = new();
     private readonly Mock<IConfiguration> _configuration = new();
     private readonly Mock<ILogger<AiAssistantService>> _logger = new();
+    // Реальный MemoryCache, а не мок — TryGetValue/Set у IMemoryCache в
+    // основном extension-методы поверх ICacheEntry, мокать их напрямую
+    // сложнее и хрупче, чем просто использовать лёгкий конкретный класс.
+    private readonly IMemoryCache _cache = new MemoryCache(new MemoryCacheOptions());
 
     private static Mock<HttpMessageHandler> MockHandler(HttpStatusCode statusCode, string content)
     {
         var handler = new Mock<HttpMessageHandler>();
+        // Фабрика, а не общий инстанс (2026-08-08) — PostToGroqAsync делает
+        // `using var response = ...`, диспозя объект в конце вызова. Раньше
+        // 429-сценарии всегда укладывались в один HTTP-вызов, но с фолбэком
+        // на резервную модель (Блок 1.1) второй вызов получал бы УЖЕ
+        // задиспозенный HttpResponseMessage при переиспользовании одного
+        // инстанса и падал с ObjectDisposedException вместо ожидаемого 429.
         handler.Protected()
             .Setup<Task<HttpResponseMessage>>("SendAsync", ItExpr.IsAny<HttpRequestMessage>(), ItExpr.IsAny<CancellationToken>())
-            .ReturnsAsync(new HttpResponseMessage { StatusCode = statusCode, Content = new StringContent(content) });
+            .ReturnsAsync(() => new HttpResponseMessage { StatusCode = statusCode, Content = new StringContent(content) });
         return handler;
     }
 
@@ -73,6 +86,7 @@ public class AiAssistantServiceTests
     private AiAssistantService CreateService(Mock<HttpMessageHandler> handler, string? apiKey = "test-groq-key")
     {
         _configuration.Setup(c => c["Groq:ApiKey"]).Returns(apiKey);
+        _categoryRepository.Setup(r => r.GetAllAsync()).ReturnsAsync([]);
         var httpClient = new HttpClient(handler.Object);
         return new AiAssistantService(
             httpClient,
@@ -93,6 +107,9 @@ public class AiAssistantServiceTests
             _farmerStaffMemberService.Object,
             _favoriteService.Object,
             _reviewService.Object,
+            _categoryRepository.Object,
+            _cache,
+            _conversationLogService.Object,
             _currentUser.Object,
             _configuration.Object,
             _logger.Object);
@@ -274,10 +291,10 @@ public class AiAssistantServiceTests
     [Fact]
     public async Task AskAsync_CustomerSearchProductsToolCall_ExecutesSearchAndSendsToolResultBack()
     {
-        _productListingRepository.Setup(r => r.SearchAsync("tomato")).ReturnsAsync(
-        [
-            new ProductListing { Id = 1, Title = "Помидор", RetailPricePerKg = 12 }
-        ]);
+        _productListingRepository.Setup(r => r.SearchCatalogAsync(It.Is<ProductListingSearchFilter>(f => f.Search == "tomato"))).ReturnsAsync(
+        ([
+            (new ProductListing { Id = 1, Title = "Помидор", RetailPricePerKg = 12 }, 0.0, 0)
+        ], 1));
 
         var first = GroqToolCallResponse("call_1", "search_products", "{\"query\":\"tomato\"}");
         var second = GroqTextResponse("{\"intent\":\"product\",\"productId\":1,\"message\":\"Нашёл помидоры\"}");
@@ -289,14 +306,14 @@ public class AiAssistantServiceTests
         Assert.True(result.IsSuccess);
         Assert.Equal("product", result.Data!.Intent);
         Assert.Equal(1, result.Data.ProductId);
-        _productListingRepository.Verify(r => r.SearchAsync("tomato"), Times.Once);
+        _productListingRepository.Verify(r => r.SearchCatalogAsync(It.Is<ProductListingSearchFilter>(f => f.Search == "tomato")), Times.Once);
         handler.Protected().Verify("SendAsync", Times.Exactly(2), ItExpr.IsAny<HttpRequestMessage>(), ItExpr.IsAny<CancellationToken>());
     }
 
     [Fact]
     public async Task AskAsync_SecondRequest_IncludesAssistantToolCallAndToolResultMessages()
     {
-        _productListingRepository.Setup(r => r.SearchAsync(It.IsAny<string>())).ReturnsAsync([]);
+        _productListingRepository.Setup(r => r.SearchCatalogAsync(It.IsAny<ProductListingSearchFilter>())).ReturnsAsync(([], 0));
 
         var capturedBodies = new List<JsonObject>();
         var handler = new Mock<HttpMessageHandler>();
@@ -413,7 +430,7 @@ public class AiAssistantServiceTests
     [Fact]
     public async Task AskAsync_ToolCallsExceedMaxRounds_StopsAfterThreeRoundsWithoutInfiniteLoop()
     {
-        _productListingRepository.Setup(r => r.SearchAsync(It.IsAny<string>())).ReturnsAsync([]);
+        _productListingRepository.Setup(r => r.SearchCatalogAsync(It.IsAny<ProductListingSearchFilter>())).ReturnsAsync(([], 0));
 
         var alwaysToolCall = GroqToolCallResponse("call_x", "search_products", "{\"query\":\"tomato\"}");
         var handler = MockHandlerSequence(
@@ -847,6 +864,91 @@ public class AiAssistantServiceTests
         Assert.Equal(ErrorType.TooManyRequests, result.ErrorType);
         // 90 секунд округляется вверх до 2 минут (см. AiAssistantService.FormatRetryDelay).
         Assert.Contains("2 мин", result.Error);
+    }
+
+    // === Фолбэк на резервную модель Groq при 429 (Блок 1.1, 2026-08-08) ===
+
+    [Fact]
+    public async Task AskAsync_PrimaryModelRateLimited_FallsBackToSecondaryModelAndSucceeds()
+    {
+        var capturedModels = new List<string>();
+        var handler = new Mock<HttpMessageHandler>();
+        var responses = new Queue<(HttpStatusCode Status, string Body)>(new[]
+        {
+            (HttpStatusCode.TooManyRequests, "{\"error\":{\"message\":\"rate limited\"}}"),
+            (HttpStatusCode.OK, GroqTextResponse("{\"intent\":\"none\",\"message\":\"Ответ от резервной модели\"}"))
+        });
+        handler.Protected()
+            .Setup<Task<HttpResponseMessage>>("SendAsync", ItExpr.IsAny<HttpRequestMessage>(), ItExpr.IsAny<CancellationToken>())
+            .Returns<HttpRequestMessage, CancellationToken>(async (req, _) =>
+            {
+                var text = await req.Content!.ReadAsStringAsync();
+                capturedModels.Add(JsonNode.Parse(text)!["model"]!.GetValue<string>());
+                var (status, body) = responses.Dequeue();
+                return new HttpResponseMessage { StatusCode = status, Content = new StringContent(body) };
+            });
+        var service = CreateService(handler);
+
+        var result = await service.AskAsync("tomatoes?", null);
+
+        Assert.True(result.IsSuccess);
+        Assert.Equal("Ответ от резервной модели", result.Data!.Message);
+        Assert.Equal(2, capturedModels.Count);
+        Assert.NotEqual(capturedModels[0], capturedModels[1]);
+    }
+
+    // === Кэш повторяющихся вопросов (Блок 1.1, 2026-08-08) ===
+
+    [Fact]
+    public async Task AskAsync_SameQuestionAskedTwiceWithoutHistory_SecondCallServedFromCacheSkipsGroq()
+    {
+        var handler = MockHandlerSequence(
+            (HttpStatusCode.OK, GroqTextResponse("{\"intent\":\"none\",\"message\":\"Ответ на вопрос\"}")));
+        var service = CreateService(handler);
+
+        var first = await service.AskAsync("Сколько стоит помидор?", null);
+        var second = await service.AskAsync("Сколько стоит помидор?", null);
+
+        Assert.True(first.IsSuccess);
+        Assert.True(second.IsSuccess);
+        Assert.Equal(first.Data!.Message, second.Data!.Message);
+        handler.Protected().Verify("SendAsync", Times.Exactly(1), ItExpr.IsAny<HttpRequestMessage>(), ItExpr.IsAny<CancellationToken>());
+    }
+
+    [Fact]
+    public async Task AskAsync_SameQuestionWithNonEmptyHistory_NotCached_CallsGroqEachTime()
+    {
+        var handler = MockHandlerSequence(
+            (HttpStatusCode.OK, GroqTextResponse("{\"intent\":\"none\",\"message\":\"Ответ 1\"}")),
+            (HttpStatusCode.OK, GroqTextResponse("{\"intent\":\"none\",\"message\":\"Ответ 2\"}")));
+        var service = CreateService(handler);
+        var history = new List<AssistantHistoryMessageDto> { new() { Role = "user", Text = "previous" } };
+
+        await service.AskAsync("вопрос", history);
+        await service.AskAsync("вопрос", history);
+
+        handler.Protected().Verify("SendAsync", Times.Exactly(2), ItExpr.IsAny<HttpRequestMessage>(), ItExpr.IsAny<CancellationToken>());
+    }
+
+    // === search_products с фильтрами по цене/категории (Блок 1.2, 2026-08-08) ===
+
+    [Fact]
+    public async Task AskAsync_SearchProductsWithPriceFilter_PassesMinMaxPriceToRepository()
+    {
+        _productListingRepository
+            .Setup(r => r.SearchCatalogAsync(It.Is<ProductListingSearchFilter>(f => f.PriceMax == 10m && f.Search == null)))
+            .ReturnsAsync(([(new ProductListing { Id = 5, Title = "Лук", RetailPricePerKg = 6 }, 0.0, 0)], 1));
+
+        var first = GroqToolCallResponse("call_1", "search_products", "{\"maxPrice\":10}");
+        var second = GroqTextResponse("{\"intent\":\"category\",\"message\":\"Есть лук за 6 сомони\"}");
+        var handler = MockHandlerSequence((HttpStatusCode.OK, first), (HttpStatusCode.OK, second));
+        var service = CreateService(handler);
+
+        var result = await service.AskAsync("что дешевле 10 сомони?", null);
+
+        Assert.True(result.IsSuccess);
+        _productListingRepository.Verify(
+            r => r.SearchCatalogAsync(It.Is<ProductListingSearchFilter>(f => f.PriceMax == 10m)), Times.Once);
     }
 
     // Отличается от rate-limit случая выше — обычная ошибка Groq (не 429)

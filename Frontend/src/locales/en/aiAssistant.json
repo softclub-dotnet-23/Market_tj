@@ -20,5 +20,8 @@
   "cancel": "Cancel",
   "executing": "Working…",
   "actionCancelled": "Cancelled",
-  "actionDone": "Done"
+  "actionDone": "Done",
+  "quickQuestions": ["Show catalog", "My orders", "How to place an order"],
+  "quickQuestionsFarmer": ["My products", "My orders", "How are sales going"],
+  "quickQuestionsAdmin": ["List of users", "Reports to review", "Platform couriers"]
 }

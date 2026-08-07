@@ -14,7 +14,8 @@
     "settings": "Танзимот",
     "profile": "Профил",
     "couriers": "Курерҳо",
-    "delivery": "Расонидан"
+    "delivery": "Расонидан",
+    "aiConversationLogs": "Гуфтугӯҳои AI"
   },
   "navSections": {
     "overview": "Дидгоҳ",
@@ -685,5 +686,14 @@
     "replyPlaceholder": "Ҷавоби шумо...",
     "sendReply": "Фиристодани ҷавоб",
     "replyError": "Ҷавоб фиристода нашуд"
+  },
+  "aiConversationLogs": {
+    "title": "Гуфтугӯҳои AI-ёрдамчӣ",
+    "errorsOnly": "Танҳо бо хатогӣ",
+    "error": "Хатогӣ",
+    "errorTitle": "Журнали гуфтугӯҳо бор нашуд",
+    "errorDescription": "Пайвастшавӣ ба сервер санҷед ва бори дигар кӯшиш кунед.",
+    "emptyTitle": "Ҳанӯз гуфтугӯ нест",
+    "emptyDescription": "Дар ин ҷо журнали саволу ҷавоби AI-ёрдамчӣ пас аз аввалин муроҷиати корбарон пайдо мешавад."
   }
 }

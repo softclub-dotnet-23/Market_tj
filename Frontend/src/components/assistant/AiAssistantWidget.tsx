@@ -148,10 +148,11 @@ export function AiAssistantWidget() {
     return t("error");
   };
 
-  const handleSend = async () => {
-    const text = draft.trim();
+  // Вынесено из handleSend (2026-08-08, Блок 1.5) — кнопки быстрых вопросов
+  // должны отправлять текст сразу, а не через draft/setDraft (лишний тик
+  // ре-рендера ради значения, которое тут же стирается).
+  const sendMessage = async (text: string) => {
     if (!text || sending) return;
-    setDraft("");
     // История берётся ДО того, как в messages добавится текущий вопрос —
     // бэкенд сам добавляет message последним (см. AiAssistantService.AskAsync).
     const history = messages.map((m) => ({ role: m.role, text: m.text }));
@@ -176,6 +177,17 @@ export function AiAssistantWidget() {
     } finally {
       setSending(false);
     }
+  };
+
+  const handleSend = () => {
+    const text = draft.trim();
+    if (!text || sending) return;
+    setDraft("");
+    void sendMessage(text);
+  };
+
+  const handleQuickQuestion = (question: string) => {
+    void sendMessage(question);
   };
 
   const handleConfirmAction = async (messageId: number, action: AssistantActionDto) => {
@@ -333,6 +345,23 @@ export function AiAssistantWidget() {
                 <div className="flex h-full flex-col items-center justify-center gap-3 px-4 text-center">
                   <AssistantMascot size={44} />
                   <p className="text-sm text-stone-500 dark:text-stone-400">{t(`greeting${roleSuffix}`)}</p>
+                  {/* Кнопки быстрых вопросов (2026-08-08, Блок 1.5) — свой набор
+                      на роль (t(`quickQuestions${roleSuffix}`), тот же принцип
+                      суффикса, что и у greeting/subtitle выше), только пока
+                      диалог пуст — не загромождают уже идущий разговор. */}
+                  <div className="flex flex-wrap justify-center gap-2 pt-1">
+                    {(t(`quickQuestions${roleSuffix}`, { returnObjects: true }) as string[]).map((q) => (
+                      <button
+                        key={q}
+                        type="button"
+                        onClick={() => handleQuickQuestion(q)}
+                        disabled={sending}
+                        className="rounded-full border border-grove-200 bg-grove-50 px-3 py-1.5 text-xs font-medium text-grove-700 transition-colors hover:bg-grove-100 disabled:cursor-not-allowed disabled:opacity-50 dark:border-grove-800 dark:bg-grove-900/30 dark:text-grove-400 dark:hover:bg-grove-900/50"
+                      >
+                        {q}
+                      </button>
+                    ))}
+                  </div>
                 </div>
               )}
               {messages.map((m) => (
