@@ -28,6 +28,13 @@
     "discount": "Скидка",
     "premium": "Премиум"
   },
+  "freshness": {
+    "today": "Собрано сегодня",
+    "daysAgo_one": "{{count}} день назад",
+    "daysAgo_few": "{{count}} дня назад",
+    "daysAgo_many": "{{count}} дней назад",
+    "daysAgo_other": "{{count}} дней назад"
+  },
   "outOfStock": "Нет в наличии",
   "removeFromFavorites": "Убрать из избранного",
   "addToFavorites": "Добавить в избранное",

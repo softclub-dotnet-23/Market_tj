@@ -25,6 +25,10 @@
     "discount": "Тахфиф",
     "premium": "Премиум"
   },
+  "freshness": {
+    "today": "Имрӯз ҷамъоварӣ шудааст",
+    "daysAgo": "{{count}} рӯз пеш"
+  },
   "outOfStock": "Мавҷуд нест",
   "removeFromFavorites": "Аз дӯстдоштаҳо баровардан",
   "addToFavorites": "Ба дӯстдоштаҳо илова кардан",

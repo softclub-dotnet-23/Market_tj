@@ -26,6 +26,11 @@
     "discount": "Discount",
     "premium": "Premium"
   },
+  "freshness": {
+    "today": "Harvested today",
+    "daysAgo_one": "{{count}} day ago",
+    "daysAgo_other": "{{count}} days ago"
+  },
   "outOfStock": "Out of stock",
   "removeFromFavorites": "Remove from favorites",
   "addToFavorites": "Add to favorites",

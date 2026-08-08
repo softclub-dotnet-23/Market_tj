@@ -383,6 +383,9 @@ public class ProductListingService(
         MinimumOrderQuantity = listing.MinimumOrderQuantity,
         HarvestDate = listing.HarvestDate,
         ExpectedHarvestDate = listing.ExpectedHarvestDate,
+        FreshnessDaysAgo = listing.HarvestDate.HasValue
+            ? Math.Max(0, (int)(DateTime.UtcNow.Date - listing.HarvestDate.Value.Date).TotalDays)
+            : null,
         QualityGrade = listing.QualityGrade,
         Region = listing.Region,
         District = listing.District,

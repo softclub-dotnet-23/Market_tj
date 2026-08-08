@@ -1,7 +1,7 @@
 import { Link } from "react-router-dom";
 import { motion } from "framer-motion";
 import { useTranslation } from "react-i18next";
-import { Heart, MapPin, Plus } from "lucide-react";
+import { Heart, Leaf, MapPin, Plus } from "lucide-react";
 import type { Product } from "@/types";
 import { PhotoTile } from "@/components/ui/PhotoTile";
 import { RatingStars } from "@/components/ui/RatingStars";
@@ -58,6 +58,17 @@ export function ProductCard({ product, className }: { product: Product; classNam
               {t("product:outOfStock")}
             </span>
           </div>
+        )}
+
+        {/* "Свежесть" (2026-08-09) — только если фермер указал HarvestDate;
+            если нет, ничего не показываем (не показывать "неизвестно"). */}
+        {product.freshnessDaysAgo != null && (
+          <span className="absolute bottom-3 left-3 inline-flex items-center gap-1 rounded-full bg-white/90 px-2.5 py-1 text-xs font-medium text-grove-700 shadow-sm backdrop-blur dark:bg-stone-900/90 dark:text-grove-400">
+            <Leaf size={12} />
+            {product.freshnessDaysAgo === 0
+              ? t("product:freshness.today")
+              : t("product:freshness.daysAgo", { count: product.freshnessDaysAgo })}
+          </span>
         )}
       </Link>
 

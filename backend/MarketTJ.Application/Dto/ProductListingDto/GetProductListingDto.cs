@@ -21,6 +21,13 @@ public class GetProductListingDto
     public decimal MinimumOrderQuantity { get; set; }
     public DateTime? HarvestDate { get; set; }
     public DateTime? ExpectedHarvestDate { get; set; }
+
+    // "Свежесть" (2026-08-09, по явному запросу пользователя) — сколько
+    // дней назад собран урожай, вычисляется здесь один раз (не на фронте),
+    // чтобы формула "сегодня минус HarvestDate" не дублировалась в каждом
+    // клиенте. null, если HarvestDate не указана — фронт обязан скрывать
+    // бейдж целиком в этом случае, а не показывать "неизвестно".
+    public int? FreshnessDaysAgo { get; set; }
     public string QualityGrade { get; set; } = null!;
     public string Region { get; set; } = null!;
     public string District { get; set; } = null!;

@@ -332,6 +332,62 @@ public class ProductListingServiceTests
         Assert.Equal(6, result.Data!.OrderCount);
     }
 
+    // ---------- FreshnessDaysAgo ("Свежесть", 2026-08-09) ----------
+
+    [Fact]
+    public async Task GetByIdAsync_HarvestDateNotSet_FreshnessDaysAgoIsNull()
+    {
+        var listing = CreateListing(5);
+        listing.HarvestDate = null;
+        _productListingRepository.Setup(r => r.GetByIdAsync(5)).ReturnsAsync(listing);
+
+        var result = await _service.GetByIdAsync(5);
+
+        Assert.True(result.IsSuccess);
+        Assert.Null(result.Data!.FreshnessDaysAgo);
+    }
+
+    [Fact]
+    public async Task GetByIdAsync_HarvestedToday_FreshnessDaysAgoIsZero()
+    {
+        var listing = CreateListing(5);
+        listing.HarvestDate = DateTime.UtcNow.Date;
+        _productListingRepository.Setup(r => r.GetByIdAsync(5)).ReturnsAsync(listing);
+
+        var result = await _service.GetByIdAsync(5);
+
+        Assert.True(result.IsSuccess);
+        Assert.Equal(0, result.Data!.FreshnessDaysAgo);
+    }
+
+    [Fact]
+    public async Task GetByIdAsync_HarvestedThreeDaysAgo_FreshnessDaysAgoIsThree()
+    {
+        var listing = CreateListing(5);
+        listing.HarvestDate = DateTime.UtcNow.Date.AddDays(-3);
+        _productListingRepository.Setup(r => r.GetByIdAsync(5)).ReturnsAsync(listing);
+
+        var result = await _service.GetByIdAsync(5);
+
+        Assert.True(result.IsSuccess);
+        Assert.Equal(3, result.Data!.FreshnessDaysAgo);
+    }
+
+    [Fact]
+    public async Task GetByIdAsync_HarvestDateInFuture_FreshnessDaysAgoClampedToZero()
+    {
+        // Защита от случайной будущей даты (опечатка фермера) — не должно
+        // показывать отрицательное число дней.
+        var listing = CreateListing(5);
+        listing.HarvestDate = DateTime.UtcNow.Date.AddDays(2);
+        _productListingRepository.Setup(r => r.GetByIdAsync(5)).ReturnsAsync(listing);
+
+        var result = await _service.GetByIdAsync(5);
+
+        Assert.True(result.IsSuccess);
+        Assert.Equal(0, result.Data!.FreshnessDaysAgo);
+    }
+
     [Fact]
     public async Task GetByIdAsync_NonExistingId_ReturnsNotFound()
     {

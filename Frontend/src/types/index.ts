@@ -57,6 +57,10 @@ export interface Product {
   availableQuantity: number;
   minimumOrderQuantity: number;
   harvestDate: string;
+  // "Свежесть" (2026-08-09) — сколько дней назад собран урожай, приходит
+  // готовым с бэкенда. null/undefined = HarvestDate не указана фермером —
+  // бейдж свежести должен быть скрыт целиком, не показывать "неизвестно".
+  freshnessDaysAgo?: number | null;
   createdAt: string;
   qualityGrade: string;
   region: string;

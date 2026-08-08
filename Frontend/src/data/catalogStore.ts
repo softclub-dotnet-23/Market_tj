@@ -56,6 +56,7 @@ interface RawListing {
   minimumOrderQuantity: number;
   harvestDate: string | null;
   expectedHarvestDate: string | null;
+  freshnessDaysAgo: number | null;
   qualityGrade: string;
   region: string;
   district: string;
@@ -271,6 +272,7 @@ async function loadCatalog(): Promise<CatalogData> {
       availableQuantity: listing.availableQuantity,
       minimumOrderQuantity: listing.minimumOrderQuantity,
       harvestDate,
+      freshnessDaysAgo: listing.freshnessDaysAgo,
       createdAt: listing.createdAt,
       qualityGrade: listing.qualityGrade,
       region: listing.region,
