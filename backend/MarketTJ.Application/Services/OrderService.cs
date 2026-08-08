@@ -237,7 +237,7 @@ public class OrderService(
             {
                 var farmerBlock = await accountBlockService.GetActiveBlockAsync(currentUser.UserId.Value);
                 if (farmerBlock is not null)
-                    return Result<string>.Fail(FormatBlockMessage(farmerBlock), ErrorType.Forbidden);
+                    return Result<string>.Fail(farmerBlock.FormatBlockMessage(), ErrorType.Forbidden);
             }
 
             // Блок 2 (2026-08-08, по явному запросу пользователя) — по аналогии
@@ -323,9 +323,6 @@ public class OrderService(
             return Result<string>.Fail("Не удалось обновить заказ", ErrorType.InternalServerError);
         }
     }
-
-    private static string FormatBlockMessage(Domain.Entities.AccountBlock block) =>
-        $"Аккаунт временно заблокирован до {block.BlockedUntil:dd.MM.yyyy HH:mm} UTC. Причина: {block.Reason}.";
 
     public async Task<Result<string>> DeleteAsync(int id)
     {

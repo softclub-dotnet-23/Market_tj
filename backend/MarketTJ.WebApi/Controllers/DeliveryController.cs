@@ -1,5 +1,6 @@
 using MarketTJ.Application.Dto.DeliveryDto;
 using MarketTJ.Application.Interfaces.Services;
+using MarketTJ.WebApi.Filters;
 using MarketTJ.WebApi.Models;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
@@ -100,16 +101,22 @@ public class DeliveryController(IDeliveryService service) : ApiControllerBase
 
     // Курьер отменяет СВОЮ уже назначенную доставку (Блок 2, 2026-08-08) —
     // причина обязательна, DTO переиспользован от админского CancelAsync.
+    // Блок 3: та же кнопка защищена и от спам-кликов.
+    [RateLimit]
     [Authorize(Roles = "Courier")]
     [HttpPost("{id:int}/courier-cancel")]
     public async Task<IActionResult> CourierCancel(int id, [FromBody] CancelDeliveryDto dto)
         => HandleResult(await service.CancelByCourierAsync(id, dto.Reason));
 
+    [RateLimit]
     [Authorize(Roles = "Courier")]
     [HttpPost("{id:int}/accept")]
     public async Task<IActionResult> Accept(int id)
         => HandleResult(await service.AcceptAsync(id));
 
+    // Блок 3 (2026-08-08) — кнопки смены статуса доставки одни из самых
+    // "кликабельных" в приложении, явно указаны пользователем как пример.
+    [RateLimit]
     [Authorize(Roles = "Courier")]
     [HttpPatch("{id:int}/status")]
     public async Task<IActionResult> UpdateCourierStatus(int id, [FromBody] CourierStatusUpdateDto dto)

@@ -23,9 +23,16 @@ public interface IAccountBlockService
     // из перечисленных userId сейчас активно заблокированы.
     Task<HashSet<int>> GetActiveBlockedUserIdsAsync(IEnumerable<int> userIds);
 
-    // Общее создание бана — переиспользуется Блоком 3 (rate-limit) с другим
-    // blockType, а не только Блоком 2 (RecordCancellationAsync).
-    Task<AccountBlock> CreateBlockAsync(int userId, string role, string blockType, string reason, TimeSpan? overrideDuration = null);
+    // Общее создание бана — переиспользуется Блоком 3 (rate-limit, RateLimitService)
+    // с другим blockType и СВОЕЙ парой длительностей (5 мин / 30 мин), а не
+    // только Блоком 2 (RecordCancellationAsync, 48ч / 7д). Если обе не заданы —
+    // используются дефолты Блока 2 (для обратной совместимости вызовов без
+    // явных длительностей). Эскалация (2-й+ параметр) применяется всегда
+    // одинаково — "уже был бан этого типа раньше" → длительность из
+    // escalatedDuration, иначе firstOffenseDuration.
+    Task<AccountBlock> CreateBlockAsync(
+        int userId, string role, string blockType, string reason,
+        TimeSpan? firstOffenseDuration = null, TimeSpan? escalatedDuration = null);
 
     Task<Result<PagedResult<GetAccountBlockDto>>> GetAllAsync(PagedRequest request, bool? activeOnly);
     Task<Result<string>> UnblockAsync(int blockId);

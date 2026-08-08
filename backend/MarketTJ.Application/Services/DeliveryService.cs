@@ -849,9 +849,6 @@ public class DeliveryService(
         }
     }
 
-    private static string FormatBlockMessage(Domain.Entities.AccountBlock block) =>
-        $"Аккаунт временно заблокирован до {block.BlockedUntil:dd.MM.yyyy HH:mm} UTC. Причина: {block.Reason}.";
-
     public async Task<Result<string>> MarkReadyForPickupAsync(int orderId)
     {
         try
@@ -903,7 +900,7 @@ public class DeliveryService(
             // курьеров" барьер — см. GetAvailableCouriersAsync ниже).
             var activeBlock = await accountBlockService.GetActiveBlockAsync(currentUser.UserId.Value);
             if (activeBlock is not null)
-                return Result<string>.Fail(FormatBlockMessage(activeBlock), ErrorType.Forbidden);
+                return Result<string>.Fail(activeBlock.FormatBlockMessage(), ErrorType.Forbidden);
 
             var delivery = await deliveryRepository.GetByIdAsync(deliveryId);
             if (delivery is null)

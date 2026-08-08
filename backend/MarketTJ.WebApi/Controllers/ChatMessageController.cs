@@ -1,5 +1,6 @@
 using MarketTJ.Application.Dto.ChatMessageDto;
 using MarketTJ.Application.Interfaces.Services;
+using MarketTJ.WebApi.Filters;
 using MarketTJ.WebApi.Models;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
@@ -18,6 +19,9 @@ public class ChatMessageController(IChatMessageService service) : ApiControllerB
     public async Task<IActionResult> GetById(int id)
         => HandleResult(await service.GetByIdAsync(id));
 
+    // Блок 3 (2026-08-08) — отправка сообщений в чат защищена от спам-кликов
+    // "отправить" (>15 сообщений/мин с одного аккаунта).
+    [RateLimit]
     [HttpPost]
     public async Task<IActionResult> Create([FromBody] CreateChatMessageDto dto)
         => HandleResult(await service.CreateAsync(dto));

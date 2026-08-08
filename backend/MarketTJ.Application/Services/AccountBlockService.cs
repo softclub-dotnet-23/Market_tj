@@ -27,6 +27,7 @@ public class AccountBlockService(
     private const int MinReasonLength = 10;
 
     public const string CancellationsBlockType = "Cancellations";
+    public const string RateLimitBlockType = "RateLimit";
 
     public async Task<Result<string?>> RecordCancellationAsync(int userId, string role, int orderId, string reason)
     {
@@ -76,22 +77,20 @@ public class AccountBlockService(
     public async Task<HashSet<int>> GetActiveBlockedUserIdsAsync(IEnumerable<int> userIds)
         => [.. await blockRepository.GetActiveUserIdsAsync(userIds, DateTime.UtcNow)];
 
-    public async Task<AccountBlock> CreateBlockAsync(int userId, string role, string blockType, string reason, TimeSpan? overrideDuration = null)
+    public async Task<AccountBlock> CreateBlockAsync(
+        int userId, string role, string blockType, string reason,
+        TimeSpan? firstOffenseDuration = null, TimeSpan? escalatedDuration = null)
     {
-        TimeSpan duration;
-        if (overrideDuration is not null)
-        {
-            duration = overrideDuration.Value;
-        }
-        else
-        {
-            // Эскалация (2026-08-08, Блок 2.5): если у пользователя УЖЕ был
-            // бан этого же типа раньше (истёкший или снятый вручную — сам
-            // факт повтора нарушения важен, а не текущий статус того бана) —
-            // следующий бан длиннее.
-            var priorCount = await blockRepository.CountPriorAsync(userId, blockType);
-            duration = priorCount > 0 ? EscalatedBlockDuration : FirstBlockDuration;
-        }
+        // Эскалация (2026-08-08, Блок 2.5, переиспользуется Блоком 3 со своей
+        // парой длительностей): если у пользователя УЖЕ был бан ЭТОГО ЖЕ
+        // ТИПА раньше (истёкший или снятый вручную — сам факт повтора
+        // нарушения важен, а не текущий статус того бана) — следующий бан
+        // длиннее. firstOffenseDuration/escalatedDuration не заданы → дефолты
+        // Блока 2 (48ч/7д), заданы (Блок 3, RateLimitService) → 5 мин/30 мин.
+        var priorCount = await blockRepository.CountPriorAsync(userId, blockType);
+        var duration = priorCount > 0
+            ? escalatedDuration ?? EscalatedBlockDuration
+            : firstOffenseDuration ?? FirstBlockDuration;
 
         var block = new AccountBlock
         {

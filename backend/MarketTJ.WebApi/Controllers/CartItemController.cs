@@ -1,5 +1,6 @@
 using MarketTJ.Application.Dto.CartItemDto;
 using MarketTJ.Application.Interfaces.Services;
+using MarketTJ.WebApi.Filters;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 
@@ -17,6 +18,9 @@ public class CartItemController(ICartItemService service) : ApiControllerBase
     public async Task<IActionResult> GetById(int id)
         => HandleResult(await service.GetByIdAsync(id));
 
+    // Блок 3 (2026-08-08) — "добавить в корзину" защищено от случайных
+    // повторных кликов/скриптового спама (>15 добавлений/мин).
+    [RateLimit]
     [HttpPost]
     public async Task<IActionResult> Create([FromBody] CreateCartItemDto dto)
         => HandleResult(await service.CreateAsync(dto));

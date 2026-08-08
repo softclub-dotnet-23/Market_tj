@@ -2,6 +2,7 @@ using MarketTJ.Application.Common;
 using MarketTJ.Application.Dto.Admin;
 using MarketTJ.Application.Interfaces.Services;
 using MarketTJ.Domain.Enums;
+using MarketTJ.WebApi.Filters;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 
@@ -17,6 +18,9 @@ public class AdminOrderController(IOrderService orderService, IRefundRequestServ
     public async Task<IActionResult> GetOrders([FromQuery] PagedRequest request, [FromQuery] OrderStatus? status)
         => HandleResult(await orderService.GetPagedAsync(request, status));
 
+    // Блок 3 (2026-08-08) — админские кнопки смены статуса заказа тоже
+    // "чувствительная" повторяемая кнопка.
+    [RateLimit]
     [HttpPatch("orders/{id:int}/status")]
     public async Task<IActionResult> ChangeOrderStatus(int id, [FromBody] ChangeOrderStatusDto dto)
         => HandleResult(await orderService.ChangeStatusAsync(id, dto.Status, currentUser.UserId!.Value));

@@ -71,6 +71,7 @@ public static class DependencyInjection
         services.AddScoped<IWalletPinService, WalletPinService>();
         services.AddScoped<IAiConversationLogService, AiConversationLogService>();
         services.AddScoped<IAccountBlockService, AccountBlockService>();
+        services.AddScoped<IRateLimitService, RateLimitService>();
 
         // Кэш повторяющихся вопросов AI-ассистенту (2026-08-08) — простой
         // in-memory, не Redis: один инстанс backend на Railway, отдельная

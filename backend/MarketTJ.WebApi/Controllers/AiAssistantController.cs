@@ -1,5 +1,6 @@
 using MarketTJ.Application.Dto.AiAssistantDto;
 using MarketTJ.Application.Interfaces.Services;
+using MarketTJ.WebApi.Filters;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 
@@ -14,6 +15,10 @@ public class AiAssistantController(IAiAssistantService aiAssistantService) : Api
 {
     // Контроллер не содержит бизнес-логику (раздел 19 ТЗ) — только вызов
     // сервиса и приведение Result<T> к единому формату ответа (раздел 20).
+    // Блок 3 (2026-08-08) — [RateLimit] здесь не действует на гостей (их
+    // некому банить), но защищает авторизованных пользователей от спама
+    // "отправить" в чате ассистента.
+    [RateLimit]
     [HttpPost("ask")]
     public async Task<IActionResult> Ask([FromBody] AskAssistantDto dto)
         => HandleResult(await aiAssistantService.AskAsync(dto.Message, dto.History));

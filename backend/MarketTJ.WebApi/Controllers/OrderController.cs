@@ -1,5 +1,6 @@
 using MarketTJ.Application.Dto.OrderDto;
 using MarketTJ.Application.Interfaces.Services;
+using MarketTJ.WebApi.Filters;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 
@@ -21,6 +22,9 @@ public class OrderController(IOrderService service) : ApiControllerBase
     public async Task<IActionResult> Create([FromBody] CreateOrderDto dto)
         => HandleResult(await service.CreateAsync(dto));
 
+    // Блок 3 (2026-08-08) — этим же методом фермер меняет статус заказа
+    // (кнопки статуса из явного примера пользователя), защищено от спама.
+    [RateLimit]
     [HttpPut("{id:int}")]
     public async Task<IActionResult> Update(int id, [FromBody] UpdateOrderDto dto)
         => HandleResult(await service.UpdateAsync(id, dto));

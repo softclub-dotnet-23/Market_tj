@@ -157,15 +157,29 @@ public class AccountBlockServiceTests
     }
 
     [Fact]
-    public async Task CreateBlockAsync_OverrideDuration_IgnoresEscalationLogic()
+    public async Task CreateBlockAsync_ExplicitFirstOffenseDuration_UsedWhenNoPriorBlock()
     {
-        // Блок 3 (rate-limit) переиспользует этот же метод с фиксированной
-        // длительностью первого нарушения (5 минут), не 48ч.
-        var block = await _service.CreateBlockAsync(1, "Customer", "RateLimit", "spam", TimeSpan.FromMinutes(5));
+        // Блок 3 (rate-limit) переиспользует этот же метод со своей парой
+        // длительностей (5 мин первое нарушение), не 48ч дефолт Блока 2.
+        _blockRepository.Setup(r => r.CountPriorAsync(1, "RateLimit")).ReturnsAsync(0);
+
+        var block = await _service.CreateBlockAsync(1, "Customer", "RateLimit", "spam", TimeSpan.FromMinutes(5), TimeSpan.FromMinutes(30));
 
         var expected = DateTime.UtcNow.AddMinutes(5);
         Assert.True(Math.Abs((block.BlockedUntil - expected).TotalSeconds) < 30);
-        _blockRepository.Verify(r => r.CountPriorAsync(It.IsAny<int>(), It.IsAny<string>()), Times.Never);
+    }
+
+    [Fact]
+    public async Task CreateBlockAsync_ExplicitEscalatedDuration_UsedOnRepeatOffense()
+    {
+        // Повтор rate-limit нарушения после разбана — эскалация тоже
+        // работает для Блока 3, просто с другими (более короткими) числами.
+        _blockRepository.Setup(r => r.CountPriorAsync(1, "RateLimit")).ReturnsAsync(1);
+
+        var block = await _service.CreateBlockAsync(1, "Customer", "RateLimit", "spam", TimeSpan.FromMinutes(5), TimeSpan.FromMinutes(30));
+
+        var expected = DateTime.UtcNow.AddMinutes(30);
+        Assert.True(Math.Abs((block.BlockedUntil - expected).TotalSeconds) < 30);
     }
 
     // ---------- GetActiveBlockAsync ----------

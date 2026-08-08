@@ -65,6 +65,9 @@
     "addedItem": "{{title}} ба дӯстдоштаҳо илова шуд",
     "defaultItemName": "Маҳсулот"
   },
+  "rateLimit": {
+    "unblocksIn": "Рафъи манъ пас аз {{time}}"
+  },
   "dates": {
     "months": [
       "январ",

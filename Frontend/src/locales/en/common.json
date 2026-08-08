@@ -52,6 +52,9 @@
     "addedItem": "{{title}} added to favorites",
     "defaultItemName": "Item"
   },
+  "rateLimit": {
+    "unblocksIn": "Unblocks in {{time}}"
+  },
   "dates": {
     "months": [
       "January",
